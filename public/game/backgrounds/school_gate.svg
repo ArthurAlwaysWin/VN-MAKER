@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#E0F0FF"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7BA87B"/>
+      <stop offset="100%" stop-color="#5A8A5A"/>
+    </linearGradient>
+  </defs>
+  <!-- Sky -->
+  <rect width="1280" height="720" fill="url(#sky)"/>
+  <!-- Ground -->
+  <rect y="500" width="1280" height="220" fill="url(#ground)"/>
+  <!-- Path -->
+  <path d="M500,720 L520,500 L760,500 L780,720" fill="#D4C4A0" opacity="0.7"/>
+  <!-- School gate -->
+  <rect x="440" y="280" width="40" height="220" fill="#8B7355" rx="4"/>
+  <rect x="800" y="280" width="40" height="220" fill="#8B7355" rx="4"/>
+  <rect x="440" y="260" width="400" height="40" fill="#8B7355" rx="4"/>
+  <text x="640" y="287" text-anchor="middle" font-size="22" fill="#FFF" font-family="serif">樱花学园</text>
+  <!-- School building -->
+  <rect x="350" y="150" width="580" height="150" fill="#E8E0D0" rx="4"/>
+  <rect x="370" y="120" width="540" height="40" fill="#D0C0A8" rx="4"/>
+  <!-- Windows -->
+  <rect x="400" y="180" width="60" height="50" fill="#A0D8E8" rx="2" opacity="0.8"/>
+  <rect x="490" y="180" width="60" height="50" fill="#A0D8E8" rx="2" opacity="0.8"/>
+  <rect x="580" y="180" width="60" height="50" fill="#A0D8E8" rx="2" opacity="0.8"/>
+  <rect x="670" y="180" width="60" height="50" fill="#A0D8E8" rx="2" opacity="0.8"/>
+  <rect x="760" y="180" width="60" height="50" fill="#A0D8E8" rx="2" opacity="0.8"/>
+  <!-- Cherry blossom trees -->
+  <rect x="200" y="350" width="20" height="150" fill="#8B6B4A"/>
+  <circle cx="210" cy="320" r="70" fill="#FFB7C5" opacity="0.85"/>
+  <circle cx="180" cy="340" r="50" fill="#FFC0CB" opacity="0.7"/>
+  <circle cx="240" cy="330" r="55" fill="#FFB0C0" opacity="0.75"/>
+  <rect x="1040" y="350" width="20" height="150" fill="#8B6B4A"/>
+  <circle cx="1050" cy="320" r="70" fill="#FFB7C5" opacity="0.85"/>
+  <circle cx="1020" cy="340" r="50" fill="#FFC0CB" opacity="0.7"/>
+  <circle cx="1080" cy="330" r="55" fill="#FFB0C0" opacity="0.75"/>
+  <!-- Falling petals -->
+  <circle cx="300" cy="200" r="4" fill="#FFD0DD" opacity="0.7"/>
+  <circle cx="500" cy="150" r="3" fill="#FFD0DD" opacity="0.6"/>
+  <circle cx="700" cy="250" r="4" fill="#FFD0DD" opacity="0.5"/>
+  <circle cx="900" cy="180" r="3" fill="#FFD0DD" opacity="0.7"/>
+  <circle cx="150" cy="300" r="3" fill="#FFD0DD" opacity="0.6"/>
+  <circle cx="1100" cy="220" r="4" fill="#FFD0DD" opacity="0.5"/>
+</svg>

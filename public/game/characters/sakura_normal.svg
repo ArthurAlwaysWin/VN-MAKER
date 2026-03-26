@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700">
+  <!-- Sakura - Normal expression -->
+  <!-- Hair (long, pink) -->
+  <ellipse cx="200" cy="140" rx="95" ry="105" fill="#FFB7C5"/>
+  <path d="M105,140 Q105,500 140,600 L120,700 L280,700 L260,600 Q295,500 295,140" fill="#FFB7C5"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="165" rx="72" ry="82" fill="#FFE4D0"/>
+  <!-- Eyes -->
+  <ellipse cx="170" cy="170" rx="15" ry="18" fill="#4A90D9"/>
+  <ellipse cx="230" cy="170" rx="15" ry="18" fill="#4A90D9"/>
+  <circle cx="165" cy="164" r="5" fill="white" opacity="0.8"/>
+  <circle cx="225" cy="164" r="5" fill="white" opacity="0.8"/>
+  <!-- Eyebrows -->
+  <path d="M150,148 Q170,140 188,148" stroke="#C08090" stroke-width="2.5" fill="none"/>
+  <path d="M212,148 Q230,140 250,148" stroke="#C08090" stroke-width="2.5" fill="none"/>
+  <!-- Nose -->
+  <path d="M198,188 Q200,195 202,188" stroke="#E0B0A0" stroke-width="1.5" fill="none"/>
+  <!-- Mouth - neutral -->
+  <path d="M185,210 Q200,218 215,210" stroke="#E08080" stroke-width="2" fill="none"/>
+  <!-- Bangs -->
+  <path d="M128,120 Q140,90 160,115 Q170,80 200,110 Q220,80 240,115 Q260,90 272,120" fill="#FFB7C5"/>
+  <!-- Hair accessories (cherry blossom clips) -->
+  <circle cx="130" cy="130" r="10" fill="#FF8FAA"/>
+  <circle cx="270" cy="130" r="10" fill="#FF8FAA"/>
+  <!-- Body - School uniform -->
+  <!-- Blazer -->
+  <path d="M140,250 L120,500 L280,500 L260,250" fill="#2C3E6B"/>
+  <!-- White collar -->
+  <path d="M160,248 L200,290 L240,248" fill="white" stroke="#DDD" stroke-width="1"/>
+  <!-- Ribbon -->
+  <path d="M190,270 L200,290 L210,270 L205,275 L200,265 L195,275 Z" fill="#E05050"/>
+  <!-- Skirt -->
+  <path d="M130,500 L110,660 L290,660 L270,500" fill="#3A4A7A"/>
+  <line x1="150" y1="500" x2="140" y2="660" stroke="#2C3E6B" stroke-width="1" opacity="0.5"/>
+  <line x1="190" y1="500" x2="185" y2="660" stroke="#2C3E6B" stroke-width="1" opacity="0.5"/>
+  <line x1="230" y1="500" x2="225" y2="660" stroke="#2C3E6B" stroke-width="1" opacity="0.5"/>
+</svg>

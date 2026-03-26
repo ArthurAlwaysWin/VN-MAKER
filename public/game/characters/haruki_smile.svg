@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700">
+  <!-- Haruki - Smile expression -->
+  <ellipse cx="200" cy="120" rx="85" ry="75" fill="#2C3E6B"/>
+  <ellipse cx="200" cy="160" rx="68" ry="78" fill="#FFE4D0"/>
+  <!-- Happy eyes -->
+  <path d="M158,168 Q172,155 186,168" stroke="#3A5A8A" stroke-width="3" fill="none"/>
+  <path d="M214,168 Q228,155 242,168" stroke="#3A5A8A" stroke-width="3" fill="none"/>
+  <path d="M152,143 Q172,138 190,146" stroke="#2C3E6B" stroke-width="3" fill="none"/>
+  <path d="M210,146 Q228,138 248,143" stroke="#2C3E6B" stroke-width="3" fill="none"/>
+  <path d="M198,183 Q200,190 202,183" stroke="#E0B0A0" stroke-width="1.5" fill="none"/>
+  <!-- Smile -->
+  <path d="M180,205 Q200,220 220,205" stroke="#C08070" stroke-width="2.5" fill="none"/>
+  <!-- Bangs -->
+  <path d="M135,115 Q145,70 165,100 Q175,60 200,95 Q215,55 230,95 Q245,70 265,115" fill="#2C3E6B"/>
+  <!-- Body -->
+  <path d="M135,245 L115,500 L285,500 L265,245" fill="#2C3E6B"/>
+  <path d="M165,243 L200,275 L235,243" fill="white" stroke="#DDD" stroke-width="1"/>
+  <rect x="194" y="265" width="12" height="80" fill="#C04040" rx="2"/>
+  <path d="M194,265 L200,255 L206,265" fill="#C04040"/>
+  <path d="M125,500 L110,680 L195,680 L200,500 L205,680 L290,680 L275,500" fill="#2A2A3A"/>
+</svg>

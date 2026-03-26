@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F0E8"/>
+      <stop offset="100%" stop-color="#E8E0D0"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D4C4A0"/>
+      <stop offset="100%" stop-color="#C0B090"/>
+    </linearGradient>
+  </defs>
+  <!-- Wall -->
+  <rect width="1280" height="720" fill="url(#wall)"/>
+  <!-- Floor -->
+  <rect y="520" width="1280" height="200" fill="url(#floor)"/>
+  <!-- Chalkboard -->
+  <rect x="200" y="80" width="500" height="280" fill="#2D5A3D" rx="8"/>
+  <rect x="210" y="90" width="480" height="260" fill="#3A6B4A" rx="4"/>
+  <text x="450" y="220" text-anchor="middle" font-size="28" fill="rgba(255,255,255,0.5)" font-family="serif">数 学</text>
+  <!-- Windows (right side) -->
+  <rect x="820" y="60" width="140" height="240" fill="#B0D8F0" rx="4" stroke="#C0B090" stroke-width="3"/>
+  <line x1="890" y1="60" x2="890" y2="300" stroke="#C0B090" stroke-width="2"/>
+  <line x1="820" y1="180" x2="960" y2="180" stroke="#C0B090" stroke-width="2"/>
+  <rect x="1000" y="60" width="140" height="240" fill="#B0D8F0" rx="4" stroke="#C0B090" stroke-width="3"/>
+  <line x1="1070" y1="60" x2="1070" y2="300" stroke="#C0B090" stroke-width="2"/>
+  <line x1="1000" y1="180" x2="1140" y2="180" stroke="#C0B090" stroke-width="2"/>
+  <!-- Sunlight through windows -->
+  <rect x="820" y="300" width="320" height="200" fill="#FFF8E0" opacity="0.15"/>
+  <!-- Desks row 1 -->
+  <rect x="150" y="420" width="120" height="25" fill="#A0845A" rx="2"/>
+  <rect x="310" y="420" width="120" height="25" fill="#A0845A" rx="2"/>
+  <rect x="470" y="420" width="120" height="25" fill="#A0845A" rx="2"/>
+  <rect x="630" y="420" width="120" height="25" fill="#A0845A" rx="2"/>
+  <!-- Desks row 2 -->
+  <rect x="150" y="490" width="120" height="25" fill="#A0845A" rx="2"/>
+  <rect x="310" y="490" width="120" height="25" fill="#A0845A" rx="2"/>
+  <rect x="470" y="490" width="120" height="25" fill="#A0845A" rx="2"/>
+  <rect x="630" y="490" width="120" height="25" fill="#A0845A" rx="2"/>
+  <!-- Cherry blossom visible through window -->
+  <circle cx="890" cy="120" r="30" fill="#FFB7C5" opacity="0.4"/>
+  <circle cx="1070" cy="130" r="25" fill="#FFB7C5" opacity="0.3"/>
+</svg>

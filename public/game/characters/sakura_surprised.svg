@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700">
+  <!-- Sakura - Surprised expression -->
+  <ellipse cx="200" cy="140" rx="95" ry="105" fill="#FFB7C5"/>
+  <path d="M105,140 Q105,500 140,600 L120,700 L280,700 L260,600 Q295,500 295,140" fill="#FFB7C5"/>
+  <ellipse cx="200" cy="165" rx="72" ry="82" fill="#FFE4D0"/>
+  <!-- Wide eyes -->
+  <ellipse cx="170" cy="168" rx="17" ry="22" fill="#4A90D9"/>
+  <ellipse cx="230" cy="168" rx="17" ry="22" fill="#4A90D9"/>
+  <circle cx="166" cy="162" r="6" fill="white" opacity="0.8"/>
+  <circle cx="226" cy="162" r="6" fill="white" opacity="0.8"/>
+  <!-- Raised eyebrows -->
+  <path d="M148,138 Q170,130 190,140" stroke="#C08090" stroke-width="2.5" fill="none"/>
+  <path d="M210,140 Q230,130 252,138" stroke="#C08090" stroke-width="2.5" fill="none"/>
+  <!-- Blush -->
+  <ellipse cx="155" cy="192" rx="16" ry="7" fill="#FFB0B0" opacity="0.5"/>
+  <ellipse cx="245" cy="192" rx="16" ry="7" fill="#FFB0B0" opacity="0.5"/>
+  <path d="M198,188 Q200,195 202,188" stroke="#E0B0A0" stroke-width="1.5" fill="none"/>
+  <!-- Surprised O mouth -->
+  <ellipse cx="200" cy="215" rx="10" ry="12" fill="#E08080" opacity="0.8"/>
+  <!-- Bangs -->
+  <path d="M128,120 Q140,90 160,115 Q170,80 200,110 Q220,80 240,115 Q260,90 272,120" fill="#FFB7C5"/>
+  <circle cx="130" cy="130" r="10" fill="#FF8FAA"/>
+  <circle cx="270" cy="130" r="10" fill="#FF8FAA"/>
+  <!-- Body -->
+  <path d="M140,250 L120,500 L280,500 L260,250" fill="#2C3E6B"/>
+  <path d="M160,248 L200,290 L240,248" fill="white" stroke="#DDD" stroke-width="1"/>
+  <path d="M190,270 L200,290 L210,270 L205,275 L200,265 L195,275 Z" fill="#E05050"/>
+  <path d="M130,500 L110,660 L290,660 L270,500" fill="#3A4A7A"/>
+</svg>

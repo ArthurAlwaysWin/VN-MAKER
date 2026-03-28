@@ -84,57 +84,177 @@
       </div>
     </div>
 
-    <!-- ─── 右：属性面板（Phase 5 扩展，此处仅显示选中概览）─── -->
+    <!-- ─── 右：属性面板 ─── -->
     <div class="inspector" v-if="selectedElement">
       <div class="inspector-header">
         <span class="inspector-title">属性</span>
         <span class="elem-type-badge">{{ typeLabel(selectedElement.type) }}</span>
       </div>
       <div class="inspector-body">
-        <div class="form-row">
-          <label>X</label>
-          <input type="number" :value="selectedElement.x" @input="setProp('x', $event)" />
-        </div>
-        <div class="form-row">
-          <label>Y</label>
-          <input type="number" :value="selectedElement.y" @input="setProp('y', $event)" />
-        </div>
-        <template v-if="selectedElement.width != null">
-          <div class="form-row">
-            <label>宽</label>
-            <input type="number" :value="selectedElement.width" @input="setProp('width', $event)" />
+        <!-- ── 位置 & 尺寸 ── -->
+        <div class="inspector-section">
+          <div class="section-title">📐 位置</div>
+          <div class="form-grid">
+            <div class="form-cell">
+              <label>X</label>
+              <input type="number" :value="selectedElement.x" @input="setProp('x', $event)" />
+            </div>
+            <div class="form-cell">
+              <label>Y</label>
+              <input type="number" :value="selectedElement.y" @input="setProp('y', $event)" />
+            </div>
           </div>
-          <div class="form-row">
-            <label>高</label>
-            <input type="number" :value="selectedElement.height" @input="setProp('height', $event)" />
+          <div class="form-grid" v-if="selectedElement.width != null">
+            <div class="form-cell">
+              <label>宽</label>
+              <input type="number" :value="selectedElement.width" @input="setProp('width', $event)" />
+            </div>
+            <div class="form-cell">
+              <label>高</label>
+              <input type="number" :value="selectedElement.height" @input="setProp('height', $event)" />
+            </div>
           </div>
-        </template>
+        </div>
+
+        <!-- ── 设置组件属性 ── -->
         <template v-if="selectedElement.type === 'setting'">
-          <div class="form-row">
-            <label>标签</label>
-            <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
+          <div class="inspector-section">
+            <div class="section-title">🏷️ 内容</div>
+            <div class="form-row">
+              <label>标签</label>
+              <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
+            </div>
+            <div class="form-row">
+              <label>类型</label>
+              <span class="readonly-val">{{ settingLabel(selectedElement.settingType) }}</span>
+            </div>
+          </div>
+          <div class="inspector-section">
+            <div class="section-title">🎨 样式</div>
+            <div class="form-row">
+              <label>字号</label>
+              <input type="number" :value="selectedElement.style?.fontSize || 16" @input="setStyleProp('fontSize', $event)" />
+            </div>
+            <div class="form-row">
+              <label>字体</label>
+              <select :value="selectedElement.style?.fontFamily || 'sans-serif'" @change="setStyleSelect('fontFamily', $event)">
+                <option value="sans-serif">Sans Serif</option>
+                <option value="'Noto Sans SC', sans-serif">Noto Sans SC</option>
+                <option value="'Noto Serif SC', serif">Noto Serif SC</option>
+                <option value="serif">Serif</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>文字色</label>
+              <input type="color" :value="selectedElement.style?.labelColor || '#ffffff'" @input="setStyleColor('labelColor', $event)" />
+            </div>
+            <template v-if="isSlider(selectedElement.settingType)">
+              <div class="form-row">
+                <label>滑块色</label>
+                <input type="color" :value="selectedElement.style?.fillColor || '#ff6b9d'" @input="setStyleColor('fillColor', $event)" />
+              </div>
+              <div class="form-row">
+                <label>轨道色</label>
+                <input type="color" :value="selectedElement.style?.trackColor || '#555555'" @input="setStyleColor('trackColor', $event)" />
+              </div>
+              <div class="form-row">
+                <label>滑钮色</label>
+                <input type="color" :value="selectedElement.style?.thumbColor || '#ffffff'" @input="setStyleColor('thumbColor', $event)" />
+              </div>
+            </template>
+            <template v-else>
+              <div class="form-row">
+                <label>激活色</label>
+                <input type="color" :value="selectedElement.style?.fillColor || '#ff6b9d'" @input="setStyleColor('fillColor', $event)" />
+              </div>
+            </template>
           </div>
         </template>
+
+        <!-- ── 标签属性 ── -->
         <template v-if="selectedElement.type === 'label'">
-          <div class="form-row">
-            <label>文本</label>
-            <input type="text" :value="selectedElement.text" @input="setTextProp('text', $event)" />
+          <div class="inspector-section">
+            <div class="section-title">🏷️ 内容</div>
+            <div class="form-row">
+              <label>文本</label>
+              <input type="text" :value="selectedElement.text" @input="setTextProp('text', $event)" />
+            </div>
           </div>
-          <div class="form-row">
-            <label>字号</label>
-            <input type="number" :value="selectedElement.style?.fontSize || 24" @input="setStyleProp('fontSize', $event)" />
+          <div class="inspector-section">
+            <div class="section-title">🎨 样式</div>
+            <div class="form-row">
+              <label>字号</label>
+              <input type="number" :value="selectedElement.style?.fontSize || 24" @input="setStyleProp('fontSize', $event)" />
+            </div>
+            <div class="form-row">
+              <label>字体</label>
+              <select :value="selectedElement.style?.fontFamily || 'sans-serif'" @change="setStyleSelect('fontFamily', $event)">
+                <option value="sans-serif">Sans Serif</option>
+                <option value="'Noto Sans SC', sans-serif">Noto Sans SC</option>
+                <option value="'Noto Serif SC', serif">Noto Serif SC</option>
+                <option value="serif">Serif</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>颜色</label>
+              <input type="color" :value="selectedElement.style?.color || '#ffffff'" @input="setStyleColor('color', $event)" />
+            </div>
           </div>
         </template>
+
+        <!-- ── 图片属性 ── -->
         <template v-if="selectedElement.type === 'image'">
-          <div class="form-row">
-            <label>图片</label>
-            <button class="pick-btn" @click="pickImage">选择…</button>
+          <div class="inspector-section">
+            <div class="section-title">🖼️ 图片</div>
+            <div class="form-row">
+              <label>源</label>
+              <button class="pick-btn" @click="pickImage">选择…</button>
+            </div>
+            <div v-if="selectedElement.src" class="image-preview-box">
+              <img :src="resolveAsset(selectedElement.src)" />
+            </div>
           </div>
         </template>
+
+        <!-- ── 按钮属性 ── -->
         <template v-if="selectedElement.type === 'button'">
-          <div class="form-row">
-            <label>文字</label>
-            <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
+          <div class="inspector-section">
+            <div class="section-title">🏷️ 内容</div>
+            <div class="form-row">
+              <label>文字</label>
+              <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
+            </div>
+          </div>
+          <div class="inspector-section">
+            <div class="section-title">🎨 样式</div>
+            <div class="form-row">
+              <label>字号</label>
+              <input type="number" :value="selectedElement.style?.fontSize || 18" @input="setStyleProp('fontSize', $event)" />
+            </div>
+            <div class="form-row">
+              <label>字体</label>
+              <select :value="selectedElement.style?.fontFamily || 'sans-serif'" @change="setStyleSelect('fontFamily', $event)">
+                <option value="sans-serif">Sans Serif</option>
+                <option value="'Noto Sans SC', sans-serif">Noto Sans SC</option>
+                <option value="'Noto Serif SC', serif">Noto Serif SC</option>
+                <option value="serif">Serif</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>文字色</label>
+              <input type="color" :value="selectedElement.style?.textColor || '#ffffff'" @input="setStyleColor('textColor', $event)" />
+            </div>
+            <div class="form-row">
+              <label>背景色</label>
+              <input type="color" :value="rgbaToHex(selectedElement.style?.backgroundColor)" @input="setStyleColor('backgroundColor', $event)" />
+            </div>
+            <div class="form-row">
+              <label>圆角</label>
+              <input type="number" :value="selectedElement.style?.borderRadius || 8" @input="setStyleProp('borderRadius', $event)" />
+            </div>
           </div>
         </template>
       </div>
@@ -307,6 +427,31 @@ function setStyleProp(key, e) {
   selectedElement.value.style ??= {};
   selectedElement.value.style[key] = Number(e.target.value);
   saveLayout();
+}
+
+function setStyleColor(key, e) {
+  if (!selectedElement.value) return;
+  selectedElement.value.style ??= {};
+  selectedElement.value.style[key] = e.target.value;
+  saveLayout();
+}
+
+function setStyleSelect(key, e) {
+  if (!selectedElement.value) return;
+  selectedElement.value.style ??= {};
+  selectedElement.value.style[key] = e.target.value;
+  saveLayout();
+}
+
+function rgbaToHex(rgba) {
+  if (!rgba) return '#262626';
+  if (rgba.startsWith('#')) return rgba.length <= 7 ? rgba : rgba.slice(0, 7);
+  const m = rgba.match(/[\d.]+/g);
+  if (!m || m.length < 3) return '#262626';
+  const r = Math.round(Number(m[0])).toString(16).padStart(2, '0');
+  const g = Math.round(Number(m[1])).toString(16).padStart(2, '0');
+  const b = Math.round(Number(m[2])).toString(16).padStart(2, '0');
+  return `#${r}${g}${b}`;
 }
 
 // ─── Background ──────────────────────────────────────────
@@ -638,7 +783,7 @@ function resolveAsset(path) {
 
 /* ─── Inspector ─── */
 .inspector {
-  width: 200px;
+  width: 220px;
   background: #1e1e1e;
   border-left: 1px solid #333;
   flex-shrink: 0;
@@ -668,7 +813,49 @@ function resolveAsset(path) {
 }
 
 .inspector-body {
+  padding: 0;
+}
+
+.inspector-section {
   padding: 10px 12px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.section-title {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.form-cell label {
+  display: block;
+  color: #666;
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+.form-cell input {
+  width: 100%;
+  background: #252526;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.form-cell input:focus {
+  outline: none;
+  border-color: #007acc;
 }
 
 .form-row {
@@ -679,13 +866,14 @@ function resolveAsset(path) {
 }
 
 .form-row label {
-  min-width: 24px;
+  min-width: 38px;
   color: #888;
-  font-size: 12px;
+  font-size: 11px;
   flex-shrink: 0;
 }
 
-.form-row input {
+.form-row input[type="text"],
+.form-row input[type="number"] {
   flex: 1;
   background: #252526;
   border: 1px solid #333;
@@ -696,9 +884,49 @@ function resolveAsset(path) {
   min-width: 0;
 }
 
+.form-row input[type="color"] {
+  flex: 1;
+  height: 26px;
+  padding: 1px;
+  background: #252526;
+  border: 1px solid #333;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.form-row select {
+  flex: 1;
+  background: #252526;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.form-row select:focus,
 .form-row input:focus {
   outline: none;
   border-color: #007acc;
+}
+
+.readonly-val {
+  color: #666;
+  font-size: 11px;
+}
+
+.image-preview-box {
+  margin-top: 6px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 100px;
+}
+
+.image-preview-box img {
+  width: 100%;
+  object-fit: contain;
 }
 
 .pick-btn {

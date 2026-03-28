@@ -61,9 +61,11 @@
                 :style="{ background: elem.style?.trackColor || undefined }">
                 <div class="elem-slider-fill" :style="{ background: elem.style?.fillColor || '#ff6b9d' }"></div>
               </div>
-              <div v-else-if="isSelect(elem.settingType)" class="elem-select-preview">
-                <span class="elem-select-text">{{ selectDefaultLabel(elem.settingType) }}</span>
-                <span class="elem-select-arrow">▾</span>
+              <div v-else-if="isSelect(elem.settingType)" class="elem-segment-group">
+                <span v-for="opt in selectOptions(elem.settingType)" :key="opt.value"
+                  class="elem-segment-btn" :class="{ active: opt.value === selectDefault(elem.settingType) }">
+                  {{ opt.label }}
+                </span>
               </div>
               <div v-else class="elem-toggle-preview"
                 :style="{ background: elem.style?.fillColor ? undefined : undefined }"></div>
@@ -560,11 +562,12 @@ function isSelect(settingType) {
   return SETTING_DEFS[settingType]?.type === 'select';
 }
 
-function selectDefaultLabel(settingType) {
-  const def = SETTING_DEFS[settingType];
-  if (!def?.options) return '';
-  const defaultOpt = def.options.find(o => o.value === def.default);
-  return defaultOpt?.label || def.options[0]?.label || '';
+function selectOptions(settingType) {
+  return SETTING_DEFS[settingType]?.options || [];
+}
+
+function selectDefault(settingType) {
+  return SETTING_DEFS[settingType]?.default || '';
 }
 
 function typeLabel(type) {
@@ -813,30 +816,42 @@ function resolveAsset(path) {
   border-radius: 50%;
 }
 
-.elem-select-preview {
+.elem-select-preview,
+.elem-segment-group {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex: 1;
   min-width: 0;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 3px;
-  padding: 2px 6px;
-  font-size: 11px;
-  color: #aaa;
+  gap: 0;
 }
 
-.elem-select-text {
+.elem-segment-btn {
   flex: 1;
+  text-align: center;
+  padding: 2px 4px;
+  font-size: 10px;
+  color: #888;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-right-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.elem-select-arrow {
-  flex-shrink: 0;
-  opacity: 0.5;
+.elem-segment-btn:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.elem-segment-btn:last-child {
+  border-radius: 0 3px 3px 0;
+  border-right-width: 1px;
+}
+
+.elem-segment-btn.active {
+  background: rgba(100, 160, 255, 0.25);
+  color: #aac;
+  border-color: rgba(100, 160, 255, 0.4);
 }
 
 .elem-close-icon {

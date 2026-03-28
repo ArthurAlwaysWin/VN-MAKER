@@ -21,6 +21,7 @@
       <div class="header-actions">
         <button class="icon-btn" title="撤销 (Ctrl+Z)" :disabled="!canUndo" @click="script.undo(); project.markDirty()">↩</button>
         <button class="icon-btn" title="重做 (Ctrl+Y)" :disabled="!canRedo" @click="script.redo(); project.markDirty()">↪</button>
+        <button class="icon-btn save-btn" title="保存 (Ctrl+S)" :disabled="!project.isDirty" @click="manualSave">💾</button>
         <button class="preview-btn" @click="openPreview">▶ 预览</button>
       </div>
     </header>
@@ -190,6 +191,12 @@ async function goHome() {
 function openPreview() {
   if (window.ipcRenderer) {
     window.ipcRenderer.invoke('open-preview', project.projectPath);
+  }
+}
+
+function manualSave() {
+  if (project.projectPath && script.data) {
+    project.saveProject(script.data);
   }
 }
 </script>

@@ -155,21 +155,27 @@ export class SettingsScreen {
   }
 
   _buildSelect(wrapper, def, cfg, style) {
-    const select = document.createElement('select');
-    select.classList.add('sc-select');
+    const group = document.createElement('div');
+    group.classList.add('sc-segment-group');
+    const currentVal = cfg.get(def.settingKey) || def.default;
+
     for (const opt of def.options) {
-      const optEl = document.createElement('option');
-      optEl.value = opt.value;
-      optEl.textContent = opt.label;
-      select.appendChild(optEl);
+      const btn = document.createElement('button');
+      btn.classList.add('sc-segment-btn');
+      if (opt.value === currentVal) btn.classList.add('active');
+      btn.textContent = opt.label;
+      this._applyTextStyle(btn, style.labelColor, style.fontSize, style.fontFamily);
+
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.sc-segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        cfg.set(def.settingKey, opt.value);
+        this._notifyChange();
+      });
+
+      group.appendChild(btn);
     }
-    select.value = cfg.get(def.settingKey) || def.default;
-    this._applyTextStyle(select, style.labelColor, style.fontSize, style.fontFamily);
-    select.addEventListener('change', () => {
-      cfg.set(def.settingKey, select.value);
-      this._notifyChange();
-    });
-    wrapper.appendChild(select);
+    wrapper.appendChild(group);
   }
 
   _renderLabelElem(elem) {
@@ -311,11 +317,11 @@ export class SettingsScreen {
         </div>
         <div class="settings-item">
           <span class="settings-label">窗口模式</span>
-          <select class="sc-select" id="s-window-mode">
-            <option value="windowed" ${cfg.get('windowMode') === 'windowed' || !cfg.get('windowMode') ? 'selected' : ''}>窗口</option>
-            <option value="fullscreen" ${cfg.get('windowMode') === 'fullscreen' ? 'selected' : ''}>全屏</option>
-            <option value="borderless" ${cfg.get('windowMode') === 'borderless' ? 'selected' : ''}>无边框窗口</option>
-          </select>
+          <div class="sc-segment-group" id="s-window-mode">
+            <button class="sc-segment-btn ${cfg.get('windowMode') === 'windowed' || !cfg.get('windowMode') ? 'active' : ''}" data-value="windowed">窗口</button>
+            <button class="sc-segment-btn ${cfg.get('windowMode') === 'fullscreen' ? 'active' : ''}" data-value="fullscreen">全屏</button>
+            <button class="sc-segment-btn ${cfg.get('windowMode') === 'borderless' ? 'active' : ''}" data-value="borderless">无边框窗口</button>
+          </div>
         </div>
       </div>
     `;
@@ -358,10 +364,14 @@ export class SettingsScreen {
       return `${Math.round(v)}%`;
     });
 
-    const wmSelect = this.el.querySelector('#s-window-mode');
-    wmSelect.addEventListener('change', () => {
-      cfg.set('windowMode', wmSelect.value);
-      this._notifyChange();
+    const wmGroup = this.el.querySelector('#s-window-mode');
+    wmGroup.querySelectorAll('.sc-segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        wmGroup.querySelectorAll('.sc-segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        cfg.set('windowMode', btn.dataset.value);
+        this._notifyChange();
+      });
     });
   }
 

@@ -759,6 +759,46 @@ body {
   line-height: 1;
 }
 
+.sc-segment-group {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+
+.sc-segment-btn {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-right-width: 0;
+  color: rgba(255,255,255,0.5);
+  padding: 6px 10px;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.sc-segment-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.sc-segment-btn:last-child {
+  border-radius: 0 4px 4px 0;
+  border-right-width: 1px;
+}
+
+.sc-segment-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+}
+
+.sc-segment-btn.active {
+  background: rgba(255, 107, 157, 0.25);
+  border-color: rgba(255, 107, 157, 0.5);
+  color: #fff;
+}
+
 .sc-select {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.2);

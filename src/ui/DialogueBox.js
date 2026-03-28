@@ -1,6 +1,8 @@
 /**
  * DialogueBox — Displays dialogue text with typewriter effect
  */
+import { sanitizeCssValue, clampField } from './sanitize.js';
+
 export class DialogueBox {
   /**
    * @param {HTMLElement} container — the #dialogue-layer element
@@ -87,25 +89,28 @@ export class DialogueBox {
       return;
     }
     const s = style;
-    if (s.x !== undefined) this.el.style.left = `${s.x}px`;
+    if (s.x !== undefined) this.el.style.left = `${clampField('x', s.x)}px`;
     if (s.y !== undefined) {
       this.el.style.bottom = 'auto';
-      this.el.style.top = `${s.y}px`;
+      this.el.style.top = `${clampField('y', s.y)}px`;
       this.el.style.right = 'auto';
     }
-    if (s.width) this.el.style.width = `${s.width}px`;
+    if (s.width) this.el.style.width = `${clampField('width', s.width)}px`;
     if (s.height) {
-      this.el.style.height = `${s.height}px`;
+      this.el.style.height = `${clampField('height', s.height)}px`;
       this.el.style.minHeight = 'unset';
     }
-    if (s.fontSize) this.textEl.style.fontSize = `${s.fontSize}px`;
-    if (s.fontFamily) this.textEl.style.fontFamily = s.fontFamily;
-    if (s.textColor) this.textEl.style.color = s.textColor;
-    if (s.backgroundColor) this.el.style.background = s.backgroundColor;
-    if (s.borderRadius !== undefined) this.el.style.borderRadius = `${s.borderRadius}px`;
+    if (s.fontSize) this.textEl.style.fontSize = `${clampField('fontSize', s.fontSize)}px`;
+    const fontFamily = sanitizeCssValue(s.fontFamily);
+    if (fontFamily) this.textEl.style.fontFamily = fontFamily;
+    const textColor = sanitizeCssValue(s.textColor);
+    if (textColor) this.textEl.style.color = textColor;
+    const bgColor = sanitizeCssValue(s.backgroundColor);
+    if (bgColor) this.el.style.background = bgColor;
+    if (s.borderRadius !== undefined) this.el.style.borderRadius = `${clampField('borderRadius', s.borderRadius)}px`;
     if (s.padding) {
       const p = Array.isArray(s.padding) ? s.padding : [s.padding, s.padding, s.padding, s.padding];
-      this.el.style.padding = p.map(v => `${v}px`).join(' ');
+      this.el.style.padding = p.map(v => `${clampField('padding', v)}px`).join(' ');
     }
   }
 

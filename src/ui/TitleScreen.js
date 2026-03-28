@@ -2,6 +2,8 @@
  * TitleScreen — Main menu (start, continue, settings)
  * Supports custom layout from script.json ui.titleScreen config.
  */
+import { sanitizeCssValue, clampField } from './sanitize.js';
+
 export class TitleScreen {
   /**
    * @param {HTMLElement} container
@@ -86,11 +88,14 @@ export class TitleScreen {
     el.className = 'title-custom-element';
     el.textContent = cfg.content || this.gameTitle;
     this._applyPosition(el, cfg);
-    if (cfg.fontSize) el.style.fontSize = `${cfg.fontSize}px`;
-    if (cfg.fontFamily) el.style.fontFamily = cfg.fontFamily;
-    if (cfg.color) el.style.color = cfg.color;
-    if (cfg.letterSpacing) el.style.letterSpacing = `${cfg.letterSpacing}px`;
-    if (cfg.textShadow) el.style.textShadow = cfg.textShadow;
+    if (cfg.fontSize) el.style.fontSize = `${clampField('fontSize', cfg.fontSize)}px`;
+    const fontFamily = sanitizeCssValue(cfg.fontFamily);
+    if (fontFamily) el.style.fontFamily = fontFamily;
+    const color = sanitizeCssValue(cfg.color);
+    if (color) el.style.color = color;
+    if (cfg.letterSpacing) el.style.letterSpacing = `${clampField('letterSpacing', cfg.letterSpacing)}px`;
+    const textShadow = sanitizeCssValue(cfg.textShadow);
+    if (textShadow) el.style.textShadow = textShadow;
     this.el.appendChild(el);
   }
 
@@ -99,18 +104,23 @@ export class TitleScreen {
     btn.className = 'title-custom-element title-custom-button';
     btn.textContent = cfg.text || '';
     this._applyPosition(btn, cfg);
-    if (cfg.width) btn.style.width = `${cfg.width}px`;
-    if (cfg.height) btn.style.height = `${cfg.height}px`;
-    if (cfg.fontSize) btn.style.fontSize = `${cfg.fontSize}px`;
-    if (cfg.fontFamily) btn.style.fontFamily = cfg.fontFamily;
-    if (cfg.color) btn.style.color = cfg.color;
-    if (cfg.backgroundColor) btn.style.background = cfg.backgroundColor;
-    if (cfg.borderRadius !== undefined) btn.style.borderRadius = `${cfg.borderRadius}px`;
-    if (cfg.border) btn.style.border = cfg.border;
+    if (cfg.width) btn.style.width = `${clampField('width', cfg.width)}px`;
+    if (cfg.height) btn.style.height = `${clampField('height', cfg.height)}px`;
+    if (cfg.fontSize) btn.style.fontSize = `${clampField('fontSize', cfg.fontSize)}px`;
+    const fontFamily = sanitizeCssValue(cfg.fontFamily);
+    if (fontFamily) btn.style.fontFamily = fontFamily;
+    const color = sanitizeCssValue(cfg.color);
+    if (color) btn.style.color = color;
+    const bgColor = sanitizeCssValue(cfg.backgroundColor);
+    if (bgColor) btn.style.background = bgColor;
+    if (cfg.borderRadius !== undefined) btn.style.borderRadius = `${clampField('borderRadius', cfg.borderRadius)}px`;
+    const border = sanitizeCssValue(cfg.border);
+    if (border) btn.style.border = border;
 
-    if (cfg.hoverColor) {
-      btn.addEventListener('mouseenter', () => { btn.style.color = cfg.hoverColor; });
-      btn.addEventListener('mouseleave', () => { btn.style.color = cfg.color || ''; });
+    const hoverColor = sanitizeCssValue(cfg.hoverColor);
+    if (hoverColor) {
+      btn.addEventListener('mouseenter', () => { btn.style.color = hoverColor; });
+      btn.addEventListener('mouseleave', () => { btn.style.color = color || ''; });
     }
 
     const action = cfg.action;
@@ -128,12 +138,12 @@ export class TitleScreen {
   _applyPosition(el, cfg) {
     el.style.position = 'absolute';
     if (cfg.anchor === 'center') {
-      el.style.left = `${cfg.x ?? 640}px`;
-      el.style.top = `${cfg.y ?? 360}px`;
+      el.style.left = `${clampField('x', cfg.x ?? 640)}px`;
+      el.style.top = `${clampField('y', cfg.y ?? 360)}px`;
       el.style.transform = 'translate(-50%, -50%)';
     } else {
-      if (cfg.x !== undefined) el.style.left = `${cfg.x}px`;
-      if (cfg.y !== undefined) el.style.top = `${cfg.y}px`;
+      if (cfg.x !== undefined) el.style.left = `${clampField('x', cfg.x)}px`;
+      if (cfg.y !== undefined) el.style.top = `${clampField('y', cfg.y)}px`;
     }
   }
 

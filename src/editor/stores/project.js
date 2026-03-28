@@ -7,6 +7,7 @@ export const useProjectStore = defineStore('project', () => {
   const recentProjects = ref([]);
   const hasCreatedProject = ref(false);
   const isDirty = ref(false);
+  const _saving = ref(false);
 
   const projectName = computed(() => projectData.value?.name || '');
 
@@ -43,15 +44,20 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   async function saveProject(scriptData) {
-    if (!window.ipcRenderer || !projectPath.value) return false;
-    const result = await window.ipcRenderer.invoke('save-project', {
-      project: JSON.parse(JSON.stringify(projectData.value)),
-      script: JSON.parse(JSON.stringify(scriptData))
-    });
-    if (result.success) {
-      isDirty.value = false;
+    if (_saving.value || !window.ipcRenderer || !projectPath.value) return false;
+    _saving.value = true;
+    try {
+      const result = await window.ipcRenderer.invoke('save-project', {
+        project: JSON.parse(JSON.stringify(projectData.value)),
+        script: JSON.parse(JSON.stringify(scriptData))
+      });
+      if (result.success) {
+        isDirty.value = false;
+      }
+      return result.success;
+    } finally {
+      _saving.value = false;
     }
-    return result.success;
   }
 
   function closeProject() {

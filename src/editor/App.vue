@@ -134,6 +134,9 @@ function onKeyDown(e) {
 onMounted(async () => {
   document.addEventListener('keydown', onKeyDown);
   await project.loadRecentProjects();
+  // Expose for Electron close handler
+  window.__hasDirtyProject = () => project.isDirty && !!script.data;
+  window.__saveCurrentProject = () => script.data ? project.saveProject(script.data) : Promise.resolve();
 });
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeyDown);

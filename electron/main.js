@@ -317,6 +317,30 @@ function createWindow() {
     },
   });
 
+  win.on('close', async (e) => {
+    e.preventDefault();
+    try {
+      const hasUnsaved = await win.webContents.executeJavaScript(
+        'window.__hasDirtyProject ? window.__hasDirtyProject() : false'
+      );
+      if (hasUnsaved) {
+        const { response } = await dialog.showMessageBox(win, {
+          type: 'warning',
+          buttons: ['保存', '不保存', '取消'],
+          defaultId: 0,
+          cancelId: 2,
+          title: '未保存的修改',
+          message: '项目有未保存的修改，是否保存？',
+        });
+        if (response === 2) return;
+        if (response === 0) {
+          await win.webContents.executeJavaScript('window.__saveCurrentProject()');
+        }
+      }
+    } catch { /* renderer already destroyed */ }
+    win.destroy();
+  });
+
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL + 'editor.html');
   } else {
@@ -335,7 +359,11 @@ app.whenReady().then(() => {
     const base = currentProjectPath
       ? path.join(currentProjectPath, 'assets')
       : path.join(process.env.APP_ROOT, 'public', 'game');
-    const fullPath = path.join(base, filePath);
+    const fullPath = path.resolve(path.join(base, filePath));
+    const resolvedBase = path.resolve(base);
+    if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
+      return new Response('Forbidden', { status: 403 });
+    }
     return net.fetch(pathToFileURL(fullPath).toString());
   });
   createWindow();

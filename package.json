@@ -8,11 +8,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.5",
     "electron": "^41.0.4",
+    "patch-package": "^8.0.1",
     "vite": "^6.3.0",
     "vite-plugin-electron": "^0.29.1",
     "vite-plugin-electron-renderer": "^0.14.6"

@@ -1,0 +1,17 @@
+diff --git a/node_modules/vite-plugin-electron/dist/index.js b/node_modules/vite-plugin-electron/dist/index.js
+index ab26886..0e5967d 100644
+--- a/node_modules/vite-plugin-electron/dist/index.js
++++ b/node_modules/vite-plugin-electron/dist/index.js
+@@ -168,7 +168,11 @@ async function mockIndexHtml(config) {
+ }
+ function treeKillSync(pid) {
+   if (process.platform === "win32") {
+-    cp.execSync(`taskkill /pid ${pid} /T /F`);
++    try {
++      cp.execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
++    } catch {
++      // Process may already be terminated — safe to ignore
++    }
+   } else {
+     killTree(pidTree({ pid, ppid: process.pid }));
+   }

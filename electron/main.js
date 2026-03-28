@@ -7,6 +7,11 @@ import { existsSync } from 'node:fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let currentProjectPath = null;
+let win;
+
+function getMainWindow() {
+  return win || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+}
 
 // --- Recent Projects ---
 
@@ -130,7 +135,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
 });
 
 ipcMain.handle('open-project', async () => {
-  const result = await dialog.showOpenDialog(win, {
+  const result = await dialog.showOpenDialog(getMainWindow(), {
     properties: ['openDirectory'],
     title: '选择项目文件夹'
   });
@@ -257,7 +262,7 @@ ipcMain.handle('close-project', () => {
 });
 
 ipcMain.handle('show-save-dialog', async () => {
-  const { response } = await dialog.showMessageBox(win, {
+  const { response } = await dialog.showMessageBox(getMainWindow(), {
     type: 'warning',
     buttons: ['保存', '不保存', '取消'],
     defaultId: 0, cancelId: 2,
@@ -269,7 +274,7 @@ ipcMain.handle('show-save-dialog', async () => {
 
 ipcMain.handle('dialog-open-directory', async () => {
   try {
-    const result = await dialog.showOpenDialog(win, {
+    const result = await dialog.showOpenDialog(getMainWindow(), {
       properties: ['openDirectory'],
       title: '选择保存位置'
     });
@@ -312,13 +317,11 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST;
 
-let win;
-
 function createWindow() {
   win = new BrowserWindow({
     width: 1280, height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.mjs'),
     },
   });
 

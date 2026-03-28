@@ -641,6 +641,125 @@ body {
   min-width: 40px;
 }
 
+/* Custom layout mode — absolute positioning container */
+#settings-screen.settings-custom {
+  display: block;
+}
+
+/* Custom setting element (label + control + value in a row) */
+.sc-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sc-setting-label {
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+.sc-setting-value {
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Custom slider (CSS custom property driven) */
+.sc-slider {
+  -webkit-appearance: none;
+  flex: 1;
+  height: 4px;
+  background: var(--track-color, rgba(255,255,255,0.1));
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.sc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--thumb-color, #fff);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  transition: transform 0.15s ease;
+}
+
+.sc-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Toggle switch */
+.sc-toggle {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.sc-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sc-toggle-track {
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.25s ease;
+}
+
+.sc-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.25s ease;
+}
+
+.sc-toggle input:checked + .sc-toggle-track {
+  background: var(--toggle-active, #ff6b9d);
+}
+
+.sc-toggle input:checked + .sc-toggle-track::after {
+  transform: translateX(20px);
+}
+
+/* Custom label, image, button elements */
+.sc-label {
+  user-select: none;
+}
+
+.sc-image {
+  pointer-events: none;
+}
+
+.sc-button button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.sc-button button:hover {
+  opacity: 0.8;
+}
+
+/* Toggle in default layout */
+.settings-item-toggle {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 /* ============================================
    Backlog Screen
    ============================================ */

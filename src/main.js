@@ -68,9 +68,21 @@ let isPlaying = false; // whether the game is actively playing (not on title)
 
 // ─── Apply config ───────────────────────────────────────
 function applyConfig() {
-  audio.setBgmVolume(config.get('bgmVolume'));
-  audio.setSeVolume(config.get('seVolume'));
+  const master = config.get('masterVolume');
+  audio.setBgmVolume(config.get('bgmVolume') * master);
+  audio.setSeVolume(config.get('seVolume') * master);
   dialogueBox.typeSpeed = config.get('textSpeed');
+
+  // Dialogue box opacity
+  const dlgEl = document.querySelector('#dialogue-box');
+  if (dlgEl) {
+    dlgEl.style.setProperty('--dialogue-opacity', config.get('dialogueOpacity'));
+  }
+
+  // Fullscreen toggle (Electron only)
+  if (window.ipcRenderer) {
+    window.ipcRenderer.invoke('set-fullscreen', config.get('fullscreen')).catch(() => {});
+  }
 }
 applyConfig();
 
@@ -424,6 +436,11 @@ async function init() {
     // Apply custom title screen layout if defined in script
     if (engine.script.ui?.titleScreen) {
       titleScreen.setLayout(engine.script.ui.titleScreen);
+    }
+
+    // Apply custom settings screen layout if defined in script
+    if (engine.script.ui?.settingsScreen) {
+      settingsScreen.setLayout(engine.script.ui.settingsScreen);
     }
 
     showTitle();

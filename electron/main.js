@@ -261,6 +261,11 @@ ipcMain.handle('close-project', () => {
   currentProjectPath = null;
 });
 
+ipcMain.handle('set-fullscreen', (event, isFullscreen) => {
+  const w = getMainWindow();
+  if (w) w.setFullScreen(!!isFullscreen);
+});
+
 ipcMain.handle('show-save-dialog', async () => {
   const { response } = await dialog.showMessageBox(getMainWindow(), {
     type: 'warning',

@@ -19,8 +19,10 @@
       </div>
     </div>
 
+    <AssetPanel ref="assetPanelRef" />
+
     <!-- Main Workspace -->
-    <div class="scene-workspace" v-if="selectedScene">
+    <div class="scene-workspace" v-if="selectedScene" @dragover.prevent @drop="onAssetDrop">
       <div class="toolbar">
         <div class="scene-meta">
           <input type="text" v-model="selectedScene.name" placeholder="场景名称" class="scene-name-input" />
@@ -283,10 +285,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { useCanvasState } from '../composables/useCanvasState.js';
 import CanvasPreview from '../components/canvas/CanvasPreview.vue';
+import AssetPanel from '../components/AssetPanel.vue';
 
 const script = useScriptStore();
 const selectedSceneId = ref('');
@@ -294,12 +297,7 @@ const selectedCmdIndex = ref(-1);
 const newCommandType = ref('dialogue');
 const viewMode = ref('timeline');
 const showDialogueStyle = ref(false);
-
-onMounted(() => {
-  if (!script.data) {
-    script.loadScript();
-  }
-});
+const assetPanelRef = ref(null);
 
 const selectedScene = computed(() => {
   if (!script.data || !selectedSceneId.value) return null;
@@ -410,6 +408,34 @@ function getCommandPreview(cmd) {
     case 'jump': return `→ ${cmd.target}`;
     default: return '';
   }
+}
+
+function onAssetDrop(event) {
+  const raw = event.dataTransfer.getData('application/galgame-asset');
+  if (!raw) return;
+  const { category, filename } = JSON.parse(raw);
+  const scene = selectedScene.value;
+  if (!scene) return;
+
+  if (category === 'backgrounds') {
+    let bgCmd = scene.commands.find(c => c.type === 'background');
+    if (bgCmd) {
+      bgCmd.image = filename;
+    } else {
+      scene.commands.unshift({ type: 'background', image: filename });
+    }
+  } else if (category === 'characters') {
+    const charId = filename.replace(/\.[^.]+$/, '').replace(/_\w+$/, '');
+    scene.commands.push({ type: 'character', id: charId, action: 'show', expression: 'normal' });
+  } else if (category === 'audio') {
+    let bgmCmd = scene.commands.find(c => c.type === 'bgm');
+    if (bgmCmd) {
+      bgmCmd.file = filename;
+    } else {
+      scene.commands.unshift({ type: 'bgm', file: filename });
+    }
+  }
+  script.pushState();
 }
 
 async function save() {

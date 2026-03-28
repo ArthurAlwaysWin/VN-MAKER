@@ -118,7 +118,7 @@ const bgStyle = computed(() => {
   const img = props.sceneState.bg?.image;
   if (!img) return { background: '#1a1a2e' };
   return {
-    backgroundImage: `url(game/${img})`,
+    backgroundImage: `url(asset://backgrounds/${img})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   };

@@ -27,7 +27,7 @@
     <div class="asset-grid" v-else-if="currentTab !== 'audio'">
       <div class="asset-card" v-for="file in files" :key="file.name">
         <div class="thumbnail">
-          <img :src="`/game/${currentTab}/${file.name}`" :alt="file.name" />
+          <img :src="`asset://${currentTab}/${file.name}`" :alt="file.name" />
         </div>
         <div class="filename" :title="file.name">{{ file.name }}</div>
       </div>
@@ -37,7 +37,7 @@
       <div class="list-item" v-for="file in files" :key="file.name">
         <span class="icon">🎵</span>
         <span class="filename">{{ file.name }}</span>
-        <audio controls :src="`/game/audio/${file.name}`"></audio>
+        <audio controls :src="`asset://audio/${file.name}`"></audio>
       </div>
     </div>
   </div>
@@ -57,7 +57,7 @@ const acceptTypes = computed(() => {
 async function loadFiles() {
   if (window.ipcRenderer) {
     try {
-      const dirPath = `public/game/${currentTab.value}`;
+      const dirPath = `assets/${currentTab.value}`;
       const result = await window.ipcRenderer.invoke('read-dir', dirPath);
       files.value = result.filter(f => !f.isDirectory);
     } catch (e) {

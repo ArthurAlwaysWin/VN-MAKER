@@ -55,10 +55,19 @@ export const useScriptStore = defineStore('script', () => {
     historyIndex.value = -1;
   }
 
+  // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
+  async function loadScript() {
+    console.warn('loadScript() is deprecated — use loadFromData() via project store');
+  }
+  async function saveScript() {
+    console.warn('saveScript() is deprecated — use project.saveProject()');
+  }
+
   return {
     data, isLoading, _skipWatch,
     pushState, undo, redo,
     historyIndex, history,
-    loadFromData, reset
+    loadFromData, reset,
+    loadScript, saveScript
   };
 });

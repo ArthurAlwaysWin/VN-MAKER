@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, net, dialog } from 'electron';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
-import { existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -36,15 +36,27 @@ async function addToRecent(projectPath, name) {
   await writeRecentProjects(recent);
 }
 
-// --- Atomic File Write (Windows-safe: backup → write → cleanup) ---
+// --- Path Security ---
 
-function atomicWriteSync(filePath, content) {
+function isInsideProject(fullPath) {
+  const resolved = path.resolve(fullPath);
+  const projectResolved = path.resolve(currentProjectPath);
+  return resolved.startsWith(projectResolved + path.sep) || resolved === projectResolved;
+}
+
+function sanitizeProjectName(name) {
+  return name.replace(/[<>:"|?*\\/]/g, '_').replace(/\.{2,}/g, '_').trim() || 'untitled';
+}
+
+// --- Atomic File Write (Windows-safe, async) ---
+
+async function atomicWrite(filePath, content) {
   const tmp = filePath + '.tmp';
   const bak = filePath + '.bak';
-  writeFileSync(tmp, content, 'utf-8');
-  try { renameSync(filePath, bak); } catch {}
-  renameSync(tmp, filePath);
-  try { unlinkSync(bak); } catch {}
+  await fs.writeFile(tmp, content, 'utf-8');
+  try { await fs.rename(filePath, bak); } catch {}
+  await fs.rename(tmp, filePath);
+  try { await fs.unlink(bak); } catch {}
 }
 
 // --- Default Script Template ---
@@ -68,7 +80,8 @@ function defaultScript() {
 
 ipcMain.handle('create-project', async (event, { name, author, location, resolution, template }) => {
   try {
-    const projectDir = path.join(location, name);
+    const safeName = sanitizeProjectName(name);
+    const projectDir = path.join(location, safeName);
     await fs.mkdir(projectDir, { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'backgrounds'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'characters'), { recursive: true });
@@ -195,8 +208,8 @@ ipcMain.handle('save-project', async (event, { project, script }) => {
   if (!currentProjectPath) return { success: false, error: 'No project loaded' };
   try {
     project.lastModified = new Date().toISOString();
-    atomicWriteSync(path.join(currentProjectPath, 'project.json'), JSON.stringify(project, null, 2));
-    atomicWriteSync(path.join(currentProjectPath, 'script.json'), JSON.stringify(script, null, 2));
+    await atomicWrite(path.join(currentProjectPath, 'project.json'), JSON.stringify(project, null, 2));
+    await atomicWrite(path.join(currentProjectPath, 'script.json'), JSON.stringify(script, null, 2));
     return { success: true };
   } catch (e) {
     console.error('Failed to save project:', e);
@@ -208,6 +221,7 @@ ipcMain.handle('read-dir', async (event, relativePath) => {
   try {
     if (!currentProjectPath) return [];
     const fullPath = path.join(currentProjectPath, relativePath);
+    if (!isInsideProject(fullPath)) return [];
     const files = await fs.readdir(fullPath, { withFileTypes: true });
     return files.map(f => ({ name: f.name, isDirectory: f.isDirectory() }));
   } catch (e) {
@@ -219,6 +233,7 @@ ipcMain.handle('upload-asset', async (event, { category, name, data }) => {
   try {
     if (!currentProjectPath) return false;
     const dir = path.join(currentProjectPath, 'assets', category);
+    if (!isInsideProject(dir)) return false;
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(path.join(dir, name), Buffer.from(data));
     return true;

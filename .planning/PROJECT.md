@@ -33,16 +33,26 @@
 - ✓ 素材面板（140px 侧栏，拖拽到画布） — Phase 3A
 - ✓ 自动保存（2s 防抖）+ Ctrl+S 手动保存 — Phase 3A
 - ✓ 窗口关闭保护（3 选项对话框） — Phase 3A
+- ✓ 设置页设计器：画布上拖放预制设置组件 — v0.1
+- ✓ 7 种预制设置组件（BGM/SE/文字速度/自动速度/窗口模式/对话框透明度/总音量） — v0.1
+- ✓ 引擎渲染可交互设置页面（自定义布局 + 默认回退） — v0.1
+- ✓ 设置组件属性编辑（位置/颜色/字体/大小） — v0.1
+- ✓ 关闭按钮（支持 × 图标/文字两种模式） — v0.1
+- ✓ 窗口模式三选一（窗口/全屏/无边框），radio 按钮样式 — v0.1
+- ✓ 保存按钮 💾 添加到工具栏 — v0.1
 
-### Active
+### Active — v0.2 候选需求
 
-<!-- 当前 Milestone 目标 -->
+<!-- 下一个里程碑候选，已讨论但未正式规划 -->
 
-- [ ] 修复文件对话框不弹出 bug（创建项目向导 "浏览..." 按钮无响应）
-- [ ] 修复 vite-plugin-electron Windows 热重载崩溃
-- [ ] 设置页设计器：画布上拖放预制设置组件，自定义位置/颜色/字体
-- [ ] 预制设置组件：BGM 音量、SE 音量、文字速度、自动播放速度、全屏开关、跳过已读、对话框透明度
-- [ ] 引擎渲染可交互设置页面（组件逻辑内置，开发者只定义外观布局）
+- [ ] **资源库重构**：合并角色管理到资源库，文件格式验证，自动命名（背景-1），角色表情/差分系统
+- [ ] **标题页设计器**：4 个按钮组件（开始游戏/继续游戏/设置/退出），画布 + 背景/BGM 选择
+- [ ] **游戏内容编辑器**：PPT 式页面系统 — 新建页面，添加背景/BGM/角色/对话/按钮
+- [ ] **角色表情/差分系统**：角色拥有多个差分表情，场景中可切换
+- [ ] **游戏按钮系统**：存档/读档/自动/快进/设置/返回标题，支持文字/图标/混合显示模式
+- [ ] **设置页叠加层模式**：设置页覆盖在当前游戏页面上方（z-index overlay），× 关闭
+- [ ] **存读档界面**：保存和加载共用同一 UI，点击存档槽时执行不同操作
+- [ ] **自定义字体导入**：用户非常重视，支持导入自定义字体文件到项目中使用
 
 ### Out of Scope
 
@@ -59,13 +69,17 @@
 - **编辑器架构**：component :is + keep-alive 切换标签页，无 vue-router
 - **数据格式**：文件夹项目（project.json + script.json + assets/）
 - **引擎架构**：纯 JS，事件驱动（自定义 EventEmitter），DOM 渲染
-- **已有画布基础设施**：标题页设计器 TitleDesigner.vue 可作为设置页设计器参考
-- **设置页占位**：SettingsDesigner.vue 已存在但为空壳
+- **画布基础设施**：标题页 TitleDesigner.vue + 设置页 SettingsDesigner.vue 均可作为参考
+- **设置页数据**：`ui.settingsScreen = { background, elements[] }` 存在 script.json 中
+- **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认设置页
 
 ### 已知问题
 
-- 🔴 创建项目向导中文件对话框（dialog.showOpenDialog）不弹出 — 可能是 IPC handler 中 `win` 变量未定义
-- 🟡 vite-plugin-electron Windows 热重载偶尔崩溃（taskkill 找不到进程）
+- ✅ ~~创建项目向导中文件对话框不弹出~~ — 已修复（preload.mjs 路径）
+- ✅ ~~vite-plugin-electron Windows 热重载崩溃~~ — 已修复（patch-package）
+- ✅ ~~创建项目 reactive Proxy 序列化失败~~ — 已修复（解构为纯对象）
+- ✅ ~~设置页设计器样式预览不生效~~ — 已修复（添加 :style 绑定）
+- ✅ ~~撤销/重做画布不同步~~ — 已修复（watch store data）
 
 ## Constraints
 
@@ -82,25 +96,16 @@
 | 文件夹项目格式（project.json + script.json + assets/） | 方便版本控制和素材管理 | ✓ Good |
 | asset:// 自定义协议 | 避免硬编码路径，支持任意位置 | ✓ Good |
 | 原子写入（temp → rename） | 防断电/崩溃数据丢失 | ✓ Good |
-| 设置页设计器复用画布拖拽模式 | 与标题页设计器体验一致 | — Pending |
-| 设置组件逻辑引擎预制 | 符合"不碰逻辑"核心理念 | — Pending |
+| 设置页设计器复用画布拖拽模式 | 与标题页设计器体验一致 | ✓ Good |
+| 设置组件逻辑引擎预制 | 符合"不碰逻辑"核心理念 | ✓ Good |
+| SETTING_DEFS 注册表 + 工厂函数 | 扩展新组件只需加注册表条目 | ✓ Good |
+| 窗口模式用 select 类型 + segment radio UI | 比 toggle 更灵活，支持 3 选项 | ✓ Good |
+| 关闭按钮 icon/text 双模式 | 支持 × 图标或自定义文字 | ✓ Good |
+| Vue reactive Proxy 必须解构后才能 IPC | Electron structured clone 不支持 Proxy | ✓ Good |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
-*Last updated: 2026-03-28 after initialization*
+*Last updated: 2025-03-29 — v0.1 complete + post-milestone polish*

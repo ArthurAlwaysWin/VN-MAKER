@@ -84,8 +84,15 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bug Fixes | 0/0 | Not started | - |
-| 2. Data Schema & Component Registry | 0/0 | Not started | - |
-| 3. Runtime Settings Renderer | 0/0 | Not started | - |
-| 4. Editor Canvas & Component Palette | 0/0 | Not started | - |
-| 5. Property Panel & Integration | 0/0 | Not started | - |
+| 1. Bug Fixes | ✅ | Done | 2025-03-28 |
+| 2. Data Schema & Component Registry | ✅ | Done | 2025-03-28 |
+| 3. Runtime Settings Renderer | ✅ | Done | 2025-03-28 |
+| 4. Editor Canvas & Component Palette | ✅ | Done | 2025-03-28 |
+| 5. Property Panel & Integration | ✅ | Done | 2025-03-28 |
+
+**Post-milestone polish (2025-03-29):**
+- ✅ 创建项目 reactive Proxy bug 修复
+- ✅ 设置页设计器 5 项 bug 修复（样式预览/撤销重做/自动调高等）
+- ✅ 关闭按钮移至设置组件区 + icon/text 双模式
+- ✅ 全屏开关 → 窗口模式三选一（radio 按钮样式）
+- ✅ 保存按钮 💾 添加到工具栏

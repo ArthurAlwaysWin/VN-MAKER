@@ -120,6 +120,10 @@ body {
   right: 5%;
 }
 
+.character-sprite.pos-custom {
+  bottom: auto;
+}
+
 /* Enter transitions (must come BEFORE .entered so .entered wins the cascade) */
 .character-sprite.enter-fade {
   opacity: 0;
@@ -138,10 +142,13 @@ body {
 /* .entered MUST come AFTER enter-* so opacity:1 wins over opacity:0 */
 .character-sprite.entered {
   opacity: 1;
+}
+
+.character-sprite.entered:not(.pos-custom) {
   transform: translateX(0) !important;
 }
 
-.character-sprite.pos-center.entered {
+.character-sprite.pos-center.entered:not(.pos-custom) {
   transform: translateX(-50%) !important;
 }
 
@@ -253,6 +260,18 @@ body {
 #choice-menu.hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+#choice-menu.layout-custom {
+  inset: auto;
+  display: block;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+#choice-menu.layout-custom .choice-list {
+  position: relative;
+  min-width: unset;
 }
 
 .choice-prompt {

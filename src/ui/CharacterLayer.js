@@ -32,9 +32,28 @@ export class CharacterLayer {
 
     el.src = this.basePath + data.image;
 
-    // Position
+    // Reset classes and inline positioning
     el.className = 'character-sprite';
-    el.classList.add(`pos-${data.position || 'center'}`);
+    el.style.left = '';
+    el.style.right = '';
+    el.style.top = '';
+    el.style.bottom = '';
+    el.style.transform = '';
+
+    // Positioning: prefer explicit x/y over preset position strings
+    if (data.x !== undefined || data.y !== undefined) {
+      el.classList.add('pos-custom');
+      el.style.left = `${data.x ?? 640}px`;
+      if (data.y !== undefined) {
+        el.style.bottom = 'auto';
+        el.style.top = `${data.y}px`;
+      }
+      if (data.scale) {
+        el.style.transform = `scale(${data.scale})`;
+      }
+    } else {
+      el.classList.add(`pos-${data.position || 'center'}`);
+    }
 
     // Transition in
     const transition = data.transition || 'fade';

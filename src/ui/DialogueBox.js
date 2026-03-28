@@ -56,6 +56,9 @@ export class DialogueBox {
   show(data) {
     this.el.classList.add('visible');
 
+    // Apply custom style if provided
+    this._applyStyle(data.style);
+
     // Speaker name
     if (data.speakerName) {
       this.nameEl.textContent = data.speakerName;
@@ -74,6 +77,36 @@ export class DialogueBox {
     this.indicatorEl.classList.remove('visible');
 
     this._startTypewriter();
+  }
+
+  _applyStyle(style) {
+    // Reset to CSS defaults when no custom style
+    if (!style) {
+      this.el.style.cssText = '';
+      this.textEl.style.cssText = '';
+      return;
+    }
+    const s = style;
+    if (s.x !== undefined) this.el.style.left = `${s.x}px`;
+    if (s.y !== undefined) {
+      this.el.style.bottom = 'auto';
+      this.el.style.top = `${s.y}px`;
+      this.el.style.right = 'auto';
+    }
+    if (s.width) this.el.style.width = `${s.width}px`;
+    if (s.height) {
+      this.el.style.height = `${s.height}px`;
+      this.el.style.minHeight = 'unset';
+    }
+    if (s.fontSize) this.textEl.style.fontSize = `${s.fontSize}px`;
+    if (s.fontFamily) this.textEl.style.fontFamily = s.fontFamily;
+    if (s.textColor) this.textEl.style.color = s.textColor;
+    if (s.backgroundColor) this.el.style.background = s.backgroundColor;
+    if (s.borderRadius !== undefined) this.el.style.borderRadius = `${s.borderRadius}px`;
+    if (s.padding) {
+      const p = Array.isArray(s.padding) ? s.padding : [s.padding, s.padding, s.padding, s.padding];
+      this.el.style.padding = p.map(v => `${v}px`).join(' ');
+    }
   }
 
   hide() {

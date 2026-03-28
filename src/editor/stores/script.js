@@ -55,6 +55,22 @@ export const useScriptStore = defineStore('script', () => {
     historyIndex.value = -1;
   }
 
+  /** Get or initialize the ui.settingsScreen section */
+  function getSettingsScreen() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.settingsScreen ??= { background: null, elements: [] };
+    return data.value.ui.settingsScreen;
+  }
+
+  /** Replace the entire settingsScreen and push undo state */
+  function updateSettingsScreen(settingsScreen) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.settingsScreen = settingsScreen;
+    pushState();
+  }
+
   // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
   async function loadScript() {
     console.warn('loadScript() is deprecated — use loadFromData() via project store');
@@ -68,6 +84,7 @@ export const useScriptStore = defineStore('script', () => {
     pushState, undo, redo,
     historyIndex, history,
     loadFromData, reset,
+    getSettingsScreen, updateSettingsScreen,
     loadScript, saveScript
   };
 });

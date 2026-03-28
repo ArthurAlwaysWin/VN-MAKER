@@ -9,8 +9,11 @@ export class ConfigManager {
     this.defaults = {
       bgmVolume: 0.5,
       seVolume: 0.8,
-      textSpeed: 30,   // ms per character
-      autoSpeed: 2000,  // ms wait after line completes in auto mode
+      textSpeed: 30,        // ms per character
+      autoSpeed: 2000,      // ms wait after line completes in auto mode
+      fullscreen: false,
+      dialogueOpacity: 0.8, // 0.1–1, dialogue box background alpha
+      masterVolume: 1,      // 0–1, scales bgmVolume & seVolume proportionally
     };
 
     this.config = { ...this.defaults };

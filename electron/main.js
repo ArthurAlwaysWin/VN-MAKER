@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, net, dialog } from 'electron';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
-import { existsSync, writeFileSync, renameSync } from 'node:fs';
+import { existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,7 +44,7 @@ function atomicWriteSync(filePath, content) {
   writeFileSync(tmp, content, 'utf-8');
   try { renameSync(filePath, bak); } catch {}
   renameSync(tmp, filePath);
-  try { require('node:fs').unlinkSync(bak); } catch {}
+  try { unlinkSync(bak); } catch {}
 }
 
 // --- Default Script Template ---

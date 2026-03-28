@@ -411,28 +411,34 @@ function getCommandPreview(cmd) {
 }
 
 function onAssetDrop(event) {
+  if (!selectedScene.value) return;
   const raw = event.dataTransfer.getData('application/galgame-asset');
   if (!raw) return;
-  const { category, filename } = JSON.parse(raw);
+  let asset;
+  try {
+    asset = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  const { category, filename } = asset;
   const scene = selectedScene.value;
-  if (!scene) return;
 
   if (category === 'backgrounds') {
-    let bgCmd = scene.commands.find(c => c.type === 'background');
+    let bgCmd = scene.commands.find(c => c.type === 'set_background');
     if (bgCmd) {
       bgCmd.image = filename;
     } else {
-      scene.commands.unshift({ type: 'background', image: filename });
+      scene.commands.unshift({ type: 'set_background', image: filename });
     }
   } else if (category === 'characters') {
     const charId = filename.replace(/\.[^.]+$/, '').replace(/_\w+$/, '');
-    scene.commands.push({ type: 'character', id: charId, action: 'show', expression: 'normal' });
+    scene.commands.push({ type: 'show_character', id: charId, expression: 'normal', position: 'center' });
   } else if (category === 'audio') {
-    let bgmCmd = scene.commands.find(c => c.type === 'bgm');
+    let bgmCmd = scene.commands.find(c => c.type === 'play_bgm');
     if (bgmCmd) {
       bgmCmd.file = filename;
     } else {
-      scene.commands.unshift({ type: 'bgm', file: filename });
+      scene.commands.unshift({ type: 'play_bgm', file: filename });
     }
   }
   script.pushState();

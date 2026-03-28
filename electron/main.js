@@ -261,9 +261,27 @@ ipcMain.handle('close-project', () => {
   currentProjectPath = null;
 });
 
-ipcMain.handle('set-fullscreen', (event, isFullscreen) => {
+ipcMain.handle('set-window-mode', (event, mode) => {
   const w = getMainWindow();
-  if (w) w.setFullScreen(!!isFullscreen);
+  if (!w) return;
+  switch (mode) {
+    case 'fullscreen':
+      w.setFullScreen(true);
+      break;
+    case 'borderless': {
+      w.setFullScreen(false);
+      const { screen } = require('electron');
+      const bounds = screen.getPrimaryDisplay().bounds;
+      w.setBounds(bounds);
+      break;
+    }
+    case 'windowed':
+    default:
+      if (w.isFullScreen()) w.setFullScreen(false);
+      w.setSize(1280, 720);
+      w.center();
+      break;
+  }
 });
 
 ipcMain.handle('show-save-dialog', async () => {

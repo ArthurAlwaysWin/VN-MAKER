@@ -12,12 +12,12 @@
           @dragstart="onDragStart($event, 'setting', comp)">
           {{ comp.icon }} {{ comp.label }}
         </div>
+        <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'button')">✕ 关闭按钮</div>
       </div>
       <div class="palette-section">
         <div class="palette-header">🎨 装饰元素</div>
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'label')">🏷️ 文字标签</div>
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'image')">🖼️ 装饰图片</div>
-        <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'button')">✕ 关闭按钮</div>
       </div>
     </div>
 
@@ -61,6 +61,10 @@
                 :style="{ background: elem.style?.trackColor || undefined }">
                 <div class="elem-slider-fill" :style="{ background: elem.style?.fillColor || '#ff6b9d' }"></div>
               </div>
+              <div v-else-if="isSelect(elem.settingType)" class="elem-select-preview">
+                <span class="elem-select-text">{{ selectDefaultLabel(elem.settingType) }}</span>
+                <span class="elem-select-arrow">▾</span>
+              </div>
               <div v-else class="elem-toggle-preview"
                 :style="{ background: elem.style?.fillColor ? undefined : undefined }"></div>
             </div>
@@ -80,7 +84,8 @@
             <!-- Button preview -->
             <div v-else-if="elem.type === 'button'" class="elem-preview elem-button"
               :style="buttonPreviewStyle(elem)">
-              {{ elem.label || '返回' }}
+              <span v-if="elem.displayMode === 'icon'" class="elem-close-icon">×</span>
+              <span v-else>{{ elem.label || '返回' }}</span>
             </div>
           </DraggableElement>
         </div>
@@ -226,6 +231,13 @@
           <div class="inspector-section">
             <div class="section-title">🏷️ 内容</div>
             <div class="form-row">
+              <label>显示</label>
+              <select :value="selectedElement.displayMode || 'text'" @change="setDirectSelect('displayMode', $event)">
+                <option value="icon">× 图标</option>
+                <option value="text">文字</option>
+              </select>
+            </div>
+            <div class="form-row" v-if="selectedElement.displayMode !== 'icon'">
               <label>文字</label>
               <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
             </div>
@@ -283,7 +295,7 @@ const scriptStore = useScriptStore();
 const settingComponents = Object.entries(SETTING_DEFS).map(([key, def]) => ({
   settingType: key,
   label: def.label,
-  icon: def.type === 'toggle' ? '🔘' : '🎚️',
+  icon: def.type === 'toggle' ? '🔘' : def.type === 'select' ? '📋' : '🎚️',
 }));
 
 // ─── Layout state ────────────────────────────────────────
@@ -470,6 +482,12 @@ function setStyleSelect(key, e) {
   saveLayout();
 }
 
+function setDirectSelect(key, e) {
+  if (!selectedElement.value) return;
+  selectedElement.value[key] = e.target.value;
+  saveLayout();
+}
+
 function rgbaToHex(rgba) {
   if (!rgba) return '#262626';
   if (rgba.startsWith('#')) return rgba.length <= 7 ? rgba : rgba.slice(0, 7);
@@ -536,6 +554,17 @@ function settingLabel(settingType) {
 
 function isSlider(settingType) {
   return SETTING_DEFS[settingType]?.type === 'slider';
+}
+
+function isSelect(settingType) {
+  return SETTING_DEFS[settingType]?.type === 'select';
+}
+
+function selectDefaultLabel(settingType) {
+  const def = SETTING_DEFS[settingType];
+  if (!def?.options) return '';
+  const defaultOpt = def.options.find(o => o.value === def.default);
+  return defaultOpt?.label || def.options[0]?.label || '';
 }
 
 function typeLabel(type) {
@@ -782,6 +811,38 @@ function resolveAsset(path) {
   height: 14px;
   background: #fff;
   border-radius: 50%;
+}
+
+.elem-select-preview {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.elem-select-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elem-select-arrow {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.elem-close-icon {
+  font-size: 1.5em;
+  line-height: 1;
+  font-weight: 300;
 }
 
 .elem-label-text {

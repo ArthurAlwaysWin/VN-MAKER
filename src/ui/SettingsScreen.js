@@ -93,6 +93,8 @@ export class SettingsScreen {
       this._buildSlider(wrapper, def, cfg, style);
     } else if (def.type === 'toggle') {
       this._buildToggle(wrapper, def, cfg, style);
+    } else if (def.type === 'select') {
+      this._buildSelect(wrapper, def, cfg, style);
     }
 
     this.el.appendChild(wrapper);
@@ -152,6 +154,24 @@ export class SettingsScreen {
     wrapper.appendChild(toggle);
   }
 
+  _buildSelect(wrapper, def, cfg, style) {
+    const select = document.createElement('select');
+    select.classList.add('sc-select');
+    for (const opt of def.options) {
+      const optEl = document.createElement('option');
+      optEl.value = opt.value;
+      optEl.textContent = opt.label;
+      select.appendChild(optEl);
+    }
+    select.value = cfg.get(def.settingKey) || def.default;
+    this._applyTextStyle(select, style.labelColor, style.fontSize, style.fontFamily);
+    select.addEventListener('change', () => {
+      cfg.set(def.settingKey, select.value);
+      this._notifyChange();
+    });
+    wrapper.appendChild(select);
+  }
+
   _renderLabelElem(elem) {
     const style = { ...DEFAULT_LABEL_STYLE, ...(elem.style || {}) };
     const wrapper = this._positioned(elem);
@@ -187,7 +207,12 @@ export class SettingsScreen {
     wrapper.classList.add('sc-button');
 
     const btn = document.createElement('button');
-    btn.textContent = elem.label || '返回';
+    if (elem.displayMode === 'icon') {
+      btn.textContent = '×';
+      btn.classList.add('sc-close-icon');
+    } else {
+      btn.textContent = elem.label || '返回';
+    }
     btn.style.width = '100%';
     btn.style.height = '100%';
 
@@ -284,12 +309,13 @@ export class SettingsScreen {
           <input type="range" class="settings-slider" id="s-dlg-opacity" min="10" max="100" value="${Math.round(cfg.get('dialogueOpacity') * 100)}" />
           <span class="settings-value" id="s-dlg-val">${Math.round(cfg.get('dialogueOpacity') * 100)}%</span>
         </div>
-        <div class="settings-item settings-item-toggle">
-          <span class="settings-label">全屏模式</span>
-          <label class="sc-toggle">
-            <input type="checkbox" id="s-fullscreen" ${cfg.get('fullscreen') ? 'checked' : ''} />
-            <span class="sc-toggle-track"></span>
-          </label>
+        <div class="settings-item">
+          <span class="settings-label">窗口模式</span>
+          <select class="sc-select" id="s-window-mode">
+            <option value="windowed" ${cfg.get('windowMode') === 'windowed' || !cfg.get('windowMode') ? 'selected' : ''}>窗口</option>
+            <option value="fullscreen" ${cfg.get('windowMode') === 'fullscreen' ? 'selected' : ''}>全屏</option>
+            <option value="borderless" ${cfg.get('windowMode') === 'borderless' ? 'selected' : ''}>无边框窗口</option>
+          </select>
         </div>
       </div>
     `;
@@ -332,9 +358,9 @@ export class SettingsScreen {
       return `${Math.round(v)}%`;
     });
 
-    const fsToggle = this.el.querySelector('#s-fullscreen');
-    fsToggle.addEventListener('change', () => {
-      cfg.set('fullscreen', fsToggle.checked);
+    const wmSelect = this.el.querySelector('#s-window-mode');
+    wmSelect.addEventListener('change', () => {
+      cfg.set('windowMode', wmSelect.value);
       this._notifyChange();
     });
   }

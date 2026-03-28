@@ -11,7 +11,8 @@ export class ConfigManager {
       seVolume: 0.8,
       textSpeed: 30,        // ms per character
       autoSpeed: 2000,      // ms wait after line completes in auto mode
-      fullscreen: false,
+      fullscreen: false,        // deprecated, kept for backward compat
+      windowMode: 'windowed',   // 'windowed' | 'fullscreen' | 'borderless'
       dialogueOpacity: 0.8, // 0.1–1, dialogue box background alpha
       masterVolume: 1,      // 0–1, scales bgmVolume & seVolume proportionally
     };

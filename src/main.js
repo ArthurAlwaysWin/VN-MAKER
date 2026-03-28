@@ -79,9 +79,10 @@ function applyConfig() {
     dlgEl.style.setProperty('--dialogue-opacity', config.get('dialogueOpacity'));
   }
 
-  // Fullscreen toggle (Electron only)
+  // Window mode (Electron only)
   if (window.ipcRenderer) {
-    window.ipcRenderer.invoke('set-fullscreen', config.get('fullscreen')).catch(() => {});
+    const mode = config.get('windowMode') || (config.get('fullscreen') ? 'fullscreen' : 'windowed');
+    window.ipcRenderer.invoke('set-window-mode', mode).catch(() => {});
   }
 }
 applyConfig();

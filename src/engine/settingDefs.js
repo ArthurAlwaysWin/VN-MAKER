@@ -5,7 +5,7 @@
  * The editor palette, canvas renderer, and runtime renderer all read from this registry.
  *
  * Each entry describes:
- *  - type:       'slider' | 'toggle' — determines the UI control rendered by the engine
+ *  - type:       'slider' | 'toggle' | 'select' — determines the UI control rendered by the engine
  *  - settingKey: ConfigManager key this component reads/writes
  *  - label:      default display label (user can override per-element)
  *  - min/max/step/default: value constraints (sliders only)
@@ -49,11 +49,16 @@ export const SETTING_DEFS = {
     step: 100,
     default: 2000,
   },
-  'fullscreen-toggle': {
-    type: 'toggle',
-    settingKey: 'fullscreen',
-    label: '全屏模式',
-    default: false,
+  'window-mode': {
+    type: 'select',
+    settingKey: 'windowMode',
+    label: '窗口模式',
+    options: [
+      { value: 'windowed', label: '窗口' },
+      { value: 'fullscreen', label: '全屏' },
+      { value: 'borderless', label: '无边框窗口' },
+    ],
+    default: 'windowed',
   },
   'dialogue-opacity': {
     type: 'slider',
@@ -204,8 +209,9 @@ export function createButtonElement(x = 1180, y = 50) {
     action: 'close',
     x,
     y,
-    width: 80,
-    height: 40,
+    width: 48,
+    height: 48,
+    displayMode: 'icon',  // 'icon' = × cross, 'text' = custom label
     label: '返回',
     style: { ...DEFAULT_BUTTON_STYLE },
   };

@@ -53,13 +53,16 @@
             @move="onElementMove(elem, $event)"
             @resize="onElementResize(elem, $event)">
             <!-- Setting preview -->
-            <div v-if="elem.type === 'setting'" class="elem-preview elem-setting">
+            <div v-if="elem.type === 'setting'" class="elem-preview elem-setting"
+              :style="settingPreviewStyle(elem)">
               <span class="elem-icon">{{ settingIcon(elem.settingType) }}</span>
               <span class="elem-label">{{ elem.label || settingLabel(elem.settingType) }}</span>
-              <div v-if="isSlider(elem.settingType)" class="elem-slider-track">
+              <div v-if="isSlider(elem.settingType)" class="elem-slider-track"
+                :style="{ background: elem.style?.trackColor || undefined }">
                 <div class="elem-slider-fill" :style="{ background: elem.style?.fillColor || '#ff6b9d' }"></div>
               </div>
-              <div v-else class="elem-toggle-preview"></div>
+              <div v-else class="elem-toggle-preview"
+                :style="{ background: elem.style?.fillColor ? undefined : undefined }"></div>
             </div>
 
             <!-- Label preview -->
@@ -325,6 +328,8 @@ function updateScale() {
 }
 
 // ─── Lifecycle ───────────────────────────────────────────
+let _syncing = false;
+
 onMounted(() => {
   const screen = scriptStore.getSettingsScreen();
   if (screen) {
@@ -342,6 +347,21 @@ onBeforeUnmount(() => {
   resizeObs?.disconnect();
   document.removeEventListener('keydown', onKeyDown);
 });
+
+// Sync layout from store on undo/redo
+watch(
+  () => scriptStore.data?.ui?.settingsScreen,
+  (newScreen) => {
+    if (_syncing || !newScreen) return;
+    layout.background = newScreen.background || null;
+    layout.elements = (newScreen.elements || []).map(e => ({ ...e, style: { ...(e.style || {}) } }));
+    // Clear selection if the selected element no longer exists
+    if (selectedId.value && !layout.elements.find(e => e.id === selectedId.value)) {
+      selectedId.value = null;
+    }
+  },
+  { deep: true }
+);
 
 // ─── Drag & Drop ─────────────────────────────────────────
 function onDragStart(e, type, comp) {
@@ -426,6 +446,13 @@ function setStyleProp(key, e) {
   if (!selectedElement.value) return;
   selectedElement.value.style ??= {};
   selectedElement.value.style[key] = Number(e.target.value);
+  // Auto-adjust height when fontSize increases beyond current bounds
+  if (key === 'fontSize' && selectedElement.value.height != null) {
+    const minH = Math.max(40, Math.round(Number(e.target.value) * 2.5));
+    if (selectedElement.value.height < minH) {
+      selectedElement.value.height = minH;
+    }
+  }
   saveLayout();
 }
 
@@ -485,10 +512,12 @@ async function pickImage() {
 
 // ─── Save ────────────────────────────────────────────────
 function saveLayout() {
+  _syncing = true;
   scriptStore.updateSettingsScreen({
     background: layout.background,
     elements: layout.elements.map(e => ({ ...e, style: { ...(e.style || {}) } })),
   });
+  nextTick(() => { _syncing = false; });
 }
 
 // ─── Preview helpers ─────────────────────────────────────
@@ -528,6 +557,15 @@ function buttonPreviewStyle(elem) {
   if (elem.style?.textColor) s.color = elem.style.textColor;
   if (elem.style?.borderRadius != null) s.borderRadius = elem.style.borderRadius + 'px';
   if (elem.style?.fontSize) s.fontSize = elem.style.fontSize + 'px';
+  if (elem.style?.fontFamily) s.fontFamily = elem.style.fontFamily;
+  return s;
+}
+
+function settingPreviewStyle(elem) {
+  const s = {};
+  if (elem.style?.fontSize) s.fontSize = elem.style.fontSize + 'px';
+  if (elem.style?.fontFamily) s.fontFamily = elem.style.fontFamily;
+  if (elem.style?.labelColor) s.color = elem.style.labelColor;
   return s;
 }
 

@@ -8,14 +8,14 @@
 |------|------|------|
 | Phase 1 | 运行时引擎 MVP（脚本引擎、对话、角色、选项、存档等） | ✅ 完成 |
 | Phase 2 | PPT式画布编辑器（拖拽定位、自由布局、画布预览） | ✅ 完成 |
-| **Phase 3A** | **项目系统 + 编辑器工作流重构** | 🚧 进行中 |
-| Phase 3B | 设置页设计器 + 桌面应用导出 | 📋 计划中 |
+| Phase 3A | 项目系统 + 编辑器工作流重构 | ✅ 完成 |
+| **Phase 3B** | **设置页设计器 + 桌面应用导出** | 📋 计划中 |
 
 ## 📖 指导文档
 
 > **⚠️ 项目以下列文档为准，其他文档仅供参考：**
 
-- **[Phase 3A 设计规格](docs/superpowers/specs/2025-06-25-phase-3a-project-system-design.md)** — 当前阶段的权威指导文件
+- **[Phase 3A 设计规格](docs/superpowers/specs/2025-06-25-phase-3a-project-system-design.md)** — Phase 3A 完整设计文档
 - **[脚本格式参考](docs/script-format.md)** — script.json 技术规格
 
 ## 快速开始
@@ -33,8 +33,8 @@ npm run dev
 | 组件 | 技术 |
 |------|------|
 | 游戏引擎 | 纯 JavaScript（ES Modules），DOM 渲染 |
-| 编辑器 | Vue 3 + Pinia |
-| 桌面壳 | Electron |
+| 编辑器 | Vue 3 + Pinia（无 vue-router，标签页切换） |
+| 桌面壳 | Electron（IPC 项目管理 + asset:// 协议） |
 | 构建工具 | Vite + vite-plugin-electron |
 | 样式 | 纯 CSS，暗色主题 |
 
@@ -59,3 +59,14 @@ npm run dev
 - 标题页设计：自定义元素拖拽布局
 - 角色/素材管理：可视化管理界面
 - 撤销/重做 + 中文界面
+
+### 项目系统（Phase 3A）
+- **欢迎界面**：Figma 风格居中布局，最近项目列表
+- **项目创建**：首次使用 4 步向导，后续快速创建（名称+位置）
+- **文件夹项目**：project.json + script.json + assets/ 目录结构
+- **6 标签页导航**：游戏内容、标题页、设置页、素材库、角色、项目设置
+- **素材面板**：140px 侧栏，拖拽素材到画布自动创建指令
+- **自动保存**：2 秒防抖，脏标记（●），原子写入（temp+rename）
+- **窗口关闭保护**：3 选项对话框（保存/不保存/取消）
+- **键盘快捷键**：Ctrl+Z 撤销、Ctrl+Y 重做、Ctrl+S 保存
+- **安全**：路径遍历防护、CSS 消毒、项目名消毒、保存竞态锁

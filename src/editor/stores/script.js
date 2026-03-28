@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 
 export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
-  const isLoading = ref(true);
+  const isLoading = ref(false);
+  const _skipWatch = ref(false);
 
-  // History tracking for Undo/Redo
+  // Undo/Redo history
   const history = ref([]);
   const historyIndex = ref(-1);
 
@@ -17,7 +18,6 @@ export const useScriptStore = defineStore('script', () => {
     }
     history.value.push(snapshot);
     historyIndex.value++;
-    
     if (history.value.length > 50) {
       history.value.shift();
       historyIndex.value--;
@@ -26,45 +26,39 @@ export const useScriptStore = defineStore('script', () => {
 
   function undo() {
     if (historyIndex.value > 0) {
+      _skipWatch.value = true;
       historyIndex.value--;
       data.value = JSON.parse(JSON.stringify(history.value[historyIndex.value]));
-      saveScript();
+      nextTick(() => { _skipWatch.value = false; });
     }
   }
 
   function redo() {
     if (historyIndex.value < history.value.length - 1) {
+      _skipWatch.value = true;
       historyIndex.value++;
       data.value = JSON.parse(JSON.stringify(history.value[historyIndex.value]));
-      saveScript();
+      nextTick(() => { _skipWatch.value = false; });
     }
   }
 
-  async function loadScript() {
-    isLoading.value = true;
-    if (window.ipcRenderer) {
-      const script = await window.ipcRenderer.invoke('read-script');
-      if (script) {
-        data.value = script;
-        history.value = [];
-        historyIndex.value = -1;
-        pushState(); // Initial state
-      }
-    }
-    isLoading.value = false;
+  function loadFromData(scriptData) {
+    data.value = scriptData;
+    history.value = [];
+    historyIndex.value = -1;
+    pushState();
   }
 
-  async function saveScript() {
-    if (window.ipcRenderer && data.value) {
-      const success = await window.ipcRenderer.invoke('save-script', JSON.parse(JSON.stringify(data.value)));
-      if (success) {
-        console.log('Script saved successfully');
-      }
-    }
+  function reset() {
+    data.value = null;
+    history.value = [];
+    historyIndex.value = -1;
   }
 
-  return { 
-    data, isLoading, loadScript, saveScript, 
-    pushState, undo, redo, historyIndex, history 
+  return {
+    data, isLoading, _skipWatch,
+    pushState, undo, redo,
+    historyIndex, history,
+    loadFromData, reset
   };
 });

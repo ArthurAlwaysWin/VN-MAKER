@@ -1,19 +1,718 @@
 <template>
-  <div class="placeholder">
-    <div class="placeholder-content">
-      <div class="placeholder-icon">⚙️</div>
-      <h3>设置页设计器</h3>
-      <p>即将在 Phase 3B 中推出</p>
-      <p class="sub">你将可以自定义游戏设置页的布局、组件样式和功能选项。</p>
+  <div class="settings-designer">
+    <!-- ─── 左：组件面板 ─── -->
+    <div class="component-palette">
+      <div class="palette-section">
+        <div class="palette-header">⚙️ 设置组件</div>
+        <div
+          v-for="comp in settingComponents"
+          :key="comp.settingType"
+          class="palette-item"
+          draggable="true"
+          @dragstart="onDragStart($event, 'setting', comp)">
+          {{ comp.icon }} {{ comp.label }}
+        </div>
+      </div>
+      <div class="palette-section">
+        <div class="palette-header">🎨 装饰元素</div>
+        <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'label')">🏷️ 文字标签</div>
+        <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'image')">🖼️ 装饰图片</div>
+        <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'button')">✕ 关闭按钮</div>
+      </div>
+    </div>
+
+    <!-- ─── 中：画布 ─── -->
+    <div class="designer-workspace">
+      <div class="toolbar">
+        <h3>设置页设计</h3>
+        <div class="toolbar-actions">
+          <button class="toolbar-btn" @click="pickBackground">🖼️ 背景</button>
+          <button class="toolbar-btn" v-if="layout.background" @click="clearBackground">✕ 清除背景</button>
+          <span class="toolbar-sep"></span>
+          <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected">🗑 删除</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper" ref="wrapperRef" @click="deselect" @dragover.prevent @drop="onCanvasDrop">
+        <div class="canvas-artboard" ref="artboardRef" :style="artboardStyle">
+          <!-- Background -->
+          <div class="canvas-bg" :style="bgStyle"></div>
+
+          <!-- Elements -->
+          <DraggableElement
+            v-for="elem in layout.elements"
+            :key="elem.id"
+            :x="elem.x"
+            :y="elem.y"
+            :width="elem.width || null"
+            :height="elem.height || null"
+            :is-selected="selectedId === elem.id"
+            :resizable="elem.type !== 'label'"
+            :canvas-scale="canvasScale"
+            @select="selectedId = elem.id"
+            @move="onElementMove(elem, $event)"
+            @resize="onElementResize(elem, $event)">
+            <!-- Setting preview -->
+            <div v-if="elem.type === 'setting'" class="elem-preview elem-setting">
+              <span class="elem-icon">{{ settingIcon(elem.settingType) }}</span>
+              <span class="elem-label">{{ elem.label || settingLabel(elem.settingType) }}</span>
+              <div v-if="isSlider(elem.settingType)" class="elem-slider-track">
+                <div class="elem-slider-fill" :style="{ background: elem.style?.fillColor || '#ff6b9d' }"></div>
+              </div>
+              <div v-else class="elem-toggle-preview"></div>
+            </div>
+
+            <!-- Label preview -->
+            <div v-else-if="elem.type === 'label'" class="elem-preview elem-label-text"
+              :style="labelPreviewStyle(elem)">
+              {{ elem.text || '标题' }}
+            </div>
+
+            <!-- Image preview -->
+            <div v-else-if="elem.type === 'image'" class="elem-preview elem-image">
+              <img v-if="resolveAsset(elem.src)" :src="resolveAsset(elem.src)" />
+              <span v-else class="elem-placeholder">🖼️</span>
+            </div>
+
+            <!-- Button preview -->
+            <div v-else-if="elem.type === 'button'" class="elem-preview elem-button"
+              :style="buttonPreviewStyle(elem)">
+              {{ elem.label || '返回' }}
+            </div>
+          </DraggableElement>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 右：属性面板（Phase 5 扩展，此处仅显示选中概览）─── -->
+    <div class="inspector" v-if="selectedElement">
+      <div class="inspector-header">
+        <span class="inspector-title">属性</span>
+        <span class="elem-type-badge">{{ typeLabel(selectedElement.type) }}</span>
+      </div>
+      <div class="inspector-body">
+        <div class="form-row">
+          <label>X</label>
+          <input type="number" :value="selectedElement.x" @input="setProp('x', $event)" />
+        </div>
+        <div class="form-row">
+          <label>Y</label>
+          <input type="number" :value="selectedElement.y" @input="setProp('y', $event)" />
+        </div>
+        <template v-if="selectedElement.width != null">
+          <div class="form-row">
+            <label>宽</label>
+            <input type="number" :value="selectedElement.width" @input="setProp('width', $event)" />
+          </div>
+          <div class="form-row">
+            <label>高</label>
+            <input type="number" :value="selectedElement.height" @input="setProp('height', $event)" />
+          </div>
+        </template>
+        <template v-if="selectedElement.type === 'setting'">
+          <div class="form-row">
+            <label>标签</label>
+            <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
+          </div>
+        </template>
+        <template v-if="selectedElement.type === 'label'">
+          <div class="form-row">
+            <label>文本</label>
+            <input type="text" :value="selectedElement.text" @input="setTextProp('text', $event)" />
+          </div>
+          <div class="form-row">
+            <label>字号</label>
+            <input type="number" :value="selectedElement.style?.fontSize || 24" @input="setStyleProp('fontSize', $event)" />
+          </div>
+        </template>
+        <template v-if="selectedElement.type === 'image'">
+          <div class="form-row">
+            <label>图片</label>
+            <button class="pick-btn" @click="pickImage">选择…</button>
+          </div>
+        </template>
+        <template v-if="selectedElement.type === 'button'">
+          <div class="form-row">
+            <label>文字</label>
+            <input type="text" :value="selectedElement.label" @input="setTextProp('label', $event)" />
+          </div>
+        </template>
+      </div>
     </div>
   </div>
 </template>
 
+<script setup>
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { useScriptStore } from '../stores/script.js';
+import DraggableElement from '../components/canvas/DraggableElement.vue';
+import {
+  SETTING_DEFS,
+  createSettingElement,
+  createLabelElement,
+  createImageElement,
+  createButtonElement,
+} from '../../engine/settingDefs.js';
+
+const scriptStore = useScriptStore();
+
+// ─── Palette data ────────────────────────────────────────
+const settingComponents = Object.entries(SETTING_DEFS).map(([key, def]) => ({
+  settingType: key,
+  label: def.label,
+  icon: def.type === 'toggle' ? '🔘' : '🎚️',
+}));
+
+// ─── Layout state ────────────────────────────────────────
+const layout = reactive({ background: null, elements: [] });
+const selectedId = ref(null);
+
+const selectedElement = computed(() => {
+  if (!selectedId.value) return null;
+  return layout.elements.find(e => e.id === selectedId.value) || null;
+});
+
+// ─── Canvas scaling ──────────────────────────────────────
+const GAME_W = 1280;
+const GAME_H = 720;
+const canvasScale = ref(1);
+const wrapperRef = ref(null);
+const artboardRef = ref(null);
+let resizeObs = null;
+
+const artboardStyle = computed(() => ({
+  transform: `scale(${canvasScale.value})`,
+  transformOrigin: 'top center',
+}));
+
+const bgStyle = computed(() => {
+  if (!layout.background) return {};
+  const resolved = resolveAsset(layout.background);
+  if (!resolved) return {};
+  return {
+    backgroundImage: `url("${resolved}")`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+});
+
+function updateScale() {
+  if (!wrapperRef.value) return;
+  const rect = wrapperRef.value.getBoundingClientRect();
+  const sw = (rect.width - 40) / GAME_W;
+  const sh = (rect.height - 40) / GAME_H;
+  canvasScale.value = Math.min(sw, sh, 1);
+}
+
+// ─── Lifecycle ───────────────────────────────────────────
+onMounted(() => {
+  const screen = scriptStore.getSettingsScreen();
+  if (screen) {
+    layout.background = screen.background || null;
+    layout.elements = (screen.elements || []).map(e => ({ ...e, style: { ...(e.style || {}) } }));
+  }
+
+  nextTick(updateScale);
+  resizeObs = new ResizeObserver(updateScale);
+  if (wrapperRef.value) resizeObs.observe(wrapperRef.value);
+  document.addEventListener('keydown', onKeyDown);
+});
+
+onBeforeUnmount(() => {
+  resizeObs?.disconnect();
+  document.removeEventListener('keydown', onKeyDown);
+});
+
+// ─── Drag & Drop ─────────────────────────────────────────
+function onDragStart(e, type, comp) {
+  e.dataTransfer.setData('application/settings-elem', JSON.stringify({ type, comp }));
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+function onCanvasDrop(e) {
+  e.preventDefault();
+  const raw = e.dataTransfer.getData('application/settings-elem');
+  if (!raw) return;
+
+  const { type, comp } = JSON.parse(raw);
+  const rect = artboardRef.value.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) / canvasScale.value);
+  const y = Math.round((e.clientY - rect.top) / canvasScale.value);
+
+  let elem;
+  switch (type) {
+    case 'setting': elem = createSettingElement(comp.settingType, x, y); break;
+    case 'label':   elem = createLabelElement('标题', x, y); break;
+    case 'image':   elem = createImageElement('', x, y); break;
+    case 'button':  elem = createButtonElement(x, y); break;
+    default: return;
+  }
+
+  layout.elements.push(elem);
+  selectedId.value = elem.id;
+  saveLayout();
+}
+
+// ─── Element manipulation ────────────────────────────────
+function onElementMove(elem, { x, y }) {
+  elem.x = x;
+  elem.y = y;
+  saveLayout();
+}
+
+function onElementResize(elem, { width, height }) {
+  elem.width = width;
+  elem.height = height;
+  saveLayout();
+}
+
+function deleteSelected() {
+  if (!selectedId.value) return;
+  const idx = layout.elements.findIndex(e => e.id === selectedId.value);
+  if (idx >= 0) {
+    layout.elements.splice(idx, 1);
+    selectedId.value = null;
+    saveLayout();
+  }
+}
+
+function deselect() {
+  selectedId.value = null;
+}
+
+function onKeyDown(e) {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedId.value && document.activeElement?.tagName !== 'INPUT') {
+      e.preventDefault();
+      deleteSelected();
+    }
+  }
+}
+
+// ─── Inspector setters ───────────────────────────────────
+function setProp(key, e) {
+  if (!selectedElement.value) return;
+  selectedElement.value[key] = Number(e.target.value);
+  saveLayout();
+}
+
+function setTextProp(key, e) {
+  if (!selectedElement.value) return;
+  selectedElement.value[key] = e.target.value;
+  saveLayout();
+}
+
+function setStyleProp(key, e) {
+  if (!selectedElement.value) return;
+  selectedElement.value.style ??= {};
+  selectedElement.value.style[key] = Number(e.target.value);
+  saveLayout();
+}
+
+// ─── Background ──────────────────────────────────────────
+async function pickBackground() {
+  if (!window.ipcRenderer) return;
+  try {
+    const result = await window.ipcRenderer.invoke('select-asset', { types: ['backgrounds'] });
+    if (result) {
+      layout.background = result;
+      saveLayout();
+    }
+  } catch { /* user cancelled */ }
+}
+
+function clearBackground() {
+  layout.background = null;
+  saveLayout();
+}
+
+// ─── Image picking ───────────────────────────────────────
+async function pickImage() {
+  if (!window.ipcRenderer || !selectedElement.value) return;
+  try {
+    const result = await window.ipcRenderer.invoke('select-asset', { types: ['backgrounds'] });
+    if (result) {
+      selectedElement.value.src = result;
+      saveLayout();
+    }
+  } catch { /* user cancelled */ }
+}
+
+// ─── Save ────────────────────────────────────────────────
+function saveLayout() {
+  scriptStore.updateSettingsScreen({
+    background: layout.background,
+    elements: layout.elements.map(e => ({ ...e, style: { ...(e.style || {}) } })),
+  });
+}
+
+// ─── Preview helpers ─────────────────────────────────────
+function settingIcon(settingType) {
+  const iconMap = {
+    'bgm-volume': '🎵', 'se-volume': '🔊', 'text-speed': '⚡',
+    'auto-speed': '⏱️', 'fullscreen-toggle': '🖥️',
+    'dialogue-opacity': '👁️', 'master-volume': '🔉',
+  };
+  return iconMap[settingType] || '⚙️';
+}
+
+function settingLabel(settingType) {
+  return SETTING_DEFS[settingType]?.label || settingType;
+}
+
+function isSlider(settingType) {
+  return SETTING_DEFS[settingType]?.type === 'slider';
+}
+
+function typeLabel(type) {
+  const map = { setting: '设置', label: '标签', image: '图片', button: '按钮' };
+  return map[type] || type;
+}
+
+function labelPreviewStyle(elem) {
+  const s = {};
+  if (elem.style?.color) s.color = elem.style.color;
+  if (elem.style?.fontSize) s.fontSize = elem.style.fontSize + 'px';
+  if (elem.style?.fontFamily) s.fontFamily = elem.style.fontFamily;
+  return s;
+}
+
+function buttonPreviewStyle(elem) {
+  const s = {};
+  if (elem.style?.backgroundColor) s.background = elem.style.backgroundColor;
+  if (elem.style?.textColor) s.color = elem.style.textColor;
+  if (elem.style?.borderRadius != null) s.borderRadius = elem.style.borderRadius + 'px';
+  if (elem.style?.fontSize) s.fontSize = elem.style.fontSize + 'px';
+  return s;
+}
+
+function resolveAsset(path) {
+  if (!path) return '';
+  if (path.startsWith('asset://') || path.startsWith('http')) return path;
+  return `asset://${path}`;
+}
+</script>
+
 <style scoped>
-.placeholder { display: flex; align-items: center; justify-content: center; height: 100%; }
-.placeholder-content { text-align: center; color: #888; }
-.placeholder-icon { font-size: 56px; margin-bottom: 12px; }
-.placeholder-content h3 { color: #ccc; font-size: 18px; margin: 0 0 8px; }
-.placeholder-content p { font-size: 14px; margin: 4px 0; }
-.placeholder-content .sub { font-size: 12px; color: #666; }
+.settings-designer {
+  display: flex;
+  height: 100%;
+  gap: 1px;
+  background: #111;
+}
+
+/* ─── Palette ─── */
+.component-palette {
+  width: 150px;
+  background: #1e1e1e;
+  border-right: 1px solid #333;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.palette-section {
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.palette-header {
+  padding: 8px 10px;
+  color: #888;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.palette-item {
+  background: #252526;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 7px 10px;
+  margin: 0 6px 4px;
+  cursor: grab;
+  font-size: 12px;
+  color: #aaa;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s;
+}
+
+.palette-item:hover {
+  background: #2a2d2e;
+  color: #ccc;
+  border-color: #555;
+}
+
+.palette-item:active {
+  cursor: grabbing;
+}
+
+/* ─── Workspace ─── */
+.designer-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  min-width: 0;
+}
+
+.toolbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.toolbar h3 {
+  margin: 0;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-btn {
+  background: #252526;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #2a2d2e;
+  color: #ccc;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.toolbar-btn.danger:hover:not(:disabled) {
+  background: #3a1a1a;
+  border-color: #622;
+  color: #f88;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: #333;
+}
+
+/* ─── Canvas ─── */
+.canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  padding: 20px;
+  background: #111;
+}
+
+.canvas-artboard {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  background: #2a2a2a;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.canvas-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ─── Element previews ─── */
+.elem-preview {
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.elem-setting {
+  gap: 8px;
+  padding: 0 10px;
+  background: rgba(80, 120, 200, 0.12);
+  border: 1px dashed rgba(80, 120, 200, 0.35);
+  border-radius: 4px;
+  color: #aac;
+  font-size: 12px;
+}
+
+.elem-icon { flex-shrink: 0; }
+
+.elem-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 50px;
+}
+
+.elem-slider-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.elem-slider-fill {
+  width: 50%;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.elem-toggle-preview {
+  width: 36px;
+  height: 20px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.elem-toggle-preview::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.elem-label-text {
+  color: #fff;
+  font-size: 24px;
+  white-space: nowrap;
+  padding: 4px;
+}
+
+.elem-image {
+  background: rgba(100, 180, 100, 0.1);
+  border: 1px dashed rgba(100, 180, 100, 0.3);
+  border-radius: 4px;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.elem-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.elem-placeholder {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+.elem-button {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  justify-content: center;
+}
+
+/* ─── Inspector ─── */
+.inspector {
+  width: 200px;
+  background: #1e1e1e;
+  border-left: 1px solid #333;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.inspector-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inspector-title {
+  color: #e0e0e0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.elem-type-badge {
+  background: #252526;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #888;
+}
+
+.inspector-body {
+  padding: 10px 12px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-row label {
+  min-width: 24px;
+  color: #888;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.form-row input {
+  flex: 1;
+  background: #252526;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.form-row input:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.pick-btn {
+  background: #252526;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pick-btn:hover {
+  background: #2a2d2e;
+  color: #ccc;
+}
 </style>

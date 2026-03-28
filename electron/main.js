@@ -130,7 +130,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
 });
 
 ipcMain.handle('open-project', async () => {
-  const result = await dialog.showOpenDialog({
+  const result = await dialog.showOpenDialog(win, {
     properties: ['openDirectory'],
     title: '选择项目文件夹'
   });
@@ -257,7 +257,7 @@ ipcMain.handle('close-project', () => {
 });
 
 ipcMain.handle('show-save-dialog', async () => {
-  const { response } = await dialog.showMessageBox({
+  const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
     buttons: ['保存', '不保存', '取消'],
     defaultId: 0, cancelId: 2,
@@ -268,12 +268,17 @@ ipcMain.handle('show-save-dialog', async () => {
 });
 
 ipcMain.handle('dialog-open-directory', async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ['openDirectory'],
-    title: '选择保存位置'
-  });
-  if (result.canceled) return null;
-  return result.filePaths[0];
+  try {
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory'],
+      title: '选择保存位置'
+    });
+    if (result.canceled) return null;
+    return result.filePaths[0];
+  } catch (err) {
+    console.error('dialog-open-directory error:', err);
+    return null;
+  }
 });
 
 let previewWin = null;

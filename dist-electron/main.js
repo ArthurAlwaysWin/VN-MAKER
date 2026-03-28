@@ -1,49 +1,55 @@
-import { ipcMain as c, dialog as h, BrowserWindow as _, app as j, protocol as A, net as L } from "electron";
-import t from "node:path";
-import { fileURLToPath as M, pathToFileURL as x } from "node:url";
-import o from "node:fs/promises";
-import { existsSync as w } from "node:fs";
-const P = t.dirname(M(import.meta.url));
-let a = null;
-function I() {
-  return t.join(j.getPath("userData"), "recent-projects.json");
+import { ipcMain, dialog, BrowserWindow, app, protocol, net } from "electron";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+let currentProjectPath = null;
+function recentProjectsPath() {
+  return path.join(app.getPath("userData"), "recent-projects.json");
 }
-async function F() {
+async function readRecentProjects() {
   try {
-    const n = await o.readFile(I(), "utf-8");
-    return JSON.parse(n);
+    const raw = await fs.readFile(recentProjectsPath(), "utf-8");
+    return JSON.parse(raw);
   } catch {
-    return { hasCreatedProject: !1, projects: [] };
+    return { hasCreatedProject: false, projects: [] };
   }
 }
-async function E(n) {
-  await o.writeFile(I(), JSON.stringify(n, null, 2), "utf-8");
+async function writeRecentProjects(data) {
+  await fs.writeFile(recentProjectsPath(), JSON.stringify(data, null, 2), "utf-8");
 }
-async function b(n, r) {
-  const e = await F();
-  e.projects = e.projects.filter((s) => s.path !== n), e.projects.unshift({ path: n, name: r, openedAt: (/* @__PURE__ */ new Date()).toISOString() }), e.projects.length > 20 && (e.projects = e.projects.slice(0, 20)), e.hasCreatedProject = !0, await E(e);
+async function addToRecent(projectPath, name) {
+  const recent = await readRecentProjects();
+  recent.projects = recent.projects.filter((p) => p.path !== projectPath);
+  recent.projects.unshift({ path: projectPath, name, openedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  if (recent.projects.length > 20) recent.projects = recent.projects.slice(0, 20);
+  recent.hasCreatedProject = true;
+  await writeRecentProjects(recent);
 }
-function T(n) {
-  const r = t.resolve(n), e = t.resolve(a);
-  return r.startsWith(e + t.sep) || r === e;
+function isInsideProject(fullPath) {
+  const resolved = path.resolve(fullPath);
+  const projectResolved = path.resolve(currentProjectPath);
+  return resolved.startsWith(projectResolved + path.sep) || resolved === projectResolved;
 }
-function C(n) {
-  return n.replace(/[<>:"|?*\\/]/g, "_").replace(/\.{2,}/g, "_").trim() || "untitled";
+function sanitizeProjectName(name) {
+  return name.replace(/[<>:"|?*\\/]/g, "_").replace(/\.{2,}/g, "_").trim() || "untitled";
 }
-async function D(n, r) {
-  const e = n + ".tmp", s = n + ".bak";
-  await o.writeFile(e, r, "utf-8");
+async function atomicWrite(filePath, content) {
+  const tmp = filePath + ".tmp";
+  const bak = filePath + ".bak";
+  await fs.writeFile(tmp, content, "utf-8");
   try {
-    await o.rename(n, s);
+    await fs.rename(filePath, bak);
   } catch {
   }
-  await o.rename(e, n);
+  await fs.rename(tmp, filePath);
   try {
-    await o.unlink(s);
+    await fs.unlink(bak);
   } catch {
   }
 }
-function J() {
+function defaultScript() {
   return {
     characters: {},
     scenes: {
@@ -57,116 +63,167 @@ function J() {
     }
   };
 }
-c.handle("create-project", async (n, { name: r, author: e, location: s, resolution: i, template: d }) => {
+ipcMain.handle("create-project", async (event, { name, author, location, resolution, template }) => {
   try {
-    const f = C(r), l = t.join(s, f);
-    await o.mkdir(l, { recursive: !0 }), await o.mkdir(t.join(l, "assets", "backgrounds"), { recursive: !0 }), await o.mkdir(t.join(l, "assets", "characters"), { recursive: !0 }), await o.mkdir(t.join(l, "assets", "audio"), { recursive: !0 }), await o.mkdir(t.join(l, "assets", "ui"), { recursive: !0 });
-    const V = {
-      name: r,
-      author: e || "",
+    const safeName = sanitizeProjectName(name);
+    const projectDir = path.join(location, safeName);
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(path.join(projectDir, "assets", "backgrounds"), { recursive: true });
+    await fs.mkdir(path.join(projectDir, "assets", "characters"), { recursive: true });
+    await fs.mkdir(path.join(projectDir, "assets", "audio"), { recursive: true });
+    await fs.mkdir(path.join(projectDir, "assets", "ui"), { recursive: true });
+    const projectJson = {
+      name,
+      author: author || "",
       version: "1.0.0",
       description: "",
-      resolution: i || { width: 1280, height: 720 },
+      resolution: resolution || { width: 1280, height: 720 },
       engineVersion: "0.1.0",
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       lastModified: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await o.writeFile(t.join(l, "project.json"), JSON.stringify(V, null, 2), "utf-8");
-    let y = J();
-    if (d === "demo") {
-      const m = t.join(process.env.APP_ROOT, "public", "game");
-      if (w(t.join(m, "script.json"))) {
-        const S = JSON.parse(await o.readFile(t.join(m, "script.json"), "utf-8"));
-        delete S.meta, y = S;
-        for (const R of ["backgrounds", "characters", "audio"]) {
-          const g = t.join(m, R), U = t.join(l, "assets", R);
-          if (w(g)) {
-            const k = await o.readdir(g);
-            for (const O of k)
-              await o.copyFile(t.join(g, O), t.join(U, O));
+    await fs.writeFile(path.join(projectDir, "project.json"), JSON.stringify(projectJson, null, 2), "utf-8");
+    let scriptData = defaultScript();
+    if (template === "demo") {
+      const demoDir = path.join(process.env.APP_ROOT, "public", "game");
+      if (existsSync(path.join(demoDir, "script.json"))) {
+        const demoScript = JSON.parse(await fs.readFile(path.join(demoDir, "script.json"), "utf-8"));
+        delete demoScript.meta;
+        scriptData = demoScript;
+        for (const sub of ["backgrounds", "characters", "audio"]) {
+          const srcDir = path.join(demoDir, sub);
+          const dstDir = path.join(projectDir, "assets", sub);
+          if (existsSync(srcDir)) {
+            const files = await fs.readdir(srcDir);
+            for (const f of files) {
+              await fs.copyFile(path.join(srcDir, f), path.join(dstDir, f));
+            }
           }
         }
       }
     }
-    return await o.writeFile(t.join(l, "script.json"), JSON.stringify(y, null, 2), "utf-8"), await b(l, r), { success: !0, path: l };
-  } catch (f) {
-    return console.error("Failed to create project:", f), { success: !1, error: f.message };
+    await fs.writeFile(path.join(projectDir, "script.json"), JSON.stringify(scriptData, null, 2), "utf-8");
+    await addToRecent(projectDir, name);
+    return { success: true, path: projectDir };
+  } catch (e) {
+    console.error("Failed to create project:", e);
+    return { success: false, error: e.message };
   }
 });
-c.handle("open-project", async () => {
-  const n = await h.showOpenDialog({
+ipcMain.handle("open-project", async () => {
+  const result = await dialog.showOpenDialog(win, {
     properties: ["openDirectory"],
     title: "选择项目文件夹"
   });
-  if (n.canceled || n.filePaths.length === 0) return { canceled: !0 };
-  const r = n.filePaths[0], e = w(t.join(r, "project.json")), s = w(t.join(r, "script.json"));
-  return !e && !s ? { success: !1, error: "不是有效的项目文件夹：找不到 project.json 或 script.json" } : { success: !0, path: r, needsMigration: !e && s };
+  if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+  const dir = result.filePaths[0];
+  const hasProject = existsSync(path.join(dir, "project.json"));
+  const hasScript = existsSync(path.join(dir, "script.json"));
+  if (!hasProject && !hasScript) {
+    return { success: false, error: "不是有效的项目文件夹：找不到 project.json 或 script.json" };
+  }
+  return { success: true, path: dir, needsMigration: !hasProject && hasScript };
 });
-c.handle("load-project", async (n, r) => {
+ipcMain.handle("load-project", async (event, projectPath) => {
   try {
-    let e, s;
-    const i = t.join(r, "project.json"), d = t.join(r, "script.json");
-    if (w(i) && (e = JSON.parse(await o.readFile(i, "utf-8"))), w(d) ? s = JSON.parse(await o.readFile(d, "utf-8")) : s = J(), !e && s.meta) {
-      e = {
-        name: s.meta.title || t.basename(r),
-        author: s.meta.author || "",
-        version: s.meta.version || "1.0.0",
+    let projectData;
+    let scriptData;
+    const projectJsonPath = path.join(projectPath, "project.json");
+    const scriptJsonPath = path.join(projectPath, "script.json");
+    if (existsSync(projectJsonPath)) {
+      projectData = JSON.parse(await fs.readFile(projectJsonPath, "utf-8"));
+    }
+    if (existsSync(scriptJsonPath)) {
+      scriptData = JSON.parse(await fs.readFile(scriptJsonPath, "utf-8"));
+    } else {
+      scriptData = defaultScript();
+    }
+    if (!projectData && scriptData.meta) {
+      projectData = {
+        name: scriptData.meta.title || path.basename(projectPath),
+        author: scriptData.meta.author || "",
+        version: scriptData.meta.version || "1.0.0",
         description: "",
-        resolution: s.meta.resolution || { width: 1280, height: 720 },
+        resolution: scriptData.meta.resolution || { width: 1280, height: 720 },
         engineVersion: "0.1.0",
         createdAt: (/* @__PURE__ */ new Date()).toISOString(),
         lastModified: (/* @__PURE__ */ new Date()).toISOString()
-      }, delete s.meta, await o.writeFile(i, JSON.stringify(e, null, 2), "utf-8"), await o.writeFile(d, JSON.stringify(s, null, 2), "utf-8");
-      for (const f of ["backgrounds", "characters", "audio", "ui"])
-        await o.mkdir(t.join(r, "assets", f), { recursive: !0 });
+      };
+      delete scriptData.meta;
+      await fs.writeFile(projectJsonPath, JSON.stringify(projectData, null, 2), "utf-8");
+      await fs.writeFile(scriptJsonPath, JSON.stringify(scriptData, null, 2), "utf-8");
+      for (const sub of ["backgrounds", "characters", "audio", "ui"]) {
+        await fs.mkdir(path.join(projectPath, "assets", sub), { recursive: true });
+      }
     }
-    return e || (e = {
-      name: t.basename(r),
-      author: "",
-      version: "1.0.0",
-      description: "",
-      resolution: { width: 1280, height: 720 },
-      engineVersion: "0.1.0",
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      lastModified: (/* @__PURE__ */ new Date()).toISOString()
-    }), a = r, await b(r, e.name), { success: !0, project: e, script: s, path: r };
+    if (!projectData) {
+      projectData = {
+        name: path.basename(projectPath),
+        author: "",
+        version: "1.0.0",
+        description: "",
+        resolution: { width: 1280, height: 720 },
+        engineVersion: "0.1.0",
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        lastModified: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+    currentProjectPath = projectPath;
+    await addToRecent(projectPath, projectData.name);
+    return { success: true, project: projectData, script: scriptData, path: projectPath };
   } catch (e) {
-    return console.error("Failed to load project:", e), { success: !1, error: e.message };
+    console.error("Failed to load project:", e);
+    return { success: false, error: e.message };
   }
 });
-c.handle("save-project", async (n, { project: r, script: e }) => {
-  if (!a) return { success: !1, error: "No project loaded" };
+ipcMain.handle("save-project", async (event, { project, script }) => {
+  if (!currentProjectPath) return { success: false, error: "No project loaded" };
   try {
-    return r.lastModified = (/* @__PURE__ */ new Date()).toISOString(), await D(t.join(a, "project.json"), JSON.stringify(r, null, 2)), await D(t.join(a, "script.json"), JSON.stringify(e, null, 2)), { success: !0 };
-  } catch (s) {
-    return console.error("Failed to save project:", s), { success: !1, error: s.message };
+    project.lastModified = (/* @__PURE__ */ new Date()).toISOString();
+    await atomicWrite(path.join(currentProjectPath, "project.json"), JSON.stringify(project, null, 2));
+    await atomicWrite(path.join(currentProjectPath, "script.json"), JSON.stringify(script, null, 2));
+    return { success: true };
+  } catch (e) {
+    console.error("Failed to save project:", e);
+    return { success: false, error: e.message };
   }
 });
-c.handle("read-dir", async (n, r) => {
+ipcMain.handle("read-dir", async (event, relativePath) => {
   try {
-    if (!a) return [];
-    const e = t.join(a, r);
-    return T(e) ? (await o.readdir(e, { withFileTypes: !0 })).map((i) => ({ name: i.name, isDirectory: i.isDirectory() })) : [];
-  } catch {
+    if (!currentProjectPath) return [];
+    const fullPath = path.join(currentProjectPath, relativePath);
+    if (!isInsideProject(fullPath)) return [];
+    const files = await fs.readdir(fullPath, { withFileTypes: true });
+    return files.map((f) => ({ name: f.name, isDirectory: f.isDirectory() }));
+  } catch (e) {
     return [];
   }
 });
-c.handle("upload-asset", async (n, { category: r, name: e, data: s }) => {
+ipcMain.handle("upload-asset", async (event, { category, name, data }) => {
   try {
-    if (!a) return !1;
-    const i = t.join(a, "assets", r);
-    return T(i) ? (await o.mkdir(i, { recursive: !0 }), await o.writeFile(t.join(i, e), Buffer.from(s)), !0) : !1;
-  } catch (i) {
-    return console.error("Failed to upload asset:", i), !1;
+    if (!currentProjectPath) return false;
+    const dir = path.join(currentProjectPath, "assets", category);
+    if (!isInsideProject(dir)) return false;
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, name), Buffer.from(data));
+    return true;
+  } catch (e) {
+    console.error("Failed to upload asset:", e);
+    return false;
   }
 });
-c.handle("get-recent-projects", async () => await F());
-c.handle("update-recent-projects", async (n, r) => (await E(r), !0));
-c.handle("close-project", () => {
-  a = null;
+ipcMain.handle("get-recent-projects", async () => {
+  return await readRecentProjects();
 });
-c.handle("show-save-dialog", async () => {
-  const { response: n } = await h.showMessageBox({
+ipcMain.handle("update-recent-projects", async (event, data) => {
+  await writeRecentProjects(data);
+  return true;
+});
+ipcMain.handle("close-project", () => {
+  currentProjectPath = null;
+});
+ipcMain.handle("show-save-dialog", async () => {
+  const { response } = await dialog.showMessageBox(win, {
     type: "warning",
     buttons: ["保存", "不保存", "取消"],
     defaultId: 0,
@@ -174,51 +231,68 @@ c.handle("show-save-dialog", async () => {
     title: "未保存的修改",
     message: "项目有未保存的修改，是否保存？"
   });
-  return ["save", "discard", "cancel"][n];
+  return ["save", "discard", "cancel"][response];
 });
-c.handle("dialog-open-directory", async () => {
-  const n = await h.showOpenDialog({
-    properties: ["openDirectory"],
-    title: "选择保存位置"
-  });
-  return n.canceled ? null : n.filePaths[0];
+ipcMain.handle("dialog-open-directory", async () => {
+  console.log("[IPC] dialog-open-directory called, win =", !!win);
+  try {
+    const result = await dialog.showOpenDialog(win, {
+      properties: ["openDirectory"],
+      title: "选择保存位置"
+    });
+    console.log("[IPC] dialog result:", result);
+    if (result.canceled) return null;
+    return result.filePaths[0];
+  } catch (err) {
+    console.error("[IPC] dialog-open-directory error:", err);
+    return null;
+  }
 });
-let p = null;
-c.handle("open-preview", (n, r) => {
-  if (p) {
-    p.focus();
+let previewWin = null;
+ipcMain.handle("open-preview", (event, projectPath) => {
+  if (previewWin) {
+    previewWin.focus();
     return;
   }
-  p = new _({
+  previewWin = new BrowserWindow({
     width: 1280,
     height: 720,
-    autoHideMenuBar: !0
+    autoHideMenuBar: true
   });
-  const e = r ? `?project=${encodeURIComponent(r)}` : "";
-  process.env.VITE_DEV_SERVER_URL ? p.loadURL(process.env.VITE_DEV_SERVER_URL + "index.html" + e) : p.loadFile(t.join(process.env.APP_ROOT, "dist/index.html"), {
-    search: e ? `project=${encodeURIComponent(r)}` : void 0
-  }), p.on("closed", () => {
-    p = null;
+  const projectParam = projectPath ? `?project=${encodeURIComponent(projectPath)}` : "";
+  if (process.env["VITE_DEV_SERVER_URL"]) {
+    previewWin.loadURL(process.env["VITE_DEV_SERVER_URL"] + "index.html" + projectParam);
+  } else {
+    previewWin.loadFile(path.join(process.env.APP_ROOT, "dist/index.html"), {
+      search: projectParam ? `project=${encodeURIComponent(projectPath)}` : void 0
+    });
+  }
+  previewWin.on("closed", () => {
+    previewWin = null;
   });
 });
-process.env.APP_ROOT = t.join(P, "..");
-const v = process.env.VITE_DEV_SERVER_URL, G = t.join(process.env.APP_ROOT, "dist-electron"), N = t.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = v ? t.join(process.env.APP_ROOT, "public") : N;
-let u;
-function B() {
-  u = new _({
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: t.join(P, "preload.js")
+      preload: path.join(__dirname$1, "preload.js")
     }
-  }), u.on("close", async (n) => {
-    n.preventDefault();
+  });
+  win.on("close", async (e) => {
+    e.preventDefault();
     try {
-      if (await u.webContents.executeJavaScript(
+      const hasUnsaved = await win.webContents.executeJavaScript(
         "window.__hasDirtyProject ? window.__hasDirtyProject() : false"
-      )) {
-        const { response: e } = await h.showMessageBox(u, {
+      );
+      if (hasUnsaved) {
+        const { response } = await dialog.showMessageBox(win, {
           type: "warning",
           buttons: ["保存", "不保存", "取消"],
           defaultId: 0,
@@ -226,25 +300,43 @@ function B() {
           title: "未保存的修改",
           message: "项目有未保存的修改，是否保存？"
         });
-        if (e === 2) return;
-        e === 0 && await u.webContents.executeJavaScript("window.__saveCurrentProject()");
+        if (response === 2) return;
+        if (response === 0) {
+          await win.webContents.executeJavaScript("window.__saveCurrentProject()");
+        }
       }
     } catch {
     }
-    u.destroy();
-  }), v ? u.loadURL(v + "editor.html") : u.loadFile(t.join(N, "editor.html"));
+    win.destroy();
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL + "editor.html");
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "editor.html"));
+  }
 }
-j.on("window-all-closed", () => {
-  process.platform !== "darwin" && (j.quit(), u = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-j.whenReady().then(() => {
-  A.handle("asset", (n) => {
-    const r = new URL(n.url), e = decodeURIComponent(r.hostname + r.pathname), s = a ? t.join(a, "assets") : t.join(process.env.APP_ROOT, "public", "game"), i = t.resolve(t.join(s, e)), d = t.resolve(s);
-    return !i.startsWith(d + t.sep) && i !== d ? new Response("Forbidden", { status: 403 }) : L.fetch(x(i).toString());
-  }), B();
+app.whenReady().then(() => {
+  protocol.handle("asset", (request) => {
+    const url = new URL(request.url);
+    const filePath = decodeURIComponent(url.hostname + url.pathname);
+    const base = currentProjectPath ? path.join(currentProjectPath, "assets") : path.join(process.env.APP_ROOT, "public", "game");
+    const fullPath = path.resolve(path.join(base, filePath));
+    const resolvedBase = path.resolve(base);
+    if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
+      return new Response("Forbidden", { status: 403 });
+    }
+    return net.fetch(pathToFileURL(fullPath).toString());
+  });
+  createWindow();
 });
 export {
-  G as MAIN_DIST,
-  N as RENDERER_DIST,
-  v as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

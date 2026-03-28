@@ -109,8 +109,12 @@ const canNext = computed(() => {
 
 async function browseLocation() {
   if (!window.ipcRenderer) return;
-  const result = await window.ipcRenderer.invoke('dialog-open-directory');
-  if (result) form.location = result;
+  try {
+    const result = await window.ipcRenderer.invoke('dialog-open-directory');
+    if (result) form.location = result;
+  } catch (err) {
+    console.error('Failed to open directory dialog:', err);
+  }
 }
 
 async function handleCreate() {

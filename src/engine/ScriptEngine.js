@@ -239,6 +239,7 @@ export class ScriptEngine extends EventEmitter {
       speakerName: char?.name || null,
       speakerColor: char?.color || null,
       text: cmd.text,
+      style: cmd.style || null,
     };
     this.history.push({
       speaker: cmd.speaker,
@@ -255,6 +256,9 @@ export class ScriptEngine extends EventEmitter {
       id: cmd.id,
       expression: cmd.expression,
       position: cmd.position || 'center',
+      x: cmd.x,
+      y: cmd.y,
+      scale: cmd.scale,
       transition: cmd.transition || 'fade',
       duration: cmd.duration || 500,
       image: char?.expressions?.[cmd.expression] || '',
@@ -325,6 +329,8 @@ export class ScriptEngine extends EventEmitter {
     this.emit('choice', {
       prompt: cmd.prompt,
       options: cmd.options,
+      layout: cmd.layout || 'default',
+      style: cmd.style || null,
     });
   }
 

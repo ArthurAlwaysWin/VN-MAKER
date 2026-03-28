@@ -1,5 +1,13 @@
 # Phase 3A: Project System & Editor Workflow Redesign
 
+> **⚠️ 本文档是 Galgame Maker 项目的最新指导性文件。**
+> 今后项目开发以本文档为准。所有此前的提案、计划文档均已归档。
+>
+> - **创建日期：** 2025-06-25
+> - **最后更新：** 2025-06-25
+> - **状态：** ✅ 设计完成，待实施
+> - **阶段：** Phase 3A（前序 Phase 1 运行时引擎 ✅、Phase 2 PPT式画布编辑器 ✅ 均已完成）
+
 ## Goal
 
 Transform the Galgame Maker editor from a single-file script editor into a full project-based IDE with a complete "create → import → design → preview" workflow. Developers should be able to create projects, manage assets, and build visual novels without touching code or logic.

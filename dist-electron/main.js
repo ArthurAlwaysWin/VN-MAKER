@@ -1,80 +1,106 @@
-import { ipcMain as a, BrowserWindow as u, app as c, protocol as P, net as m } from "electron";
-import e from "node:path";
-import { fileURLToPath as _, pathToFileURL as w } from "node:url";
-import s from "node:fs/promises";
-const h = e.dirname(_(import.meta.url));
-a.handle("read-dir", async (o, t) => {
+import { ipcMain, BrowserWindow, app, protocol, net } from "electron";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import fs from "node:fs/promises";
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+ipcMain.handle("read-dir", async (event, dirPath) => {
   try {
-    const r = e.join(process.env.APP_ROOT, t);
-    return (await s.readdir(r, { withFileTypes: !0 })).map((n) => ({ name: n.name, isDirectory: n.isDirectory() }));
-  } catch (r) {
-    return console.error("Failed to read dir:", r), [];
+    const fullPath = path.join(process.env.APP_ROOT, dirPath);
+    const files = await fs.readdir(fullPath, { withFileTypes: true });
+    return files.map((f) => ({ name: f.name, isDirectory: f.isDirectory() }));
+  } catch (e) {
+    console.error("Failed to read dir:", e);
+    return [];
   }
 });
-a.handle("read-script", async () => {
+ipcMain.handle("read-script", async () => {
   try {
-    const o = e.join(process.env.APP_ROOT, "public/game/script.json"), t = await s.readFile(o, "utf-8");
-    return JSON.parse(t);
-  } catch (o) {
-    return console.error("Failed to read script.json:", o), null;
+    const filePath = path.join(process.env.APP_ROOT, "public/game/script.json");
+    const data = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(data);
+  } catch (e) {
+    console.error("Failed to read script.json:", e);
+    return null;
   }
 });
-a.handle("save-script", async (o, t) => {
+ipcMain.handle("save-script", async (event, data) => {
   try {
-    const r = e.join(process.env.APP_ROOT, "public/game/script.json");
-    return await s.writeFile(r, JSON.stringify(t, null, 2), "utf-8"), !0;
-  } catch (r) {
-    return console.error("Failed to save script.json:", r), !1;
+    const filePath = path.join(process.env.APP_ROOT, "public/game/script.json");
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+    return true;
+  } catch (e) {
+    console.error("Failed to save script.json:", e);
+    return false;
   }
 });
-a.handle("upload-asset", async (o, { category: t, name: r, data: p }) => {
+ipcMain.handle("upload-asset", async (event, { category, name, data }) => {
   try {
-    const n = e.join(process.env.APP_ROOT, "public/game", t);
-    await s.mkdir(n, { recursive: !0 });
-    const f = e.join(n, r);
-    return await s.writeFile(f, Buffer.from(p)), !0;
-  } catch (n) {
-    return console.error("Failed to upload asset:", n), !1;
+    const dir = path.join(process.env.APP_ROOT, "public/game", category);
+    await fs.mkdir(dir, { recursive: true });
+    const filePath = path.join(dir, name);
+    await fs.writeFile(filePath, Buffer.from(data));
+    return true;
+  } catch (e) {
+    console.error("Failed to upload asset:", e);
+    return false;
   }
 });
-let i = null;
-a.handle("open-preview", () => {
-  if (i) {
-    i.focus();
+let previewWin = null;
+ipcMain.handle("open-preview", () => {
+  if (previewWin) {
+    previewWin.focus();
     return;
   }
-  i = new u({
+  previewWin = new BrowserWindow({
     width: 1280,
     height: 720,
-    autoHideMenuBar: !0
-  }), process.env.VITE_DEV_SERVER_URL ? i.loadURL(process.env.VITE_DEV_SERVER_URL + "index.html") : i.loadFile(e.join(process.env.APP_ROOT, "dist/index.html")), i.on("closed", () => {
-    i = null;
+    autoHideMenuBar: true
+  });
+  if (process.env["VITE_DEV_SERVER_URL"]) {
+    previewWin.loadURL(process.env["VITE_DEV_SERVER_URL"] + "index.html");
+  } else {
+    previewWin.loadFile(path.join(process.env.APP_ROOT, "dist/index.html"));
+  }
+  previewWin.on("closed", () => {
+    previewWin = null;
   });
 });
-process.env.APP_ROOT = e.join(h, "..");
-const d = process.env.VITE_DEV_SERVER_URL, y = e.join(process.env.APP_ROOT, "dist-electron"), R = e.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = d ? e.join(process.env.APP_ROOT, "public") : R;
-let l;
-function v() {
-  l = new u({
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
     width: 1280,
     height: 720,
     webPreferences: {
-      preload: e.join(h, "preload.js")
+      preload: path.join(__dirname$1, "preload.js")
     }
-  }), d ? l.loadURL(d + "editor.html") : l.loadFile(e.join(R, "editor.html"));
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL + "editor.html");
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "editor.html"));
+  }
 }
-c.on("window-all-closed", () => {
-  process.platform !== "darwin" && (c.quit(), l = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-c.whenReady().then(() => {
-  P.handle("asset", (o) => {
-    const t = decodeURIComponent(o.url.replace("asset://", "")), r = e.join(process.env.APP_ROOT, "public/game", t);
-    return m.fetch(w(r).toString());
-  }), v();
+app.whenReady().then(() => {
+  protocol.handle("asset", (request) => {
+    const filePath = decodeURIComponent(request.url.replace("asset://", ""));
+    const fullPath = path.join(process.env.APP_ROOT, "public/game", filePath);
+    return net.fetch(pathToFileURL(fullPath).toString());
+  });
+  createWindow();
 });
 export {
-  y as MAIN_DIST,
-  R as RENDERER_DIST,
-  d as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

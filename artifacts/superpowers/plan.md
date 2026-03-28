@@ -1,142 +1,77 @@
-# Phase 1 实施计划：Galgame Maker Runtime Engine MVP
+# Phase 2 实施计划：Galgame Maker Visual Editor (Vue + Electron)
 
 ## Goal
 
-从零搭建 Galgame Maker 的运行时引擎（Phase 1），使用 Vite + 原生 JS 构建。引擎能解析 JSON 格式的游戏脚本并运行一个包含对话、立绘、背景、音频、选项分支、存档/读档的完整示例游戏。
+开发 Galgame Maker 的桌面端图形化编辑器。不编写代码的用户可以通过带有拖拽支持的所见即所得界面来编排场景、管理角色/资产、并一键生成/预览供运行时引擎使用的 `script.json`。
 
 ## Assumptions
 
-- 技术栈：Vite + Vanilla JS + CSS（无框架），方便后续引擎独立打包
-- 游戏脚本格式使用 JSON（结构化、编辑器友好）
-- 渲染方案：DOM + CSS 动画（混合方案，Phase 1 暂不引入 Canvas）
-- 示例游戏使用 AI 生成的占位资源
-- 目标平台：仅 Windows 10 / 11 桌面浏览器，不考虑移动端和 macOS
-- 暂不实现：CG 鉴赏、音乐鉴赏、i18n、导出打包、移动端适配
+- 技术栈：Vue 3 (Composition API / `<script setup>`) + Vite + Electron
+- 状态管理：Pinia (用于管理当前的脚本数据和整个编辑器的状态)
+- 桌面容器：Electron (利用 Node.js `fs` 直接读写本地项目目录，如读取素材目录、写入 script.json)
+- 界面设计：暗黑模式，类似 IDE 的布局（侧边栏、中心工作区、右侧属性面板）
+- 节点库：使用纯 CSS 或引入类似 Vue Flow 的组件实现场景流程图（初期优先列表视图）
 
 ## Plan
 
-### Step 1: 项目脚手架搭建
-- **Files**: `package.json`, `vite.config.js`, `index.html`, `src/main.js`, `src/style.css`
-- **Change**:
-  - 用 `npx create-vite` 初始化 Vanilla JS 项目
-  - 清理默认模板文件，搭建基本项目结构
-  - 创建引擎目录结构 `src/engine/`、`src/ui/`、`public/`
-- **Verify**: `npm run dev` 启动成功，浏览器显示空白页面无报错
+### Step 1: Editor 脚手架搭建 (Vue + Vite + Electron)
+- **Files**: `package.json`, `electron/main.js`, `electron/preload.js`, `vite.config.ts`
+- **Change**: 
+  - 集成 Electron 到现有的 Vite 项目或配置双层入口。
+  - 配置 IPC (Inter-Process Communication) 通道以允许 Vue 渲染进程访问本地文件。
+- **Verify**: `npm run electron:dev` 能弹出一个包含 Vue 基本界面的 Electron 桌面窗口。
 
-### Step 2: 定义游戏脚本 JSON 格式 + 示例脚本
-- **Files**: `public/game/script.json`, `docs/script-format.md`
+### Step 2: UI 框架与核心布局
+- **Files**: `src/editor/App.vue`, `src/editor/components/layout/*`
 - **Change**:
-  - 设计 JSON 脚本格式规范，包含场景（scenes）、对话（dialogues）、选项（choices）、跳转（jumps）、变量（variables）等节点类型
-  - 编写一个 3-5 个场景的示例脚本，覆盖：对话、立绘切换、背景切换、BGM、选项分支、变量判断
-  - 编写格式说明文档
-- **Verify**: JSON 文件语法正确（`node -e "require('./public/game/script.json')"`）
+  - 创建类似 VS Code/Unity 的基础三栏布局：左侧导航栏（资产/角色/场景列表），中间编辑区，右侧属性检查器。
+- **Verify**: 运行后看到完整的暗色系大体布局结构。
 
-### Step 3: 脚本引擎核心 — ScriptEngine
-- **Files**: `src/engine/ScriptEngine.js`
+### Step 3: Project Manager 与 Asset Browser (资产管理)
+- **Files**: `src/editor/stores/project.js`, `src/editor/components/AssetBrowser.vue`
 - **Change**:
-  - 实现 `ScriptEngine` 类：加载脚本 JSON、管理当前场景/当前指令索引、执行 next() 推进指令
-  - 支持指令类型：`dialogue`、`show_character`、`hide_character`、`set_background`、`play_bgm`、`stop_bgm`、`play_se`、`choice`、`jump`、`set_variable`、`condition`
-  - 变量存储与条件判断
-  - 事件驱动：引擎每执行一条指令时发出事件，UI 层监听并响应
-- **Verify**: 在 `main.js` 中加载脚本并 `console.log` 依次输出每条指令
+  - 实现本地目录的读取（通过 Electron IPC），扫描 `public/game/backgrounds`、`images` 和 `audio`。
+  - 界面上以网格形式显示缩略图和文件名。
+- **Verify**: 界面左侧可以列出本地已存在的图片和音频列表。
 
-### Step 4: 文本显示系统 — DialogueBox
-- **Files**: `src/ui/DialogueBox.js`, `src/style.css`
+### Step 4: 角色与变量编辑器 (Character & Variables)
+- **Files**: `src/editor/components/CharacterEditor.vue`, `src/editor/components/VariableEditor.vue`
 - **Change**:
-  - 实现对话框 UI 组件：角色名、对话文字区域、点击推进指示器
-  - 打字机效果（逐字显示），点击可跳过直接显示全文
-  - 样式：底部对话框，半透明背景，现代化设计
-- **Verify**: 浏览器中运行，对话文字逐字显示，点击推进到下一句
+  - 增删改查 `characters` 数据字典（添加角色、修改颜色、绑定不同的立绘差分图片路径）。
+  - 全局变量的定义与初始值设置面板。
+- **Verify**: 能够添加一个新角色，并能在 JSON 对象中正确反映出来。
 
-### Step 5: 角色立绘系统 — CharacterLayer
-- **Files**: `src/ui/CharacterLayer.js`, `src/style.css`
+### Step 5: Scene Flow (场景管理器)
+- **Files**: `src/editor/components/SceneList.vue`, `src/editor/stores/script.js`
 - **Change**:
-  - 实现角色立绘 DOM 层，支持多角色同屏（左/中/右位置）
-  - 立绘显示/隐藏动画（CSS fade-in/fade-out/slide）
-  - 表情差分切换（同角色替换图片）
-- **Verify**: 示例脚本中角色立绘正确显示在屏幕上，有进出场动画
+  - 实现场景（Scenes）的增删改查列表。
+  - 允许修改场景的入口和属性。
+  - (可选/后期) 使用连线节点图展示多结局分支情况。
+- **Verify**: 可以在列表中添加新的场景并重命名。
 
-### Step 6: 背景系统 — BackgroundLayer
-- **Files**: `src/ui/BackgroundLayer.js`, `src/style.css`
+### Step 6: 场景指令时间轴/列表 (Scene Detail Editor)
+- **Files**: `src/editor/components/CommandEditor.vue`, `src/editor/components/commands/*`
 - **Change**:
-  - 实现背景图层，全屏显示背景图片
-  - 背景切换转场效果（淡入淡出 crossfade）
-- **Verify**: 背景图正确显示并在切换时有渐变效果
+  - 在选中某一个场景时，中间展示该场景从上到下的指令列表（拖拽排序功能）。
+  - 右侧显示当前选中指令的属性设置（例如：对话指令显示说话人和文本输入框；图片指令显示素材下拉菜单等）。
+- **Verify**: 点选一个指令（如 dialogue），右侧能修改文字并且立刻同步到当前内存状态中。
 
-### Step 7: 音频系统 — AudioManager
-- **Files**: `src/engine/AudioManager.js`
+### Step 7: 实时预览集成 (Live Preview)
+- **Files**: `src/editor/components/PreviewWindow.vue`
 - **Change**:
-  - 实现 BGM 播放/暂停/切换（带淡入淡出）
-  - 实现 SE（音效）播放
-  - 处理浏览器自动播放策略（用户首次点击后解锁）
-- **Verify**: BGM 在场景切换时正确播放和切换，SE 在指定时机播放
-
-### Step 8: 选项与分支系统 — ChoiceMenu
-- **Files**: `src/ui/ChoiceMenu.js`, `src/style.css`
-- **Change**:
-  - 实现选项菜单 UI（覆盖在对话框上方，居中显示选项按钮）
-  - 点击选项后设置变量并跳转到对应场景/标签
-  - 条件分支：根据变量值执行不同指令
-- **Verify**: 选项出现时可点击，点击后跳转到正确的分支场景
-
-### Step 9: 存档/读档系统 — SaveManager
-- **Files**: `src/engine/SaveManager.js`, `src/ui/SaveLoadScreen.js`, `src/style.css`
-- **Change**:
-  - 实现存档数据结构（当前场景、指令索引、变量状态、时间戳）
-  - 多存档槽位（8-10 个）
-  - 使用 localStorage 持久化（后续可扩展 IndexedDB）
-  - 存档/读档界面：显示槽位列表、时间戳、缩略图（截图或快照文本）
-- **Verify**: 存档后刷新页面，读档能恢复到存档时的游戏状态
-
-### Step 10: Auto / Skip / Backlog 功能
-- **Files**: `src/ui/DialogueBox.js`（扩展）, `src/ui/BacklogScreen.js`, `src/style.css`
-- **Change**:
-  - Auto 模式：每句对话显示完毕后自动推进（可设速度）
-  - Skip 模式：快速跳过已读对话
-  - Backlog（文字回看）：显示历史对话列表，可滚动查看
-- **Verify**: Auto 模式自动推进对话；Skip 快速跳过；Backlog 能回顾历史
-
-### Step 11: 系统设置界面 — SettingsScreen
-- **Files**: `src/ui/SettingsScreen.js`, `src/engine/ConfigManager.js`, `src/style.css`
-- **Change**:
-  - 设置项：文字速度、Auto 速度、BGM 音量、SE 音量、全屏切换
-  - 设置持久化到 localStorage
-  - 设置界面 UI
-- **Verify**: 调节音量滑块后音量实时变化，刷新后设置保留
-
-### Step 12: 主菜单 / 标题画面 — TitleScreen
-- **Files**: `src/ui/TitleScreen.js`, `src/style.css`
-- **Change**:
-  - 标题画面：游戏名、开始游戏、继续游戏（读档）、设置
-  - 游戏中菜单（右键/ESC 呼出）：存档、读档、设置、返回标题
-- **Verify**: 标题画面显示正确，菜单各按钮功能正常
-
-### Step 13: 生成示例游戏资源 + 集成测试
-- **Files**: `public/game/` (图片、音频资源)
-- **Change**:
-  - 用 AI 生成占位立绘和背景图
-  - 使用免费音乐/音效资源
-  - 完善示例脚本，确保所有功能都有覆盖
-  - 完整跑通整个示例游戏流程
-- **Verify**: 从标题画面 → 开始游戏 → 对话推进 → 选项分支 → 存档/读档 → 不同结局，全流程无报错
-
-### Step 14: 视觉打磨
-- **Files**: `src/style.css`, 各 UI 组件
-- **Change**:
-  - 美化整体 UI：标题画面、对话框、选项菜单、存档界面
-  - 添加微动画和过渡效果
-  - 确保在 Windows 桌面浏览器（Chrome/Edge）中表现良好
-- **Verify**: 在 Windows 桌面浏览器中全流程无视觉异常
+  - 利用 iframe 或者直接在 Electron 内挂载 Phase 1 写好的 `ScriptEngine` 画布。
+  - 将当前编辑器内存中的 `script.json` 直接发送给引擎，并在编辑区旁边即时预览执行效果。
+- **Verify**: 点击"预览"按钮，可以看到弹出的引擎窗口并完整运行当前的剧本数据。
 
 ## Risks & Mitigations
 
 | 风险 | 缓解 |
 |------|------|
-| 示例资源版权问题 | 使用 AI 生成或明确 CC0/免费资源 |
-| 浏览器音频自动播放限制 | 首次交互后才初始化 AudioContext |
-| localStorage 存储上限 | Phase 1 够用，后续迁移到 IndexedDB |
+| Electron 与 Vite 集成时的相对路径与打包问题 | 参考社区成熟模板（如 `electron-vite`），确保开发与打包环境路径一致 |
+| 拖拽排序体验卡顿 | 采用成熟的 Vue 拖拽库如 `vuedraggable` 或 `Sortable.js` |
+| IPC 通信带来的异步延迟 | 在 Vue 的 Store (Pinia) 内维护状态树，只在保存时通过 IPC 写入文件，减少高频 IO |
 
 ## Rollback Plan
 
-- 每个 Step 为独立 Git commit，可按 commit 回退
-- 引擎各模块松耦合，某模块有问题可临时禁用不影响其他功能
+- 由于加入 Electron 和重构目录结构改动较大，所有新代码先放在 `src/editor` 或另外新建分支，保障 `main` 分支原先的纯 Web 运行时不受影响。
+- 如果打包有严重阻塞问题，可以退回仅仅通过浏览器操作 API (`showDirectoryPicker`) 的纯 Web 方案。

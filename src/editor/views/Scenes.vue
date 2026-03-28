@@ -3,7 +3,7 @@
     <!-- Scene List Sidebar -->
     <div class="scene-sidebar">
       <div class="list-header">
-        <h3>Scenes</h3>
+        <h3>场景列表</h3>
         <button class="add-btn" @click="addScene">+</button>
       </div>
       <div class="list-items">
@@ -23,32 +23,32 @@
     <div class="scene-workspace" v-if="selectedScene">
       <div class="toolbar">
         <div class="scene-meta">
-          <input type="text" v-model="selectedScene.name" placeholder="Scene Name" class="scene-name-input" />
+          <input type="text" v-model="selectedScene.name" placeholder="场景名称" class="scene-name-input" />
           <span class="scene-id-lbl">ID: {{ selectedSceneId }}</span>
         </div>
         <div class="actions">
           <!-- View toggle: Timeline / Canvas -->
           <div class="view-toggle">
-            <button :class="{ active: viewMode === 'timeline' }" @click="viewMode = 'timeline'">📋 Timeline</button>
-            <button :class="{ active: viewMode === 'canvas' }" @click="viewMode = 'canvas'">🎨 Canvas</button>
+            <button :class="{ active: viewMode === 'timeline' }" @click="viewMode = 'timeline'">📋 时间线</button>
+            <button :class="{ active: viewMode === 'canvas' }" @click="viewMode = 'canvas'">🎨 画布</button>
           </div>
           <select v-model="newCommandType" class="cmd-select">
-            <option value="dialogue">Dialogue</option>
-            <option value="show_character">Show Character</option>
-            <option value="hide_character">Hide Character</option>
-            <option value="set_expression">Set Expression</option>
-            <option value="set_background">Set Background</option>
-            <option value="play_bgm">Play BGM</option>
-            <option value="play_se">Play SE</option>
-            <option value="stop_bgm">Stop BGM</option>
-            <option value="choice">Choice Menu</option>
-            <option value="set_variable">Set Variable</option>
-            <option value="condition">Condition Branch</option>
-            <option value="jump">Jump Scene</option>
-            <option value="end">End Game</option>
+            <option value="dialogue">对话</option>
+            <option value="show_character">显示角色</option>
+            <option value="hide_character">隐藏角色</option>
+            <option value="set_expression">设置表情</option>
+            <option value="set_background">设置背景</option>
+            <option value="play_bgm">播放BGM</option>
+            <option value="play_se">播放音效</option>
+            <option value="stop_bgm">停止BGM</option>
+            <option value="choice">选择菜单</option>
+            <option value="set_variable">设置变量</option>
+            <option value="condition">条件分支</option>
+            <option value="jump">跳转场景</option>
+            <option value="end">结束游戏</option>
           </select>
-          <button class="primary-btn" @click="addCommand">Add Command</button>
-          <button class="save-btn" @click="save">Save Script</button>
+          <button class="primary-btn" @click="addCommand">添加指令</button>
+          <button class="save-btn" @click="save">保存脚本</button>
         </div>
       </div>
       
@@ -71,7 +71,7 @@
           </div>
         </div>
         <div class="empty-commands" v-if="!selectedScene.commands || selectedScene.commands.length === 0">
-          No commands in this scene.
+          该场景暂无指令。
         </div>
       </div>
 
@@ -86,13 +86,13 @@
     </div>
     
     <div class="empty-state" v-else>
-      Select a scene from the left to start editing.
+      从左侧选择一个场景开始编辑。
     </div>
 
     <!-- Command Property Inspector -->
     <div class="inspector" v-if="selectedScene && selectedCmd">
       <div class="inspector-header">
-        <h3>Properties</h3>
+        <h3>属性</h3>
         <span class="cmd-badge">{{ selectedCmd.type }}</span>
       </div>
       
@@ -101,16 +101,16 @@
         <!-- Dialogue -->
         <template v-if="selectedCmd.type === 'dialogue'">
           <div class="form-group">
-            <label>Speaker (ID or blank for narrator)</label>
+            <label>说话人（角色ID，留空为旁白）</label>
             <input type="text" v-model="selectedCmd.speaker" />
           </div>
           <div class="form-group">
-            <label>Text</label>
+            <label>文本</label>
             <textarea v-model="selectedCmd.text" rows="4"></textarea>
           </div>
           <div class="inspector-section">
             <div class="section-toggle" @click="showDialogueStyle = !showDialogueStyle">
-              {{ showDialogueStyle ? '▾' : '▸' }} Custom Style
+              {{ showDialogueStyle ? '▾' : '▸' }} 自定义样式
             </div>
             <template v-if="showDialogueStyle">
               <div class="form-row">
@@ -125,37 +125,37 @@
               </div>
               <div class="form-row">
                 <div class="form-group half">
-                  <label>Width</label>
+                  <label>宽度</label>
                   <input type="number" :value="selectedCmd.style?.width" @input="setStyleField(selectedCmd, 'width', $event)" />
                 </div>
                 <div class="form-group half">
-                  <label>Height</label>
+                  <label>高度</label>
                   <input type="number" :value="selectedCmd.style?.height" @input="setStyleField(selectedCmd, 'height', $event)" />
                 </div>
               </div>
               <div class="form-group">
-                <label>Font Size (px)</label>
+                <label>字号 (px)</label>
                 <input type="number" :value="selectedCmd.style?.fontSize" @input="setStyleField(selectedCmd, 'fontSize', $event)" />
               </div>
               <div class="form-group">
-                <label>Font Family</label>
+                <label>字体</label>
                 <input type="text" :value="selectedCmd.style?.fontFamily" @input="setStyleTextField(selectedCmd, 'fontFamily', $event)" placeholder="Noto Sans SC" />
               </div>
               <div class="form-group">
-                <label>Text Color</label>
+                <label>文字颜色</label>
                 <input type="text" :value="selectedCmd.style?.textColor" @input="setStyleTextField(selectedCmd, 'textColor', $event)" placeholder="#ffffff" />
               </div>
               <div class="form-group">
-                <label>Background Color</label>
+                <label>背景色</label>
                 <input type="text" :value="selectedCmd.style?.backgroundColor" @input="setStyleTextField(selectedCmd, 'backgroundColor', $event)" placeholder="rgba(0,0,0,0.7)" />
               </div>
               <div class="form-row">
                 <div class="form-group half">
-                  <label>Border Radius</label>
+                  <label>圆角</label>
                   <input type="number" :value="selectedCmd.style?.borderRadius" @input="setStyleField(selectedCmd, 'borderRadius', $event)" />
                 </div>
                 <div class="form-group half">
-                  <label>Padding</label>
+                  <label>内边距</label>
                   <input type="number" :value="selectedCmd.style?.padding" @input="setStyleField(selectedCmd, 'padding', $event)" />
                 </div>
               </div>
@@ -166,20 +166,20 @@
         <!-- Show Character -->
         <template v-if="selectedCmd.type === 'show_character' || selectedCmd.type === 'set_expression'">
           <div class="form-group">
-            <label>Character ID</label>
+            <label>角色 ID</label>
             <input type="text" v-model="selectedCmd.id" />
           </div>
           <div class="form-group">
-            <label>Expression</label>
+            <label>表情</label>
             <input type="text" v-model="selectedCmd.expression" />
           </div>
           <div class="form-group" v-if="selectedCmd.type === 'show_character'">
-            <label>Position</label>
+            <label>位置</label>
             <select v-model="selectedCmd.position">
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-              <option value="custom">Custom (x/y)</option>
+              <option value="left">左侧</option>
+              <option value="center">居中</option>
+              <option value="right">右侧</option>
+              <option value="custom">自定义 (x/y)</option>
             </select>
           </div>
           <!-- Custom position fields -->
@@ -195,7 +195,7 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Scale</label>
+              <label>缩放</label>
               <input type="number" v-model.number="selectedCmd.scale" step="0.1" min="0.1" max="5" />
             </div>
           </template>
@@ -204,7 +204,7 @@
         <!-- Hide Character -->
         <template v-if="selectedCmd.type === 'hide_character'">
           <div class="form-group">
-            <label>Character ID</label>
+            <label>角色 ID</label>
             <input type="text" v-model="selectedCmd.id" />
           </div>
         </template>
@@ -212,7 +212,7 @@
         <!-- Set Background -->
         <template v-if="selectedCmd.type === 'set_background'">
           <div class="form-group">
-            <label>Image Path</label>
+            <label>图片路径</label>
             <input type="text" v-model="selectedCmd.image" placeholder="backgrounds/school.png" />
           </div>
         </template>
@@ -220,11 +220,11 @@
         <!-- Audio -->
         <template v-if="selectedCmd.type === 'play_bgm' || selectedCmd.type === 'play_se'">
           <div class="form-group">
-            <label>Audio File</label>
+            <label>音频文件</label>
             <input type="text" v-model="selectedCmd.file" placeholder="audio/bgm.mp3" />
           </div>
           <div class="form-group" v-if="selectedCmd.type === 'play_bgm'">
-            <label>Volume (0.0 to 1.0)</label>
+            <label>音量 (0.0 到 1.0)</label>
             <input type="number" v-model.number="selectedCmd.volume" step="0.1" min="0" max="1" />
           </div>
         </template>
@@ -232,7 +232,7 @@
         <!-- Jump -->
         <template v-if="selectedCmd.type === 'jump'">
           <div class="form-group">
-            <label>Target Scene</label>
+            <label>目标场景</label>
             <input type="text" v-model="selectedCmd.target" />
           </div>
         </template>
@@ -240,14 +240,14 @@
         <!-- Choice -->
         <template v-if="selectedCmd.type === 'choice'">
           <div class="form-group">
-            <label>Prompt Text</label>
+            <label>提示文本</label>
             <input type="text" v-model="selectedCmd.prompt" />
           </div>
           <div class="form-group">
-            <label>Layout</label>
+            <label>布局</label>
             <select v-model="selectedCmd.layout">
-              <option value="default">Default (Centered)</option>
-              <option value="custom">Custom (Free Position)</option>
+              <option value="default">默认（居中）</option>
+              <option value="custom">自定义（自由定位）</option>
             </select>
           </div>
           <template v-if="selectedCmd.layout === 'custom'">
@@ -263,13 +263,13 @@
             </div>
           </template>
           <div class="options-list">
-            <label>Options</label>
+            <label>选项列表</label>
             <div class="option-item" v-for="(opt, i) in selectedCmd.options" :key="i">
-              <input type="text" v-model="opt.text" placeholder="Text" />
-              <input type="text" v-model="opt.jump" placeholder="Jump scene" />
+              <input type="text" v-model="opt.text" placeholder="选项文本" />
+              <input type="text" v-model="opt.jump" placeholder="跳转场景" />
               <button @click="selectedCmd.options.splice(i, 1)">x</button>
             </div>
-            <button class="secondary-btn" @click="!selectedCmd.options ? selectedCmd.options = [{text:'', jump:''}] : selectedCmd.options.push({text:'', jump:''})">Add Option</button>
+            <button class="secondary-btn" @click="!selectedCmd.options ? selectedCmd.options = [{text:'', jump:''}] : selectedCmd.options.push({text:'', jump:''})">添加选项</button>
           </div>
         </template>
 
@@ -277,7 +277,7 @@
     </div>
     
     <div class="empty-inspector" v-else-if="selectedScene">
-      Select a command to view properties
+      选择一个指令以查看属性
     </div>
   </div>
 </template>
@@ -349,9 +349,9 @@ function selectCommand(index) {
 }
 
 function addScene() {
-  const id = prompt('Enter scene ID (e.g. dawn_1):');
+  const id = prompt('请输入场景 ID（如 dawn_1）:');
   if (id && !script.data.scenes[id]) {
-    script.data.scenes[id] = { name: 'New Scene', commands: [] };
+    script.data.scenes[id] = { name: '新场景', commands: [] };
     selectedSceneId.value = id;
     selectedCmdIndex.value = -1;
   }
@@ -366,14 +366,14 @@ function addCommand() {
   // Set some sensible defaults based on type
   if (baseCmd.type === 'dialogue') {
     baseCmd.speaker = '';
-    baseCmd.text = 'New Dialogue line';
+    baseCmd.text = '新对话文本';
   } else if (baseCmd.type === 'show_character') {
     baseCmd.id = '';
     baseCmd.expression = 'normal';
     baseCmd.position = 'center';
   } else if (baseCmd.type === 'choice') {
-    baseCmd.prompt = 'Make a choice';
-    baseCmd.options = [{ text: 'Yes', jump: '' }];
+    baseCmd.prompt = '请做出选择';
+    baseCmd.options = [{ text: '是', jump: '' }];
   }
 
   selectedScene.value.commands.push(baseCmd);
@@ -403,18 +403,18 @@ function moveCmd(index, dir) {
 function getCommandPreview(cmd) {
   switch (cmd.type) {
     case 'dialogue': return `${cmd.speaker ? cmd.speaker+':' : ''} ${cmd.text?.substring(0, 30)}...`;
-    case 'show_character': return `${cmd.id} (${cmd.expression}) at ${cmd.position}`;
+    case 'show_character': return `${cmd.id} (${cmd.expression}) ${cmd.position}`;
     case 'set_background': return `${cmd.image}`;
     case 'play_bgm': return `${cmd.file}`;
-    case 'choice': return `${cmd.options?.length || 0} options`;
-    case 'jump': return `-> ${cmd.target}`;
+    case 'choice': return `${cmd.options?.length || 0} 个选项`;
+    case 'jump': return `→ ${cmd.target}`;
     default: return '';
   }
 }
 
 async function save() {
   await script.saveScript();
-  alert('Script saved!');
+  alert('脚本已保存！');
 }
 </script>
 

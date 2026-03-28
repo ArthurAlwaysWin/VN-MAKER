@@ -119,18 +119,26 @@ async function browseLocation() {
 
 async function handleCreate() {
   creating.value = true;
-  const result = await project.createProject({
-    name: form.name.trim(),
-    author: form.author.trim(),
-    location: form.location,
-    resolution: form.resolution,
-    template: form.template
-  });
-  creating.value = false;
-  if (result.success) {
-    emit('created', result.path);
-  } else {
-    alert('创建失败: ' + result.error);
+  try {
+    console.log('[Wizard] Creating project:', { name: form.name, location: form.location, template: form.template });
+    const result = await project.createProject({
+      name: form.name.trim(),
+      author: form.author.trim(),
+      location: form.location,
+      resolution: { width: form.resolution.width, height: form.resolution.height },
+      template: form.template
+    });
+    console.log('[Wizard] Create result:', result);
+    creating.value = false;
+    if (result && result.success) {
+      emit('created', result.path);
+    } else {
+      alert('创建失败: ' + (result?.error || '未知错误'));
+    }
+  } catch (err) {
+    creating.value = false;
+    console.error('[Wizard] handleCreate error:', err);
+    alert('创建项目出错: ' + err.message);
   }
 }
 </script>

@@ -259,5 +259,10 @@ The existing `public/game/` demo data remains as a built-in demo project templat
 
 - Debounce interval: **2 seconds** after last edit
 - Dirty-state indicator: dot (●) appended to project name in title bar when unsaved
-- Auto-save writes both `project.json` and `script.json` atomically
+- Auto-save writes both `project.json` and `script.json` (write to temp file, then rename to avoid corruption)
 - Manual save via Ctrl+S also available
+- On app close with unsaved changes: show "是否保存？" dialog (Save / Don't Save / Cancel)
+
+## Project Switching
+
+Users can return to the welcome screen to switch projects via a "🏠" button in the title bar or File menu. This sets `currentView = 'welcome'` and clears the current project state. Unsaved changes trigger the save dialog before switching.

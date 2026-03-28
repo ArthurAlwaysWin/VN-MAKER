@@ -107,7 +107,9 @@ watch(() => script.data, () => {
   // Auto-save to disk
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    project.saveProject(script.data);
+    if (script.data && project.projectPath) {
+      project.saveProject(script.data);
+    }
   }, 2000);
 }, { deep: true });
 
@@ -133,7 +135,11 @@ onMounted(async () => {
   document.addEventListener('keydown', onKeyDown);
   await project.loadRecentProjects();
 });
-onBeforeUnmount(() => document.removeEventListener('keydown', onKeyDown));
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeyDown);
+  if (saveTimer) clearTimeout(saveTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+});
 
 // --- Actions ---
 function showCreateDialog() {
@@ -165,8 +171,13 @@ async function goHome() {
   if (project.isDirty && script.data) {
     const action = await window.ipcRenderer.invoke('show-save-dialog');
     if (action === 'cancel') return;
-    if (action === 'save') await project.saveProject(script.data);
+    if (action === 'save') {
+      const saved = await project.saveProject(script.data);
+      if (!saved) return;
+    }
   }
+  if (saveTimer) clearTimeout(saveTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
   script.reset();
   project.closeProject();
   currentView.value = 'welcome';

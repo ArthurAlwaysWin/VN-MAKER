@@ -26,3 +26,5 @@ npm-debug.log*
 
 # Gemini agent artifacts
 .gemini/
+
+.superpowers/

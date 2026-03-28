@@ -54,7 +54,9 @@ my-visual-novel/
 }
 ```
 
-**script.json** retains its current format (scenes, characters, title layout, etc.) with no structural changes. It is already the source of truth for all game content.
+**script.json** retains its current format for game content (scenes, characters, title layout, etc.) with one change: the `meta` block is **removed** from script.json. Project metadata (title, author, version, resolution) now lives exclusively in `project.json` — single source of truth, no duplication.
+
+**Migration:** When opening a legacy script.json that contains a `meta` block (i.e., no project.json exists), the editor extracts `meta` into a new `project.json` and removes it from `script.json`.
 
 ### 2. Welcome Screen
 
@@ -70,6 +72,8 @@ my-visual-novel/
 - New Vue component: `WelcomeScreen.vue`
 - Recent projects stored in Electron's `app.getPath('userData')` as `recent-projects.json`
 - App.vue state machine: `welcome` → `editing` (controlled by `currentView` ref)
+- Navigation uses `<component :is="...">` with `<keep-alive>` for tab switching (preserves scroll/state per tab)
+- Vue Router is **removed** — tab switching is purely component-based
 
 ### 3. New Project Flow
 
@@ -148,13 +152,17 @@ New/modified IPC handlers:
 |---------|-----------|---------|
 | `create-project` | renderer → main | Create project folder + files |
 | `open-project` | renderer → main | Open folder dialog, validate project |
-| `load-project` | renderer → main | Read project.json + script.json |
+| `load-project` | renderer → main | Read project.json + script.json; **stores project path in main process state** |
 | `save-project` | renderer → main | Write project.json + script.json |
 | `read-dir` | (modify) | Read from project dir instead of hardcoded path |
 | `upload-asset` | (modify) | Write to project's assets/ dir |
 | `get-recent-projects` | renderer → main | Read recent-projects.json |
 | `update-recent-projects` | renderer → main | Write to recent-projects.json |
 | `open-preview` | (modify) | Pass project path to preview window |
+
+**Asset protocol state:** When `load-project` is called, the main process stores the project path in a module-level variable (`let currentProjectPath = null`). The `asset://` protocol handler reads from `currentProjectPath + '/assets/'` instead of the hardcoded `public/game/`. If `currentProjectPath` is null (no project loaded), the protocol falls back to `public/game/` for backward compatibility.
+
+**Project validation rules:** `open-project` validates a folder by checking: (1) `project.json` exists and is valid JSON, OR (2) `script.json` exists (legacy project — triggers migration). Invalid folders show an error dialog.
 
 ### 8. Data Flow
 
@@ -225,7 +233,31 @@ The preview window currently loads `index.html` which reads from `public/game/`.
 | File | Reason |
 |------|--------|
 | `src/editor/components/layout/Sidebar.vue` | Replaced by TabBar |
+| `src/editor/router/index.js` | Replaced by component-based tab switching |
+| `src/editor/views/Dashboard.vue` | Replaced by WelcomeScreen.vue |
+
+### Modified (additional)
+| File | Changes |
+|------|---------|
+| `src/editor/main.js` | Remove `vue-router` import and `app.use(router)` |
 
 ## Migration Strategy
 
 The existing `public/game/` demo data remains as a built-in demo project template. When users create a "demo project" from the wizard, these files are copied into the new project folder.
+
+## Error Handling
+
+| Scenario | Behavior |
+|----------|----------|
+| Project folder deleted externally | Show error dialog on next save, offer "Save As" to new location |
+| JSON file corrupt/unreadable | Show error with file path, offer to reset to empty project |
+| Disk full on save | Show OS error message, keep in-memory state intact |
+| Open non-project folder | Show "不是有效的项目文件夹" dialog with instructions |
+| Legacy script.json (no project.json) | Auto-migrate: create project.json from meta, show notification |
+
+## Auto-Save
+
+- Debounce interval: **2 seconds** after last edit
+- Dirty-state indicator: dot (●) appended to project name in title bar when unsaved
+- Auto-save writes both `project.json` and `script.json` atomically
+- Manual save via Ctrl+S also available

@@ -189,6 +189,9 @@ function replayCurrentScene() {
           id: cmd.id,
           expression: cmd.expression,
           position: cmd.position || 'center',
+          x: cmd.x,
+          y: cmd.y,
+          scale: cmd.scale,
           transition: 'none',
           duration: 0,
           image: char?.expressions?.[cmd.expression] || '',
@@ -417,6 +420,11 @@ async function init() {
 
     // Set title screen name from script
     titleScreen.gameTitle = engine.script.meta.title;
+
+    // Apply custom title screen layout if defined in script
+    if (engine.script.ui?.titleScreen) {
+      titleScreen.setLayout(engine.script.ui.titleScreen);
+    }
 
     showTitle();
     console.log('[GalgameMaker] Ready!');

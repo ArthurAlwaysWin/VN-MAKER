@@ -400,6 +400,26 @@ body {
   letter-spacing: 2px;
 }
 
+.title-custom-element {
+  position: absolute;
+  user-select: none;
+}
+
+.title-custom-button {
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Noto Sans SC', sans-serif;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+}
+
+.title-custom-button:hover {
+  border-color: rgba(180, 160, 255, 0.4);
+  background: rgba(180, 160, 255, 0.08);
+}
+
 /* ============================================
    Save / Load Screen
    ============================================ */

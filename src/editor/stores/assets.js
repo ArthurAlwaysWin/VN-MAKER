@@ -89,6 +89,24 @@ export const useAssetStore = defineStore('assets', () => {
   }
 
   /**
+   * Rename an asset file within a category.
+   * @param {string} category - Target category
+   * @param {string} oldName - Current filename
+   * @param {string} newName - New filename
+   * @returns {Promise<{ success: boolean, newName?: string, error?: string }>}
+   */
+  async function renameAsset(category, oldName, newName) {
+    const result = await window.ipcRenderer.invoke(
+      'rename-asset',
+      JSON.parse(JSON.stringify({ category, oldName, newName }))
+    );
+    if (result.success) {
+      await loadCategory(category);
+    }
+    return result;
+  }
+
+  /**
    * Open a native file dialog to select an asset.
    * @param {string[]} types - Asset type filters (e.g. ['backgrounds'])
    * @returns {Promise<string|null>} Relative path or null if cancelled
@@ -156,7 +174,7 @@ export const useAssetStore = defineStore('assets', () => {
   // ─── Return ─────────────────────────────────────────────────────────
   return {
     files, fontMeta, isLoading, fontFamilies,
-    loadCategory, loadAll, importAssets, deleteAsset, selectAsset,
+    loadCategory, loadAll, importAssets, deleteAsset, renameAsset, selectAsset,
     syncFontMeta, loadProjectFonts, importFont,
   };
 });

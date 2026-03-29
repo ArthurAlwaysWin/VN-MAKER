@@ -384,6 +384,32 @@ ipcMain.handle('delete-asset', async (event, { category, filename }) => {
   }
 });
 
+ipcMain.handle('rename-asset', async (event, { category, oldName, newName }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+
+    const dir = path.join(currentProjectPath, 'assets', category);
+    const oldPath = path.join(dir, oldName);
+    const newPath = path.join(dir, newName);
+
+    if (!isInsideProject(oldPath) || !isInsideProject(newPath)) {
+      return { success: false, error: 'Invalid path' };
+    }
+    if (!existsSync(oldPath)) {
+      return { success: false, error: 'File not found' };
+    }
+    if (existsSync(newPath) && oldName !== newName) {
+      return { success: false, error: 'File already exists' };
+    }
+
+    await fs.rename(oldPath, newPath);
+    return { success: true, newName };
+  } catch (e) {
+    console.error('[rename-asset] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('list-assets', async (event, { category }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };

@@ -55,7 +55,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Importing a file whose name already exists in the target folder automatically appends a number suffix (背景-1.png, 背景-2.png) — no overwrite, no user intervention
   3. Custom font files imported to assets/fonts/ are loadable via FontFace API in both the editor window and the engine window independently
   4. All new IPC calls from Vue components safely deconstruct reactive Proxy objects before sending — no serialization errors
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Backend infrastructure: validateAsset.js, 4 IPC handlers, fonts/ directory, fontLoader.js
+- [ ] 06-02-PLAN.md — Asset store + integration wiring: Pinia assets store, editor/engine font loading
 
 ### Phase 7: Asset Library UI
 **Goal**: Users manage all project assets — backgrounds, characters, audio, and fonts — in one unified view with visual browsing, inline editing, and drag-to-import
@@ -103,7 +107,7 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. Asset Library Foundation | 0/? | Not started | - |
+| 6. Asset Library Foundation | 0/2 | Planned | - |
 | 7. Asset Library UI | 0/? | Not started | - |
 | 8. Title Page Designer | 0/? | Not started | - |
 | 9. Settings Overlay | 0/? | Not started | - |

@@ -54,16 +54,15 @@ export const useAssetStore = defineStore('assets', () => {
   }
 
   /**
-   * Import assets into a category via IPC.
+   * Import assets into a category via IPC (path-based for efficiency).
    * @param {string} category - Target category
-   * @param {Array<{ name: string, data: number[] }>} fileDataArray - Files to import
+   * @param {string[]} filePaths - Native file paths to import
    * @returns {Promise<{ success: boolean, imported: Array, errors: Array }>}
    */
-  async function importAssets(category, fileDataArray) {
-    const cleanData = JSON.parse(JSON.stringify(fileDataArray));
+  async function importAssets(category, filePaths) {
     const result = await window.ipcRenderer.invoke('import-assets', {
       category,
-      files: cleanData,
+      paths: JSON.parse(JSON.stringify(filePaths)),
     });
     if (result.success) {
       await loadCategory(category);
@@ -144,12 +143,12 @@ export const useAssetStore = defineStore('assets', () => {
   /**
    * Import font files, create metadata, update script store, and hot-load.
    * @param {string} category - Should be 'fonts'
-   * @param {Array<{ name: string, data: number[] }>} fileDataArray - Font files to import
+   * @param {string[]} filePaths - Native file paths to import
    * @param {object} scriptStore - The script Pinia store instance
    * @returns {Promise<{ success: boolean, imported: Array, errors: Array }>}
    */
-  async function importFont(category, fileDataArray, scriptStore) {
-    const result = await importAssets(category, fileDataArray);
+  async function importFont(category, filePaths, scriptStore) {
+    const result = await importAssets(category, filePaths);
     if (result.success && result.imported.length > 0) {
       for (let i = 0; i < result.imported.length; i++) {
         const file = result.imported[i];

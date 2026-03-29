@@ -325,8 +325,8 @@ ipcMain.handle('select-asset', async (event, { types }) => {
   }
 });
 
-ipcMain.handle('import-assets', async (event, { category, files }) => {
-  // files: Array<{ name: string, data: number[] }>
+ipcMain.handle('import-assets', async (event, { category, paths }) => {
+  // paths: string[] — native file paths from renderer
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
@@ -337,29 +337,40 @@ ipcMain.handle('import-assets', async (event, { category, files }) => {
     const imported = [];
     const errors = [];
 
-    for (const file of files) {
-      const buffer = Buffer.from(file.data);
-      const ext = path.extname(file.name);
+    for (const filePath of paths) {
+      const name = path.basename(filePath);
+      const ext = path.extname(name);
 
-      // Validate format (D-03: magic bytes + extension)
-      const headerBytes = buffer.subarray(0, 12);
+      // Validate format (D-03: magic bytes + extension) — read only first 12 bytes
+      let headerBytes;
+      try {
+        const fh = await fs.open(filePath, 'r');
+        const buf = Buffer.alloc(12);
+        await fh.read(buf, 0, 12, 0);
+        await fh.close();
+        headerBytes = buf;
+      } catch (readErr) {
+        errors.push({ name, reason: `无法读取文件: ${readErr.message}` });
+        continue;
+      }
+
       const validation = validateAssetFormat(headerBytes, ext, category);
       if (!validation.valid) {
-        errors.push({ name: file.name, reason: validation.reason });
+        errors.push({ name, reason: validation.reason });
         continue; // D-02: skip invalid, continue with valid
       }
 
       // Auto-name if conflict (ASSET-04)
-      const safeName = await uniqueFilename(dir, file.name);
+      const safeName = await uniqueFilename(dir, name);
       const fullPath = path.join(dir, safeName);
 
       if (!isInsideProject(fullPath)) {
-        errors.push({ name: file.name, reason: 'Path security violation' });
+        errors.push({ name, reason: 'Path security violation' });
         continue;
       }
 
-      await fs.writeFile(fullPath, buffer);
-      imported.push({ original: file.name, saved: safeName });
+      await fs.copyFile(filePath, fullPath);
+      imported.push({ original: name, saved: safeName });
     }
 
     return { success: true, imported, errors, supportedFormats: getSupportedFormats(category) };

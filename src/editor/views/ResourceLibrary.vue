@@ -130,24 +130,18 @@ async function onFileDrop(droppedFiles) {
 
 /**
  * Common import logic for both file input and drag-drop.
- * Reads files into ArrayBuffer, converts to byte arrays, calls appropriate store method.
+ * Sends native file paths to main process for efficient copy.
  * @param {File[]} fileArray
  */
 async function importFiles(fileArray) {
   const category = activeSubTab.value;
-  const fileDataArray = [];
-  for (const file of fileArray) {
-    const buffer = await file.arrayBuffer();
-    fileDataArray.push({
-      name: file.name,
-      data: Array.from(new Uint8Array(buffer)),
-    });
-  }
+  const filePaths = fileArray.map(f => f.path).filter(Boolean);
+  if (filePaths.length === 0) return;
   let result;
   if (category === 'fonts') {
-    result = await assets.importFont('fonts', fileDataArray, script);
+    result = await assets.importFont('fonts', filePaths, script);
   } else {
-    result = await assets.importAssets(category, fileDataArray);
+    result = await assets.importAssets(category, filePaths);
   }
   importResult.value = result;
 }

@@ -1,8 +1,8 @@
-import { ipcMain as f, dialog as b, BrowserWindow as O, app as P, protocol as C, net as L } from "electron";
+import { ipcMain as f, dialog as F, BrowserWindow as D, app as O, protocol as $, net as C } from "electron";
 import r from "node:path";
-import { fileURLToPath as $, pathToFileURL as W } from "node:url";
+import { fileURLToPath as L, pathToFileURL as W } from "node:url";
 import o from "node:fs/promises";
-import { existsSync as p } from "node:fs";
+import { existsSync as w } from "node:fs";
 const q = {
   png: { bytes: [137, 80, 78, 71], offset: 0 },
   jpeg: { bytes: [255, 216, 255], offset: 0 },
@@ -68,22 +68,22 @@ function E(n, t, e) {
   if (!s)
     return { valid: !1, reason: `Unknown category: ${e}` };
   const a = t.toLowerCase();
-  return s.extensions.includes(a) ? s.signatures.some((c) => {
-    const u = q[c];
-    return u && z(n, u);
+  return s.extensions.includes(a) ? s.signatures.some((u) => {
+    const c = q[u];
+    return c && z(n, c);
   }) ? { valid: !0 } : { valid: !1, reason: `文件内容与 ${a} 格式不匹配` } : { valid: !1, reason: `不支持的文件格式 ${a}` };
 }
 function G(n) {
   var t;
   return ((t = k[n]) == null ? void 0 : t.extensions) || [];
 }
-const T = r.dirname($(import.meta.url));
-let l = null, d;
-function F() {
-  return d || O.getFocusedWindow() || O.getAllWindows()[0] || null;
+const T = r.dirname(L(import.meta.url));
+let l = null, p;
+function S() {
+  return p || D.getFocusedWindow() || D.getAllWindows()[0] || null;
 }
 function N() {
-  return r.join(P.getPath("userData"), "recent-projects.json");
+  return r.join(O.getPath("userData"), "recent-projects.json");
 }
 async function A() {
   try {
@@ -100,7 +100,7 @@ async function J(n, t) {
   const e = await A();
   e.projects = e.projects.filter((s) => s.path !== n), e.projects.unshift({ path: n, name: t, openedAt: (/* @__PURE__ */ new Date()).toISOString() }), e.projects.length > 20 && (e.projects = e.projects.slice(0, 20)), e.hasCreatedProject = !0, await U(e);
 }
-function w(n) {
+function h(n) {
   const t = r.resolve(n), e = r.resolve(l);
   return t.startsWith(e + r.sep) || t === e;
 }
@@ -122,9 +122,9 @@ async function I(n, t) {
 }
 async function V(n, t) {
   const { name: e, ext: s } = r.parse(t), a = await o.readdir(n).catch(() => []);
-  let i = t, c = 1;
+  let i = t, u = 1;
   for (; a.includes(i); )
-    i = `${e}-${c}${s}`, c++;
+    i = `${e}-${u}${s}`, u++;
   return i;
 }
 function B() {
@@ -143,9 +143,9 @@ function B() {
 }
 f.handle("create-project", async (n, { name: t, author: e, location: s, resolution: a, template: i }) => {
   try {
-    const c = H(t), u = r.join(s, c);
-    await o.mkdir(u, { recursive: !0 }), await o.mkdir(r.join(u, "assets", "backgrounds"), { recursive: !0 }), await o.mkdir(r.join(u, "assets", "characters"), { recursive: !0 }), await o.mkdir(r.join(u, "assets", "audio"), { recursive: !0 }), await o.mkdir(r.join(u, "assets", "ui"), { recursive: !0 }), await o.mkdir(r.join(u, "assets", "fonts"), { recursive: !0 });
-    const v = {
+    const u = H(t), c = r.join(s, u);
+    await o.mkdir(c, { recursive: !0 }), await o.mkdir(r.join(c, "assets", "backgrounds"), { recursive: !0 }), await o.mkdir(r.join(c, "assets", "characters"), { recursive: !0 }), await o.mkdir(r.join(c, "assets", "audio"), { recursive: !0 }), await o.mkdir(r.join(c, "assets", "ui"), { recursive: !0 }), await o.mkdir(r.join(c, "assets", "fonts"), { recursive: !0 });
+    const x = {
       name: t,
       author: e || "",
       version: "1.0.0",
@@ -155,42 +155,42 @@ f.handle("create-project", async (n, { name: t, author: e, location: s, resoluti
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       lastModified: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await o.writeFile(r.join(u, "project.json"), JSON.stringify(v, null, 2), "utf-8");
-    let m = B();
+    await o.writeFile(r.join(c, "project.json"), JSON.stringify(x, null, 2), "utf-8");
+    let j = B();
     if (i === "demo") {
-      const h = r.join(process.env.APP_ROOT, "public", "game");
-      if (p(r.join(h, "script.json"))) {
-        const j = JSON.parse(await o.readFile(r.join(h, "script.json"), "utf-8"));
-        delete j.meta, m = j;
-        for (const x of ["backgrounds", "characters", "audio"]) {
-          const g = r.join(h, x), S = r.join(u, "assets", x);
-          if (p(g)) {
-            const R = await o.readdir(g);
-            for (const D of R)
-              await o.copyFile(r.join(g, D), r.join(S, D));
+      const m = r.join(process.env.APP_ROOT, "public", "game");
+      if (w(r.join(m, "script.json"))) {
+        const g = JSON.parse(await o.readFile(r.join(m, "script.json"), "utf-8"));
+        delete g.meta, j = g;
+        for (const b of ["backgrounds", "characters", "audio"]) {
+          const d = r.join(m, b), y = r.join(c, "assets", b);
+          if (w(d)) {
+            const P = await o.readdir(d);
+            for (const R of P)
+              await o.copyFile(r.join(d, R), r.join(y, R));
           }
         }
       }
     }
-    return await o.writeFile(r.join(u, "script.json"), JSON.stringify(m, null, 2), "utf-8"), await J(u, t), { success: !0, path: u };
-  } catch (c) {
-    return console.error("Failed to create project:", c), { success: !1, error: c.message };
+    return await o.writeFile(r.join(c, "script.json"), JSON.stringify(j, null, 2), "utf-8"), await J(c, t), { success: !0, path: c };
+  } catch (u) {
+    return console.error("Failed to create project:", u), { success: !1, error: u.message };
   }
 });
 f.handle("open-project", async () => {
-  const n = await b.showOpenDialog(F(), {
+  const n = await F.showOpenDialog(S(), {
     properties: ["openDirectory"],
     title: "选择项目文件夹"
   });
   if (n.canceled || n.filePaths.length === 0) return { canceled: !0 };
-  const t = n.filePaths[0], e = p(r.join(t, "project.json")), s = p(r.join(t, "script.json"));
+  const t = n.filePaths[0], e = w(r.join(t, "project.json")), s = w(r.join(t, "script.json"));
   return !e && !s ? { success: !1, error: "不是有效的项目文件夹：找不到 project.json 或 script.json" } : { success: !0, path: t, needsMigration: !e && s };
 });
 f.handle("load-project", async (n, t) => {
   try {
     let e, s;
     const a = r.join(t, "project.json"), i = r.join(t, "script.json");
-    if (p(a) && (e = JSON.parse(await o.readFile(a, "utf-8"))), p(i) ? s = JSON.parse(await o.readFile(i, "utf-8")) : s = B(), !e && s.meta) {
+    if (w(a) && (e = JSON.parse(await o.readFile(a, "utf-8"))), w(i) ? s = JSON.parse(await o.readFile(i, "utf-8")) : s = B(), !e && s.meta) {
       e = {
         name: s.meta.title || r.basename(t),
         author: s.meta.author || "",
@@ -201,8 +201,8 @@ f.handle("load-project", async (n, t) => {
         createdAt: (/* @__PURE__ */ new Date()).toISOString(),
         lastModified: (/* @__PURE__ */ new Date()).toISOString()
       }, delete s.meta, await o.writeFile(a, JSON.stringify(e, null, 2), "utf-8"), await o.writeFile(i, JSON.stringify(s, null, 2), "utf-8");
-      for (const c of ["backgrounds", "characters", "audio", "ui"])
-        await o.mkdir(r.join(t, "assets", c), { recursive: !0 });
+      for (const u of ["backgrounds", "characters", "audio", "ui"])
+        await o.mkdir(r.join(t, "assets", u), { recursive: !0 });
     }
     return e || (e = {
       name: r.basename(t),
@@ -230,7 +230,7 @@ f.handle("read-dir", async (n, t) => {
   try {
     if (!l) return [];
     const e = r.join(l, t);
-    return w(e) ? (await o.readdir(e, { withFileTypes: !0 })).map((a) => ({ name: a.name, isDirectory: a.isDirectory() })) : [];
+    return h(e) ? (await o.readdir(e, { withFileTypes: !0 })).map((a) => ({ name: a.name, isDirectory: a.isDirectory() })) : [];
   } catch {
     return [];
   }
@@ -239,7 +239,7 @@ f.handle("upload-asset", async (n, { category: t, name: e, data: s }) => {
   try {
     if (!l) return !1;
     const a = r.join(l, "assets", t);
-    return w(a) ? (await o.mkdir(a, { recursive: !0 }), await o.writeFile(r.join(a, e), Buffer.from(s)), !0) : !1;
+    return h(a) ? (await o.mkdir(a, { recursive: !0 }), await o.writeFile(r.join(a, e), Buffer.from(s)), !0) : !1;
   } catch (a) {
     return console.error("Failed to upload asset:", a), !1;
   }
@@ -253,46 +253,55 @@ f.handle("select-asset", async (n, { types: t }) => {
       audio: { name: "音频", extensions: ["mp3", "ogg", "wav"] },
       fonts: { name: "字体", extensions: ["ttf", "otf", "woff", "woff2"] },
       ui: { name: "图片", extensions: ["png", "jpg", "jpeg", "webp"] }
-    }, s = t[0], a = t.map((D) => e[D]).filter(Boolean), i = r.join(l, "assets", s || ""), c = await b.showOpenDialog(F(), {
+    }, s = t[0], a = t.map((R) => e[R]).filter(Boolean), i = r.join(l, "assets", s || ""), u = await F.showOpenDialog(S(), {
       properties: ["openFile"],
       filters: a,
-      defaultPath: p(i) ? i : l,
+      defaultPath: w(i) ? i : l,
       title: "选择资源文件"
     });
-    if (c.canceled || c.filePaths.length === 0) return null;
-    const u = c.filePaths[0], v = r.resolve(r.join(l, "assets")), m = r.resolve(u);
-    if (m.startsWith(v + r.sep))
-      return m.slice(v.length + 1).replace(/\\/g, "/");
+    if (u.canceled || u.filePaths.length === 0) return null;
+    const c = u.filePaths[0], x = r.resolve(r.join(l, "assets")), j = r.resolve(c);
+    if (j.startsWith(x + r.sep))
+      return j.slice(x.length + 1).replace(/\\/g, "/");
     if (!s) return null;
-    const h = await o.readFile(u), j = r.extname(u);
-    if (!E(h.subarray(0, 12), j, s).valid) return null;
-    const g = r.join(l, "assets", s);
-    await o.mkdir(g, { recursive: !0 });
-    const S = await V(g, r.basename(u)), R = r.join(g, S);
-    return w(R) ? (await o.copyFile(u, R), `${s}/${S}`) : null;
+    const m = await o.readFile(c), g = r.extname(c);
+    if (!E(m.subarray(0, 12), g, s).valid) return null;
+    const d = r.join(l, "assets", s);
+    await o.mkdir(d, { recursive: !0 });
+    const y = await V(d, r.basename(c)), P = r.join(d, y);
+    return h(P) ? (await o.copyFile(c, P), `${s}/${y}`) : null;
   } catch (e) {
     return console.error("[select-asset] Failed:", e), null;
   }
 });
-f.handle("import-assets", async (n, { category: t, files: e }) => {
+f.handle("import-assets", async (n, { category: t, paths: e }) => {
   try {
     if (!l) return { success: !1, error: "No project loaded" };
     const s = r.join(l, "assets", t);
-    if (!w(s)) return { success: !1, error: "Invalid path" };
+    if (!h(s)) return { success: !1, error: "Invalid path" };
     await o.mkdir(s, { recursive: !0 });
     const a = [], i = [];
-    for (const c of e) {
-      const u = Buffer.from(c.data), v = r.extname(c.name), m = u.subarray(0, 12), h = E(m, v, t);
-      if (!h.valid) {
-        i.push({ name: c.name, reason: h.reason });
+    for (const u of e) {
+      const c = r.basename(u), x = r.extname(c);
+      let j;
+      try {
+        const d = await o.open(u, "r"), y = Buffer.alloc(12);
+        await d.read(y, 0, 12, 0), await d.close(), j = y;
+      } catch (d) {
+        i.push({ name: c, reason: `无法读取文件: ${d.message}` });
         continue;
       }
-      const j = await V(s, c.name), x = r.join(s, j);
-      if (!w(x)) {
-        i.push({ name: c.name, reason: "Path security violation" });
+      const m = E(j, x, t);
+      if (!m.valid) {
+        i.push({ name: c, reason: m.reason });
         continue;
       }
-      await o.writeFile(x, u), a.push({ original: c.name, saved: j });
+      const g = await V(s, c), b = r.join(s, g);
+      if (!h(b)) {
+        i.push({ name: c, reason: "Path security violation" });
+        continue;
+      }
+      await o.copyFile(u, b), a.push({ original: c, saved: g });
     }
     return { success: !0, imported: a, errors: i, supportedFormats: G(t) };
   } catch (s) {
@@ -303,7 +312,7 @@ f.handle("delete-asset", async (n, { category: t, filename: e }) => {
   try {
     if (!l) return { success: !1, error: "No project loaded" };
     const s = r.join(l, "assets", t, e);
-    return w(s) ? (await o.unlink(s), { success: !0 }) : { success: !1, error: "Invalid path" };
+    return h(s) ? (await o.unlink(s), { success: !0 }) : { success: !1, error: "Invalid path" };
   } catch (s) {
     return console.error("[delete-asset] Failed:", s), { success: !1, error: s.message };
   }
@@ -311,8 +320,8 @@ f.handle("delete-asset", async (n, { category: t, filename: e }) => {
 f.handle("rename-asset", async (n, { category: t, oldName: e, newName: s }) => {
   try {
     if (!l) return { success: !1, error: "No project loaded" };
-    const a = r.join(l, "assets", t), i = r.join(a, e), c = r.join(a, s);
-    return !w(i) || !w(c) ? { success: !1, error: "Invalid path" } : p(i) ? p(c) && e !== s ? { success: !1, error: "File already exists" } : (await o.rename(i, c), { success: !0, newName: s }) : { success: !1, error: "File not found" };
+    const a = r.join(l, "assets", t), i = r.join(a, e), u = r.join(a, s);
+    return !h(i) || !h(u) ? { success: !1, error: "Invalid path" } : w(i) ? w(u) && e !== s ? { success: !1, error: "File already exists" } : (await o.rename(i, u), { success: !0, newName: s }) : { success: !1, error: "File not found" };
   } catch (a) {
     return console.error("[rename-asset] Failed:", a), { success: !1, error: a.message };
   }
@@ -321,7 +330,7 @@ f.handle("list-assets", async (n, { category: t }) => {
   try {
     if (!l) return { success: !1, error: "No project loaded" };
     const e = r.join(l, "assets", t);
-    return w(e) ? p(e) ? { success: !0, files: (await o.readdir(e, { withFileTypes: !0 })).filter((i) => !i.isDirectory()).map((i) => i.name) } : { success: !0, files: [] } : { success: !1, error: "Invalid path" };
+    return h(e) ? w(e) ? { success: !0, files: (await o.readdir(e, { withFileTypes: !0 })).filter((i) => !i.isDirectory()).map((i) => i.name) } : { success: !0, files: [] } : { success: !1, error: "Invalid path" };
   } catch (e) {
     return console.error("[list-assets] Failed:", e), { success: !1, error: e.message };
   }
@@ -332,7 +341,7 @@ f.handle("close-project", () => {
   l = null;
 });
 f.handle("set-window-mode", (n, t) => {
-  const e = F();
+  const e = S();
   if (e)
     switch (t) {
       case "fullscreen":
@@ -351,7 +360,7 @@ f.handle("set-window-mode", (n, t) => {
     }
 });
 f.handle("show-save-dialog", async () => {
-  const { response: n } = await b.showMessageBox(F(), {
+  const { response: n } = await F.showMessageBox(S(), {
     type: "warning",
     buttons: ["保存", "不保存", "取消"],
     defaultId: 0,
@@ -363,7 +372,7 @@ f.handle("show-save-dialog", async () => {
 });
 f.handle("dialog-open-directory", async () => {
   try {
-    const n = await b.showOpenDialog(F(), {
+    const n = await F.showOpenDialog(S(), {
       properties: ["openDirectory"],
       title: "选择保存位置"
     });
@@ -372,41 +381,41 @@ f.handle("dialog-open-directory", async () => {
     return console.error("dialog-open-directory error:", n), null;
   }
 });
-let y = null;
+let v = null;
 f.handle("open-preview", (n, t) => {
-  if (y) {
-    y.focus();
+  if (v) {
+    v.focus();
     return;
   }
-  y = new O({
+  v = new D({
     width: 1280,
     height: 720,
     autoHideMenuBar: !0
   });
   const e = t ? `?project=${encodeURIComponent(t)}` : "";
-  process.env.VITE_DEV_SERVER_URL ? y.loadURL(process.env.VITE_DEV_SERVER_URL + "index.html" + e) : y.loadFile(r.join(process.env.APP_ROOT, "dist/index.html"), {
+  process.env.VITE_DEV_SERVER_URL ? v.loadURL(process.env.VITE_DEV_SERVER_URL + "index.html" + e) : v.loadFile(r.join(process.env.APP_ROOT, "dist/index.html"), {
     search: e ? `project=${encodeURIComponent(t)}` : void 0
-  }), y.on("closed", () => {
-    y = null;
+  }), v.on("closed", () => {
+    v = null;
   });
 });
 process.env.APP_ROOT = r.join(T, "..");
 const _ = process.env.VITE_DEV_SERVER_URL, te = r.join(process.env.APP_ROOT, "dist-electron"), M = r.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = _ ? r.join(process.env.APP_ROOT, "public") : M;
 function Y() {
-  d = new O({
+  p = new D({
     width: 1280,
     height: 800,
     webPreferences: {
       preload: r.join(T, "preload.mjs")
     }
-  }), d.on("close", async (n) => {
+  }), p.on("close", async (n) => {
     n.preventDefault();
     try {
-      if (await d.webContents.executeJavaScript(
+      if (await p.webContents.executeJavaScript(
         "window.__hasDirtyProject ? window.__hasDirtyProject() : false"
       )) {
-        const { response: e } = await b.showMessageBox(d, {
+        const { response: e } = await F.showMessageBox(p, {
           type: "warning",
           buttons: ["保存", "不保存", "取消"],
           defaultId: 0,
@@ -415,20 +424,20 @@ function Y() {
           message: "项目有未保存的修改，是否保存？"
         });
         if (e === 2) return;
-        e === 0 && await d.webContents.executeJavaScript("window.__saveCurrentProject()");
+        e === 0 && await p.webContents.executeJavaScript("window.__saveCurrentProject()");
       }
     } catch {
     }
-    d.destroy();
-  }), _ ? d.loadURL(_ + "editor.html") : d.loadFile(r.join(M, "editor.html"));
+    p.destroy();
+  }), _ ? p.loadURL(_ + "editor.html") : p.loadFile(r.join(M, "editor.html"));
 }
-P.on("window-all-closed", () => {
-  process.platform !== "darwin" && (P.quit(), d = null);
+O.on("window-all-closed", () => {
+  process.platform !== "darwin" && (O.quit(), p = null);
 });
-P.whenReady().then(() => {
-  C.handle("asset", (n) => {
+O.whenReady().then(() => {
+  $.handle("asset", (n) => {
     const t = new URL(n.url), e = decodeURIComponent(t.hostname + t.pathname), s = l ? r.join(l, "assets") : r.join(process.env.APP_ROOT, "public", "game"), a = r.resolve(r.join(s, e)), i = r.resolve(s);
-    return !a.startsWith(i + r.sep) && a !== i ? new Response("Forbidden", { status: 403 }) : L.fetch(W(a).toString());
+    return !a.startsWith(i + r.sep) && a !== i ? new Response("Forbidden", { status: 403 }) : C.fetch(W(a).toString());
   }), Y();
 });
 export {

@@ -60,10 +60,39 @@ function seek(event) {
   }
 }
 
+/**
+ * Start dragging the progress bar.
+ * @param {MouseEvent} event
+ */
+function startDrag(event) {
+  event.preventDefault();
+  const track = event.currentTarget;
+
+  function onMove(e) {
+    const rect = track.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min((e.clientX - rect.left) / rect.width, 1));
+    if (duration.value > 0) {
+      audio.currentTime = fraction * duration.value;
+    }
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  onMove(event);
+}
+
 // ─── Audio Event Listeners ──────────────────────────────────────────
 
 audio.addEventListener('loadedmetadata', () => {
-  duration.value = audio.duration;
+  if (isFinite(audio.duration)) duration.value = audio.duration;
+});
+audio.addEventListener('durationchange', () => {
+  if (isFinite(audio.duration)) duration.value = audio.duration;
 });
 audio.addEventListener('timeupdate', () => {
   currentTime.value = audio.currentTime;
@@ -97,7 +126,7 @@ onBeforeUnmount(() => {
     <button class="play-btn" @click="togglePlay" :aria-label="isPlaying ? '暂停' : '播放'">
       {{ isPlaying ? '⏸' : '▶' }}
     </button>
-    <div class="track" @click="seek">
+    <div class="track" @click="seek" @mousedown="startDrag">
       <div class="track-fill" :style="{ width: progress + '%' }"></div>
       <div class="track-thumb" :style="{ left: progress + '%' }"></div>
     </div>

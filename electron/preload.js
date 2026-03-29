@@ -1,4 +1,4 @@
-import { ipcRenderer, contextBridge } from 'electron';
+import { ipcRenderer, contextBridge, webUtils } from 'electron';
 
 // Expose safe ipcRenderer to the Vue app
 contextBridge.exposeInMainWorld('ipcRenderer', {
@@ -13,4 +13,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     ipcRenderer.on(channel, subscription);
     return () => ipcRenderer.removeListener(channel, subscription);
   }
+});
+
+// Expose webUtils for getting native file paths from File objects
+contextBridge.exposeInMainWorld('getPathForFile', (file) => {
+  return webUtils.getPathForFile(file);
 });

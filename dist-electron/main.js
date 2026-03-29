@@ -1,4 +1,4 @@
-import { ipcMain as f, dialog as F, BrowserWindow as D, app as O, protocol as $, net as C } from "electron";
+import { protocol as k, ipcMain as f, dialog as F, BrowserWindow as D, app as O, net as $ } from "electron";
 import r from "node:path";
 import { fileURLToPath as L, pathToFileURL as W } from "node:url";
 import o from "node:fs/promises";
@@ -13,9 +13,10 @@ const q = {
   },
   mp3_id3: { bytes: [73, 68, 51], offset: 0 },
   mp3_sync: {
-    bytes: [255, 251],
+    bytes: [255],
     offset: 0,
-    alt: [[255, 243], [255, 242]]
+    // MPEG audio frame sync: 0xFF followed by byte with upper 3 bits set (0xE0+)
+    checkSecondByte: !0
   },
   ogg: { bytes: [79, 103, 103, 83], offset: 0 },
   wav: {
@@ -27,7 +28,7 @@ const q = {
   otf: { bytes: [79, 84, 84, 79], offset: 0 },
   woff: { bytes: [119, 79, 70, 70], offset: 0 },
   woff2: { bytes: [119, 79, 70, 50], offset: 0 }
-}, k = {
+}, E = {
   backgrounds: {
     extensions: [".png", ".jpg", ".jpeg", ".webp"],
     signatures: ["png", "jpeg", "webp"]
@@ -57,14 +58,16 @@ function z(n, t) {
           if (n[a] !== s[a]) return !1;
         return !0;
       }) : !1;
+  if (t.checkSecondByte && (n[1] & 224) !== 224)
+    return !1;
   if (t.sub) {
     for (let e = 0; e < t.sub.bytes.length; e++)
       if (n[t.sub.offset + e] !== t.sub.bytes[e]) return !1;
   }
   return !0;
 }
-function E(n, t, e) {
-  const s = k[e];
+function T(n, t, e) {
+  const s = E[e];
   if (!s)
     return { valid: !1, reason: `Unknown category: ${e}` };
   const a = t.toLowerCase();
@@ -75,9 +78,15 @@ function E(n, t, e) {
 }
 function G(n) {
   var t;
-  return ((t = k[n]) == null ? void 0 : t.extensions) || [];
+  return ((t = E[n]) == null ? void 0 : t.extensions) || [];
 }
-const T = r.dirname(L(import.meta.url));
+const A = r.dirname(L(import.meta.url));
+k.registerSchemesAsPrivileged([
+  {
+    scheme: "asset",
+    privileges: { standard: !0, supportFetchAPI: !0, stream: !0, bypassCSP: !0 }
+  }
+]);
 let l = null, p;
 function S() {
   return p || D.getFocusedWindow() || D.getAllWindows()[0] || null;
@@ -85,7 +94,7 @@ function S() {
 function N() {
   return r.join(O.getPath("userData"), "recent-projects.json");
 }
-async function A() {
+async function U() {
   try {
     const n = await o.readFile(N(), "utf-8");
     return JSON.parse(n);
@@ -93,12 +102,12 @@ async function A() {
     return { hasCreatedProject: !1, projects: [] };
   }
 }
-async function U(n) {
+async function J(n) {
   await o.writeFile(N(), JSON.stringify(n, null, 2), "utf-8");
 }
-async function J(n, t) {
-  const e = await A();
-  e.projects = e.projects.filter((s) => s.path !== n), e.projects.unshift({ path: n, name: t, openedAt: (/* @__PURE__ */ new Date()).toISOString() }), e.projects.length > 20 && (e.projects = e.projects.slice(0, 20)), e.hasCreatedProject = !0, await U(e);
+async function V(n, t) {
+  const e = await U();
+  e.projects = e.projects.filter((s) => s.path !== n), e.projects.unshift({ path: n, name: t, openedAt: (/* @__PURE__ */ new Date()).toISOString() }), e.projects.length > 20 && (e.projects = e.projects.slice(0, 20)), e.hasCreatedProject = !0, await J(e);
 }
 function h(n) {
   const t = r.resolve(n), e = r.resolve(l);
@@ -120,14 +129,14 @@ async function I(n, t) {
   } catch {
   }
 }
-async function V(n, t) {
+async function B(n, t) {
   const { name: e, ext: s } = r.parse(t), a = await o.readdir(n).catch(() => []);
   let i = t, u = 1;
   for (; a.includes(i); )
     i = `${e}-${u}${s}`, u++;
   return i;
 }
-function B() {
+function M() {
   return {
     characters: {},
     scenes: {
@@ -156,7 +165,7 @@ f.handle("create-project", async (n, { name: t, author: e, location: s, resoluti
       lastModified: (/* @__PURE__ */ new Date()).toISOString()
     };
     await o.writeFile(r.join(c, "project.json"), JSON.stringify(x, null, 2), "utf-8");
-    let j = B();
+    let j = M();
     if (i === "demo") {
       const m = r.join(process.env.APP_ROOT, "public", "game");
       if (w(r.join(m, "script.json"))) {
@@ -172,7 +181,7 @@ f.handle("create-project", async (n, { name: t, author: e, location: s, resoluti
         }
       }
     }
-    return await o.writeFile(r.join(c, "script.json"), JSON.stringify(j, null, 2), "utf-8"), await J(c, t), { success: !0, path: c };
+    return await o.writeFile(r.join(c, "script.json"), JSON.stringify(j, null, 2), "utf-8"), await V(c, t), { success: !0, path: c };
   } catch (u) {
     return console.error("Failed to create project:", u), { success: !1, error: u.message };
   }
@@ -190,7 +199,7 @@ f.handle("load-project", async (n, t) => {
   try {
     let e, s;
     const a = r.join(t, "project.json"), i = r.join(t, "script.json");
-    if (w(a) && (e = JSON.parse(await o.readFile(a, "utf-8"))), w(i) ? s = JSON.parse(await o.readFile(i, "utf-8")) : s = B(), !e && s.meta) {
+    if (w(a) && (e = JSON.parse(await o.readFile(a, "utf-8"))), w(i) ? s = JSON.parse(await o.readFile(i, "utf-8")) : s = M(), !e && s.meta) {
       e = {
         name: s.meta.title || r.basename(t),
         author: s.meta.author || "",
@@ -213,7 +222,7 @@ f.handle("load-project", async (n, t) => {
       engineVersion: "0.1.0",
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       lastModified: (/* @__PURE__ */ new Date()).toISOString()
-    }), l = t, await o.mkdir(r.join(t, "assets", "fonts"), { recursive: !0 }), await J(t, e.name), { success: !0, project: e, script: s, path: t };
+    }), l = t, await o.mkdir(r.join(t, "assets", "fonts"), { recursive: !0 }), await V(t, e.name), { success: !0, project: e, script: s, path: t };
   } catch (e) {
     return console.error("Failed to load project:", e), { success: !1, error: e.message };
   }
@@ -265,10 +274,10 @@ f.handle("select-asset", async (n, { types: t }) => {
       return j.slice(x.length + 1).replace(/\\/g, "/");
     if (!s) return null;
     const m = await o.readFile(c), g = r.extname(c);
-    if (!E(m.subarray(0, 12), g, s).valid) return null;
+    if (!T(m.subarray(0, 12), g, s).valid) return null;
     const d = r.join(l, "assets", s);
     await o.mkdir(d, { recursive: !0 });
-    const y = await V(d, r.basename(c)), P = r.join(d, y);
+    const y = await B(d, r.basename(c)), P = r.join(d, y);
     return h(P) ? (await o.copyFile(c, P), `${s}/${y}`) : null;
   } catch (e) {
     return console.error("[select-asset] Failed:", e), null;
@@ -291,12 +300,12 @@ f.handle("import-assets", async (n, { category: t, paths: e }) => {
         i.push({ name: c, reason: `无法读取文件: ${d.message}` });
         continue;
       }
-      const m = E(j, x, t);
+      const m = T(j, x, t);
       if (!m.valid) {
         i.push({ name: c, reason: m.reason });
         continue;
       }
-      const g = await V(s, c), b = r.join(s, g);
+      const g = await B(s, c), b = r.join(s, g);
       if (!h(b)) {
         i.push({ name: c, reason: "Path security violation" });
         continue;
@@ -335,8 +344,8 @@ f.handle("list-assets", async (n, { category: t }) => {
     return console.error("[list-assets] Failed:", e), { success: !1, error: e.message };
   }
 });
-f.handle("get-recent-projects", async () => await A());
-f.handle("update-recent-projects", async (n, t) => (await U(t), !0));
+f.handle("get-recent-projects", async () => await U());
+f.handle("update-recent-projects", async (n, t) => (await J(t), !0));
 f.handle("close-project", () => {
   l = null;
 });
@@ -399,15 +408,15 @@ f.handle("open-preview", (n, t) => {
     v = null;
   });
 });
-process.env.APP_ROOT = r.join(T, "..");
-const _ = process.env.VITE_DEV_SERVER_URL, te = r.join(process.env.APP_ROOT, "dist-electron"), M = r.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = _ ? r.join(process.env.APP_ROOT, "public") : M;
+process.env.APP_ROOT = r.join(A, "..");
+const _ = process.env.VITE_DEV_SERVER_URL, te = r.join(process.env.APP_ROOT, "dist-electron"), C = r.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = _ ? r.join(process.env.APP_ROOT, "public") : C;
 function Y() {
   p = new D({
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: r.join(T, "preload.mjs")
+      preload: r.join(A, "preload.mjs")
     }
   }), p.on("close", async (n) => {
     n.preventDefault();
@@ -429,19 +438,19 @@ function Y() {
     } catch {
     }
     p.destroy();
-  }), _ ? p.loadURL(_ + "editor.html") : p.loadFile(r.join(M, "editor.html"));
+  }), _ ? p.loadURL(_ + "editor.html") : p.loadFile(r.join(C, "editor.html"));
 }
 O.on("window-all-closed", () => {
   process.platform !== "darwin" && (O.quit(), p = null);
 });
 O.whenReady().then(() => {
-  $.handle("asset", (n) => {
+  k.handle("asset", (n) => {
     const t = new URL(n.url), e = decodeURIComponent(t.hostname + t.pathname), s = l ? r.join(l, "assets") : r.join(process.env.APP_ROOT, "public", "game"), a = r.resolve(r.join(s, e)), i = r.resolve(s);
-    return !a.startsWith(i + r.sep) && a !== i ? new Response("Forbidden", { status: 403 }) : C.fetch(W(a).toString());
+    return !a.startsWith(i + r.sep) && a !== i ? new Response("Forbidden", { status: 403 }) : $.fetch(W(a).toString());
   }), Y();
 });
 export {
   te as MAIN_DIST,
-  M as RENDERER_DIST,
+  C as RENDERER_DIST,
   _ as VITE_DEV_SERVER_URL
 };

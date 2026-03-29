@@ -16,8 +16,9 @@ const SIGNATURES = {
   },
   mp3_id3: { bytes: [0x49, 0x44, 0x33], offset: 0 },
   mp3_sync: {
-    bytes: [0xFF, 0xFB], offset: 0,
-    alt: [[0xFF, 0xF3], [0xFF, 0xF2]],
+    bytes: [0xFF], offset: 0,
+    // MPEG audio frame sync: 0xFF followed by byte with upper 3 bits set (0xE0+)
+    checkSecondByte: true,
   },
   ogg: { bytes: [0x4F, 0x67, 0x67, 0x53], offset: 0 },
   wav: {
@@ -79,6 +80,11 @@ function matchesSignature(buffer, sig) {
       }
       return false;
     }
+  }
+
+  // MP3 frame sync: second byte must have upper 3 bits set (0xE0+)
+  if (sig.checkSecondByte) {
+    if ((buffer[1] & 0xE0) !== 0xE0) return false;
   }
 
   // If RIFF sub-check is required (WebP vs WAV), verify sub bytes

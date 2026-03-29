@@ -7,6 +7,14 @@ import { validateAssetFormat, getSupportedFormats } from './validateAsset.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Register asset:// as privileged scheme (must be before app.whenReady)
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'asset',
+    privileges: { standard: true, supportFetchAPI: true, stream: true, bypassCSP: true },
+  },
+]);
+
 let currentProjectPath = null;
 let win;
 

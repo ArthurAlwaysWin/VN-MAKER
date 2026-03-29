@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 6 — Asset Library Foundation
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-28 — Milestone v0.2 started
+Status: Not started — roadmap created, awaiting phase planning
+Last activity: 2025-07-21 — Roadmap created for v0.2
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -20,9 +20,9 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 - Total plans completed: 5 (v0.1) + 3 hotfix commits (v0.1 后)
-- Total execution time: 2 sessions
+- Total execution time: 2 sessions (v0.1)
 
-**By Phase (v0.1):**
+**By Phase (v0.1 — completed):**
 
 | Phase | Status | Description |
 |-------|--------|-------------|
@@ -32,19 +32,20 @@ Progress: [░░░░░░░░░░] 0%
 | 4. Editor Canvas | ✅ | 画布 + 组件面板 + DraggableElement + 拖拽放置 |
 | 5. Property Panel | ✅ | 属性编辑 + 颜色/字体 + auto-save + undo/redo |
 
-**Post-milestone 修复 (2025-03-29):**
+**By Phase (v0.2 — active):**
 
-| Commit | Description |
-|--------|-------------|
-| 1406258 | fix: 创建项目 reactive Proxy clone 错误 |
-| 6dd6207 | fix: 设置页设计器 5 项 bug（样式预览/撤销重做/自动调高等） |
-| 7228472 | feat: 关闭按钮移至设置组件 + 窗口模式三选一 |
-| d8d147e | feat: 窗口模式 radio 按钮 + 保存按钮 |
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 6. Asset Library Foundation | Not started | IPC handlers + validation + font loading |
+| 7. Asset Library UI | Not started | Unified view + thumbnails + expression editor |
+| 8. Title Page Designer | Not started | 3-panel canvas + preset buttons + schema alignment |
+| 9. Settings Overlay | Not started | Slide-in overlay + backdrop + dismiss controls |
 
 ## Accumulated Context
 
 ### Decisions
 
+**v0.1 decisions (carried forward):**
 - [Phase 1]: Preload path must match Vite output extension (.mjs for ESM projects)
 - [Phase 2]: Schema-first approach with SETTING_DEFS registry as single source of truth
 - [Phase 3]: masterVolume scales bgm/se proportionally; fullscreen via Electron IPC
@@ -55,26 +56,27 @@ Progress: [░░░░░░░░░░] 0%
 - [Post]: 关闭按钮从装饰元素移至设置组件区，支持 icon(×)/text 两种显示模式
 - [Post]: 保存按钮 💾 添加到顶部工具栏（撤销/重做旁边）
 
+**v0.2 decisions:**
+- [Roadmap]: INFRA requirements distributed to owning phases (INFRA-01→Phase 8, INFRA-02/03/04→Phase 6)
+- [Roadmap]: Phase 9 (Settings Overlay) is independent of Phases 6-8 but sequenced last for solo-dev simplicity
+- [Roadmap]: TitleScreen.js schema alignment MUST happen before designer UI build (critical pitfall #1)
+- [Roadmap]: fontLoader.js must work in both editor and engine windows from day one (critical pitfall #2)
+
 ### Blockers/Concerns
 
-None — 当前工作全部完成。
+None currently.
 
-## 用户未来愿景（已讨论，待规划）
+### Research Notes (v0.2)
 
-以下需求已在 2025-03-29 讨论中明确，待下一个里程碑规划：
-
-1. **资源库重构** — 合并角色管理到资源库，文件格式验证，自动命名（背景-1），角色表情/差分系统
-2. **标题页设计器** — 4 个组件（开始/继续/设置/退出），画布 + 背景/BGM 选择
-3. **游戏内容编辑器** — PPT 式页面系统，新建页面，添加背景/BGM/角色/对话/按钮
-4. **角色表情系统** — 角色有多个差分表情，场景中可切换
-5. **游戏按钮** — 存档/读档/自动/快进/设置/返回标题，支持文字/图标/混合模式
-6. **设置页叠加层** — 设置页覆盖在当前页面上方（z-index），× 关闭
-7. **存读档** — 同一 UI，不同操作（保存/加载）
-8. **自定义字体导入** — 用户非常重视此功能
+- Zero new npm dependencies needed — all capabilities from built-in APIs
+- SettingsDesigner.vue (800+ lines) is gold reference for TitleDesigner rewrite
+- Schema mismatch between TitleDesigner output and TitleScreen.js runtime is #1 risk
+- Font loading needs independent FontFace injection in both Electron windows
+- Settings overlay is pure CSS/JS engine change — smallest scope, safety valve if timeline pressure
 
 ## Session Continuity
 
-Last session: 2026-03-28
-Stopped at: v0.2 milestone started, defining requirements
-Resume hint: 下一步完成 requirements 定义 → 创建 roadmap
-Next action: Continue requirements → roadmap
+Last session: 2025-07-21
+Stopped at: Roadmap created for v0.2 milestone
+Resume hint: Run `/gsd-plan-phase 6` to start planning Asset Library Foundation
+Next action: Plan Phase 6

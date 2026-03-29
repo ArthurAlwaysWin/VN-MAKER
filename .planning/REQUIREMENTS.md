@@ -94,11 +94,45 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| ASSET-01 ~ ASSET-14 | TBD | Pending |
-| TITLE-01 ~ TITLE-12 | TBD | Pending |
-| OVERLAY-01 ~ OVERLAY-08 | TBD | Pending |
-| INFRA-01 ~ INFRA-04 | TBD | Pending |
+| ASSET-01 | Phase 7 | Pending |
+| ASSET-02 | Phase 7 | Pending |
+| ASSET-03 | Phase 6 | Pending |
+| ASSET-04 | Phase 6 | Pending |
+| ASSET-05 | Phase 7 | Pending |
+| ASSET-06 | Phase 7 | Pending |
+| ASSET-07 | Phase 7 | Pending |
+| ASSET-08 | Phase 7 | Pending |
+| ASSET-09 | Phase 7 | Pending |
+| ASSET-10 | Phase 7 | Pending |
+| ASSET-11 | Phase 7 | Pending |
+| ASSET-12 | Phase 6 | Pending |
+| ASSET-13 | Phase 7 | Pending |
+| ASSET-14 | Phase 7 | Pending |
+| TITLE-01 | Phase 8 | Pending |
+| TITLE-02 | Phase 8 | Pending |
+| TITLE-03 | Phase 8 | Pending |
+| TITLE-04 | Phase 8 | Pending |
+| TITLE-05 | Phase 8 | Pending |
+| TITLE-06 | Phase 8 | Pending |
+| TITLE-07 | Phase 8 | Pending |
+| TITLE-08 | Phase 8 | Pending |
+| TITLE-09 | Phase 8 | Pending |
+| TITLE-10 | Phase 8 | Pending |
+| TITLE-11 | Phase 8 | Pending |
+| TITLE-12 | Phase 8 | Pending |
+| OVERLAY-01 | Phase 9 | Pending |
+| OVERLAY-02 | Phase 9 | Pending |
+| OVERLAY-03 | Phase 9 | Pending |
+| OVERLAY-04 | Phase 9 | Pending |
+| OVERLAY-05 | Phase 9 | Pending |
+| OVERLAY-06 | Phase 9 | Pending |
+| OVERLAY-07 | Phase 9 | Pending |
+| OVERLAY-08 | Phase 9 | Pending |
+| INFRA-01 | Phase 8 | Pending |
+| INFRA-02 | Phase 6 | Pending |
+| INFRA-03 | Phase 6 | Pending |
+| INFRA-04 | Phase 6 | Pending |
 
 ---
 *38 requirements | 4 categories | v0.2 milestone*
-*Created: 2026-03-28*
+*Created: 2026-03-28 | Roadmap: 2025-07-21*

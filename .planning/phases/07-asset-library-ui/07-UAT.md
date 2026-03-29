@@ -8,11 +8,9 @@ updated: 2026-03-30T10:00:00Z
 
 ## Current Test
 
-number: 1
-name: 资源库标签页显示
-expected: |
-  打开编辑器，顶部应该只有 5 个标签页（而不是之前的 6 个）。其中一个是"资源库"。点击"资源库"后应看到 4 个子标签页：背景、角色、音频、字体。
-awaiting: user response
+number: 8
+name: 表情导入（文件选择器）
+awaiting: next session
 
 ## Tests
 
@@ -36,33 +34,41 @@ result: pass
 
 ### 5. 音频播放与单例
 expected: 在"音频"子标签页导入两个音频文件。点击第一个的播放按钮开始播放，进度条实时更新，显示 m:ss / m:ss 格式时长。再点击第二个音频的播放按钮，第一个应自动停止。点击进度条可以跳转播放位置。
-result: [pending]
+result: pass
+note: 发现并修复多个问题：大文件导入内存爆炸(62cd7a9)、Electron sandbox file.path不可用、stream协议(093a849)、MP4伪装MP3(1ad595f)、WAV Range请求(84937c8)
 
 ### 6. 右键菜单与行内重命名
 expected: 右键点击任意背景卡片，弹出菜单包含"重命名"和"删除"。选择"重命名"后进入行内编辑模式，按 Enter 确认重命名，文件名更新。选择"删除"弹出确认对话框。
-result: [pending]
+result: pass
 
 ### 7. 角色编辑器
 expected: 在"角色"子标签页中，点击"+ 新角色"创建角色。左侧栏显示角色列表和头像。右侧编辑区可以修改角色名称和颜色。
-result: [pending]
+result: pass
+note: prompt()在Electron不工作，改为自动生成ID；隐藏ID行(2ffd28f)
 
 ### 8. 表情导入（文件选择器）
 expected: 选中一个角色后，点击"+ 导入表情"按钮。弹出系统原生文件选择对话框（不是手动输入路径）。选择图片后，图片作为表情缩略图显示在角色的表情网格中。
-result: [pending]
+result: [pending — 下次session继续]
 
 ### 9. 表情右键操作
 expected: 右键点击一个表情缩略图，弹出菜单包含"重命名"和"删除"。重命名修改表情名称（不改变图片文件），删除弹出确认对话框。
-result: [pending]
+result: [pending — 下次session继续]
 
 ## Summary
 
 total: 9
-passed: 0
+passed: 7
 issues: 0
-pending: 9
+pending: 2
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-[none yet]
+- [已修复] 大文件导入内存爆炸 — 路径模式重构
+- [已修复] Electron sandbox file.path — webUtils.getPathForFile
+- [已修复] asset:// 协议缺少 stream:true — registerSchemesAsPrivileged
+- [已修复] MP4容器伪装MP3 — 添加 ftyp 魔数识别
+- [已修复] WAV 时长不显示 — Range 请求支持
+- [已修复] prompt() 不可用 — 自动生成角色ID
+- [已修复] 表情导入用旧字节数组方式 — 改为路径模式

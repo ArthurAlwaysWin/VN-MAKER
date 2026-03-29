@@ -1,288 +1,205 @@
 # Project Research Summary
 
-**Project:** Galgame Maker — Settings Page Designer Milestone
-**Domain:** Visual novel editor — canvas-based settings UI designer + runtime integration (brownfield)
-**Researched:** 2025-07-17
+**Project:** Galgame Maker v0.2  
+**Domain:** Visual novel / galgame maker — Electron desktop app (editor + runtime engine)  
+**Researched:** 2025-07-21  
 **Confidence:** HIGH
-
----
 
 ## Executive Summary
 
-This milestone adds a Settings Page Designer to an existing, production-quality visual novel editor built on Electron 41 + Vue 3 + Pinia + vanilla JS runtime. The core insight from research is that **every single infrastructure piece already exists** — the drag-and-drop canvas, undo/redo, auto-save, CSS sanitization, and the exact runtime rendering pattern all live in the codebase today. The title screen designer (`TitleDesigner.vue` + `TitleScreen.js`) is a working reference implementation that must be mirrored almost identically. Zero new npm dependencies are required; the entire deliverable is new Vue components and a refactored `SettingsScreen.js`.
+Galgame Maker v0.2 adds three features — a unified asset library, a title page designer, and a settings overlay — to an existing Electron 41 + Vue 3 + Pinia desktop application. The critical finding across all research is that **the existing codebase already establishes every pattern needed**. The SettingsDesigner.vue (800+ lines, 3-panel canvas editor) is the gold reference for the title designer. The existing IPC layer and `asset://` protocol handle all file I/O. The runtime engine's z-index stacking already positions the settings screen correctly for overlay mode. Zero new npm dependencies are required; all new capabilities (font loading, file validation, slide animations) use built-in browser and Node.js APIs.
 
-The recommended approach is schema-first: define `ui.settingsScreen` in `script.json` before writing a single Vue component or touching the runtime. The editor and runtime are independent codebases with no shared modules — the JSON schema is the only contract between them. Building the runtime renderer (`SettingsScreen._renderCustom()`) before the editor canvas validates the schema in isolation and makes the data model concrete. The settings designer then produces exactly what the renderer consumes.
+The recommended approach is a strict dependency-ordered build: **Asset Library first** (it provides the asset store, file pickers, and font infrastructure that both designers consume), **Title Designer second** (it replicates the proven SettingsDesigner pattern with a new component registry), and **Settings Overlay last** (it's a pure CSS/JS runtime change with the smallest scope and no dependency on the other two features). This ordering is unambiguous — the title designer literally cannot function without the asset picker infrastructure, and the settings overlay touches zero editor code.
 
-The key risks are tightly bounded: two **known blocking bugs** (file dialog + hot reload crash) must be fixed before any feature work begins; **editor–runtime schema drift** is the architectural death-trap (prevent it with a locked schema doc + runtime-first build order); and **interactive component events conflicting with drag-and-drop** must be resolved by making all editor canvas components visually inert. None of these are novel problems — the research resolves every pitfall with patterns already proven in the existing codebase.
-
----
+The primary risk is **schema mismatch between the editor and engine runtime**. The existing TitleScreen.js uses a legacy element schema (`type: 'text'`, flat props) that differs from the SettingsScreen.js pattern (`type: 'label'`, nested `style: {}`). If the new TitleDesigner outputs the new format but TitleScreen.js still expects the old format, custom title layouts render as blank screens — silently. The mitigation is clear: update `TitleScreen.js._renderCustom()` to the new schema **before** building the designer UI. Secondary risks include dual-process font loading (editor vs engine windows need independent `FontFace` injection) and the recurring reactive-proxy-in-IPC bug already encountered in v0.1.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Zero new dependencies.** The existing stack is complete for this milestone. Every technology needed is already installed and working.
+No new packages. The existing 8-dependency stack (Electron 41, Vue 3.5, Pinia 3, Vite 6) is sufficient. All new capabilities come from built-in APIs:
 
-**Core technologies:**
-- **Vue 3 ^3.5.31** — All editor components (SettingsDesigner.vue, SettingsCanvas.vue, property panel, palette). Composition API `<script setup>` is the project standard.
-- **Pinia ^3.0.4** — Settings layout data lives at `script.data.ui.settingsScreen`. The existing deep watcher on `script.data` auto-triggers undo snapshots and auto-save. No changes needed to the store.
-- **DraggableElement.vue** (existing) — Handles absolute positioning with canvas-scale-aware mouse delta math. Reuse as-is; wraps each settings component on the canvas.
-- **CanvasPreview.vue** pattern (existing) — `artboardStyle + canvasScale` responsive scaling for the 1280×720 artboard. Build a parallel `SettingsCanvas.vue` using this identical pattern.
-- **TitleScreen.js** (existing) — The reference implementation for custom layout rendering in the vanilla JS engine. `setLayout()` + `_renderCustom()` / `_renderDefault()` is the exact pattern to mirror in `SettingsScreen.js`.
-- **sanitize.js** (existing) — `sanitizeCssValue()` and `clampField()` already cover all CSS injection prevention needed.
+- **FontFace API** (Chromium 136): Load user-imported .ttf/.otf/.woff/.woff2 fonts programmatically — no CSS `@font-face` injection needed
+- **Magic byte validation** (Node.js `fs.read`): 40-line utility checking 12 format signatures — replaces the `file-type` package (rejected: 4 transitive deps for 12 checks)
+- **CSS transitions** (`transform` + `opacity`): Hardware-accelerated slide-in/out for settings overlay — no animation library needed
+- **`path.parse()` + counter**: Auto-naming on filename conflicts — 5 lines of code
 
-**New code to write (not install):** ~8 Vue components (~950 lines total) + refactored `SettingsScreen.js` (+150 lines) + 3 new `ConfigManager.js` keys (+5 lines) + 2 wiring lines in `main.js`.
+**Rejected alternatives:** `file-type` (dep weight), GSAP/anime.js (overkill for one animation), `vue-draggable` (conflicts with existing DraggableElement.vue), `@fontsource` (wrong use case — we load user files, not Google Fonts).
 
 See: [STACK.md](./STACK.md)
 
----
-
 ### Expected Features
 
-**Must have (table stakes) — ship in this milestone:**
-- BGM Volume slider — already in engine, needs designer integration
-- SE Volume slider — already in engine, needs designer integration
-- Text Speed slider — already in engine, needs designer integration
-- Auto-Play Speed slider — already in engine, needs designer integration
-- **Fullscreen toggle** — new ConfigManager key + Electron IPC `BrowserWindow.setFullScreen()`
-- **Dialog Box Transparency slider** — new ConfigManager key + runtime `DialogueBox` opacity
-- **Skip-Read-Only toggle** — new ConfigManager key + read-history flag in skip logic
-- 1280×720 canvas artboard with drag-and-drop positioning (B1+B3)
-- Component palette sidebar listing all 7 preset widgets (B2)
-- Property panel for selected component (position, color, font, size) (B4)
-- Background image selector (B5)
-- Return/Close button component (B6)
-- Label/text elements for section headers (B8)
-- Default fallback for projects with no settings layout (B7)
-- CSS sanitization applied to all settings element configs (C4)
+**Must have (25 table-stakes features across 3 areas):**
 
-**Should have (differentiators — defer to fast-follow):**
-- **Live interactive preview (D1)** — HIGH value (sliders actually slide in editor), HIGH complexity. Ship static preview first; interactivity as a follow-up sprint.
-- **Style presets / themes (D2)** — One-click "Dark Glass" / "Minimal" themes. Medium complexity, great DX but not blocking.
-- **Decorative image elements (D4)** — Low complexity; pure reuse of asset drag-drop. Can slip into MVP if time allows.
+*Asset Library (11 features):*
+- L1: Single unified view replacing separate Assets + Characters tabs (6→5 tabs)
+- L2: Four category sections (backgrounds, characters, audio, fonts)
+- L3: File format validation via magic bytes + extension allowlist
+- L4: Auto-naming on filename collision (背景-1.png, 背景-2.png)
+- L7/L8/L9: Character expression management with image picker (replaces manual path typing)
+- L10: Delete asset with confirmation
+- L-D1: Custom fonts as first-class assets in `assets/fonts/`
 
-**Explicitly defer to v2+:**
-- Component grouping / sections (D3) — Adds hierarchy to data model; overkill for 7-10 components
-- Snap-to-grid / alignment guides (D5) — Cross-cutting DX enhancement; benefits all designers
-- Voice volume slider (D6) — Blocked by non-existent voice system in engine
-- Accessibility settings (X5) — No i18n/a11y infrastructure exists; half-baked a11y is worse than none
-- Resolution/window size selector (X1) — Game is fixed 1280×720; offering this causes bugs
-- Keyboard shortcut remapping (X7) — Hardcoded shortcuts; remapping creates conflict surfaces
+*Title Designer (10 features):*
+- T1: 1280×720 canvas with 3-panel layout (palette → canvas → inspector)
+- T2/T3: Component palette with 4 preset buttons (start/continue/settings/exit)
+- T5/T6: Background image and BGM selection via asset pickers
+- T7/T9: Text labels and decorative image elements
+- T12: Undo/redo + auto-save (mirroring SettingsDesigner pattern)
+
+*Settings Overlay (7 features):*
+- S1: Overlay rendering on top of game scene (game continues underneath)
+- S2: Semi-transparent backdrop with optional blur
+- S3/S4: Slide-in/slide-out CSS transitions
+- S6/S7: ESC key and click-outside dismiss
+
+**Should have (time permitting):**
+- L11: Rename asset, L-D2: Font preview, L-D6: Bulk import drop-zone
+- T4: Continue button disabled-state preview, T-D4: Z-order layer control
+- S-D1: Blurred game backdrop (`backdrop-filter: blur`)
+
+**Defer to v2+:**
+- Smart expression auto-detection by filename pattern (L-D4)
+- Asset usage indicators / project health scanning (L-D5)
+- Gallery/CG Room buttons, animated title elements (T-D5/T-D6)
+- Configurable slide direction (S-D2)
+- Video backgrounds (T-X3) — no video system in engine
 
 See: [FEATURES.md](./FEATURES.md)
 
----
-
 ### Architecture Approach
 
-The Settings Page Designer is a **direct extension of the Title Screen Designer pattern**. The architecture has two integration surfaces: the Vue 3 editor writes `script.data.ui.settingsScreen` (an elements array of typed components with position + style data), and the vanilla JS `SettingsScreen.js` reads that data at runtime to render custom DOM. The critical separation: **layout** comes from `script.json` (author-controlled), **values** come from `localStorage` via ConfigManager (player-controlled). The engine never writes layout data; the editor never stores player preferences.
+The architecture is an incremental extension of the existing editor/engine split. The editor (Vue 3 + Pinia) gains one new store (`assets.js` for filesystem state), one new view (`AssetLibrary.vue` merging two old views), one full rewrite (`TitleDesigner.vue`), and one new shared registry (`titleDefs.js`). The engine (pure JS + DOM) gets schema alignment in `TitleScreen.js` and CSS animation changes in `SettingsScreen.js`. A cross-cutting `fontLoader.js` utility serves both processes. Four new IPC handlers bridge the gap (`import-assets`, `delete-asset`, `list-assets`, `load-font-metadata`).
 
-**Major components:**
+**Major components and responsibilities:**
 
-| Component | Status | Responsibility |
-|-----------|--------|----------------|
-| `SettingsDesigner.vue` | Replace placeholder | Top-level view: orchestrates canvas + palette + property panel. Target: <200 lines (composable + child components carry weight) |
-| `SettingsCanvas.vue` | New | 1280×720 artboard rendering DraggableElement wrappers for each settings component |
-| `SettingsComponentPalette.vue` | New | Left sidebar: 9 preset widget types, click-to-add interaction |
-| `SettingsPropertyPanel.vue` | New | Right sidebar: position, size, label, style editors using native HTML inputs |
-| `SettingsPreview*.vue` (×4) | New | Visual-only (non-interactive) canvas representations of slider, toggle, label, button |
-| `SettingsScreen.js` | Refactor | Add `setLayout()`, `_renderCustom()`, element renderer methods following TitleScreen.js |
-| `ConfigManager.js` | Extend | Add `fullscreen`, `skipRead`, `dialogueOpacity` to defaults (+5 lines) |
-| `main.js` | 2-line wire | Pass `script.ui.settingsScreen` to `settingsScreen.setLayout()` at init |
+1. **`AssetLibrary.vue`** (NEW) — Unified UI for all asset types; delegates to `assets.js` store for file operations
+2. **`assets.js` Pinia store** (NEW) — Caches file lists, manages import/delete, provides `assetUrl()` helper to all consumers
+3. **`TitleDesigner.vue`** (REWRITE) — 3-panel canvas editor cloned from SettingsDesigner pattern, uses `titleDefs.js` registry
+4. **`titleDefs.js`** (NEW) — Component registry + factory functions for title elements (mirrors `settingDefs.js`)
+5. **`fontLoader.js`** (NEW) — FontFace API wrapper used by both editor and engine windows
+6. **`SettingsScreen.js`** (MODIFY) — CSS slide transition + `transitionend` cleanup for overlay mode
 
-**Key data model** (`ui.settingsScreen` in `script.json`):
-```json
-{
-  "settingsScreen": {
-    "background": "backgrounds/settings_bg.png",
-    "elements": [
-      { "id": "bgm-slider", "type": "slider", "settingKey": "bgmVolume",
-        "label": "BGM 音量", "x": 300, "y": 160, "width": 680, "style": { ... } },
-      { "id": "fullscreen-toggle", "type": "toggle", "settingKey": "fullscreen",
-        "label": "全屏模式", "x": 300, "y": 440, "style": { ... } },
-      { "id": "back-button", "type": "button", "action": "back",
-        "label": "返回", "x": 640, "y": 650, "anchor": "center", "style": { ... } }
-    ]
-  }
-}
-```
+**Key patterns to replicate:** Registry+Factory (settingDefs→titleDefs), Store Method Pair (get/update with lazy init), Local Reactive + `_syncing` Flag (high-frequency drag → batched undo), IPC with `isInsideProject()` security check.
 
-**Integration points that require zero changes:** Save/load IPC pipeline, auto-save deep watcher, undo/redo system, tab routing (already registered), asset:// protocol. These four existing systems absorb all settings designer data automatically.
+**Anti-patterns to avoid:** Storing file bytes in Pinia (kills undo), different element schemas between designers (doubles rendering logic), font loading via IPC on every render (inject once on load).
 
 See: [ARCHITECTURE.md](./ARCHITECTURE.md)
 
----
-
 ### Critical Pitfalls
 
-1. **Editor–Runtime Schema Drift** *(critical, Phase 0)* — Editor stores JSON; runtime reads it; they're separate codebases. If property names diverge, creators design one thing and players see another. **Prevention:** Define `ui.settingsScreen` schema in `docs/script-format.md` *first*, lock it, and build the runtime renderer against it before touching the editor.
+1. **Schema mismatch between TitleDesigner and TitleScreen.js runtime** — TitleScreen.js uses legacy `type: 'text'` + flat props; the new designer outputs `type: 'label'` + nested `style: {}`. Custom layouts silently render blank. **Fix:** Update `TitleScreen.js._renderCustom()` to the new schema *before* building the designer UI. Add migration for old `type: 'text'` elements.
 
-2. **Blocking Bugs Gate Everything** *(critical, Phase 0)* — File dialog doesn't open (likely `win` undefined in IPC handler) + Windows hot reload crash (vite-plugin-electron `taskkill` failure). These block project creation and make canvas iteration unbearable. **Prevention:** Fix both before any feature work starts. They're listed in PROJECT.md Active requirements for this exact reason.
+2. **Font not loaded in both renderer processes** — Editor and engine run in separate Electron windows (`editor.html` vs `index.html`). FontFace registered in one window is invisible in the other. **Fix:** Shared `fontLoader.js` called independently in both processes — on project load + after font import (editor), and in engine `init()` before rendering (engine).
 
-3. **Interactive Components Eat Drag Events** *(critical, Phase 2)* — Sliders, toggles, and inputs consume the same mouse events that `DraggableElement.vue` uses for drag-to-position. **Prevention:** All editor canvas components must be visually inert (`pointer-events: none` on inner content). No component on the designer canvas should respond to user input — that's for the game runtime only. This is a *must-decide-upfront* architectural rule.
+3. **Reactive proxy leaking into IPC calls** — Vue reactive objects fail Electron's structured clone. Already hit in v0.1 but the new asset store introduces more IPC touchpoints. **Fix:** `JSON.parse(JSON.stringify(data))` before every `ipcRenderer.invoke` call, same pattern as existing `project.js` store.
 
-4. **Deep Watcher Amplification During Drag** *(moderate, Phase 2)* — Every `mousemove` during drag mutates `script.data` → triggers deep watcher → Vue traverses entire script tree. 60Hz × large script = sluggish editor. **Prevention:** Emit position updates only on `mouseup` (drag end), not `mousemove`. Use a local ref for visual feedback during drag.
+4. **Title BGM overlapping game BGM** — Title BGM starts, player clicks "开始游戏", but title BGM keeps playing alongside the first scene's BGM. **Fix:** Explicitly call `audio.stopBgm({ fadeOut: 500 })` in the `titleScreen.onStart` and `titleScreen.onContinue` callbacks.
 
-5. **ConfigManager Migration Without Versioning** *(moderate, Phase 1)* — Adding new keys is fine; renaming or changing value semantics (e.g., `textSpeed` ms→scale) silently breaks existing users' saved configs. **Prevention:** Never rename config keys. Keep internal representation stable (ms for speed, 0-1 for volumes). The editor slider does display conversion; the engine stores raw values.
-
-6. **Forgetting Default Fallback for Existing Projects** *(moderate, Phase 3)* — Projects without `ui.settingsScreen` in `script.json` will crash or show blank settings. **Prevention:** Keep `_renderDefault()` as the unconditional fallback; gate `_renderCustom()` on `this.layout && this.layout.elements` — exactly the TitleScreen.js pattern.
+5. **Settings overlay transition interrupted by rapid open/close** — Quick toggling causes animation glitch or stuck state. **Fix:** Track `_animating` state flag, force-reset transform on re-trigger, skip `transitionend` listener if interrupted mid-animation.
 
 See: [PITFALLS.md](./PITFALLS.md)
 
----
-
 ## Implications for Roadmap
 
-Research strongly suggests a **4-phase structure** with a mandatory Phase 0 for bug fixes. The dependency graph is clear: schema before code, runtime before editor, canvas before properties.
+Based on combined research, the phase structure is dictated by hard dependencies: the title designer **cannot** function without the asset library's file pickers, and the settings overlay is fully independent of both.
 
----
+### Phase 1: Asset Library Foundation
 
-### Phase 0: Unblock Development
-**Rationale:** Two known bugs in PROJECT.md Active requirements make it impossible to create test projects or iterate efficiently. These are not optional — they must be resolved first or everything downstream is slower and more painful.
-**Delivers:** A working development environment: project creation works, hot reload doesn't crash.
-**Addresses:** Pitfall 5 (blocking bugs derail development)
-**Tasks:**
-- Fix `dialog.showOpenDialog` not firing (likely undefined `win` in IPC handler — check BrowserWindow.getFocusedWindow())
-- Fix vite-plugin-electron Windows hot reload crash (pin plugin version or wrap `taskkill` in try/catch)
+**Rationale:** Both the TitleDesigner and SettingsDesigner need asset pickers (backgrounds, audio, fonts). The asset store is consumed by AssetLibrary, AssetPanel, and both designer views. This is the dependency root — nothing else can be built properly without it.
 
----
+**Delivers:** Unified asset management UI, new Pinia asset store, IPC handlers for import/delete/list, file format validation, auto-naming, character expression editor with image picker, font import + FontFace loading.
 
-### Phase 1: Data Contract (Schema + ConfigManager)
-**Rationale:** Both the editor and the runtime are built against the same JSON schema. Defining it first eliminates schema drift — the #1 architectural risk. ConfigManager extension is trivial (5 lines) but must happen before anything tests the new keys.
-**Delivers:** A locked data contract that both editor and runtime code against; all 7 settings have engine-side definitions.
-**Addresses:** Pitfall 1 (schema drift), Pitfall 4 (ConfigManager migration), Pitfall 9 (extensibility)
-**Tasks:**
-- Define `SETTING_DEFS` registry: all 7 setting keys with min/max/step/format/default
-- Write `ui.settingsScreen` specification in `docs/script-format.md`
-- Extend `ConfigManager.js`: add `fullscreen`, `skipRead`, `dialogueOpacity` defaults + `configVersion`
-- Initialize `script.data.ui.settingsScreen` guard in `SettingsDesigner.vue` setup
-- Add settings-component-specific bounds to `sanitize.js` BOUNDS (sliderWidth, etc.)
+**Features addressed:** L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L-D1 (fonts)
 
----
+**Pitfalls to avoid:**
+- Pitfall #3 (reactive proxy in IPC) — JSON.parse/stringify in all new IPC calls
+- Pitfall #2 (dual-process fonts) — fontLoader.js must work in both windows from day one
+- Pitfall #5 (auto-naming race) — sequential `await` in import handler
+- Pitfall #8 (orphaned font metadata) — delete-asset must also clean script.data.assets.fonts[]
 
-### Phase 2: Runtime Renderer
-**Rationale:** Build the engine side first — it can be tested immediately with a hand-written JSON fixture in `script.json`, no editor needed. This validates the data model is renderable before spending time on editor UI. Following TitleScreen.js pattern means the code structure is already known.
-**Delivers:** A working custom settings page at runtime. Games with `ui.settingsScreen` in their script.json render the custom layout; games without it still show the default hardcoded UI.
-**Uses:** `TitleScreen.js` as implementation template; `sanitize.js` for all style values; `ConfigManager.js` for all get/set
-**Addresses:** Pitfall 6 (innerHTML XSS — use createElement+textContent), Pitfall 10 (default fallback), Pitfall 11 (z-index stacking), Pitfall 12 (asset:// paths)
-**Tasks:**
-- Refactor `SettingsScreen.js`: add `setLayout()`, `_renderCustom()`, `_createSliderElement()`, `_createToggleElement()`, `_createButtonElement()`, `_createTextElement()`
-- Use registry pattern (`COMPONENT_RENDERERS` object, not switch) for future extensibility
-- Wire 2 lines in `main.js`: `settingsScreen.setLayout(engine.script.ui?.settingsScreen)`
-- Add CSS for `.settings-custom-element`, `.settings-slider-wrap`, `.settings-toggle-wrap` in `style.css`
-- Test with hand-crafted `script.json` containing `ui.settingsScreen` before touching editor
+**Build order:** assets.js store → list-assets + delete-asset IPC → import-assets IPC (validation + auto-naming) → AssetLibrary.vue (bg/audio tabs) → Characters sub-tab migration → Fonts sub-tab + fontLoader.js → App.vue tab swap → AssetPanel.vue update
 
----
+### Phase 2: Title Page Designer
 
-### Phase 3: Editor Canvas + Palette
-**Rationale:** With the schema locked and runtime validated, the editor can be built with confidence that its output will render correctly. The canvas implementation is the highest-risk coding phase (drag-and-drop, coordinate systems, event conflicts) and must implement several pitfall mitigations explicitly.
-**Delivers:** A working visual designer — creator can place all 7 preset components, drag to position, delete, and see a static visual preview.
-**Addresses:** Pitfall 2 (interactive events — all components are visually inert), Pitfall 3 (god-component — SettingsDesigner.vue stays <200 lines), Pitfall 7 (coordinate system), Pitfall 8 (deep watcher — position updates only on mouseup), Pitfall 13 (undo — all state in script.data.ui)
-**Tasks:**
-- Create `SettingsCanvas.vue` — 1280×720 artboard using CanvasPreview.vue `artboardStyle + canvasScale` pattern; DraggableElement wrappers for each element
-- Create `SettingsComponentPalette.vue` — sidebar with 9 available widget types; click-to-add (not drag-from-palette)
-- Create `SettingsPreviewSlider.vue`, `SettingsPreviewToggle.vue`, `SettingsPreviewLabel.vue`, `SettingsPreviewButton.vue` — purely visual, `pointer-events: none` on inner content
-- Create `useSettingsDesigner.js` composable — selection state, add/remove/update element logic, position update handler (emit on mouseup only)
-- Wire in `SettingsDesigner.vue` — keep <200 lines by delegating to composable and child components
+**Rationale:** Depends on Phase 1 for asset pickers (background, BGM, image, font selection). The SettingsDesigner is the proven template — this is a structured replication, not invention. The runtime schema alignment (TitleScreen.js) must happen first to avoid the #1 critical pitfall.
 
----
+**Delivers:** Full 3-panel canvas designer for title pages, 4 preset button components, text labels, decorative images, BGM selection, undo/redo, auto-save. Plus runtime engine support for the new schema.
 
-### Phase 4: Property Panel + Integration Polish
-**Rationale:** Properties depend on the canvas selection model from Phase 3. Integration testing is the final gate before the milestone is complete.
-**Delivers:** Complete settings designer feature: position, size, label, and full style editing; background image; end-to-end editor→save→preview round-trip verified.
-**Tasks:**
-- Create `SettingsPropertyPanel.vue` — native HTML inputs (type="color", type="number", type="range", select) with v-model bindings to selected element; no UI library
-- Background image selector (reuse asset panel pattern)
-- "Populate defaults" button: generates a default layout matching the current hardcoded settings screen, giving old projects an editable starting point
-- Slider default-value hint text in editor: "编辑器显示默认值，玩家值由引擎管理"
-- End-to-end integration test: design in editor → save → open preview → verify custom layout renders at correct positions
-- Backward compatibility test: load project with no `ui.settingsScreen` → engine shows default, editor shows empty canvas ready to fill
+**Features addressed:** T1, T2, T3, T5, T6, T7, T8, T9, T11, T12
 
----
+**Pitfalls to avoid:**
+- Pitfall #1 (schema mismatch) — **Update TitleScreen.js _renderCustom() FIRST**, before building designer
+- Pitfall #7 (BGM overlap) — Stop title BGM in onStart/onContinue callbacks
+- Pitfall #9 (click vs drag) — Consider adding 3px drag threshold to DraggableElement.vue
+
+**Build order:** titleDefs.js registry → script.js store methods (getTitleScreen/updateTitleScreen) → TitleScreen.js schema update → TitleDesigner.vue rewrite → Engine wiring (BGM, fonts)
+
+### Phase 3: Settings Overlay
+
+**Rationale:** Smallest scope (CSS + minor JS changes in engine), zero dependency on other v0.2 features. Pure runtime modification — no editor changes needed. Can be built and tested independently.
+
+**Delivers:** Settings screen renders as slide-in overlay on top of the running game. Semi-transparent backdrop, ESC/click-outside dismiss, smooth CSS transitions.
+
+**Features addressed:** S1, S2, S3, S4, S5, S6, S7
+
+**Pitfalls to avoid:**
+- Pitfall #6 (rapid open/close glitch) — `_animating` state flag, force-reset on re-trigger
+- Pitfall #11 (backdrop-filter performance) — Keep blur ≤ 12px, CSS variable fallback
+
+**Build order:** style.css slide animation → SettingsScreen.js show()/hide() update → main.js ESC key priority → Test with both custom and default layouts
 
 ### Phase Ordering Rationale
 
-- **Phase 0 gates everything** — the bugs block project creation and dev iteration. Fixing them is the force multiplier.
-- **Schema first (Phase 1)** because editor and runtime share zero code — the JSON is the only contract. Schema drift is the #1 rewrite risk.
-- **Runtime before editor (Phase 2)** because it can be tested with a hand-written JSON file in isolation, validating the data model is correct before editor complexity layers on top.
-- **Canvas before properties (Phase 3 before 4)** because properties depend on the selection model, which lives in the canvas.
-- **Phases 2 and 3 can run in parallel** once Phase 1 is complete (schema locked). If two developers are available, assign one to each.
+- **Dependency chain is unambiguous:** Asset Library → Title Designer → Settings Overlay. The title designer's background picker, BGM picker, and font selector all consume the asset store built in Phase 1.
+- **Risk front-loading:** The two hardest pitfalls (schema mismatch #1, dual-process fonts #2) are confronted early — Phase 1 builds fontLoader.js, Phase 2 begins with TitleScreen.js schema alignment.
+- **Pattern replication reduces risk over time:** Phase 2 copies a proven 800-line component. Phase 3 is CSS-only. Complexity decreases as the milestone progresses.
+- **Settings overlay is the safety valve:** If timeline pressure hits, Phase 3 is the smallest and most independent — it could ship in a follow-up patch without blocking the other two features.
 
 ### Research Flags
 
-**Phases with standard patterns (no additional research needed):**
-- **Phase 0:** Bug fixes are documented in PROJECT.md with likely root causes. Standard debugging.
-- **Phase 1:** Follows `TitleScreen.js` + `script-format.md` pattern exactly. Well-documented internal pattern.
-- **Phase 2:** TitleScreen.js is a working 1:1 reference. The renderer is essentially a port with different component types.
-- **Phase 3:** DraggableElement.vue handles the hardest part (scale-aware coordinates). CanvasPreview.vue provides the artboard pattern.
-- **Phase 4:** Property panel uses only native HTML inputs. No new patterns needed.
+**Phases likely needing deeper research during planning:**
+- **Phase 1 (Asset Library):** Character expression editor UX — merging Characters.vue data management into the unified view requires careful UI design. The image-picker-for-expressions flow replaces manual text input and needs interaction design.
+- **Phase 2 (Title Designer):** TitleScreen.js backward compatibility — if any existing projects use the old `type: 'text'` schema, a migration path is needed. Verify whether any test projects exist.
 
-**No phases require `/gsd-research-phase`.** This is an internal architecture extension. Every pattern is proven in the existing codebase. External research (libraries, APIs) would add noise, not signal.
-
----
-
-## Open Questions Requiring User Decision
-
-Before roadmap implementation begins, these decisions need owner input:
-
-1. **Fullscreen implementation:** Electron `BrowserWindow.setFullScreen()` requires IPC from renderer to main process. Is there a preference for adding a dedicated IPC channel (`toggle-fullscreen`) vs reusing an existing general-purpose channel? This is a minor design choice but needs alignment with the existing IPC surface in `electron/main.js`.
-
-2. **Skip-Read read-history tracking:** The `skipRead` toggle requires the engine to know which dialogue nodes have been seen before. Does the existing save system (8-slot localStorage) track read history? If not, this feature needs a separate `readHistory` set in localStorage — a minor engine addition but needs confirmation of intended scope.
-
-3. **Slider preview value in editor:** Research recommends showing default ConfigManager values in the editor canvas preview (e.g., BGM slider at 50%). Should the editor instead show a neutral "middle" position or pull from the project's last-saved config? This affects user expectation-setting.
-
-4. **"Quick setup" default layout:** When a creator opens the settings designer for the first time, should the canvas be empty (creator builds from scratch) or pre-populated with a default layout matching the current hardcoded settings page? Research recommends pre-populating — but this is a UX decision.
-
----
+**Phases with standard patterns (skip deep research):**
+- **Phase 2 (TitleDesigner.vue rewrite):** Direct port of SettingsDesigner.vue patterns. The architecture doc provides complete code patterns, registry definitions, and store methods. This is execution, not invention.
+- **Phase 3 (Settings Overlay):** Pure CSS transitions + minor JS. Well-documented approach with exact CSS provided in architecture research. No unknowns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | Direct source code analysis — verified installed versions, confirmed zero external deps needed, DraggableElement.vue confirmed working |
-| Features | **HIGH** | Cross-referenced PROJECT.md requirements with codebase audit. The 7 component types are explicitly listed in PROJECT.md Active requirements |
-| Architecture | **HIGH** | TitleScreen.js is a working reference implementation of the exact pattern needed. Data flow verified by tracing App.vue watcher → save pipeline → IPC → main.js |
-| Pitfalls | **HIGH** | All pitfalls grounded in actual code (DraggableElement event handling, ConfigManager structure, App.vue deep watcher). Two blocking bugs are real, documented in PROJECT.md |
+| Stack | **HIGH** | Verified all APIs available in Electron 41 (Chromium 136 + Node 22.x). No new deps needed. |
+| Features | **HIGH** | Full codebase audit performed. Feature list cross-referenced with Ren'Py, TyranoBuilder, Visual Novel Maker, and commercial galgame conventions. All features have clear implementation paths. |
+| Architecture | **HIGH** | Every pattern derived from existing source code. SettingsDesigner.vue, settingDefs.js, script.js store, and IPC handlers all inspected directly. No speculation. |
+| Pitfalls | **HIGH** | All pitfalls traced to actual code patterns in the repository. Schema mismatch verified by reading both TitleScreen.js and SettingsScreen.js. Reactive proxy bug documented in PROJECT.md from v0.1. |
 
-**Overall confidence: HIGH**
-
-All research is based on direct source code analysis of the actual project. No external documentation, speculation, or training-data domain knowledge was required — the entire architecture already exists in the codebase. Confidence would drop to MEDIUM only for the 3 new engine behaviors (fullscreen IPC, dialogueOpacity application, skipRead history tracking), where the implementation approach is clear but the exact wiring in `main.js` and `DialogueBox` needs verification during execution.
+**Overall confidence: HIGH** — This is an unusually well-grounded research set because the existing codebase provides proven patterns for every feature. The v0.2 milestone is primarily replication and extension, not greenfield invention.
 
 ### Gaps to Address
 
-- **Fullscreen IPC wiring:** Exact call path `renderer → IPC → main.js → BrowserWindow.setFullScreen()` needs verification against current `electron/main.js` IPC handler list during Phase 2.
-- **DialogueBox opacity handle:** `dialogueOpacity` must be applied to the dialogue box background element. Need to verify `DialogueBox.js` exposes a method or style property for this during Phase 2.
-- **Read history existence:** Verify whether `skipRead` logic requires a new `readHistory` data structure in localStorage or if the engine already tracks something usable. Verify during Phase 1 schema design.
-- **TitleDesigner.vue source review:** The title screen designer is explicitly called out as the reference UI pattern in PROJECT.md, but wasn't analyzed in detail during research. Review it before building Phase 3 canvas to catch any additional patterns not visible from TitleScreen.js alone.
-
----
+- **Backward compatibility for `ui.titleScreen` schema:** If any saved projects already contain title screen data in the old format (`type: 'text'`), a migration function is needed. Verify during Phase 2 planning whether any test projects have this data.
+- **Font family name extraction:** The FontFace API needs a CSS-safe family name. Research assumes the filename stem is used (e.g., `MyFont.ttf` → family `MyFont`), but some fonts have internal family names that differ from filenames. May need to read the `name` table from TTF/OTF headers — or accept filename-based naming as sufficient for v0.2.
+- **DraggableElement.vue drag threshold:** Pitfall #9 suggests adding a 3px minimum drag distance. This affects both SettingsDesigner and TitleDesigner. Decide during Phase 2 planning whether to fix this globally or defer.
+- **`select-asset` IPC handler:** Referenced by existing SettingsDesigner.vue but not implemented (opens file dialog filtered by category). Needs implementation in Phase 1 — currently a silent gap in the codebase.
 
 ## Sources
 
-### Primary (HIGH confidence — direct source code analysis)
-- `src/editor/components/canvas/DraggableElement.vue` — Drag/resize infrastructure, scale-aware coordinates
-- `src/editor/components/canvas/CanvasPreview.vue` — Canvas scaling pattern (artboardStyle + canvasScale)
-- `src/ui/TitleScreen.js` — Reference implementation for custom layout rendering
-- `src/ui/SettingsScreen.js` — Current hardcoded settings UI (to be refactored)
-- `src/engine/ConfigManager.js` — Config persistence, 4 existing keys, localStorage
-- `src/editor/stores/script.js` — Undo/redo system (JSON snapshot of script.data)
-- `src/editor/App.vue` — Deep watcher → auto-save pipeline
-- `src/ui/sanitize.js` — CSS injection prevention
-- `src/main.js` — Engine wiring, settings screen init, title screen layout pattern
-- `docs/script-format.md` — ui.titleScreen data model (template for ui.settingsScreen)
-- `package.json` — Verified zero utility/UI dependencies
-- `src/editor/views/Scenes.vue` — God-component to avoid repeating (489 lines, flagged as fragile)
+### Primary (HIGH confidence)
+- **Codebase analysis:** SettingsDesigner.vue, Assets.vue, Characters.vue, TitleDesigner.vue (stub), TitleScreen.js, SettingsScreen.js, settingDefs.js, main.js (engine), App.vue, DraggableElement.vue, AssetPanel.vue, electron/main.js, script.js store, project.js store — all inspected directly
+- **PROJECT.md:** v0.2 milestone requirements and known issues (reactive proxy IPC bug)
+- **MDN Web Docs:** FontFace API, CSS Font Loading API, CSS transitions
+- **Wikipedia:** File signature magic bytes (stable standards)
 
-### Secondary (HIGH confidence — project documentation)
-- `.planning/PROJECT.md` — Active requirements, known bugs, constraints, core value proposition
-- `CONCERNS.md` — Existing XSS issues, performance bottlenecks, known hardcoded resolution
-- `CONVENTIONS.md` — Code patterns, module design conventions
+### Secondary (MEDIUM confidence)
+- **VN engine domain patterns:** Ren'Py screen language, TyranoBuilder UI, Kirikiri/KAG, Naninovel — established domain conventions
+- **Commercial galgame UX:** CLANNAD, Steins;Gate, etc. — overlay settings pattern is industry standard
 
-### Tertiary (MEDIUM confidence — domain knowledge)
-- RenPy, TyranoBuilder, Kirikiri, Naninovel — competitive landscape comparison for feature scoping
-- Galgame/VN player expectations — universal settings (volume, text speed, fullscreen) are well-established conventions
+### Tertiary (LOW confidence)
+- **Font family name extraction from TTF headers** — may need validation during implementation if filename-based naming proves insufficient
 
 ---
-
-*Research completed: 2025-07-17*
+*Research completed: 2025-07-21*  
 *Ready for roadmap: yes*

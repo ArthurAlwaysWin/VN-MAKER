@@ -1,692 +1,766 @@
-# Architecture: Settings Page Designer Integration
-
-**Project:** Galgame Maker — Settings Page Designer
-**Researched:** 2025-07-17
-**Confidence:** HIGH (based on thorough analysis of existing codebase patterns)
-
-## Executive Summary
-
-The Settings Page Designer must integrate into two distinct applications: the **Vue 3 editor** (where game creators design the settings page visually) and the **vanilla JS runtime engine** (where players interact with the settings). The existing codebase already establishes clear patterns for both sides via the Title Screen feature — `ui.titleScreen` in `script.json` drives custom layout, `TitleScreen.js` renders it at runtime, and the editor provides canvas-based design tools. The settings designer follows this identical architecture.
-
-The core insight is that settings components are **typed UI widgets** (slider, toggle, button, text/label) whose **logic is engine-built-in** (e.g., a `bgmVolume` slider always controls BGM volume) but whose **visual appearance and position** are author-defined. This matches the project's core philosophy: "developer doesn't touch logic — only visual design."
-
-## Recommended Architecture
-
-### System Overview
-
-```
-┌─────────────────────── EDITOR (Vue 3) ───────────────────────┐
-│                                                                │
-│  SettingsDesigner.vue                                          │
-│  ┌──────────┐  ┌──────────────────┐  ┌───────────────────┐    │
-│  │ Component │  │ Settings Canvas  │  │ Property Panel    │    │
-│  │ Palette   │──│ (1280×720)       │──│ (selected element)│    │
-│  │ (preset   │  │                  │  │                   │    │
-│  │  widgets) │  │ DraggableElement │  │ x, y, width,     │    │
-│  │           │  │ ┌──┐ ┌──┐ ┌──┐  │  │ color, font, etc. │    │
-│  │ ▸ Sliders │  │ │S │ │T │ │B │  │  │                   │    │
-│  │ ▸ Toggles │  │ └──┘ └──┘ └──┘  │  └───────────────────┘    │
-│  │ ▸ Buttons │  └──────────────────┘                           │
-│  │ ▸ Labels  │                                                 │
-│  └──────────┘                                                  │
-│           │                                                    │
-│           ▼                                                    │
-│   script.data.ui.settingsScreen  ←── Pinia (useScriptStore)   │
-│                                                                │
-└───────────────────┬────────────────────────────────────────────┘
-                    │ auto-save (2s debounce)
-                    │ IPC: save-project
-                    ▼
-          ┌──── script.json ────┐
-          │ {                   │
-          │   "ui": {           │
-          │     "settingsScreen"│ ← NEW section
-          │   }                 │
-          │ }                   │
-          └─────────┬───────────┘
-                    │ fetch at init
-                    ▼
-┌────────────────── ENGINE (Vanilla JS) ──────────────────────┐
-│                                                              │
-│  SettingsScreen.js (refactored)                              │
-│  ┌────────────────────────────────────────────────┐          │
-│  │ if (layout && layout.elements)                 │          │
-│  │   → _renderCustom() — positioned elements      │          │
-│  │ else                                           │          │
-│  │   → _renderDefault() — current hardcoded UI    │          │
-│  └──────────────────┬─────────────────────────────┘          │
-│                     │                                        │
-│  ConfigManager.js ←─┘  get/set config values                │
-│  (localStorage)        (bgmVolume, seVolume, textSpeed, etc) │
-│                                                              │
-│  main.js: settingsScreen.onChange → applyConfig()            │
-│           (AudioManager, DialogueBox get updated values)     │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Component Boundaries
-
-| Component | Location | Responsibility | Communicates With |
-|-----------|----------|---------------|-------------------|
-| **SettingsDesigner.vue** | `src/editor/views/` | Top-level view: orchestrates canvas, palette, and property panel; manages selected element state | Pinia `useScriptStore` (reads/writes `script.data.ui.settingsScreen`), child components |
-| **SettingsCanvas.vue** | `src/editor/components/canvas/` | 1280×720 artboard rendering settings component previews as DraggableElements; handles drop-to-add | `DraggableElement.vue` (reused), emits `select` / `position-update` / `element-add` to parent |
-| **Component Palette** | Inline in `SettingsDesigner.vue` or separate `SettingsComponentPalette.vue` | Sidebar listing preset settings widgets (BGM slider, SE slider, text speed, etc.) with drag-to-canvas | SettingsCanvas via HTML5 drag-and-drop (`dataTransfer`) |
-| **Property Panel** | Inline in `SettingsDesigner.vue` | Right sidebar showing editable properties for selected element (position, size, colors, fonts, label text) | Parent SettingsDesigner.vue (selected element ref) |
-| **DraggableElement.vue** | `src/editor/components/canvas/` | Generic drag + resize wrapper with scale-aware coordinates | Already exists, reused as-is |
-| **SettingsScreen.js** (refactored) | `src/ui/` | Reads `ui.settingsScreen` from script config; renders custom layout or falls back to default | `ConfigManager.js` (get/set values), callbacks to `main.js` |
-| **ConfigManager.js** | `src/engine/` | Persists settings to localStorage, provides get/set API | Used by `SettingsScreen.js`, `main.js` (`applyConfig`) |
-
-### What Is New vs. Reused
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `DraggableElement.vue` | **REUSE** as-is | Already supports move + resize + scale-aware coords |
-| `useScriptStore` (Pinia) | **REUSE** as-is | `script.data.ui.settingsScreen` is reactive via deep watcher, auto-saves |
-| `sanitize.js` | **REUSE** as-is | CSS injection prevention + coordinate clamping |
-| `SettingsDesigner.vue` | **REPLACE** current placeholder | Shell exists, needs full implementation |
-| `SettingsCanvas.vue` | **NEW** | Settings-specific canvas (simpler than CanvasPreview — no scenes/commands) |
-| `SettingsScreen.js` | **REFACTOR** | Add `setLayout()` + `_renderCustom()` following TitleScreen.js pattern |
-| `ConfigManager.js` | **EXTEND** | Add new setting keys: `fullscreen`, `skipRead`, `dialogueOpacity` |
-
-## Data Model: `ui.settingsScreen` in `script.json`
-
-Following the established `ui.titleScreen` pattern exactly. This is the **single source of truth** — editor writes it, engine reads it.
-
-```json
-{
-  "ui": {
-    "settingsScreen": {
-      "background": "backgrounds/settings_bg.png",
-      "elements": [
-        {
-          "id": "title-text",
-          "type": "text",
-          "content": "设 定",
-          "x": 640,
-          "y": 60,
-          "anchor": "center",
-          "style": {
-            "fontSize": 32,
-            "fontFamily": "Noto Serif SC",
-            "color": "#ffffff",
-            "letterSpacing": 8
-          }
-        },
-        {
-          "id": "bgm-slider",
-          "type": "slider",
-          "settingKey": "bgmVolume",
-          "label": "BGM 音量",
-          "x": 300,
-          "y": 160,
-          "width": 680,
-          "style": {
-            "labelColor": "#cccccc",
-            "labelFontSize": 14,
-            "trackColor": "rgba(255,255,255,0.2)",
-            "fillColor": "#4a9eff",
-            "thumbColor": "#ffffff"
-          }
-        },
-        {
-          "id": "se-slider",
-          "type": "slider",
-          "settingKey": "seVolume",
-          "label": "SE 音量",
-          "x": 300,
-          "y": 230,
-          "width": 680,
-          "style": { }
-        },
-        {
-          "id": "text-speed-slider",
-          "type": "slider",
-          "settingKey": "textSpeed",
-          "label": "文字速度",
-          "x": 300,
-          "y": 300,
-          "width": 680,
-          "style": { }
-        },
-        {
-          "id": "auto-speed-slider",
-          "type": "slider",
-          "settingKey": "autoSpeed",
-          "label": "自动播放速度",
-          "x": 300,
-          "y": 370,
-          "width": 680,
-          "style": { }
-        },
-        {
-          "id": "fullscreen-toggle",
-          "type": "toggle",
-          "settingKey": "fullscreen",
-          "label": "全屏模式",
-          "x": 300,
-          "y": 440,
-          "style": {
-            "labelColor": "#cccccc",
-            "activeColor": "#4a9eff",
-            "inactiveColor": "rgba(255,255,255,0.2)"
-          }
-        },
-        {
-          "id": "skip-read-toggle",
-          "type": "toggle",
-          "settingKey": "skipRead",
-          "label": "仅跳过已读文本",
-          "x": 300,
-          "y": 500,
-          "style": { }
-        },
-        {
-          "id": "dialogue-opacity-slider",
-          "type": "slider",
-          "settingKey": "dialogueOpacity",
-          "label": "对话框透明度",
-          "x": 300,
-          "y": 560,
-          "width": 680,
-          "style": { }
-        },
-        {
-          "id": "back-button",
-          "type": "button",
-          "action": "back",
-          "label": "返回",
-          "x": 640,
-          "y": 650,
-          "anchor": "center",
-          "style": {
-            "width": 180,
-            "height": 44,
-            "fontSize": 16,
-            "color": "#ffffff",
-            "backgroundColor": "rgba(255,255,255,0.1)",
-            "borderRadius": 6
-          }
-        }
-      ]
-    }
-  }
-}
-```
-
-### Element Type Definitions
-
-| Type | Purpose | Key Properties | Engine Logic (built-in) |
-|------|---------|----------------|------------------------|
-| `slider` | Range input for numeric settings | `settingKey`, `label`, `x`, `y`, `width`, `style` | Maps to ConfigManager key; handles min/max/step per setting key; displays value label |
-| `toggle` | Boolean on/off switch | `settingKey`, `label`, `x`, `y`, `style` | Maps to ConfigManager key; toggles true/false |
-| `button` | Action trigger (back, reset) | `action`, `label`, `x`, `y`, `style` | `"back"` hides screen, `"reset"` restores defaults |
-| `text` | Static label/heading | `content`, `x`, `y`, `style` | Pure display, no interaction |
-
-### Setting Keys Registry (Engine-Defined)
-
-The engine defines the valid `settingKey` values. The editor presents these as a dropdown — the author cannot invent new keys.
-
-| settingKey | Type | Default | Min | Max | Step | Display |
-|------------|------|---------|-----|-----|------|---------|
-| `bgmVolume` | slider | 0.5 | 0 | 1 | 0.01 | `${Math.round(v*100)}%` |
-| `seVolume` | slider | 0.8 | 0 | 1 | 0.01 | `${Math.round(v*100)}%` |
-| `textSpeed` | slider | 30 | 10 | 90 | 1 | mapped 1–10 scale |
-| `autoSpeed` | slider | 2000 | 500 | 5000 | 100 | `${(v/1000).toFixed(1)}s` |
-| `fullscreen` | toggle | false | — | — | — | on/off |
-| `skipRead` | toggle | true | — | — | — | on/off |
-| `dialogueOpacity` | slider | 0.8 | 0.1 | 1 | 0.05 | `${Math.round(v*100)}%` |
-
-This registry lives as a `const SETTING_DEFS` object shared between editor and engine (or duplicated in both — simpler given the dual-app architecture).
-
-## Data Flow
-
-### 1. Editor: Author Designs Settings Page
-
-```
-Author drags "BGM 音量" slider from palette onto canvas
-  │
-  ▼
-SettingsCanvas.vue handles @drop event
-  │  reads dataTransfer: { type: 'slider', settingKey: 'bgmVolume', label: 'BGM 音量' }
-  │  computes drop position (adjusted for canvas scale)
-  ▼
-SettingsDesigner.vue adds element to script.data.ui.settingsScreen.elements
-  │  (direct Pinia reactive mutation)
-  ▼
-App.vue deep watcher fires → 500ms snapshot timer → pushState() (undo history)
-                            → 2s save timer → project.saveProject(script.data)
-  │
-  ▼
-IPC: 'save-project' → main process → atomic write to script.json on disk
-```
-
-### 2. Editor: Author Repositions/Styles Element
-
-```
-Author drags element on canvas (or edits property panel)
-  │
-  ▼
-DraggableElement.vue emits 'move' { x, y }
-  │
-  ▼
-SettingsCanvas.vue emits 'position-update' { elementId, x, y }
-  │
-  ▼
-SettingsDesigner.vue finds element by id in script.data.ui.settingsScreen.elements
-  │  updates element.x, element.y (reactive mutation)
-  ▼
-Auto-save pipeline (same as above)
-```
-
-### 3. Engine: Runtime Renders Custom Settings Page
-
-```
-main.js: init()
-  │  engine.load('/game/script.json')
-  │
-  ▼
-  if (engine.script.ui?.settingsScreen) {
-    settingsScreen.setLayout(engine.script.ui.settingsScreen);  // NEW
-  }
-
-User triggers settings screen (title menu "设定" button, or ESC → Settings)
-  │
-  ▼
-settingsScreen.show()
-  │  if (this.layout && this.layout.elements) → _renderCustom()
-  │  else → _renderDefault() (current behavior, unchanged)
-  ▼
-_renderCustom() iterates elements array:
-  │
-  ├─ type: "text"   → _createTextElement(cfg)    (static label)
-  ├─ type: "slider"  → _createSliderElement(cfg)  (range input bound to settingKey)
-  ├─ type: "toggle"  → _createToggleElement(cfg)  (checkbox/switch bound to settingKey)
-  └─ type: "button"  → _createButtonElement(cfg)  (action: 'back' → hide(), 'reset' → defaults)
-  │
-  ▼
-Each interactive element reads/writes ConfigManager via settingKey
-  │  slider: cfg.get(settingKey) for initial value, cfg.set(settingKey, v) on input
-  │  toggle: cfg.get(settingKey) for initial state, cfg.set(settingKey, !v) on click
-  ▼
-this._notifyChange() → settingsScreen.onChange callback in main.js → applyConfig()
-```
-
-### 4. Preview: Round-Trip Verification
-
-```
-Author clicks "▶ 预览" in editor
-  │
-  ▼
-Editor saves script.data to disk (IPC: save-project)
-  │
-  ▼
-IPC: open-preview → main process opens new BrowserWindow with index.html?project=<path>
-  │
-  ▼
-Engine loads script.json (including ui.settingsScreen)
-  │
-  ▼
-Player navigates to settings → sees custom layout with authored positions/styles
-```
-
-## Patterns to Follow
-
-### Pattern 1: Mirror TitleScreen.js Architecture
-
-**What:** The `TitleScreen.js` already implements exactly the pattern needed: `setLayout()` stores the config, `show()` branches between `_renderCustom()` and `_renderDefault()`, and `_renderCustom()` iterates elements creating positioned DOM nodes with sanitized styles.
-
-**Why:** Code consistency, proven pattern, minimal risk.
-
-**Implementation sketch for SettingsScreen.js:**
-
-```javascript
-// New method — mirrors TitleScreen.setLayout()
-setLayout(layout) {
-  this.layout = layout;
-}
-
-// Modified show() — mirrors TitleScreen.show()
-show() {
-  if (this.layout && this.layout.elements) {
-    this._renderCustom();
-  } else {
-    this._render(); // existing default render, renamed from _render
-  }
-  this.el.classList.remove('hidden');
-  requestAnimationFrame(() => this.el.classList.add('visible'));
-}
-
-_renderCustom() {
-  this.el.innerHTML = '';
-  this.el.style.position = 'absolute';
-  this.el.style.inset = '0';
-
-  if (this.layout.background) {
-    this.el.style.backgroundImage = `url('/game/${this.layout.background}')`;
-    this.el.style.backgroundSize = 'cover';
-  }
-
-  this.layout.elements.forEach(elem => {
-    switch (elem.type) {
-      case 'text':   this._createTextElement(elem); break;
-      case 'slider': this._createSliderElement(elem); break;
-      case 'toggle': this._createToggleElement(elem); break;
-      case 'button': this._createButtonElement(elem); break;
-    }
-  });
-}
-```
-
-### Pattern 2: Preset Component Palette (Not Free-Form)
-
-**What:** The component palette offers **only predefined widgets** mapped to known `settingKey` values. The author cannot create arbitrary settings — they pick from BGM Volume, SE Volume, Text Speed, etc.
-
-**Why:** Matches core philosophy ("developer doesn't touch logic"). The engine must know what every slider/toggle does. Free-form would require scripting, which violates the project's entire design.
-
-**Implementation:** A static array of available components displayed in the palette sidebar:
-
-```javascript
-const SETTINGS_COMPONENTS = [
-  { type: 'slider', settingKey: 'bgmVolume', label: 'BGM 音量', icon: '🔊' },
-  { type: 'slider', settingKey: 'seVolume', label: 'SE 音量', icon: '🔔' },
-  { type: 'slider', settingKey: 'textSpeed', label: '文字速度', icon: '⌨️' },
-  { type: 'slider', settingKey: 'autoSpeed', label: '自动播放速度', icon: '⏩' },
-  { type: 'toggle', settingKey: 'fullscreen', label: '全屏模式', icon: '🖥️' },
-  { type: 'toggle', settingKey: 'skipRead', label: '跳过已读', icon: '⏭️' },
-  { type: 'slider', settingKey: 'dialogueOpacity', label: '对话框透明度', icon: '💬' },
-  { type: 'text', settingKey: null, label: '文本标签', icon: '📝' },
-  { type: 'button', settingKey: null, label: '按钮', icon: '🔘', action: 'back' },
-];
-```
-
-### Pattern 3: Element ID Generation
-
-**What:** Each element gets a unique `id` for editor selection tracking and element lookup during updates. Use `type-settingKey-timestamp` or a simple counter.
-
-**Why:** The TitleScreen elements don't have IDs (they're rendered once and forgotten), but the editor needs stable references for selection, property editing, and undo/redo.
-
-```javascript
-function generateElementId(type, settingKey) {
-  return `${type}-${settingKey || 'custom'}-${Date.now()}`;
-}
-```
-
-### Pattern 4: Reuse DraggableElement Without Modification
-
-**What:** `DraggableElement.vue` already handles position, resize, selection, and scale-aware coordinates. Use it as-is, wrapping each settings component preview.
-
-**Why:** The component is well-tested and handles the tricky scale math. Settings elements have simpler shapes than scene elements (no character sprites), so the existing capability is more than sufficient.
-
-### Pattern 5: Ensured `ui` Object Initialization
-
-**What:** When a project is created without settings screen data, ensure `script.data.ui` and `script.data.ui.settingsScreen` are initialized with defaults on first access.
-
-**Why:** Existing projects won't have this field. The demo `script.json` doesn't have a `ui` section at all.
-
-```javascript
-// In SettingsDesigner.vue setup
-function ensureSettingsData() {
-  if (!script.data.ui) script.data.ui = {};
-  if (!script.data.ui.settingsScreen) {
-    script.data.ui.settingsScreen = { background: null, elements: [] };
-  }
-}
-```
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Separate Settings Store
-
-**What:** Creating a new Pinia store like `useSettingsDesignerStore` for the settings page data.
-
-**Why bad:** The settings layout is part of `script.json` and must travel with the project. It already lives in `script.data.ui.settingsScreen`. A separate store would create sync issues, break undo/redo (which operates on `script.data` snapshots), and bypass the existing auto-save pipeline.
-
-**Instead:** Read/write `script.data.ui.settingsScreen` directly. The existing deep watcher on `script.data` handles everything.
-
-### Anti-Pattern 2: Engine-Side Layout Persistence
-
-**What:** Having the engine save settings layout preferences or merge author layout with runtime state.
-
-**Why bad:** The engine is read-only with respect to layout. It reads `ui.settingsScreen` from `script.json` and renders. Config values (volumes, speeds) go to `localStorage` via `ConfigManager`. Layout never changes at runtime.
-
-**Instead:** Strict separation: layout from `script.json` (authored), values from `localStorage` (player preferences).
-
-### Anti-Pattern 3: Duplicating CanvasPreview.vue
-
-**What:** Copying CanvasPreview.vue and modifying it for settings elements.
-
-**Why bad:** CanvasPreview.vue is scene-specific (background, characters, dialogue, choices — driven by command replay). Copying it would create maintenance burden and diverge quickly.
-
-**Instead:** Create a new `SettingsCanvas.vue` that is *simpler* — it only renders an artboard with positioned DraggableElements for each settings component. No command replay needed. Share only the sub-component (`DraggableElement.vue`).
-
-### Anti-Pattern 4: Free-Form Scripting of Settings Behavior
-
-**What:** Allowing authors to define custom slider ranges, custom config keys, or JavaScript expressions for settings behavior.
-
-**Why bad:** Violates "developer doesn't touch logic." Creates security risks (arbitrary code execution). Adds enormous complexity.
-
-**Instead:** Fixed registry of `settingKey` values. Engine knows the range, step, and display format for each. Author only controls position and visual style.
-
-## Component Detail: SettingsDesigner.vue Layout
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Toolbar: "设置页设计" | Background selector | Reset to default  │
-├──────────┬──────────────────────────────────┬───────────────────┤
-│ Component│                                  │ Property Panel    │
-│ Palette  │     Settings Canvas              │                   │
-│ (160px)  │     (1280×720 scaled)            │ [Position]        │
-│          │                                  │  X: [___] Y: [___]│
-│ ┌──────┐ │  ┌────────────────────────────┐  │                   │
-│ │🔊 BGM│ │  │                            │  │ [Size]            │
-│ │Volume│ │  │  ┌─ 设 定 ──────────┐      │  │  W: [___] H:[___]│
-│ └──────┘ │  │  │                  │      │  │                   │
-│ ┌──────┐ │  │  │ BGM 音量 ═══●══ │      │  │ [Label]           │
-│ │🔔 SE │ │  │  │ SE  音量 ══●═══ │      │  │  Text: [________] │
-│ │Volume│ │  │  │ 文字速度 ════●═ │      │  │                   │
-│ └──────┘ │  │  │ 自动播放 ═●════ │      │  │ [Style]           │
-│ ┌──────┐ │  │  │ [全屏] ○ ON     │      │  │  Color: [#______] │
-│ │⌨️ Text│ │  │  │                  │      │  │  Font:  [_______] │
-│ │Speed │ │  │  │    [ 返回 ]      │      │  │  BgColor: [#____]│
-│ └──────┘ │  │  └──────────────────┘      │  │                   │
-│ ┌──────┐ │  │                            │  │                   │
-│ │⏩Auto │ │  └────────────────────────────┘  │                   │
-│ │Speed │ │                                  │                   │
-│ └──────┘ │                                  │                   │
-│ ┌──────┐ │                                  │                   │
-│ │🖥️Full│ │                                  │                   │
-│ │screen│ │                                  │                   │
-│ └──────┘ │                                  │                   │
-│ ┌──────┐ │                                  │                   │
-│ │📝Text│ │                                  │                   │
-│ │Label │ │                                  │                   │
-│ └──────┘ │                                  │                   │
-│ ┌──────┐ │                                  │                   │
-│ │🔘Back│ │                                  │                   │
-│ │Btn  │ │                                  │                   │
-│ └──────┘ │                                  │                   │
-├──────────┴──────────────────────────────────┴───────────────────┤
-```
-
-## Component Detail: SettingsScreen.js Rendering
-
-The refactored engine renderer creates DOM elements for each widget type:
-
-### Slider Rendering
-
-```javascript
-_createSliderElement(cfg) {
-  const def = SETTING_DEFS[cfg.settingKey];
-  if (!def) return; // unknown setting, skip
-
-  const wrap = document.createElement('div');
-  wrap.className = 'settings-custom-element settings-slider-wrap';
-  this._applyPosition(wrap, cfg);
-  if (cfg.width) wrap.style.width = `${clampField('width', cfg.width)}px`;
-
-  // Label
-  const label = document.createElement('span');
-  label.className = 'settings-slider-label';
-  label.textContent = cfg.label || def.label;
-  // apply style.labelColor, style.labelFontSize via sanitizeCssValue
-
-  // Slider input
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = def.min;
-  slider.max = def.max;
-  slider.step = def.step;
-  slider.value = this.configManager.get(cfg.settingKey);
-  // apply style.trackColor, style.fillColor via CSS custom properties
-
-  // Value display
-  const valSpan = document.createElement('span');
-  valSpan.className = 'settings-slider-value';
-  valSpan.textContent = def.format(slider.value);
-
-  slider.addEventListener('input', () => {
-    const v = Number(slider.value);
-    this.configManager.set(cfg.settingKey, v);
-    valSpan.textContent = def.format(v);
-    this._notifyChange();
-  });
-
-  wrap.append(label, slider, valSpan);
-  this.el.appendChild(wrap);
-}
-```
-
-### Toggle Rendering
-
-```javascript
-_createToggleElement(cfg) {
-  const wrap = document.createElement('div');
-  wrap.className = 'settings-custom-element settings-toggle-wrap';
-  this._applyPosition(wrap, cfg);
-
-  const label = document.createElement('span');
-  label.textContent = cfg.label;
-
-  const toggle = document.createElement('button');
-  toggle.className = 'settings-toggle-btn';
-  let isOn = !!this.configManager.get(cfg.settingKey);
-  updateToggleVisual(toggle, isOn, cfg.style);
-
-  toggle.addEventListener('click', () => {
-    isOn = !isOn;
-    this.configManager.set(cfg.settingKey, isOn);
-    updateToggleVisual(toggle, isOn, cfg.style);
-    this._notifyChange();
-  });
-
-  wrap.append(label, toggle);
-  this.el.appendChild(wrap);
-}
-```
-
-## Scalability Considerations
-
-| Concern | Current (7 settings) | At 15 settings | At 30+ settings |
-|---------|---------------------|-----------------|-----------------|
-| Element count in JSON | 7-10 elements | 15-18 elements | Not recommended — UX issue |
-| Canvas performance | No issue (DOM elements, not canvas pixels) | No issue | No issue |
-| Undo/redo (JSON snapshots) | ~2KB per snapshot × 50 = ~100KB | ~4KB × 50 = ~200KB | Still fine |
-| Engine render time | Instant (DOM creation) | Instant | Instant |
-| ConfigManager keys | Extend defaults object | Extend defaults object | Consider grouping |
-
-**The real limit is UX, not performance.** 7 settings is the sweet spot for galgame. The architecture supports more, but the product shouldn't encourage 30+ settings.
-
-## Build Order (Dependencies)
-
-The components have clear dependency ordering. Each step must work before the next can begin.
-
-### Step 1: Data Schema (no dependencies)
-- Define `ui.settingsScreen` structure in `script.json`
-- Define `SETTING_DEFS` registry (setting key → min/max/step/format)
-- Update `docs/script-format.md` with settings screen specification
-
-**Produces:** Stable data contract that both editor and engine code against.
-
-### Step 2: Engine Rendering (depends on Step 1)
-- Refactor `SettingsScreen.js`: add `setLayout()`, `_renderCustom()`, element renderers
-- Extend `ConfigManager.js`: add `fullscreen`, `skipRead`, `dialogueOpacity` defaults
-- Wire layout in `src/main.js`: `settingsScreen.setLayout(engine.script.ui?.settingsScreen)`
-- Add CSS for custom settings elements in `src/style.css`
-
-**Why engine first:** Can be tested immediately with a hand-written JSON fixture. No editor dependency. Validates the data model works before building editor UI.
-
-### Step 3: Editor Canvas + Palette (depends on Step 1)
-- Create `SettingsCanvas.vue` (artboard + DraggableElement rendering)
-- Build component palette (sidebar with draggable preset widgets)
-- Implement drag-to-canvas (HTML5 drag/drop → add element to `script.data.ui.settingsScreen.elements`)
-- Implement click-to-select, drag-to-reposition, delete element
-
-**Can run in parallel with Step 2** once the data schema is locked.
-
-### Step 4: Property Panel + Polish (depends on Step 3)
-- Build property panel (right sidebar: position, size, label, style fields)
-- Background image selector (reuse asset panel pattern)
-- "Quick setup" button to populate default layout with all standard settings
-- Undo/redo verification (settings changes go through `script.data` watcher)
-
-### Step 5: Integration Testing (depends on Steps 2 + 4)
-- End-to-end: design in editor → save → preview → verify custom layout renders
-- Backward compatibility: projects without `ui.settingsScreen` → engine shows default
-- Edge cases: empty elements array, missing style fields, invalid settingKey
-
-```
-Step 1 (Schema)
-  ├──→ Step 2 (Engine)  ──┐
-  └──→ Step 3 (Editor)    ├──→ Step 5 (Integration)
-         └──→ Step 4 (Properties) ──┘
-```
-
-## Key Integration Points
-
-### 1. App.vue Tab Registration (already done)
-The tab `settings-design` already routes to `SettingsDesigner.vue` in `App.vue` line 78-91. No changes needed to the tab system.
-
-### 2. script.json Save/Load Pipeline (no changes needed)
-The auto-save deep watcher on `script.data` in `App.vue` (line 101-114) already captures any mutation to `script.data.ui.settingsScreen`. The existing `save-project` IPC handler serializes the entire script object. **Zero changes to the save pipeline.**
-
-### 3. Undo/Redo (no changes needed)
-`useScriptStore.pushState()` does `JSON.parse(JSON.stringify(script.data))` — full deep clone. Settings data inside `script.data.ui` is automatically included. **Zero changes to undo/redo.**
-
-### 4. Engine Initialization (2 lines of change)
-In `src/main.js`, after `engine.load()`:
-```javascript
-if (engine.script.ui?.settingsScreen) {
-  settingsScreen.setLayout(engine.script.ui.settingsScreen);
-}
-```
-This mirrors the existing title screen pattern at lines 425-427.
-
-### 5. Asset Protocol (no changes needed)
-Background images for the settings page use the same `asset://` protocol. The `backgrounds/` directory already serves through the registered protocol handler. **Zero changes.**
-
-## Security Considerations
-
-All existing security measures apply without modification:
-
-- **CSS sanitization:** `sanitizeCssValue()` and `clampField()` from `src/ui/sanitize.js` must be used in `SettingsScreen.js` `_renderCustom()` for all author-provided style values (colors, fonts, sizes). Same pattern as `TitleScreen.js` lines 91-98.
-- **Path traversal:** Background image paths go through the `asset://` protocol which validates paths stay within `assets/`. Already enforced.
-- **No new IPC channels needed.** Everything flows through existing `save-project` / `load-project`.
-
-## Sources
-
-- **HIGH confidence:** All findings based on direct codebase analysis of existing files
-  - `src/ui/TitleScreen.js` — pattern template for custom layout rendering
-  - `src/ui/SettingsScreen.js` — current implementation to refactor
-  - `src/engine/ConfigManager.js` — settings persistence layer
-  - `src/editor/components/canvas/CanvasPreview.vue` — canvas infrastructure reference
-  - `src/editor/components/canvas/DraggableElement.vue` — reusable drag component
-  - `src/editor/views/Scenes.vue` — full editor view pattern (sidebar + canvas + inspector)
-  - `src/main.js` — engine wiring and initialization
-  - `src/editor/App.vue` — tab routing and auto-save pipeline
-  - `docs/script-format.md` — existing `ui.titleScreen` data model
-  - `.planning/codebase/ARCHITECTURE.md` — system architecture reference
+# Architecture Patterns — v0.2 Feature Integration
+
+**Domain:** Galgame visual novel maker — Electron desktop app  
+**Researched:** 2025-07-14  
+**Focus:** How 3 new features (unified asset library, title page designer, settings overlay) integrate with existing architecture  
+**Confidence:** HIGH — based entirely on source code analysis of the existing codebase
 
 ---
 
-*Architecture research: 2025-07-17*
+## Executive Summary
+
+The v0.2 milestone adds three features that each touch different layers of the existing architecture. After thorough codebase analysis, the integration strategy is clear:
+
+1. **Unified Asset Library** requires a new Pinia store (`assets.js`), new IPC handlers for file validation/auto-naming, and a data model expansion in `script.json` for font metadata. The existing `Assets.vue` and `Characters.vue` merge into a single `AssetLibrary.vue`.
+
+2. **Title Page Designer** is a straightforward refactor: the current `TitleDesigner.vue` is a placeholder stub. It should be rebuilt following the exact `SettingsDesigner.vue` pattern (palette → canvas → inspector), with a `TITLE_DEFS` registry mirroring `SETTING_DEFS`, and the existing `TitleScreen.js` runtime renderer already supports custom layout rendering.
+
+3. **Settings Overlay** requires CSS/animation changes in the runtime engine only — changing `SettingsScreen.js` from opacity fade to slide-in/slide-out, adjusting z-index stacking, and ensuring the game continues rendering behind the translucent overlay. No editor changes needed.
+
+---
+
+## Recommended Architecture
+
+### Current Architecture (as-is)
+
+```
+Editor (Vue 3 + Pinia)                    Engine (Pure JS + DOM)
+┌─────────────────────────┐                ┌──────────────────────────┐
+│  App.vue                │                │  main.js (entry)         │
+│  ├─ TabBar              │                │  ├─ ScriptEngine         │
+│  ├─ keep-alive tabs:    │                │  ├─ AudioManager         │
+│  │  ├─ Scenes           │                │  ├─ ConfigManager        │
+│  │  ├─ TitleDesigner ◄──┼── STUB         │  ├─ SaveManager          │
+│  │  ├─ SettingsDesigner │                │  ├─ TitleScreen.js       │
+│  │  ├─ Assets           │                │  ├─ SettingsScreen.js    │
+│  │  ├─ Characters       │                │  ├─ GameMenu.js          │
+│  │  └─ ProjectSettings  │                │  └─ [other UI modules]   │
+│  └─ Stores:             │                └──────────────────────────┘
+│     ├─ script.js        │
+│     └─ project.js       │   ←── IPC ──→  electron/main.js
+└─────────────────────────┘                 (file I/O, asset://, dialog)
+```
+
+### Target Architecture (v0.2)
+
+```
+Editor (Vue 3 + Pinia)                    Engine (Pure JS + DOM)
+┌─────────────────────────┐                ┌──────────────────────────┐
+│  App.vue                │                │  main.js (entry)         │
+│  ├─ TabBar (5 tabs) ◄───┼── CHANGED      │  ├─ ScriptEngine         │
+│  ├─ keep-alive tabs:    │                │  ├─ AudioManager         │
+│  │  ├─ Scenes           │                │  ├─ ConfigManager        │
+│  │  ├─ TitleDesigner ◄──┼── NEW (full)   │  ├─ SaveManager          │
+│  │  ├─ SettingsDesigner │                │  ├─ TitleScreen.js ◄─────┼── MODIFIED
+│  │  ├─ AssetLibrary ◄───┼── NEW (merge)  │  ├─ SettingsScreen.js ◄──┼── MODIFIED
+│  │  └─ ProjectSettings  │                │  ├─ GameMenu.js          │
+│  └─ Stores:             │                │  └─ [other UI modules]   │
+│     ├─ script.js ◄──────┼── MODIFIED     └──────────────────────────┘
+│     ├─ project.js       │
+│     └─ assets.js ◄──────┼── NEW          Shared Registries
+└─────────────────────────┘                ┌──────────────────────────┐
+          │                                │  settingDefs.js (exists) │
+          ├── IPC ──→ electron/main.js     │  titleDefs.js ◄── NEW   │
+          │           (NEW handlers)       └──────────────────────────┘
+          │
+     New IPC Channels:
+       import-assets (validate + copy + auto-name)
+       delete-asset
+       list-assets (replaces read-dir for assets)
+       load-font-metadata
+```
+
+---
+
+## Component Boundaries
+
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `AssetLibrary.vue` (NEW) | Unified UI for backgrounds, characters, audio, fonts. Import, browse, delete, manage expressions | `assets` store → IPC `import-assets`, `list-assets`, `delete-asset` |
+| `assets.js` store (NEW) | Cache asset file lists, manage import state, provide asset data to other components | IPC bridge, consumed by `AssetLibrary.vue`, `AssetPanel.vue`, designer views |
+| `TitleDesigner.vue` (REWRITE) | Canvas-based title page layout editor with palette/inspector | `script` store → `data.ui.titleScreen`, uses `titleDefs.js` |
+| `titleDefs.js` (NEW) | Registry of title page preset components + factory functions | Used by `TitleDesigner.vue` and `TitleScreen.js` |
+| `SettingsScreen.js` (MODIFY) | Runtime settings rendering with overlay mode | `ConfigManager`, reads `ui.settingsScreen` from script |
+
+---
+
+## Feature 1: Unified Asset Library
+
+### Problem Analysis
+
+Currently assets are managed in two separate views:
+- **`Assets.vue`**: file-browser for backgrounds/characters/audio. Uses raw `read-dir` IPC, `<input type="file">` upload with `upload-asset` IPC. No validation, no auto-naming, no metadata.
+- **`Characters.vue`**: character data (name, color, expressions) stored in `script.data.characters`. Expression paths are manually typed strings (e.g., `characters/sakura_smile.png`), no file picker integration.
+
+### Data Model Changes
+
+**Current `script.json` structure:**
+```json
+{
+  "characters": {
+    "hero": {
+      "name": "主人公",
+      "color": "#FFFFFF",
+      "expressions": {
+        "normal": "characters/hero_normal.png",
+        "smile": "characters/hero_smile.png"
+      }
+    }
+  },
+  "scenes": { ... },
+  "ui": {
+    "settingsScreen": { "background": null, "elements": [] }
+  }
+}
+```
+
+**New `script.json` additions:**
+```json
+{
+  "characters": { ... },
+  "scenes": { ... },
+  "ui": {
+    "settingsScreen": { ... },
+    "titleScreen": { ... }
+  },
+  "assets": {
+    "fonts": [
+      {
+        "id": "font-1719000000000-1",
+        "name": "Custom Font Display Name",
+        "file": "fonts/MyFont.ttf",
+        "family": "MyFont"
+      }
+    ]
+  }
+}
+```
+
+**Rationale:** Backgrounds, characters, and audio don't need metadata in script.json — they're just files in `assets/` subfolders. But fonts need metadata (display name → CSS font-family mapping, file path) because the engine needs to load `@font-face` declarations. Characters already have metadata in `script.data.characters`, which stays as-is.
+
+**New project folder structure:**
+```
+project/
+├── project.json
+├── script.json
+└── assets/
+    ├── backgrounds/
+    ├── characters/
+    ├── audio/
+    ├── fonts/          ← NEW
+    └── ui/
+```
+
+### New Pinia Store: `assets.js`
+
+```javascript
+// src/editor/stores/assets.js
+export const useAssetStore = defineStore('assets', () => {
+  // Cached file lists per category
+  const files = ref({
+    backgrounds: [],
+    characters: [],
+    audio: [],
+    fonts: [],
+    ui: []
+  });
+  
+  const isLoading = ref(false);
+
+  // Load all asset file lists from disk
+  async function loadAll() { ... }
+  
+  // Load a single category
+  async function loadCategory(category) { ... }
+  
+  // Import files: validate → auto-name → copy → refresh list
+  async function importAssets(category, fileList) { ... }
+  
+  // Delete an asset file
+  async function deleteAsset(category, filename) { ... }
+  
+  // Get asset URL helper
+  function assetUrl(category, filename) {
+    return `asset://${category}/${filename}`;
+  }
+  
+  return { files, isLoading, loadAll, loadCategory, importAssets, deleteAsset, assetUrl };
+});
+```
+
+**Why a separate store (not just extend script store):**
+- Asset file lists are filesystem state, not document state. They shouldn't be in undo history.
+- Multiple components need the same file lists (AssetLibrary, AssetPanel, TitleDesigner bg picker, SettingsDesigner bg picker).
+- Import operations are async I/O, separate from the reactive script data flow.
+
+### New IPC Handlers
+
+**`import-assets`** — The workhorse handler:
+```javascript
+ipcMain.handle('import-assets', async (event, { category, files }) => {
+  // files: Array<{ name, data: number[] }>
+  // Returns: { success: true, imported: [{ original, saved }], errors: [] }
+  
+  // 1. Validate file type by extension + magic bytes
+  // 2. Auto-name: if "背景-1.png" exists, save as "背景-2.png"
+  // 3. Copy to assets/{category}/
+  // 4. (if font) Return font metadata for script.json
+});
+```
+
+**File validation rules:**
+
+| Category | Allowed Extensions | Magic Bytes Check |
+|----------|-------------------|-------------------|
+| backgrounds | .png, .jpg, .jpeg, .webp, .gif | PNG: `89504E47`, JPEG: `FFD8FF`, WebP: `52494646`, GIF: `47494638` |
+| characters | .png, .jpg, .jpeg, .webp | Same as above (no .gif — character sprites shouldn't be animated) |
+| audio | .mp3, .ogg, .wav, .m4a | MP3: `494433` or `FFFB`, OGG: `4F676753`, WAV: `52494646` |
+| fonts | .ttf, .otf, .woff, .woff2 | TTF: `00010000`, OTF: `4F54544F`, WOFF: `774F4646`, WOFF2: `774F4632` |
+
+**Auto-naming algorithm:**
+```
+Input: "sakura.png" into backgrounds/
+If exists: "sakura.png" → "sakura-2.png" → "sakura-3.png" → ...
+Keep scanning until unique name found.
+
+Category prefix (for unnamed imports):
+  backgrounds → "背景-1.png"
+  characters → "角色-1.png"  
+  audio → "音频-1.mp3"
+  fonts → "字体-1.ttf"
+```
+
+**`delete-asset`** — Simple with safety check:
+```javascript
+ipcMain.handle('delete-asset', async (event, { category, filename }) => {
+  // Verify isInsideProject(), unlink file, return success
+});
+```
+
+**`list-assets`** — Enhanced replacement for generic `read-dir`:
+```javascript
+ipcMain.handle('list-assets', async (event, category) => {
+  // Returns: [{ name, size, modifiedAt }]
+  // Sorted by name, with metadata useful for the UI
+});
+```
+
+### Component: `AssetLibrary.vue`
+
+**Layout:** Single view replacing both `Assets.vue` and `Characters.vue` tabs.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  资源库                          [📂 导入文件] [🗑 删除]  │
+│  ─────────────────────────────────────────────────────── │
+│  [背景] [角色] [音频] [字体]    ← category tabs          │
+│  ─────────────────────────────────────────────────────── │
+│                                                          │
+│  ┌─────────────┐  ┌───────────────────────────────────┐  │
+│  │  File Grid  │  │  Detail / Edit Panel              │  │
+│  │  or List    │  │  (for characters: expressions)    │  │
+│  │             │  │  (for fonts: preview)             │  │
+│  │  drag to    │  │  (for bg/audio: info)             │  │
+│  │  select     │  │                                   │  │
+│  └─────────────┘  └───────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Characters sub-view integration:** When the "角色" tab is active, show character list on left + expression editor on right. Expression paths become clickable file pickers that browse from `assets/characters/` instead of manual text input.
+
+### Tab Changes in `App.vue`
+
+Merge "素材库" and "角色" tabs into single "资源库" tab:
+
+```javascript
+// Before (6 tabs)
+const tabs = [
+  { id: 'scenes', icon: '🎬', label: '游戏内容' },
+  { id: 'title', icon: '🖼️', label: '标题页' },
+  { id: 'settings-design', icon: '⚙️', label: '设置页' },
+  { id: 'assets', icon: '🎨', label: '素材库' },
+  { id: 'characters', icon: '👤', label: '角色' },
+  { id: 'project-settings', icon: '📦', label: '项目设置' },
+];
+
+// After (5 tabs)
+const tabs = [
+  { id: 'scenes', icon: '🎬', label: '游戏内容' },
+  { id: 'title', icon: '🖼️', label: '标题页' },
+  { id: 'settings-design', icon: '⚙️', label: '设置页' },
+  { id: 'asset-library', icon: '📦', label: '资源库' },
+  { id: 'project-settings', icon: '⚙️', label: '项目设置' },
+];
+```
+
+### Font Integration
+
+Fonts need additional wiring:
+
+1. **Import:** Copy `.ttf`/`.otf`/`.woff`/`.woff2` to `assets/fonts/`, add metadata entry to `script.data.assets.fonts[]`
+2. **Registration:** When project loads, inject `@font-face` rules into editor `<head>` for preview. New IPC handler `load-font-face` reads font file and returns base64 data URL, or editor can reference via `asset://fonts/MyFont.ttf`.
+3. **Usage:** Font family names from the asset store populate the font `<select>` dropdowns in SettingsDesigner and TitleDesigner inspectors (replacing the hardcoded 5-option list).
+4. **Engine runtime:** On engine init, inject `@font-face` for all fonts in `script.assets.fonts[]` before rendering.
+
+**Font face injection pattern:**
+```javascript
+// Shared utility: src/utils/fontLoader.js
+export function injectFontFaces(fonts, baseUrl = 'asset://') {
+  const style = document.getElementById('custom-fonts') || document.createElement('style');
+  style.id = 'custom-fonts';
+  style.textContent = fonts.map(f => `
+    @font-face {
+      font-family: '${f.family}';
+      src: url('${baseUrl}fonts/${f.file}');
+    }
+  `).join('\n');
+  if (!style.parentNode) document.head.appendChild(style);
+}
+```
+
+---
+
+## Feature 2: Title Page Designer
+
+### Problem Analysis
+
+Current `TitleDesigner.vue` is a **placeholder stub** (33 lines, just shows a notice). The existing `TitleScreen.js` runtime renderer already supports custom layouts with `_renderCustom()` but uses a different element schema than `SettingsDesigner`.
+
+**Current TitleScreen.js custom layout schema:**
+```json
+{
+  "background": "backgrounds/title_bg.png",
+  "elements": [
+    { "type": "text", "content": "游戏标题", "x": 640, "y": 200, "anchor": "center", "fontSize": 56 },
+    { "type": "button", "text": "开始游戏", "action": "start", "x": 640, "y": 400, "anchor": "center" }
+  ]
+}
+```
+
+**Target: Align with SettingsDesigner pattern.** The schema needs to be normalized so both designers and both runtime renderers work the same way.
+
+### TITLE_DEFS Registry
+
+Create `src/engine/titleDefs.js` mirroring the `settingDefs.js` pattern:
+
+```javascript
+// src/engine/titleDefs.js
+
+/**
+ * Title Page Component Registry
+ * 
+ * Preset button components for the title page.
+ * Each entry defines a button with a specific action the engine handles.
+ */
+export const TITLE_BUTTON_DEFS = {
+  'start-game': {
+    action: 'start',
+    label: '开始游戏',
+    icon: '▶',
+  },
+  'continue-game': {
+    action: 'continue',
+    label: '继续游戏',
+    icon: '⏩',
+    disableCondition: 'noSave',  // engine disables when no save exists
+  },
+  'open-settings': {
+    action: 'settings',
+    label: '设 定',
+    icon: '⚙️',
+  },
+  'exit-game': {
+    action: 'exit',
+    label: '退出游戏',
+    icon: '🚪',
+  },
+};
+
+/**
+ * Title screen schema:
+ *
+ * script.json → ui.titleScreen = {
+ *   background: 'backgrounds/title_bg.png' | null,
+ *   bgm: 'audio/title_bgm.mp3' | null,
+ *   elements: TitleElement[]
+ * }
+ *
+ * Element types:
+ *
+ *   Title button (type: 'button')
+ *   ─────────────────────────────
+ *   { id, type: 'button', buttonType: TITLE_BUTTON_DEFS key,
+ *     x, y, width, height, label?, style? }
+ *
+ *   Text label (type: 'label')
+ *   ──────────────────────────
+ *   { id, type: 'label', x, y, text,
+ *     style: { color, fontSize, fontFamily, letterSpacing?, textShadow? } }
+ *
+ *   Decorative image (type: 'image')
+ *   ─────────────────────────────────
+ *   { id, type: 'image', x, y, width, height, src }
+ */
+
+export const DEFAULT_TITLE_BUTTON_STYLE = {
+  backgroundColor: 'rgba(255,255,255,0.1)',
+  textColor: '#ffffff',
+  hoverColor: '#ff6b9d',
+  fontSize: 20,
+  fontFamily: 'sans-serif',
+  borderRadius: 4,
+  border: '1px solid rgba(255,255,255,0.2)',
+};
+
+export const DEFAULT_TITLE_LABEL_STYLE = {
+  color: '#ffffff',
+  fontSize: 48,
+  fontFamily: "'Noto Serif SC', serif",
+  letterSpacing: 8,
+  textShadow: '0 0 40px rgba(180,140,255,0.3)',
+};
+
+let _idCounter = 0;
+
+export function generateTitleElementId(type) {
+  return `title-${type}-${Date.now()}-${++_idCounter}`;
+}
+
+export function createTitleButtonElement(buttonType, x = 640, y = 400) {
+  const def = TITLE_BUTTON_DEFS[buttonType];
+  if (!def) throw new Error(`Unknown title button type: ${buttonType}`);
+  return {
+    id: generateTitleElementId('button'),
+    type: 'button',
+    buttonType,
+    action: def.action,
+    x, y,
+    width: 200,
+    height: 48,
+    label: def.label,
+    style: { ...DEFAULT_TITLE_BUTTON_STYLE },
+  };
+}
+
+export function createTitleLabelElement(text = '游戏标题', x = 640, y = 200) {
+  return {
+    id: generateTitleElementId('label'),
+    type: 'label',
+    x, y,
+    text,
+    style: { ...DEFAULT_TITLE_LABEL_STYLE },
+  };
+}
+
+export function createTitleImageElement(src = '', x = 0, y = 0) {
+  return {
+    id: generateTitleElementId('image'),
+    type: 'image',
+    x, y,
+    width: 200,
+    height: 200,
+    src,
+  };
+}
+```
+
+### TitleDesigner.vue — Full Rewrite
+
+The rewritten component follows the **exact same 3-panel layout** as `SettingsDesigner.vue`:
+
+```
+┌──────────────┬────────────────────────┬──────────────┐
+│  Component   │   1280×720 Canvas      │  Inspector   │
+│  Palette     │   (CanvasPreview)      │  (properties)│
+│              │                        │              │
+│ 🏷️ 文字标签  │  ┌──────────────────┐  │  📐 位置     │
+│ ▶ 开始游戏   │  │                  │  │  🏷️ 内容     │
+│ ⏩ 继续游戏   │  │   Canvas with    │  │  🎨 样式     │
+│ ⚙️ 设定      │  │   DraggableElems │  │              │
+│ 🚪 退出游戏   │  │                  │  │              │
+│ 🖼️ 装饰图片  │  └──────────────────┘  │              │
+│              │  [🖼️ 背景] [🎵 BGM]   │              │
+└──────────────┴────────────────────────┴──────────────┘
+```
+
+**Key patterns replicated from SettingsDesigner.vue:**
+
+1. **Data flow:** `scriptStore.data.ui.titleScreen` → local `reactive({ background, bgm, elements })` → `saveLayout()` writes back via store
+2. **Undo/redo sync:** `watch(scriptStore.data?.ui?.titleScreen, ...)` with `_syncing` flag
+3. **Canvas scaling:** Same `ResizeObserver` + `GAME_W/GAME_H` calculation
+4. **Drag & drop:** Same `onDragStart` → `onCanvasDrop` with `application/title-elem` MIME type
+5. **Element CRUD:** Same `onElementMove`, `onElementResize`, `deleteSelected` pattern
+6. **Inspector:** Same property editing with `setProp`, `setStyleColor`, etc.
+
+**Script store additions:**
+
+```javascript
+// In script.js store — add parallel to getSettingsScreen/updateSettingsScreen
+
+function getTitleScreen() {
+  if (!data.value) return null;
+  data.value.ui ??= {};
+  data.value.ui.titleScreen ??= { background: null, bgm: null, elements: [] };
+  return data.value.ui.titleScreen;
+}
+
+function updateTitleScreen(titleScreen) {
+  if (!data.value) return;
+  data.value.ui ??= {};
+  data.value.ui.titleScreen = titleScreen;
+  pushState();
+}
+```
+
+### TitleScreen.js Runtime — Schema Alignment
+
+The existing `TitleScreen.js._renderCustom()` needs modification to support the new schema. The key difference:
+
+**Current schema** uses `{ type: 'text', content, anchor: 'center' }` and `{ type: 'button', text, action }`.
+
+**New schema** uses `{ type: 'label', text, style }` and `{ type: 'button', buttonType, action, label, style }` — aligned with the SettingsScreen pattern.
+
+The `_renderCustom` method needs to be updated to:
+- Handle `type: 'label'` (rename from `type: 'text'`)
+- Use consistent `style` object for styling (not top-level `fontSize`, `color`, etc.)
+- Support `type: 'image'` for decorative images
+- Use `asset://` protocol for background images (currently uses `/game/`)
+- Add `hoverColor` support from style object
+
+**Backward compatibility:** Check for old `type: 'text'` and handle gracefully during a transition period, or migrate on project load.
+
+### Title Page BGM
+
+The title screen layout includes a `bgm` field. In the engine `main.js`, after setting the layout:
+```javascript
+if (engine.script.ui?.titleScreen) {
+  titleScreen.setLayout(engine.script.ui.titleScreen);
+  // Play title BGM if configured
+  if (engine.script.ui.titleScreen.bgm) {
+    audio.playBgm({ file: engine.script.ui.titleScreen.bgm, volume: 0.5, fadeIn: 1000 });
+  }
+}
+```
+
+---
+
+## Feature 3: Settings Page Overlay
+
+### Changes Required (Engine Only)
+
+**No editor changes needed.** The overlay mode is purely a runtime rendering concern.
+
+#### CSS Changes in `style.css`
+
+```css
+/* BEFORE */
+#settings-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 10, 20, 0.95);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+#settings-screen.visible { opacity: 1; }
+#settings-screen.hidden { opacity: 0; pointer-events: none; }
+
+/* AFTER — slide-in overlay */
+#settings-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 10, 20, 0.85);
+  backdrop-filter: blur(12px);
+  transform: translateY(-100%);         /* off-screen above */
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+  pointer-events: none;
+}
+#settings-screen.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+#settings-screen.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+```
+
+**Slide direction:** `translateY(-100%)` (slide from top) is the standard pattern for settings overlays in visual novels. Alternative: `translateX(100%)` (slide from right).
+
+#### SettingsScreen.js Changes
+
+Minimal JS changes:
+
+```javascript
+// AFTER — add transition end listener for cleanup
+show() {
+  // ... render ...
+  this.el.classList.remove('hidden');
+  // Double rAF to ensure the browser has painted the hidden state
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      this.el.classList.add('visible');
+    });
+  });
+}
+
+hide() {
+  this.el.classList.remove('visible');
+  // Wait for slide-out animation to complete before adding hidden
+  const onEnd = () => {
+    this.el.classList.add('hidden');
+    this.el.removeEventListener('transitionend', onEnd);
+  };
+  this.el.addEventListener('transitionend', onEnd);
+}
+```
+
+#### Z-Index Stacking Context (Verified from source)
+
+| Layer | z-index | Notes |
+|-------|---------|-------|
+| `#background-layer` | 1 | Game background |
+| `#character-layer` | 2 | Character sprites |
+| `#dialogue-layer` | 3 | Dialogue box |
+| `#quick-controls` | 5 | AUTO/SKIP/LOG/MENU |
+| `#ui-overlay` | 10 | Choice menu, game menu |
+| `#game-menu` | 40 | ESC menu |
+| `#title-screen` | 100 | Title page |
+| `#settings-screen` | 200 | Settings overlay ✓ |
+| `#save-load-screen` | 200 | Save/load |
+| `#backlog-screen` | 200 | Backlog |
+
+**Settings at z-index 200 is correct** — no changes needed. Game continues rendering behind the overlay. BGM keeps playing (intentional — player adjusts volumes in real-time).
+
+---
+
+## New vs Modified Components (Complete List)
+
+### New Files
+
+| File | Type | Description |
+|------|------|-------------|
+| `src/editor/stores/assets.js` | Pinia store | Asset file list cache, import/delete operations |
+| `src/editor/views/AssetLibrary.vue` | Vue component | Unified asset management (replaces Assets.vue + Characters.vue) |
+| `src/engine/titleDefs.js` | Registry | Title page component definitions + factory functions |
+| `src/utils/fontLoader.js` | Utility | `@font-face` injection for custom fonts |
+
+### Modified Files
+
+| File | Change | Scope |
+|------|--------|-------|
+| `src/editor/views/TitleDesigner.vue` | **Full rewrite** — from 33-line stub to full canvas designer | Major |
+| `src/editor/App.vue` | Tab list: 6→5 tabs, component imports updated | Minor |
+| `src/editor/stores/script.js` | Add `getTitleScreen()`, `updateTitleScreen()`, init `assets.fonts` | Minor |
+| `src/ui/TitleScreen.js` | Update `_renderCustom()` to new element schema, use `asset://` | Medium |
+| `src/ui/SettingsScreen.js` | `show()`/`hide()` animation logic for slide transition | Minor |
+| `src/style.css` | Settings overlay slide animation CSS | Minor |
+| `src/main.js` (engine entry) | Load title BGM, inject custom fonts | Minor |
+| `electron/main.js` | Add `import-assets`, `delete-asset`, `list-assets` IPC handlers | Medium |
+| `src/editor/components/AssetPanel.vue` | Use asset store instead of direct IPC, add fonts section | Minor |
+
+### Deleted Files
+
+| File | Replaced By |
+|------|-------------|
+| `src/editor/views/Assets.vue` | `AssetLibrary.vue` |
+| `src/editor/views/Characters.vue` | `AssetLibrary.vue` (characters sub-tab) |
+
+---
+
+## Patterns to Follow
+
+### Pattern 1: Registry + Factory (proven by settingDefs.js)
+**What:** Registry object defines all component types. Factory functions create element instances with defaults.  
+**When:** Title page designer component system.  
+**Why:** Established pattern — adding a component type requires only a registry entry.
+
+### Pattern 2: Store Method Pair (proven by getSettingsScreen/updateSettingsScreen)
+**What:** Getter lazily initializes data section; setter replaces data + pushes undo state.  
+**When:** Title screen data management in script store.
+
+### Pattern 3: Local Reactive + _syncing Flag (proven by SettingsDesigner.vue)
+**What:** Designer views copy store data to local `reactive()`, sync back via `saveLayout()` with `_syncing` flag.  
+**Why:** Absorbs high-frequency drag events, batch-commits to store for clean undo history.
+
+### Pattern 4: IPC with isInsideProject() (proven by upload-asset handler)
+**What:** Every filesystem IPC handler validates paths against project root.  
+**When:** All new asset management IPC handlers.
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Storing File Bytes in Pinia
+**Why bad:** Large assets in reactive state kill undo/redo (JSON.parse/stringify on snapshots).  
+**Instead:** Use `asset://` protocol URLs. Browser/Electron handles caching.
+
+### Anti-Pattern 2: Separate Undo History per Feature
+**Why bad:** Both designers share `script.data.ui.*` — separate histories create conflicts.  
+**Instead:** Single script store undo history via `pushState()`.
+
+### Anti-Pattern 3: Different Element Schemas Between Designers
+**Why bad:** Current `TitleScreen.js` uses different schema than `SettingsScreen.js`. Doubles rendering logic.  
+**Instead:** Normalize to SettingsDesigner schema: `{ type, id, x, y, style: {} }` base shape.
+
+### Anti-Pattern 4: Font Loading via IPC on Every Render
+**Why bad:** IPC is async and expensive. Font rendering is synchronous.  
+**Instead:** Inject `@font-face` once on project load + font import.
+
+---
+
+## Build Order (Dependency-Aware)
+
+### Phase 1: Asset Library Foundation (build first — other features depend on it)
+
+**Why first:** Both TitleDesigner and SettingsDesigner need the asset store for background/image/font pickers.
+
+1. `assets.js` store — No dependencies on other new code
+2. `list-assets` + `delete-asset` IPC handlers — Foundation for the store
+3. `import-assets` IPC handler — Validation + auto-naming logic
+4. `AssetLibrary.vue` — Unified UI (backgrounds, audio tabs first)
+5. Characters sub-tab in AssetLibrary — Migrate expression editing
+6. Fonts sub-tab + `fontLoader.js` — Font import, `@font-face` injection
+7. Update `App.vue` — Swap tabs, remove old imports
+8. Update `AssetPanel.vue` — Use asset store, add fonts section
+
+### Phase 2: Title Page Designer (depends on Phase 1 for asset pickers)
+
+1. `titleDefs.js` — Registry file, no dependencies
+2. `script.js` store additions — `getTitleScreen()` / `updateTitleScreen()`
+3. `TitleDesigner.vue` rewrite — Full 3-panel designer
+4. `TitleScreen.js` schema update — Align `_renderCustom()` with new element schema
+5. `main.js` engine wiring — Title BGM playback, font loading
+
+### Phase 3: Settings Overlay (independent, smallest scope)
+
+1. `style.css` — Slide animation CSS
+2. `SettingsScreen.js` — Update `show()`/`hide()` for slide transition
+3. Test with custom layout and default layout
+
+---
+
+## Scalability Considerations
+
+| Concern | Current (v0.1) | v0.2 Target | Future |
+|---------|----------------|-------------|--------|
+| Asset file count | ~20 files | ~100 files | 500+ files |
+| File list loading | Direct `readdir` every tab switch | Cached in store, refresh on import/delete | Indexed DB cache with file watchers |
+| Font count | 0 (hardcoded 5 system fonts) | 1-5 custom fonts | 20+ custom fonts |
+| Title page elements | Not applicable (stub) | 5-15 elements | 50+ elements (unlikely) |
+| Undo history size | 50 snapshots × full script.json | Same — fonts metadata is small | Consider diffing instead of full snapshots |
+
+---
+
+## Sources
+
+- **Codebase analysis** — All findings derived from direct reading of source files (HIGH confidence)
+- **Electron custom protocol** — `electron/main.js` asset:// handler (verified in source)
+- **Settings designer pattern** — `src/editor/views/SettingsDesigner.vue` + `src/engine/settingDefs.js` (verified)
+- **Runtime z-index stacking** — `src/style.css` lines 50-69, 322-348, 541-560 (verified)
+- **TitleScreen runtime** — `src/ui/TitleScreen.js` custom layout support (verified)
+- **Script engine wiring** — `src/main.js` init flow lines 428-457 (verified)

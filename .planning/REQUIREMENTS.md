@@ -22,7 +22,7 @@
 - [x] **ASSET-03**: 导入文件时自动验证格式（magic bytes + 扩展名白名单：图片 PNG/JPG/WEBP，音频 MP3/OGG/WAV，字体 TTF/OTF/WOFF/WOFF2）
 - [x] **ASSET-04**: 文件名冲突时自动追加编号（背景-1.png, 背景-2.png）
 - [x] **ASSET-05**: 图片资源以缩略图网格显示
-- [ ] **ASSET-06**: 音频资源带播放控件
+- [x] **ASSET-06**: 音频资源带播放控件
 - [ ] **ASSET-07**: 角色数据面板可编辑名称、颜色、表情列表
 - [ ] **ASSET-08**: 角色表情按角色分组显示缩略图（sakura → normal/smile/angry）
 - [ ] **ASSET-09**: 通过文件选择器导入表情图片（替代手动输入路径）
@@ -99,7 +99,7 @@
 | ASSET-03 | Phase 6 | Complete |
 | ASSET-04 | Phase 6 | Complete |
 | ASSET-05 | Phase 7 | Complete |
-| ASSET-06 | Phase 7 | Pending |
+| ASSET-06 | Phase 7 | Complete |
 | ASSET-07 | Phase 7 | Pending |
 | ASSET-08 | Phase 7 | Pending |
 | ASSET-09 | Phase 7 | Pending |

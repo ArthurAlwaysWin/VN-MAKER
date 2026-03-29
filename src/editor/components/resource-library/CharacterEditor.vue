@@ -36,15 +36,11 @@
     <!-- Editor Pane -->
     <div class="editor-pane" v-if="selectedChar">
       <div class="form-group">
-        <label>ID（键名）</label>
-        <input type="text" :value="selectedId" disabled class="disabled-input" />
-      </div>
-      <div class="form-group">
         <label>显示名称</label>
         <input type="text" :value="selectedChar.name" @change="updateName($event.target.value)" />
       </div>
       <div class="form-group">
-        <label>名称颜色</label>
+        <label title="对话框中角色名的显示颜色">名称颜色</label>
         <div class="color-row">
           <input type="color" :value="selectedChar.color" @input="updateColor($event.target.value)" />
           <input type="text" :value="selectedChar.color" @change="updateColor($event.target.value)" />
@@ -183,23 +179,26 @@ function selectCharacter(id) {
 }
 
 /**
- * Create a new character via prompt dialog (D-03).
+ * Create a new character with auto-generated ID (D-03).
+ * Electron doesn't support window.prompt(), so we auto-generate and let users rename inline.
  */
 function addCharacter() {
-  const id = prompt('请输入角色 ID（如 hero、heroine）:');
-  if (!id || !id.trim()) return;
-  const trimmedId = id.trim();
-  if (script.data.characters[trimmedId]) {
-    alert('该角色 ID 已存在');
-    return;
+  if (!script.data?.characters) return;
+
+  // Auto-generate unique ID: char_1, char_2, ...
+  let counter = 1;
+  while (script.data.characters[`char_${counter}`]) {
+    counter++;
   }
-  script.data.characters[trimmedId] = {
+  const newId = `char_${counter}`;
+
+  script.data.characters[newId] = {
     name: '新角色',
     color: '#FFFFFF',
     expressions: {},
   };
   script.pushState();
-  selectedId.value = trimmedId;
+  selectedId.value = newId;
 }
 
 /**
@@ -294,28 +293,22 @@ async function importExpression() {
 }
 
 /**
- * Handle selected expression files — read, import via asset store, update character data.
+ * Handle selected expression files — import via path-based asset pipeline, update character data.
  * @param {Event} event
  */
 async function handleExpressionFiles(event) {
   const fileList = event.target.files;
   if (!fileList || fileList.length === 0 || !selectedChar.value) return;
 
-  const fileDataArray = [];
-  for (const file of fileList) {
-    const buffer = await file.arrayBuffer();
-    fileDataArray.push({
-      name: file.name,
-      data: Array.from(new Uint8Array(buffer)),
-    });
-  }
+  const filePaths = Array.from(fileList)
+    .map(f => window.getPathForFile ? window.getPathForFile(f) : f.path)
+    .filter(Boolean);
+  if (filePaths.length === 0) return;
 
-  const result = await assets.importAssets('characters', fileDataArray);
+  const result = await assets.importAssets('characters', filePaths);
   if (result.success && result.imported.length > 0) {
     for (const item of result.imported) {
-      // Expression name = filename without extension
       const exprName = item.saved.replace(/\.[^.]+$/, '');
-      // Path format: characters/{filename} (matching asset:// protocol)
       selectedChar.value.expressions[exprName] = `characters/${item.saved}`;
     }
     script.pushState();
@@ -324,7 +317,6 @@ async function handleExpressionFiles(event) {
     alert(`${result.errors.length} 个文件导入失败`);
   }
 
-  // Reset input so the same file can be re-uploaded
   event.target.value = '';
 }
 

@@ -1,1 +1,0 @@
-"use strict";const r=require("electron");r.contextBridge.exposeInMainWorld("ipcRenderer",{send:(e,...n)=>{r.ipcRenderer.send(e,...n)},invoke:(e,...n)=>r.ipcRenderer.invoke(e,...n),on:(e,n)=>{const i=(t,...o)=>n(t,...o);return r.ipcRenderer.on(e,i),()=>r.ipcRenderer.removeListener(e,i)}});r.contextBridge.exposeInMainWorld("getPathForFile",e=>r.webUtils.getPathForFile(e));

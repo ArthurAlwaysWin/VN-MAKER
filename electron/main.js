@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { validateAssetFormat, getSupportedFormats } from './validateAsset.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,6 +65,20 @@ async function atomicWrite(filePath, content) {
   try { await fs.unlink(bak); } catch {}
 }
 
+// --- Unique Filename (auto-naming collision resolution) ---
+
+async function uniqueFilename(dir, originalName) {
+  const { name, ext } = path.parse(originalName);
+  const existing = await fs.readdir(dir).catch(() => []);
+  let candidate = originalName;
+  let counter = 1;
+  while (existing.includes(candidate)) {
+    candidate = `${name}-${counter}${ext}`;
+    counter++;
+  }
+  return candidate;
+}
+
 // --- Default Script Template ---
 
 function defaultScript() {
@@ -92,6 +107,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
     await fs.mkdir(path.join(projectDir, 'assets', 'characters'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'audio'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'ui'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'assets', 'fonts'), { recursive: true });
 
     const projectJson = {
       name,
@@ -201,6 +217,10 @@ ipcMain.handle('load-project', async (event, projectPath) => {
     }
 
     currentProjectPath = projectPath;
+
+    // D-08: Auto-create fonts/ directory for legacy projects
+    await fs.mkdir(path.join(projectPath, 'assets', 'fonts'), { recursive: true });
+
     await addToRecent(projectPath, projectData.name);
     return { success: true, project: projectData, script: scriptData, path: projectPath };
   } catch (e) {
@@ -245,6 +265,143 @@ ipcMain.handle('upload-asset', async (event, { category, name, data }) => {
   } catch (e) {
     console.error('Failed to upload asset:', e);
     return false;
+  }
+});
+
+// ─── Asset Library IPC Handlers ───────────────────────────────────────
+
+ipcMain.handle('select-asset', async (event, { types }) => {
+  try {
+    if (!currentProjectPath) return null;
+
+    const filterMap = {
+      backgrounds: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+      characters: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+      audio: { name: '音频', extensions: ['mp3', 'ogg', 'wav'] },
+      fonts: { name: '字体', extensions: ['ttf', 'otf', 'woff', 'woff2'] },
+      ui: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+    };
+
+    const category = types[0];
+    const filters = types.map(t => filterMap[t]).filter(Boolean);
+    const defaultDir = path.join(currentProjectPath, 'assets', category || '');
+
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      properties: ['openFile'],
+      filters,
+      defaultPath: existsSync(defaultDir) ? defaultDir : currentProjectPath,
+      title: '选择资源文件',
+    });
+
+    if (result.canceled || result.filePaths.length === 0) return null;
+
+    const selectedPath = result.filePaths[0];
+    const assetsBase = path.resolve(path.join(currentProjectPath, 'assets'));
+
+    // If file is already inside project assets/, return relative path
+    const resolvedSelected = path.resolve(selectedPath);
+    if (resolvedSelected.startsWith(assetsBase + path.sep)) {
+      return resolvedSelected.slice(assetsBase.length + 1).replace(/\\/g, '/');
+    }
+
+    // File is outside project — copy it in with validation
+    if (!category) return null;
+    const fileBuffer = await fs.readFile(selectedPath);
+    const ext = path.extname(selectedPath);
+    const validation = validateAssetFormat(fileBuffer.subarray(0, 12), ext, category);
+    if (!validation.valid) return null;
+
+    const targetDir = path.join(currentProjectPath, 'assets', category);
+    await fs.mkdir(targetDir, { recursive: true });
+    const safeName = await uniqueFilename(targetDir, path.basename(selectedPath));
+    const destPath = path.join(targetDir, safeName);
+    if (!isInsideProject(destPath)) return null;
+
+    await fs.copyFile(selectedPath, destPath);
+    return `${category}/${safeName}`;
+  } catch (e) {
+    console.error('[select-asset] Failed:', e);
+    return null;
+  }
+});
+
+ipcMain.handle('import-assets', async (event, { category, files }) => {
+  // files: Array<{ name: string, data: number[] }>
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+
+    const dir = path.join(currentProjectPath, 'assets', category);
+    if (!isInsideProject(dir)) return { success: false, error: 'Invalid path' };
+    await fs.mkdir(dir, { recursive: true });
+
+    const imported = [];
+    const errors = [];
+
+    for (const file of files) {
+      const buffer = Buffer.from(file.data);
+      const ext = path.extname(file.name);
+
+      // Validate format (D-03: magic bytes + extension)
+      const headerBytes = buffer.subarray(0, 12);
+      const validation = validateAssetFormat(headerBytes, ext, category);
+      if (!validation.valid) {
+        errors.push({ name: file.name, reason: validation.reason });
+        continue; // D-02: skip invalid, continue with valid
+      }
+
+      // Auto-name if conflict (ASSET-04)
+      const safeName = await uniqueFilename(dir, file.name);
+      const fullPath = path.join(dir, safeName);
+
+      if (!isInsideProject(fullPath)) {
+        errors.push({ name: file.name, reason: 'Path security violation' });
+        continue;
+      }
+
+      await fs.writeFile(fullPath, buffer);
+      imported.push({ original: file.name, saved: safeName });
+    }
+
+    return { success: true, imported, errors, supportedFormats: getSupportedFormats(category) };
+  } catch (e) {
+    console.error('[import-assets] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('delete-asset', async (event, { category, filename }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+
+    const fullPath = path.join(currentProjectPath, 'assets', category, filename);
+    if (!isInsideProject(fullPath)) return { success: false, error: 'Invalid path' };
+
+    await fs.unlink(fullPath);
+    return { success: true };
+  } catch (e) {
+    console.error('[delete-asset] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('list-assets', async (event, { category }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+
+    const dir = path.join(currentProjectPath, 'assets', category);
+    if (!isInsideProject(dir)) return { success: false, error: 'Invalid path' };
+
+    if (!existsSync(dir)) return { success: true, files: [] };
+
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const files = entries
+      .filter(e => !e.isDirectory())
+      .map(e => e.name);
+
+    return { success: true, files };
+  } catch (e) {
+    console.error('[list-assets] Failed:', e);
+    return { success: false, error: e.message };
   }
 });
 

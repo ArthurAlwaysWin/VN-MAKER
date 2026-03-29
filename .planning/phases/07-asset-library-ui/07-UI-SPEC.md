@@ -46,27 +46,35 @@ Font stack: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubun
 | View heading | 20px | 500 | 1.2 | "资源库" toolbar title |
 | Section heading | 16px | 400 | 1.3 | "表情列表", section headers |
 | Body / UI | 14px | 400 | 1.5 | List items, filenames, form inputs, audio filename |
-| Caption | 12px | 400 | 1.4 | Thumbnail filename labels, duration text, sub-tab text |
-| Sub-tab button | 13px | 400 | 1.0 | Category sub-tab labels |
+| Caption / Small UI | 12px | 400 | 1.4 | Sub-tab labels, thumbnail labels, form labels, button captions, duration text, menu items, notification text |
 
-**Only 2 weights used:** 400 (regular) and 500 (medium, headings only).
+**4 sizes, 2 weights.** 400 (regular) and 500 (medium, headings only). Previous 13px sub-tab size merged into 12px — the 1px difference provided no meaningful visual distinction.
 
 ### 1.3 Spacing
 
-8-point grid, matching existing codebase patterns.
+8-point grid base, matching existing codebase patterns. Non-grid legacy values documented in Legacy Exceptions below.
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--sp-2` | 2px | Tab bar gap, icon margins |
 | `--sp-4` | 4px | Inline element gaps, border-radius (small) |
-| `--sp-6` | 6px | Button padding vertical, border-radius (medium) |
 | `--sp-8` | 8px | Card padding, thumbnail padding, component internal gaps |
-| `--sp-10` | 10px | List item vertical padding |
 | `--sp-12` | 12px | Toolbar gaps, empty state vertical gaps |
 | `--sp-16` | 16px | Grid gap, button horizontal padding, section padding |
 | `--sp-20` | 20px | View padding, form group bottom margin |
 | `--sp-24` | 24px | Section separations |
 | `--sp-40` | 40px | Editor pane horizontal padding, expression section top margin |
+
+#### Legacy Exceptions (non-grid values)
+
+The following values are **not** multiples of 4. They are inherited from existing `Assets.vue` / `Characters.vue` CSS and must be preserved to avoid visual inconsistency with unchanged views elsewhere in the application.
+
+| Value | Justification | Where Used |
+|-------|---------------|------------|
+| 2px | Inherited from existing `.tabs` button group `gap: 2px` and inline icon margins in Assets.vue. Too small for 4px (would over-space connected buttons). | Tab bar gap, icon margins, inline edit padding |
+| 6px | Inherited from existing `.tabs button` `padding: 6px 16px` in Assets.vue and established `border-radius: 6px` on cards. Changing to 4px or 8px would break visual match with other views. | Button padding-block, card/section/context-menu border-radius |
+| 10px | Inherited from existing `Characters.vue` list item `padding: 10px 12px` and audio player `gap: 10px`. Changing to 8px or 12px would alter list density relative to existing character view. | Character list item padding-block, color picker row gap, mini player gap |
+
+These values are exempt from the 8-point grid rule. All **new** spacing decisions in this phase use grid-aligned values only.
 
 ### 1.4 Border Radius
 
@@ -137,7 +145,7 @@ Reuse the existing `.tabs` connected button group pattern exactly:
   padding: 6px 16px;
   margin-left: -1px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
 }
 .sub-tabs button:first-child { border-radius: 4px 0 0 4px; }
 .sub-tabs button:last-child { border-radius: 0 4px 4px 0; }
@@ -193,7 +201,7 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 - Container: `width: 240px; background: #252526; border-right: 1px solid #111; display: flex; flex-direction: column;`
 - Header: `padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;`
 - Header title: `font-size: 14px; font-weight: 400; color: #ccc;`
-- "+" button: `background: #007acc; color: white; border: none; width: 24px; height: 24px; border-radius: 4px;`
+- "+" button: `background: #007acc; color: white; border: none; width: 24px; height: 24px; border-radius: 4px;` — **must include `aria-label="创建角色"`** (icon-only button, no visible text label).
 - Character list item: `padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #333;`
 - Item hover: `background: #2a2d2e;`
 - Item active: `background: #37373d; border-left: 3px solid #007acc;`
@@ -208,13 +216,13 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 
 **"+ 新角色" button (sidebar footer):**
 - `padding: 12px; border-top: 1px solid #333; text-align: center;`
-- Button: `background: transparent; border: 1px dashed #555; color: #888; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 13px;`
+- Button: `background: transparent; border: 1px dashed #555; color: #888; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 12px;`
 - Hover: `border-color: #007acc; color: #ccc;`
 
 **Editor Pane:**
 - Container: `flex: 1; padding: 20px 40px; overflow-y: auto;`
 - Form group: `margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;`
-- Label: `font-size: 13px; color: #aaa;`
+- Label: `font-size: 12px; color: #aaa;`
 - Text input: `background: #3c3c3c; border: 1px solid #555; color: #fff; padding: 8px 10px; border-radius: 4px;`
 - Color picker row: `display: flex; gap: 10px; align-items: center;` with `input[type=color]` + hex text input (matching Characters.vue existing pattern)
 
@@ -222,7 +230,7 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 - Section container: `margin-top: 24px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 20px;`
 - Section header: `display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;`
 - Section title: `font-size: 16px; font-weight: 400; color: #ccc;`
-- Import button: `background: #0e633c; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;`
+- Import button: `background: #0e633c; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 12px;`
 - Grid: `display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;`
 - Expression card: `background: #252526; border: 1px solid #333; border-radius: 6px; overflow: hidden; cursor: pointer;`
 - Expression thumbnail: `height: 80px; background: #1e1e1e; display: flex; align-items: center; justify-content: center; padding: 4px;`
@@ -277,6 +285,17 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 - Preview text: `你好世界 AaBbCc 1234` (ASSET-13, fixed sample string)
 - Filename bar: `padding: 8px 16px; font-size: 12px; color: #888; border-top: 1px solid #333; background: #1e1e1e;`
 
+### 2.8 Visual Focal Points
+
+Each sub-tab view has one primary focal point — the element the user's eye should land on first.
+
+| Sub-Tab | Primary Focal Point | Mechanism |
+|---------|---------------------|-----------|
+| 背景 (Backgrounds) | Thumbnail grid | Largest visual mass; images draw attention over chrome. Empty state: centered icon + CTA. |
+| 角色 (Characters) | Editor pane — selected character's expression grid | Right pane occupies ~70% width; colorful expression thumbnails attract focus. Empty state: centered prompt to select/create. |
+| 音频 (Audio) | First audio row's play button | Blue accent circle is the only saturated element in the neutral list. Empty state: centered icon + CTA. |
+| 字体 (Fonts) | Font preview sample text area | Large 20px rendered text in custom font is visually dominant over 12px filename bar. Empty state: centered icon + CTA. |
+
 ---
 
 ## 3. Interactive States & Behaviors
@@ -308,7 +327,7 @@ Applies to: expression thumbnails, background cards, audio rows, font cards.
 
 **Appearance:**
 - Container: `position: fixed; z-index: 1000; background: #252526; border: 1px solid #444; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); padding: 4px 0; min-width: 140px;`
-- Menu item: `padding: 8px 16px; font-size: 13px; color: #ccc; cursor: pointer;`
+- Menu item: `padding: 8px 16px; font-size: 12px; color: #ccc; cursor: pointer;`
 - Menu item hover: `background: #007acc; color: #fff;`
 - Destructive item (删除): `color: #e66;`
 - Destructive item hover: `background: #a22; color: #fff;`
@@ -369,11 +388,11 @@ Applies to: expression thumbnails, background cards, audio rows, font cards.
 **Implementation:** Inline notification bar at top of content area (below toolbar), auto-dismiss after 5 seconds.
 
 **Success (all files imported):**
-- `background: rgba(14, 99, 60, 0.15); border: 1px solid rgba(14, 99, 60, 0.4); border-radius: 4px; padding: 10px 16px; color: #8fdf8f; font-size: 13px;`
+- `background: rgba(14, 99, 60, 0.15); border: 1px solid rgba(14, 99, 60, 0.4); border-radius: 4px; padding: 10px 16px; color: #8fdf8f; font-size: 12px;`
 - Text: `"成功导入 {N} 个文件"`
 
 **Partial success (some files failed):**
-- `background: rgba(170, 34, 34, 0.15); border: 1px solid rgba(170, 34, 34, 0.4); border-radius: 4px; padding: 10px 16px; color: #e88; font-size: 13px;`
+- `background: rgba(170, 34, 34, 0.15); border: 1px solid rgba(170, 34, 34, 0.4); border-radius: 4px; padding: 10px 16px; color: #e88; font-size: 12px;`
 - Text: `"已导入 {N} 个文件，{M} 个文件导入失败："`
 - Failed file list: each filename on its own line, `color: #e88; font-size: 12px; margin-left: 16px;`
 - Reason per file: `"— {filename}: 不支持的格式"` (from Phase 6 validation errors)
@@ -434,7 +453,7 @@ Applies to: expression thumbnails, background cards, audio rows, font cards.
 - Container: `flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;`
 - Icon: `font-size: 48px;`
 - Title: `font-size: 14px; color: #888;`
-- Subtitle: `font-size: 13px; color: #555;`
+- Subtitle: `font-size: 12px; color: #555;`
 
 ### 4.2 Audio — No Files
 
@@ -464,7 +483,7 @@ Same layout as 4.1, different icon and text.
  暂无角色
  点击上方 + 按钮创建
 ```
-- Shown in sidebar list area, centered, `color: #555; font-size: 13px;`
+- Shown in sidebar list area, centered, `color: #555; font-size: 12px;`
 
 **Editor pane empty (no selection):**
 ```
@@ -480,7 +499,7 @@ Same layout as 4.1, different icon and text.
  该角色暂无表情图片
  点击"+ 导入表情"添加
 ```
-- Inside expression section, centered, `color: #555; font-size: 13px;`
+- Inside expression section, centered, `color: #555; font-size: 12px;`
 
 ---
 

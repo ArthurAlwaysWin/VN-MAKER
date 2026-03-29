@@ -65,6 +65,7 @@
           <span>🖼️</span>
           <p>该角色暂无表情图片</p>
           <p class="hint">点击"+ 导入表情"添加</p>
+          <p class="hint formats">支持格式：PNG、JPG、JPEG、WEBP</p>
         </div>
 
         <div v-else class="expr-grid">
@@ -410,6 +411,7 @@ function deleteExpression(exprName) {
 .expr-empty span { font-size: 32px; }
 .expr-empty p { margin: 0; }
 .expr-empty .hint { font-size: 11px; }
+.expr-empty .hint.formats { color: #444; font-size: 10px; }
 
 .expr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
 .expr-card { background: #252526; border: 1px solid #333; border-radius: 6px; overflow: hidden; cursor: pointer; transition: border-color 200ms ease; }

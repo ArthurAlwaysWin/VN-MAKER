@@ -104,6 +104,7 @@ async function onRename(oldName, newName) {
     <div class="empty-icon">📁</div>
     <p class="empty-title">当前分类下暂无背景图</p>
     <p class="empty-subtitle">拖放文件到此处，或点击上方"导入文件"按钮</p>
+    <p class="empty-formats">支持格式：PNG、JPG、JPEG、WEBP</p>
   </div>
 
   <!-- Thumbnail grid -->
@@ -199,6 +200,11 @@ async function onRename(oldName, newName) {
 .empty-subtitle {
   font-size: 12px;
   color: #555;
+  margin: 0;
+}
+.empty-formats {
+  font-size: 11px;
+  color: #444;
   margin: 0;
 }
 </style>

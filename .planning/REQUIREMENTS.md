@@ -23,9 +23,9 @@
 - [x] **ASSET-04**: 文件名冲突时自动追加编号（背景-1.png, 背景-2.png）
 - [x] **ASSET-05**: 图片资源以缩略图网格显示
 - [x] **ASSET-06**: 音频资源带播放控件
-- [ ] **ASSET-07**: 角色数据面板可编辑名称、颜色、表情列表
-- [ ] **ASSET-08**: 角色表情按角色分组显示缩略图（sakura → normal/smile/angry）
-- [ ] **ASSET-09**: 通过文件选择器导入表情图片（替代手动输入路径）
+- [x] **ASSET-07**: 角色数据面板可编辑名称、颜色、表情列表
+- [x] **ASSET-08**: 角色表情按角色分组显示缩略图（sakura → normal/smile/angry）
+- [x] **ASSET-09**: 通过文件选择器导入表情图片（替代手动输入路径）
 - [x] **ASSET-10**: 用户可删除资源（带确认对话框）
 - [x] **ASSET-11**: 用户可重命名资源（就地编辑文件名）
 - [x] **ASSET-12**: 自定义字体作为一等资源导入到 assets/fonts/，在所有设计器字体下拉中可用
@@ -100,9 +100,9 @@
 | ASSET-04 | Phase 6 | Complete |
 | ASSET-05 | Phase 7 | Complete |
 | ASSET-06 | Phase 7 | Complete |
-| ASSET-07 | Phase 7 | Pending |
-| ASSET-08 | Phase 7 | Pending |
-| ASSET-09 | Phase 7 | Pending |
+| ASSET-07 | Phase 7 | Complete |
+| ASSET-08 | Phase 7 | Complete |
+| ASSET-09 | Phase 7 | Complete |
 | ASSET-10 | Phase 7 | Complete |
 | ASSET-11 | Phase 7 | Complete |
 | ASSET-12 | Phase 6 | Complete |

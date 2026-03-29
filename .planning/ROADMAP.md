@@ -74,7 +74,7 @@ Plans:
 **Plans:** 4 plans (07-01 W1, 07-02 W2, 07-03 W3, 07-04 W3)
 
 Plans:
-- [ ] 07-01-PLAN.md — Infrastructure: rename-asset IPC + shared components (InlineEdit, ContextMenu, DropOverlay, ImportNotification)
+- [x] 07-01-PLAN.md — Infrastructure: rename-asset IPC + shared components (InlineEdit, ContextMenu, DropOverlay, ImportNotification)
 - [ ] 07-02-PLAN.md — ResourceLibrary shell + App.vue tab change (6→5) + Backgrounds grid + Fonts grid
 - [ ] 07-03-PLAN.md — Audio sub-tab: MiniPlayer + AudioList with singleton playback
 - [ ] 07-04-PLAN.md — Character editor: sidebar + editor pane + expression grid + import

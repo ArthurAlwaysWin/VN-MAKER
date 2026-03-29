@@ -27,7 +27,7 @@
 - [ ] **ASSET-08**: 角色表情按角色分组显示缩略图（sakura → normal/smile/angry）
 - [ ] **ASSET-09**: 通过文件选择器导入表情图片（替代手动输入路径）
 - [ ] **ASSET-10**: 用户可删除资源（带确认对话框）
-- [ ] **ASSET-11**: 用户可重命名资源（就地编辑文件名）
+- [x] **ASSET-11**: 用户可重命名资源（就地编辑文件名）
 - [x] **ASSET-12**: 自定义字体作为一等资源导入到 assets/fonts/，在所有设计器字体下拉中可用
 - [ ] **ASSET-13**: 字体列表显示文字样本预览（"你好世界 AaBbCc 1234"）
 - [ ] **ASSET-14**: 支持从系统文件管理器拖放多个文件批量导入（drop zone UI）
@@ -104,7 +104,7 @@
 | ASSET-08 | Phase 7 | Pending |
 | ASSET-09 | Phase 7 | Pending |
 | ASSET-10 | Phase 7 | Pending |
-| ASSET-11 | Phase 7 | Pending |
+| ASSET-11 | Phase 7 | Complete |
 | ASSET-12 | Phase 6 | Complete |
 | ASSET-13 | Phase 7 | Pending |
 | ASSET-14 | Phase 7 | Pending |

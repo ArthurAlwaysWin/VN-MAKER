@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2025-03-29)
+See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Milestone v0.1 完成 ✅ → Bug 修复 & 体验优化完成 → 准备规划 v0.2
+**Current focus:** Milestone v0.2 — 资源库重构 & 标题页设计器 & 设置叠加层
 
 ## Current Position
 
-Phase: Post-milestone 打磨阶段 — ✅ 完成
-Plan: 下一步规划 v0.2 里程碑（资源库、标题页、游戏内容编辑器等）
-Status: v0.1 设置页设计器全部交付，后续 bug 修复 & 功能调整完成
-Last activity: 2025-03-29 — Bug 修复 + 关闭按钮 + 窗口模式 + 保存按钮
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-28 — Milestone v0.2 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -74,7 +74,7 @@ None — 当前工作全部完成。
 
 ## Session Continuity
 
-Last session: 2025-03-29
-Stopped at: v0.1 全部完成 + 后续打磨完成，用户确认 OK
-Resume hint: 下一步应规划 v0.2 里程碑，按用户讨论的需求清单排优先级
-Next action: /gsd-new-milestone 或 /gsd-discuss-phase
+Last session: 2026-03-28
+Stopped at: v0.2 milestone started, defining requirements
+Resume hint: 下一步完成 requirements 定义 → 创建 roadmap
+Next action: Continue requirements → roadmap

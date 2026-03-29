@@ -107,7 +107,7 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. Asset Library Foundation | 0/2 | Planned | - |
+| 6. Asset Library Foundation | 2/2 | ✅ Complete | 2026-03-29 |
 | 7. Asset Library UI | 0/? | Not started | - |
 | 8. Title Page Designer | 0/? | Not started | - |
 | 9. Settings Overlay | 0/? | Not started | - |

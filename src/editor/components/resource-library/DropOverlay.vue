@@ -78,7 +78,7 @@ function onDrop(e) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 100%;
 }
 .drop-overlay {
   position: absolute;

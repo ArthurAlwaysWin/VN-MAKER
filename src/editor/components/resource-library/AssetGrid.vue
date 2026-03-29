@@ -116,7 +116,7 @@ async function onRename(oldName, newName) {
       @contextmenu.prevent="showMenu($event, file)"
     >
       <div class="thumbnail">
-        <img :src="`asset://${category}/${file}`" :alt="file" />
+        <img :src="`asset://${category}/${file}`" :alt="file" draggable="false" />
       </div>
       <div class="filename">
         <InlineEdit

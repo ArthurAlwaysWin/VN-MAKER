@@ -22,7 +22,7 @@
           @click="selectCharacter(char.id)"
         >
           <div class="char-avatar">
-            <img v-if="char.avatar" :src="char.avatar" :alt="char.name" />
+            <img v-if="char.avatar" :src="char.avatar" :alt="char.name" draggable="false" />
             <span v-else class="avatar-fallback">👤</span>
           </div>
           <span class="char-name">{{ char.name }}</span>
@@ -76,7 +76,7 @@
             @contextmenu.prevent="showExprMenu($event, expr.name)"
           >
             <div class="expr-thumbnail">
-              <img :src="expr.src" :alt="expr.name" />
+              <img :src="expr.src" :alt="expr.name" draggable="false" />
             </div>
             <div class="expr-name">
               <InlineEdit

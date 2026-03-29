@@ -388,11 +388,11 @@ Applies to: expression thumbnails, background cards, audio rows, font cards.
 **Implementation:** Inline notification bar at top of content area (below toolbar), auto-dismiss after 5 seconds.
 
 **Success (all files imported):**
-- `background: rgba(14, 99, 60, 0.15); border: 1px solid rgba(14, 99, 60, 0.4); border-radius: 4px; padding: 10px 16px; color: #8fdf8f; font-size: 12px;`
+- `background: rgba(14, 99, 60, 0.15); border: 1px solid rgba(14, 99, 60, 0.4); border-radius: 4px; padding: 12px 16px; color: #8fdf8f; font-size: 12px;`
 - Text: `"成功导入 {N} 个文件"`
 
 **Partial success (some files failed):**
-- `background: rgba(170, 34, 34, 0.15); border: 1px solid rgba(170, 34, 34, 0.4); border-radius: 4px; padding: 10px 16px; color: #e88; font-size: 12px;`
+- `background: rgba(170, 34, 34, 0.15); border: 1px solid rgba(170, 34, 34, 0.4); border-radius: 4px; padding: 12px 16px; color: #e88; font-size: 12px;`
 - Text: `"已导入 {N} 个文件，{M} 个文件导入失败："`
 - Failed file list: each filename on its own line, `color: #e88; font-size: 12px; margin-left: 16px;`
 - Reason per file: `"— {filename}: 不支持的格式"` (from Phase 6 validation errors)

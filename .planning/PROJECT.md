@@ -45,8 +45,8 @@
 
 <!-- 当前里程碑正式需求 -->
 
-- [ ] **资源库重构**：角色+素材+字体统一管理，文件格式验证，自动命名（背景-1），角色表情/差分数据管理（导入/分组/命名）
-- [ ] **自定义字体导入**：整合到资源库，字体作为核心资产，支持导入自定义字体文件到项目中使用
+- [~] **资源库重构**：角色+素材+字体统一管理，文件格式验证，自动命名（背景-1），角色表情/差分数据管理（导入/分组/命名） — Phase 6 后端完成（IPC + 验证 + Store），Phase 7 UI 待做
+- [~] **自定义字体导入**：整合到资源库，字体作为核心资产，支持导入自定义字体文件到项目中使用 — Phase 6 后端完成（FontFace 加载 + assets store），Phase 7 UI 待做
 - [ ] **标题页设计器**：参考设置页设计器组件拖放模式重新设计，4 个预制按钮组件（开始游戏/继续游戏/设置/退出），画布 + 背景/BGM 选择
 - [ ] **设置页叠加层模式**：设置页全屏覆盖在当前游戏页面上方，滑入/滑出动画，× 关闭按钮
 
@@ -106,7 +106,9 @@
 | SETTING_DEFS 注册表 + 工厂函数 | 扩展新组件只需加注册表条目 | ✓ Good |
 | 窗口模式用 select 类型 + segment radio UI | 比 toggle 更灵活，支持 3 选项 | ✓ Good |
 | 关闭按钮 icon/text 双模式 | 支持 × 图标或自定义文字 | ✓ Good |
-| Vue reactive Proxy 必须解构后才能 IPC | Electron structured clone 不支持 Proxy | ✓ Good |
+| Magic bytes + 扩展名双重验证资源文件 | 防止无效文件污染项目 | ✓ Good |
+| fontLoader 独立模块 + asset:// URL | 编辑器和引擎窗口独立加载字体 | ✓ Good |
+| Pinia asset store 统一 IPC 封装 | 所有资源操作走 store，自动 Proxy 解构 | ✓ Good |
 
 ## Evolution
 
@@ -122,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 - 设置页叠加层 — 全屏覆盖 + 滑入/滑出动画
 
 ---
-*Last updated: 2026-03-28 — v0.2 milestone started*
+*Last updated: 2026-03-29 — Phase 6 (Asset Library Foundation) complete*

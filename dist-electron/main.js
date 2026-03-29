@@ -1,4 +1,4 @@
-import { protocol as k, ipcMain as f, dialog as F, BrowserWindow as D, app as O, net as $ } from "electron";
+import { protocol as k, ipcMain as f, dialog as F, BrowserWindow as _, app as D, net as $ } from "electron";
 import r from "node:path";
 import { fileURLToPath as L, pathToFileURL as W } from "node:url";
 import o from "node:fs/promises";
@@ -17,6 +17,10 @@ const q = {
     offset: 0,
     // MPEG audio frame sync: 0xFF followed by byte with upper 3 bits set (0xE0+)
     checkSecondByte: !0
+  },
+  mp4_audio: {
+    bytes: [102, 116, 121, 112],
+    offset: 4
   },
   ogg: { bytes: [79, 103, 103, 83], offset: 0 },
   wav: {
@@ -38,8 +42,8 @@ const q = {
     signatures: ["png", "jpeg", "webp"]
   },
   audio: {
-    extensions: [".mp3", ".ogg", ".wav"],
-    signatures: ["mp3_id3", "mp3_sync", "ogg", "wav"]
+    extensions: [".mp3", ".ogg", ".wav", ".m4a", ".mp4", ".aac"],
+    signatures: ["mp3_id3", "mp3_sync", "mp4_audio", "ogg", "wav"]
   },
   fonts: {
     extensions: [".ttf", ".otf", ".woff", ".woff2"],
@@ -89,10 +93,10 @@ k.registerSchemesAsPrivileged([
 ]);
 let l = null, p;
 function S() {
-  return p || D.getFocusedWindow() || D.getAllWindows()[0] || null;
+  return p || _.getFocusedWindow() || _.getAllWindows()[0] || null;
 }
 function N() {
-  return r.join(O.getPath("userData"), "recent-projects.json");
+  return r.join(D.getPath("userData"), "recent-projects.json");
 }
 async function U() {
   try {
@@ -165,14 +169,14 @@ f.handle("create-project", async (n, { name: t, author: e, location: s, resoluti
       lastModified: (/* @__PURE__ */ new Date()).toISOString()
     };
     await o.writeFile(r.join(c, "project.json"), JSON.stringify(x, null, 2), "utf-8");
-    let j = M();
+    let m = M();
     if (i === "demo") {
-      const m = r.join(process.env.APP_ROOT, "public", "game");
-      if (w(r.join(m, "script.json"))) {
-        const g = JSON.parse(await o.readFile(r.join(m, "script.json"), "utf-8"));
-        delete g.meta, j = g;
+      const j = r.join(process.env.APP_ROOT, "public", "game");
+      if (w(r.join(j, "script.json"))) {
+        const g = JSON.parse(await o.readFile(r.join(j, "script.json"), "utf-8"));
+        delete g.meta, m = g;
         for (const b of ["backgrounds", "characters", "audio"]) {
-          const d = r.join(m, b), y = r.join(c, "assets", b);
+          const d = r.join(j, b), y = r.join(c, "assets", b);
           if (w(d)) {
             const P = await o.readdir(d);
             for (const R of P)
@@ -181,7 +185,7 @@ f.handle("create-project", async (n, { name: t, author: e, location: s, resoluti
         }
       }
     }
-    return await o.writeFile(r.join(c, "script.json"), JSON.stringify(j, null, 2), "utf-8"), await V(c, t), { success: !0, path: c };
+    return await o.writeFile(r.join(c, "script.json"), JSON.stringify(m, null, 2), "utf-8"), await V(c, t), { success: !0, path: c };
   } catch (u) {
     return console.error("Failed to create project:", u), { success: !1, error: u.message };
   }
@@ -259,7 +263,7 @@ f.handle("select-asset", async (n, { types: t }) => {
     const e = {
       backgrounds: { name: "图片", extensions: ["png", "jpg", "jpeg", "webp"] },
       characters: { name: "图片", extensions: ["png", "jpg", "jpeg", "webp"] },
-      audio: { name: "音频", extensions: ["mp3", "ogg", "wav"] },
+      audio: { name: "音频", extensions: ["mp3", "ogg", "wav", "m4a", "mp4", "aac"] },
       fonts: { name: "字体", extensions: ["ttf", "otf", "woff", "woff2"] },
       ui: { name: "图片", extensions: ["png", "jpg", "jpeg", "webp"] }
     }, s = t[0], a = t.map((R) => e[R]).filter(Boolean), i = r.join(l, "assets", s || ""), u = await F.showOpenDialog(S(), {
@@ -269,12 +273,12 @@ f.handle("select-asset", async (n, { types: t }) => {
       title: "选择资源文件"
     });
     if (u.canceled || u.filePaths.length === 0) return null;
-    const c = u.filePaths[0], x = r.resolve(r.join(l, "assets")), j = r.resolve(c);
-    if (j.startsWith(x + r.sep))
-      return j.slice(x.length + 1).replace(/\\/g, "/");
+    const c = u.filePaths[0], x = r.resolve(r.join(l, "assets")), m = r.resolve(c);
+    if (m.startsWith(x + r.sep))
+      return m.slice(x.length + 1).replace(/\\/g, "/");
     if (!s) return null;
-    const m = await o.readFile(c), g = r.extname(c);
-    if (!T(m.subarray(0, 12), g, s).valid) return null;
+    const j = await o.readFile(c), g = r.extname(c);
+    if (!T(j.subarray(0, 12), g, s).valid) return null;
     const d = r.join(l, "assets", s);
     await o.mkdir(d, { recursive: !0 });
     const y = await B(d, r.basename(c)), P = r.join(d, y);
@@ -292,17 +296,17 @@ f.handle("import-assets", async (n, { category: t, paths: e }) => {
     const a = [], i = [];
     for (const u of e) {
       const c = r.basename(u), x = r.extname(c);
-      let j;
+      let m;
       try {
         const d = await o.open(u, "r"), y = Buffer.alloc(12);
-        await d.read(y, 0, 12, 0), await d.close(), j = y;
+        await d.read(y, 0, 12, 0), await d.close(), m = y;
       } catch (d) {
         i.push({ name: c, reason: `无法读取文件: ${d.message}` });
         continue;
       }
-      const m = T(j, x, t);
-      if (!m.valid) {
-        i.push({ name: c, reason: m.reason });
+      const j = T(m, x, t);
+      if (!j.valid) {
+        i.push({ name: c, reason: j.reason });
         continue;
       }
       const g = await B(s, c), b = r.join(s, g);
@@ -396,7 +400,7 @@ f.handle("open-preview", (n, t) => {
     v.focus();
     return;
   }
-  v = new D({
+  v = new _({
     width: 1280,
     height: 720,
     autoHideMenuBar: !0
@@ -409,10 +413,10 @@ f.handle("open-preview", (n, t) => {
   });
 });
 process.env.APP_ROOT = r.join(A, "..");
-const _ = process.env.VITE_DEV_SERVER_URL, te = r.join(process.env.APP_ROOT, "dist-electron"), C = r.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = _ ? r.join(process.env.APP_ROOT, "public") : C;
+const O = process.env.VITE_DEV_SERVER_URL, te = r.join(process.env.APP_ROOT, "dist-electron"), C = r.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = O ? r.join(process.env.APP_ROOT, "public") : C;
 function Y() {
-  p = new D({
+  p = new _({
     width: 1280,
     height: 800,
     webPreferences: {
@@ -438,12 +442,12 @@ function Y() {
     } catch {
     }
     p.destroy();
-  }), _ ? p.loadURL(_ + "editor.html") : p.loadFile(r.join(C, "editor.html"));
+  }), O ? p.loadURL(O + "editor.html") : p.loadFile(r.join(C, "editor.html"));
 }
-O.on("window-all-closed", () => {
-  process.platform !== "darwin" && (O.quit(), p = null);
+D.on("window-all-closed", () => {
+  process.platform !== "darwin" && (D.quit(), p = null);
 });
-O.whenReady().then(() => {
+D.whenReady().then(() => {
   k.handle("asset", (n) => {
     const t = new URL(n.url), e = decodeURIComponent(t.hostname + t.pathname), s = l ? r.join(l, "assets") : r.join(process.env.APP_ROOT, "public", "game"), a = r.resolve(r.join(s, e)), i = r.resolve(s);
     return !a.startsWith(i + r.sep) && a !== i ? new Response("Forbidden", { status: 403 }) : $.fetch(W(a).toString());
@@ -452,5 +456,5 @@ O.whenReady().then(() => {
 export {
   te as MAIN_DIST,
   C as RENDERER_DIST,
-  _ as VITE_DEV_SERVER_URL
+  O as VITE_DEV_SERVER_URL
 };

@@ -118,7 +118,7 @@ async function onRename(oldName, newName) {
       <div class="empty-icon">🎵</div>
       <p class="empty-title">当前分类下暂无音频文件</p>
       <p class="empty-subtitle">拖放文件到此处，或点击上方"导入文件"按钮</p>
-      <p class="empty-formats">支持格式：MP3、OGG、WAV</p>
+      <p class="empty-formats">支持格式：MP3、OGG、WAV、M4A、AAC</p>
     </div>
 
     <!-- Audio file list -->

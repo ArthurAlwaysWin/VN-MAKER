@@ -285,7 +285,7 @@ ipcMain.handle('select-asset', async (event, { types }) => {
     const filterMap = {
       backgrounds: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
       characters: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
-      audio: { name: '音频', extensions: ['mp3', 'ogg', 'wav'] },
+      audio: { name: '音频', extensions: ['mp3', 'ogg', 'wav', 'm4a', 'mp4', 'aac'] },
       fonts: { name: '字体', extensions: ['ttf', 'otf', 'woff', 'woff2'] },
       ui: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
     };

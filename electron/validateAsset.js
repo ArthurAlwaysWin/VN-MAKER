@@ -20,6 +20,9 @@ const SIGNATURES = {
     // MPEG audio frame sync: 0xFF followed by byte with upper 3 bits set (0xE0+)
     checkSecondByte: true,
   },
+  mp4_audio: {
+    bytes: [0x66, 0x74, 0x79, 0x70], offset: 4,
+  },
   ogg: { bytes: [0x4F, 0x67, 0x67, 0x53], offset: 0 },
   wav: {
     bytes: [0x52, 0x49, 0x46, 0x46], offset: 0,
@@ -43,8 +46,8 @@ const CATEGORY_FORMATS = {
     signatures: ['png', 'jpeg', 'webp'],
   },
   audio: {
-    extensions: ['.mp3', '.ogg', '.wav'],
-    signatures: ['mp3_id3', 'mp3_sync', 'ogg', 'wav'],
+    extensions: ['.mp3', '.ogg', '.wav', '.m4a', '.mp4', '.aac'],
+    signatures: ['mp3_id3', 'mp3_sync', 'mp4_audio', 'ogg', 'wav'],
   },
   fonts: {
     extensions: ['.ttf', '.otf', '.woff', '.woff2'],

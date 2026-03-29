@@ -61,8 +61,7 @@ import TabBar from './components/TabBar.vue';
 import Scenes from './views/Scenes.vue';
 import TitleDesigner from './views/TitleDesigner.vue';
 import SettingsDesigner from './views/SettingsDesigner.vue';
-import Assets from './views/Assets.vue';
-import Characters from './views/Characters.vue';
+import ResourceLibrary from './views/ResourceLibrary.vue';
 import ProjectSettings from './views/ProjectSettings.vue';
 
 const script = useScriptStore();
@@ -79,17 +78,15 @@ const tabs = [
   { id: 'scenes', icon: '🎬', label: '游戏内容' },
   { id: 'title', icon: '🖼️', label: '标题页' },
   { id: 'settings-design', icon: '⚙️', label: '设置页' },
-  { id: 'assets', icon: '🎨', label: '素材库' },
-  { id: 'characters', icon: '👤', label: '角色' },
-  { id: 'project-settings', icon: '📦', label: '项目设置' },
+  { id: 'resource-library', icon: '📦', label: '资源库' },
+  { id: 'project-settings', icon: '⚡', label: '项目设置' },
 ];
 
 const tabComponents = {
   'scenes': markRaw(Scenes),
   'title': markRaw(TitleDesigner),
   'settings-design': markRaw(SettingsDesigner),
-  'assets': markRaw(Assets),
-  'characters': markRaw(Characters),
+  'resource-library': markRaw(ResourceLibrary),
   'project-settings': markRaw(ProjectSettings),
 };
 

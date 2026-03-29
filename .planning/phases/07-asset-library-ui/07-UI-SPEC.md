@@ -199,7 +199,7 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 
 **Sidebar (240px):**
 - Container: `width: 240px; background: #252526; border-right: 1px solid #111; display: flex; flex-direction: column;`
-- Header: `padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;`
+- Header: `padding: 16px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;`
 - Header title: `font-size: 14px; font-weight: 400; color: #ccc;`
 - "+" button: `background: #007acc; color: white; border: none; width: 24px; height: 24px; border-radius: 4px;` — **must include `aria-label="创建角色"`** (icon-only button, no visible text label).
 - Character list item: `padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #333;`
@@ -230,7 +230,7 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 - Section container: `margin-top: 24px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 20px;`
 - Section header: `display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;`
 - Section title: `font-size: 16px; font-weight: 400; color: #ccc;`
-- Import button: `background: #0e633c; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 12px;`
+- Import button: `background: #0e633c; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;`
 - Grid: `display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;`
 - Expression card: `background: #252526; border: 1px solid #333; border-radius: 6px; overflow: hidden; cursor: pointer;`
 - Expression thumbnail: `height: 80px; background: #1e1e1e; display: flex; align-items: center; justify-content: center; padding: 4px;`
@@ -258,7 +258,7 @@ Reuse the existing `.tabs` connected button group pattern exactly:
 
 **Mini Player (D-09):**
 - Container: `display: flex; align-items: center; gap: 10px; flex: 1;`
-- Play/Pause button: `width: 28px; height: 28px; border-radius: 50%; background: #007acc; color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;`
+- Play/Pause button: `width: 28px; height: 28px; border-radius: 50%; background: #007acc; color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;` — **must include `aria-label="播放"` / `aria-label="暂停"` toggled with state** (icon-only button).
 - Play/Pause hover: `background: #0587d9;`
 - Play icon: `▶` (Unicode &#9654;) / Pause icon: `⏸` (Unicode &#9208;)
 - Progress bar track: `flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; position: relative;`
@@ -397,7 +397,7 @@ Applies to: expression thumbnails, background cards, audio rows, font cards.
 - Failed file list: each filename on its own line, `color: #e88; font-size: 12px; margin-left: 16px;`
 - Reason per file: `"— {filename}: 不支持的格式"` (from Phase 6 validation errors)
 
-**Dismiss:** Click × button or auto-dismiss after 5 seconds.
+**Dismiss:** Click × button (`aria-label="关闭通知"`) or auto-dismiss after 5 seconds.
 
 ### 3.6 Audio Playback (D-09, D-10)
 

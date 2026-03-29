@@ -19,8 +19,8 @@
 
 - [ ] **ASSET-01**: 用户在一个统一视图中管理所有项目资源（替代分离的素材库+角色标签页，标签数 6→5）
 - [ ] **ASSET-02**: 资源按四个分类区显示：背景、角色、音频、字体
-- [ ] **ASSET-03**: 导入文件时自动验证格式（magic bytes + 扩展名白名单：图片 PNG/JPG/WEBP，音频 MP3/OGG/WAV，字体 TTF/OTF/WOFF/WOFF2）
-- [ ] **ASSET-04**: 文件名冲突时自动追加编号（背景-1.png, 背景-2.png）
+- [x] **ASSET-03**: 导入文件时自动验证格式（magic bytes + 扩展名白名单：图片 PNG/JPG/WEBP，音频 MP3/OGG/WAV，字体 TTF/OTF/WOFF/WOFF2）
+- [x] **ASSET-04**: 文件名冲突时自动追加编号（背景-1.png, 背景-2.png）
 - [ ] **ASSET-05**: 图片资源以缩略图网格显示
 - [ ] **ASSET-06**: 音频资源带播放控件
 - [ ] **ASSET-07**: 角色数据面板可编辑名称、颜色、表情列表
@@ -61,8 +61,8 @@
 ### 基础设施 (INFRA)
 
 - [ ] **INFRA-01**: TitleScreen.js 运行时数据格式对齐新设计器 schema（type/style 结构，兼容旧格式迁移）
-- [ ] **INFRA-02**: fontLoader.js 共享模块在编辑器和引擎双进程独立加载自定义字体（FontFace API）
-- [ ] **INFRA-03**: 实现资源管理 IPC 处理器（select-asset / import-assets / delete-asset / list-assets / load-font-metadata）
+- [x] **INFRA-02**: fontLoader.js 共享模块在编辑器和引擎双进程独立加载自定义字体（FontFace API）
+- [x] **INFRA-03**: 实现资源管理 IPC 处理器（select-asset / import-assets / delete-asset / list-assets / load-font-metadata）
 - [ ] **INFRA-04**: 所有新 IPC 调用解构 Vue reactive Proxy 为纯对象后再发送
 
 ---
@@ -96,8 +96,8 @@
 |--------|-------|--------|
 | ASSET-01 | Phase 7 | Pending |
 | ASSET-02 | Phase 7 | Pending |
-| ASSET-03 | Phase 6 | Pending |
-| ASSET-04 | Phase 6 | Pending |
+| ASSET-03 | Phase 6 | Complete |
+| ASSET-04 | Phase 6 | Complete |
 | ASSET-05 | Phase 7 | Pending |
 | ASSET-06 | Phase 7 | Pending |
 | ASSET-07 | Phase 7 | Pending |
@@ -129,8 +129,8 @@
 | OVERLAY-07 | Phase 9 | Pending |
 | OVERLAY-08 | Phase 9 | Pending |
 | INFRA-01 | Phase 8 | Pending |
-| INFRA-02 | Phase 6 | Pending |
-| INFRA-03 | Phase 6 | Pending |
+| INFRA-02 | Phase 6 | Complete |
+| INFRA-03 | Phase 6 | Complete |
 | INFRA-04 | Phase 6 | Pending |
 
 ---

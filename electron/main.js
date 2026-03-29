@@ -586,7 +586,7 @@ app.on('window-all-closed', () => {
 });
 
 app.whenReady().then(() => {
-  protocol.handle('asset', (request) => {
+  protocol.handle('asset', async (request) => {
     const url = new URL(request.url);
     const filePath = decodeURIComponent(url.hostname + url.pathname);
     const base = currentProjectPath
@@ -597,6 +597,53 @@ app.whenReady().then(() => {
     if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
       return new Response('Forbidden', { status: 403 });
     }
+
+    // Support Range requests for audio/video seeking & duration detection
+    const rangeHeader = request.headers.get('Range');
+    if (rangeHeader) {
+      const stat = await fs.stat(fullPath);
+      const total = stat.size;
+      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        const start = parseInt(match[1], 10);
+        const end = match[2] ? parseInt(match[2], 10) : total - 1;
+        const chunkSize = end - start + 1;
+        const { createReadStream } = await import('node:fs');
+        const stream = createReadStream(fullPath, { start, end });
+        let closed = false;
+        const onError = (err) => {
+          if (!closed) { closed = true; controller.error(err); }
+        };
+        let controller;
+        const readable = new ReadableStream({
+          start(ctrl) {
+            controller = ctrl;
+            stream.on('data', (chunk) => {
+              if (!closed) ctrl.enqueue(chunk);
+            });
+            stream.on('end', () => {
+              if (!closed) { closed = true; ctrl.close(); }
+            });
+            stream.on('error', onError);
+          },
+          cancel() {
+            closed = true;
+            stream.off('error', onError);
+            stream.destroy();
+            stream.on('error', () => {}); // absorb destroy-triggered errors
+          },
+        });
+        return new Response(readable, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${end}/${total}`,
+            'Content-Length': String(chunkSize),
+            'Accept-Ranges': 'bytes',
+          },
+        });
+      }
+    }
+
     return net.fetch(pathToFileURL(fullPath).toString());
   });
   createWindow();

@@ -71,7 +71,7 @@ Plans:
   3. User can edit character name and color, and manage character expressions by importing images through a file picker (not typing paths manually)
   4. User can delete any asset (with confirmation dialog) and rename any asset via inline text editing
   5. User can drag files from the system file manager onto a drop zone to batch-import multiple assets, and font assets display sample text preview ("你好世界 AaBbCc 1234")
-**Plans:** 4 plans
+**Plans:** 4 plans (07-01 W1, 07-02 W2, 07-03 W3, 07-04 W3)
 
 Plans:
 - [ ] 07-01-PLAN.md — Infrastructure: rename-asset IPC + shared components (InlineEdit, ContextMenu, DropOverlay, ImportNotification)
@@ -115,6 +115,6 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. Asset Library Foundation | 2/2 | ✅ Complete | 2026-03-29 |
-| 7. Asset Library UI | 0/? | Not started | - |
+| 7. Asset Library UI | 4/4 | Planned | 2026-03-30 |
 | 8. Title Page Designer | 0/? | Not started | - |
 | 9. Settings Overlay | 0/? | Not started | - |

@@ -20,6 +20,7 @@ import { BacklogScreen } from './ui/BacklogScreen.js';
 import { SettingsScreen } from './ui/SettingsScreen.js';
 import { TitleScreen } from './ui/TitleScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
+import { loadAllFonts } from './engine/fontLoader.js';
 
 // ─── DOM references ─────────────────────────────────────
 const gameContainer = document.getElementById('game-container');
@@ -430,6 +431,14 @@ async function init() {
 
   try {
     await engine.load('/game/script.json');
+
+    // Load custom fonts before any rendering (INFRA-02)
+    if (engine.script.assets?.fonts?.length) {
+      const fontResult = await loadAllFonts(engine.script.assets.fonts, 'asset://');
+      if (fontResult.failed.length) {
+        console.warn('[GalgameMaker] Some fonts failed to load:', fontResult.failed);
+      }
+    }
 
     // Set title screen name from script
     titleScreen.gameTitle = engine.script.meta.title;

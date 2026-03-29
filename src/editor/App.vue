@@ -52,6 +52,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, markRaw } from 'vue';
 import { useScriptStore } from './stores/script.js';
 import { useProjectStore } from './stores/project.js';
+import { useAssetStore } from './stores/assets.js';
 
 import WelcomeScreen from './views/WelcomeScreen.vue';
 import CreateProjectWizard from './views/CreateProjectWizard.vue';
@@ -66,6 +67,7 @@ import ProjectSettings from './views/ProjectSettings.vue';
 
 const script = useScriptStore();
 const project = useProjectStore();
+const assets = useAssetStore();
 
 // --- State Machine ---
 const currentView = ref('welcome'); // 'welcome' | 'editing'
@@ -158,6 +160,29 @@ async function openProject(projectPath) {
   const result = await project.loadProject(projectPath);
   if (result && result.success) {
     script.loadFromData(result.script);
+
+    // Load asset file lists for all categories
+    await assets.loadAll();
+
+    // Load custom fonts into editor window (D-04: all fonts on project open)
+    const fontResult = await assets.loadProjectFonts(script.data);
+    if (fontResult.failed.length > 0) {
+      for (const f of fontResult.failed) {
+        console.error(`[FontLoader] ${f.file} 加载失败:`, f.error);
+        const shouldDelete = confirm(`字体 ${f.file} 加载失败。\n\n是否删除此损坏的字体文件？`);
+        if (shouldDelete) {
+          const filename = f.file.split('/').pop();
+          await assets.deleteAsset('fonts', filename);
+          // Also remove from script metadata
+          if (script.data?.assets?.fonts) {
+            script.data.assets.fonts = script.data.assets.fonts.filter(fm => fm.file !== f.file);
+            script.pushState();
+          }
+          assets.syncFontMeta(script.data);
+        }
+      }
+    }
+
     currentView.value = 'editing';
     activeTab.value = 'scenes';
   } else if (result && result.error) {

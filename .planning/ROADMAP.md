@@ -71,7 +71,14 @@ Plans:
   3. User can edit character name and color, and manage character expressions by importing images through a file picker (not typing paths manually)
   4. User can delete any asset (with confirmation dialog) and rename any asset via inline text editing
   5. User can drag files from the system file manager onto a drop zone to batch-import multiple assets, and font assets display sample text preview ("你好世界 AaBbCc 1234")
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Infrastructure: rename-asset IPC + shared components (InlineEdit, ContextMenu, DropOverlay, ImportNotification)
+- [ ] 07-02-PLAN.md — ResourceLibrary shell + App.vue tab change (6→5) + Backgrounds grid + Fonts grid
+- [ ] 07-03-PLAN.md — Audio sub-tab: MiniPlayer + AudioList with singleton playback
+- [ ] 07-04-PLAN.md — Character editor: sidebar + editor pane + expression grid + import
+
 **UI hint**: yes
 
 ### Phase 8: Title Page Designer

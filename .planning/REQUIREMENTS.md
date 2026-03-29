@@ -28,7 +28,7 @@
 - [ ] **ASSET-09**: 通过文件选择器导入表情图片（替代手动输入路径）
 - [ ] **ASSET-10**: 用户可删除资源（带确认对话框）
 - [ ] **ASSET-11**: 用户可重命名资源（就地编辑文件名）
-- [ ] **ASSET-12**: 自定义字体作为一等资源导入到 assets/fonts/，在所有设计器字体下拉中可用
+- [x] **ASSET-12**: 自定义字体作为一等资源导入到 assets/fonts/，在所有设计器字体下拉中可用
 - [ ] **ASSET-13**: 字体列表显示文字样本预览（"你好世界 AaBbCc 1234"）
 - [ ] **ASSET-14**: 支持从系统文件管理器拖放多个文件批量导入（drop zone UI）
 
@@ -63,7 +63,7 @@
 - [ ] **INFRA-01**: TitleScreen.js 运行时数据格式对齐新设计器 schema（type/style 结构，兼容旧格式迁移）
 - [x] **INFRA-02**: fontLoader.js 共享模块在编辑器和引擎双进程独立加载自定义字体（FontFace API）
 - [x] **INFRA-03**: 实现资源管理 IPC 处理器（select-asset / import-assets / delete-asset / list-assets / load-font-metadata）
-- [ ] **INFRA-04**: 所有新 IPC 调用解构 Vue reactive Proxy 为纯对象后再发送
+- [x] **INFRA-04**: 所有新 IPC 调用解构 Vue reactive Proxy 为纯对象后再发送
 
 ---
 
@@ -105,7 +105,7 @@
 | ASSET-09 | Phase 7 | Pending |
 | ASSET-10 | Phase 7 | Pending |
 | ASSET-11 | Phase 7 | Pending |
-| ASSET-12 | Phase 6 | Pending |
+| ASSET-12 | Phase 6 | Complete |
 | ASSET-13 | Phase 7 | Pending |
 | ASSET-14 | Phase 7 | Pending |
 | TITLE-01 | Phase 8 | Pending |
@@ -131,7 +131,7 @@
 | INFRA-01 | Phase 8 | Pending |
 | INFRA-02 | Phase 6 | Complete |
 | INFRA-03 | Phase 6 | Complete |
-| INFRA-04 | Phase 6 | Pending |
+| INFRA-04 | Phase 6 | Complete |
 
 ---
 *38 requirements | 4 categories | v0.2 milestone*

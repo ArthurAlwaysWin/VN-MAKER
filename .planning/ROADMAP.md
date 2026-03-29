@@ -59,7 +59,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 06-01-PLAN.md — Backend infrastructure: validateAsset.js, 4 IPC handlers, fonts/ directory, fontLoader.js
-- [ ] 06-02-PLAN.md — Asset store + integration wiring: Pinia assets store, editor/engine font loading
+- [x] 06-02-PLAN.md — Asset store + integration wiring: Pinia assets store, editor/engine font loading
 
 ### Phase 7: Asset Library UI
 **Goal**: Users manage all project assets — backgrounds, characters, audio, and fonts — in one unified view with visual browsing, inline editing, and drag-to-import

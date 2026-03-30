@@ -69,7 +69,11 @@ export class TitleScreen {
     this.el.style.inset = '0';
 
     if (this.layout.background) {
-      this.el.style.backgroundImage = `url('/game/${this.layout.background}')`;
+      const bgPath = this.layout.background;
+      const bgUrl = bgPath.startsWith('asset://') || bgPath.startsWith('http') || bgPath.startsWith('/game/')
+        ? bgPath
+        : `/game/${bgPath}`;
+      this.el.style.backgroundImage = `url('${bgUrl}')`;
       this.el.style.backgroundSize = 'cover';
       this.el.style.backgroundPosition = 'center';
     }
@@ -79,6 +83,8 @@ export class TitleScreen {
         this._createTextElement(elem);
       } else if (elem.type === 'button') {
         this._createButtonElement(elem);
+      } else if (elem.type === 'image') {
+        this._createImageElement(elem);
       }
     });
   }
@@ -119,8 +125,9 @@ export class TitleScreen {
 
     const hoverColor = sanitizeCssValue(cfg.hoverColor);
     if (hoverColor) {
-      btn.addEventListener('mouseenter', () => { btn.style.color = hoverColor; });
-      btn.addEventListener('mouseleave', () => { btn.style.color = color || ''; });
+      const origBg = bgColor || '';
+      btn.addEventListener('mouseenter', () => { btn.style.background = hoverColor; });
+      btn.addEventListener('mouseleave', () => { btn.style.background = origBg; });
     }
 
     const action = cfg.action;
@@ -131,8 +138,35 @@ export class TitleScreen {
       btn.addEventListener('click', () => { if (this.onContinue) this.onContinue(); });
     } else if (action === 'settings') {
       btn.addEventListener('click', () => { if (this.onSettings) this.onSettings(); });
+    } else if (action === 'quit') {
+      btn.addEventListener('click', () => { if (window.close) window.close(); });
     }
     this.el.appendChild(btn);
+  }
+
+  _createImageElement(cfg) {
+    const el = document.createElement('div');
+    el.className = 'title-custom-element title-custom-image';
+    this._applyPosition(el, cfg);
+    if (cfg.width) el.style.width = `${clampField('width', cfg.width)}px`;
+    if (cfg.height) el.style.height = `${clampField('height', cfg.height)}px`;
+    el.style.overflow = 'hidden';
+
+    const src = sanitizeCssValue(cfg.src);
+    if (src) {
+      const img = document.createElement('img');
+      const imgUrl = src.startsWith('asset://') || src.startsWith('http') || src.startsWith('/game/')
+        ? src
+        : `/game/${src}`;
+      img.src = imgUrl;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'contain';
+      img.style.display = 'block';
+      img.draggable = false;
+      el.appendChild(img);
+    }
+    this.el.appendChild(el);
   }
 
   _applyPosition(el, cfg) {

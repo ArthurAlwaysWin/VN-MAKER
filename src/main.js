@@ -408,11 +408,16 @@ function updateQuickBtnStates() {
 
 // ─── Title screen ───────────────────────────────────────
 function showTitle() {
+  const titleLayout = engine.script?.ui?.titleScreen;
+  if (titleLayout?.bgm) {
+    audio.playBgm({ file: titleLayout.bgm, volume: 1, loop: true });
+  }
   titleScreen.show(saveManager.hasAnySave());
 }
 
 titleScreen.onStart = () => {
   titleScreen.hide();
+  audio.stopBgm();
   isPlaying = true;
   engine.startGame('start');
 };

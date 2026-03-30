@@ -119,8 +119,9 @@
 
 - 色差计算：RGB 欧几里得距离，最大值 ≈ 441（√(255²×3)）
 - 容差范围 0-100 映射到色差 0-441
-- 柔化：在阈值边缘创建 alpha 渐变过渡带
-- 性能：`requestAnimationFrame` 节流，参数变化时延迟 50ms 重新处理
+- 柔化：在阈值边缘创建 alpha 渐变过渡带，`scaleFactor = 441 / 5`（将 0-5px UI 值映射到色差空间）
+- 性能：`requestAnimationFrame` 节流，参数变化时延迟 50ms 重新处理；超大图片（>2000px）可降采样预览
+
 
 ### 取色交互
 
@@ -133,6 +134,12 @@
 - `Canvas.toBlob('image/png')` → `FileReader.readAsArrayBuffer` → IPC 发送
 - 新 IPC handler `save-processed-image`：接收 `{ filePath, data }` → `fs.writeFile` 覆盖
 - 路径安全：`isInsideProject()` 校验
+- 保存失败时显示错误提示，Modal 保持打开不丢失用户操作
+
+### UI 状态
+
+- 初始状态："确认去背景"按钮禁用，直到用户点击取色选定背景色
+- 取色后按钮激活，每次参数变化实时更新预览
 
 ## 约束
 

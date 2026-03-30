@@ -236,10 +236,9 @@ async function confirmRemoval() {
       reader.readAsDataURL(blob);
     });
 
-    // Save as .png — if original is already .png, add _nobg suffix to preserve original
+    // Save as .png with _nobg suffix — original file preserved
     const baseName = props.filename.replace(/\.[^.]+$/, '');
-    const ext = props.filename.split('.').pop().toLowerCase();
-    const newFilename = ext === 'png' ? `${baseName}_nobg.png` : `${baseName}.png`;
+    const newFilename = `${baseName}_nobg.png`;
 
     const result = await window.ipcRenderer.invoke('save-processed-image', {
       category: props.category,

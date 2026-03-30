@@ -304,19 +304,14 @@ function openBgRemoval(exprName) {
   bgModalVisible.value = true;
 }
 
-function onBgRemovalDone({ newFilename, oldFilename }) {
+function onBgRemovalDone({ newFilename }) {
   bgModalVisible.value = false;
   assets.loadCategory('characters');
 
-  // Update expression reference to point to the new .png (original file preserved on disk)
-  if (selectedChar.value && newFilename !== oldFilename) {
-    const exprs = selectedChar.value.expressions;
-    for (const [name, exprPath] of Object.entries(exprs)) {
-      if (exprPath === `characters/${oldFilename}`) {
-        exprs[name] = `characters/${newFilename}`;
-        break;
-      }
-    }
+  // Add new expression for the processed image, keep original untouched
+  if (selectedChar.value) {
+    const newExprName = newFilename.replace(/\.[^.]+$/, '');
+    selectedChar.value.expressions[newExprName] = `characters/${newFilename}`;
     script.pushState();
   }
 }
@@ -398,14 +393,20 @@ function renameExpression(oldName, newName) {
 }
 
 /**
- * Delete an expression reference (removes metadata only, not file on disk).
+ * Delete an expression — removes metadata and deletes the image file from disk.
  * @param {string} exprName - Expression name to delete
  */
-function deleteExpression(exprName) {
+async function deleteExpression(exprName) {
   if (!selectedChar.value) return;
-  if (confirm(`确定要删除表情 "${exprName}" 吗？`)) {
+  if (confirm(`确定要删除表情 "${exprName}" 吗？\n图片文件也会从磁盘删除。`)) {
+    const exprPath = selectedChar.value.expressions[exprName];
     delete selectedChar.value.expressions[exprName];
     script.pushState();
+
+    if (exprPath) {
+      const filename = exprPath.split('/').pop();
+      await assets.deleteAsset('characters', filename);
+    }
   }
 }
 </script>

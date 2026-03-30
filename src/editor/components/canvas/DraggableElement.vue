@@ -80,14 +80,21 @@ function onResizeStart(e) {
   const startH = props.height || 100;
   const startX = e.clientX;
   const startY = e.clientY;
+  const aspectRatio = startW / startH;
 
   const onMove = (ev) => {
     const dw = (ev.clientX - startX) / props.canvasScale;
     const dh = (ev.clientY - startY) / props.canvasScale;
-    emit('resize', {
-      width: Math.max(50, Math.round(startW + dw)),
-      height: Math.max(30, Math.round(startH + dh)),
-    });
+    let newW = Math.max(50, Math.round(startW + dw));
+    let newH = Math.max(30, Math.round(startH + dh));
+    if (ev.shiftKey) {
+      if (Math.abs(dw) >= Math.abs(dh)) {
+        newH = Math.max(30, Math.round(newW / aspectRatio));
+      } else {
+        newW = Math.max(50, Math.round(newH * aspectRatio));
+      }
+    }
+    emit('resize', { width: newW, height: newH });
   };
 
   const onUp = () => {

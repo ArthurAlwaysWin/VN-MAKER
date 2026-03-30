@@ -441,10 +441,20 @@ ipcMain.handle('save-processed-image', async (event, { category, filename, dataB
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
-    const fullPath = path.join(currentProjectPath, 'assets', category, filename);
+    const safeName = path.basename(filename);
+    if (!safeName || safeName !== filename) {
+      return { success: false, error: 'Invalid filename' };
+    }
+
+    const fullPath = path.join(currentProjectPath, 'assets', category, safeName);
     if (!isInsideProject(fullPath)) return { success: false, error: 'Invalid path' };
 
     const buffer = Buffer.from(dataBase64, 'base64');
+    const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    if (buffer.length < 8 || !buffer.subarray(0, 8).equals(PNG_MAGIC)) {
+      return { success: false, error: 'Invalid PNG data' };
+    }
+
     await fs.writeFile(fullPath, buffer);
     return { success: true };
   } catch (e) {

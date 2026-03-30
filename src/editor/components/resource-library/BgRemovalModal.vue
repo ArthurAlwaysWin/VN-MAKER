@@ -82,7 +82,7 @@
  * BgRemovalModal — Pure-Canvas solid-color background removal tool.
  * User clicks to pick background color, adjusts tolerance/feather, confirms to export transparent PNG.
  */
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
 
 const props = defineProps({
   visible: Boolean,
@@ -109,7 +109,7 @@ let imgWidth = 0;
 let imgHeight = 0;
 let processTimer = null;
 
-// Load image when modal opens
+// Load image when modal opens; clean up on close
 watch(() => props.visible, async (v) => {
   if (v && props.imageSrc) {
     pickedColor.value = null;
@@ -119,7 +119,16 @@ watch(() => props.visible, async (v) => {
     saving.value = false;
     await nextTick();
     loadImage();
+  } else {
+    clearTimeout(processTimer);
+    processTimer = null;
+    originalImageData = null;
   }
+});
+
+onBeforeUnmount(() => {
+  clearTimeout(processTimer);
+  originalImageData = null;
 });
 
 function loadImage() {
@@ -214,11 +223,18 @@ async function confirmRemoval() {
   saving.value = true;
 
   try {
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    const buffer = await blob.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        b => (b ? resolve(b) : reject(new Error('Canvas export failed'))),
+        'image/png'
+      );
+    });
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
 
     const result = await window.ipcRenderer.invoke('save-processed-image', {
       category: props.category,

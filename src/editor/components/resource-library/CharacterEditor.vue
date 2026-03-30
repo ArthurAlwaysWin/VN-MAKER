@@ -306,10 +306,7 @@ function openBgRemoval(exprName) {
   bgModalVisible.value = true;
 }
 
-function onBgRemovalDone() {
-  bgModalVisible.value = false;
-  assets.loadCategory('characters');
-
+function advanceBgQueue() {
   if (bgModalPendingImports.value.length > 0) {
     const next = bgModalPendingImports.value.shift();
     bgModalSrc.value = `asset://characters/${next}`;
@@ -318,15 +315,15 @@ function onBgRemovalDone() {
   }
 }
 
+function onBgRemovalDone() {
+  bgModalVisible.value = false;
+  assets.loadCategory('characters');
+  advanceBgQueue();
+}
+
 function onBgRemovalSkip() {
   bgModalVisible.value = false;
-
-  if (bgModalPendingImports.value.length > 0) {
-    const next = bgModalPendingImports.value.shift();
-    bgModalSrc.value = `asset://characters/${next}`;
-    bgModalFilename.value = next;
-    bgModalVisible.value = true;
-  }
+  advanceBgQueue();
 }
 
 function onBgRemovalCancel() {
@@ -357,6 +354,7 @@ async function importExpression() {
 async function handleExpressionFiles(event) {
   const fileList = event.target.files;
   if (!fileList || fileList.length === 0 || !selectedChar.value) return;
+  if (bgModalVisible.value) return;
 
   const filePaths = Array.from(fileList)
     .map(f => window.getPathForFile ? window.getPathForFile(f) : f.path)

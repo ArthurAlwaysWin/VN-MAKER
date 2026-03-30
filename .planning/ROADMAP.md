@@ -91,7 +91,12 @@ Plans:
   3. User can select a title background image and BGM from asset library pickers, and customize any element's text, color, font, size, and hover effects in the property panel
   4. Changes support undo/redo (Ctrl+Z/Y), auto-save (2s debounce), and Z-order layer reordering (上移/下移)
   5. Engine renders custom title page layouts correctly — including legacy format migration — and "继续游戏" button shows disabled state when no save data exists
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Infrastructure: script store getTitleScreen/updateTitleScreen + TitleScreen.js runtime schema extension (image type, quit action, hoverColor fix, BGM)
+- [ ] 08-02-PLAN.md — TitleDesigner.vue full 3-panel designer rewrite + DraggableElement Shift aspect-ratio lock
+
 **UI hint**: yes
 
 ### Phase 9: Settings Overlay

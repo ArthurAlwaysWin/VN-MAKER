@@ -71,6 +71,22 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  /** Get or initialize the ui.titleScreen section */
+  function getTitleScreen() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.titleScreen ??= { background: null, bgm: null, elements: [] };
+    return data.value.ui.titleScreen;
+  }
+
+  /** Replace the entire titleScreen and push undo state */
+  function updateTitleScreen(titleScreen) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.titleScreen = titleScreen;
+    pushState();
+  }
+
   // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
   async function loadScript() {
     console.warn('loadScript() is deprecated — use loadFromData() via project store');
@@ -85,6 +101,7 @@ export const useScriptStore = defineStore('script', () => {
     historyIndex, history,
     loadFromData, reset,
     getSettingsScreen, updateSettingsScreen,
+    getTitleScreen, updateTitleScreen,
     loadScript, saveScript
   };
 });

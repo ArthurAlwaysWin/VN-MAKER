@@ -133,6 +133,36 @@ export function validateAssetFormat(buffer, extension, category) {
 }
 
 /**
+ * Check whether an image file has an alpha (transparency) channel.
+ * Requires at least 26 bytes for PNG, 21 bytes for WebP.
+ * @param {Buffer} buffer - File header bytes (at least 26 bytes recommended)
+ * @param {string} extension - File extension including dot
+ * @returns {{ hasAlpha: boolean }}
+ */
+export function checkImageAlpha(buffer, extension) {
+  const ext = extension.toLowerCase();
+
+  if (ext === '.jpg' || ext === '.jpeg') {
+    return { hasAlpha: false };
+  }
+
+  if (ext === '.png' && buffer.length >= 26) {
+    // PNG IHDR color type at offset 25: 4=grayscale+alpha, 6=RGBA
+    const colorType = buffer[25];
+    return { hasAlpha: colorType === 4 || colorType === 6 };
+  }
+
+  if (ext === '.webp' && buffer.length >= 21) {
+    const chunk = String.fromCharCode(buffer[12], buffer[13], buffer[14], buffer[15]);
+    if (chunk === 'VP8X') return { hasAlpha: (buffer[20] & 0x10) !== 0 };
+    if (chunk === 'VP8L') return { hasAlpha: true }; // lossless WebP typically has alpha
+    if (chunk === 'VP8 ') return { hasAlpha: false };
+  }
+
+  return { hasAlpha: true }; // unknown → assume OK, don't warn
+}
+
+/**
  * Get the list of supported file extensions for a category.
  * @param {string} category - Asset category
  * @returns {string[]} Array of extensions including dots (e.g. ['.png', '.jpg'])

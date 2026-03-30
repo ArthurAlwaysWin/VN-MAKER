@@ -307,11 +307,16 @@ async function handleExpressionFiles(event) {
 
   const result = await assets.importAssets('characters', filePaths);
   if (result.success && result.imported.length > 0) {
+    const noAlphaFiles = result.imported.filter(item => item.noAlpha);
     for (const item of result.imported) {
       const exprName = item.saved.replace(/\.[^.]+$/, '');
       selectedChar.value.expressions[exprName] = `characters/${item.saved}`;
     }
     script.pushState();
+    if (noAlphaFiles.length > 0) {
+      const names = noAlphaFiles.map(f => f.saved).join('、');
+      alert(`⚠️ 以下图片没有透明背景：${names}\n\n角色立绘建议使用透明 PNG 或 WebP 格式，否则在游戏场景中会显示矩形底色。`);
+    }
   }
   if (result.errors?.length > 0) {
     alert(`${result.errors.length} 个文件导入失败`);

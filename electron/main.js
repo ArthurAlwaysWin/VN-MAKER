@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { validateAssetFormat, getSupportedFormats } from './validateAsset.js';
+import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -349,12 +349,12 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
       const name = path.basename(filePath);
       const ext = path.extname(name);
 
-      // Validate format (D-03: magic bytes + extension) — read only first 12 bytes
+      // Validate format (D-03: magic bytes + extension) — read first 32 bytes (covers PNG IHDR for alpha check)
       let headerBytes;
       try {
         const fh = await fs.open(filePath, 'r');
-        const buf = Buffer.alloc(12);
-        await fh.read(buf, 0, 12, 0);
+        const buf = Buffer.alloc(32);
+        await fh.read(buf, 0, 32, 0);
         await fh.close();
         headerBytes = buf;
       } catch (readErr) {
@@ -378,7 +378,15 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
       }
 
       await fs.copyFile(filePath, fullPath);
-      imported.push({ original: name, saved: safeName });
+      const item = { original: name, saved: safeName };
+
+      // Check transparency for character sprites
+      if (category === 'characters') {
+        const { hasAlpha } = checkImageAlpha(headerBytes, ext);
+        if (!hasAlpha) item.noAlpha = true;
+      }
+
+      imported.push(item);
     }
 
     return { success: true, imported, errors, supportedFormats: getSupportedFormats(category) };

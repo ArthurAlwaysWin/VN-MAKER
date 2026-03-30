@@ -27,8 +27,11 @@
           <button class="toolbar-btn" v-if="layout.background" @click="clearBackground">✕ 清除背景</button>
           <span class="toolbar-sep"></span>
           <button class="toolbar-btn" @click="pickBgm">🎵 BGM</button>
-          <span v-if="layout.bgm" class="toolbar-info">{{ bgmFilename }}</span>
-          <button class="toolbar-btn" v-if="layout.bgm" @click="clearBgm">✕ 清除BGM</button>
+          <template v-if="layout.bgm">
+            <span class="toolbar-info">{{ bgmFilename }}</span>
+            <button class="toolbar-btn" @click="toggleBgmPreview">{{ bgmPlaying ? '⏸ 暂停' : '▶ 试听' }}</button>
+            <button class="toolbar-btn" @click="clearBgm">✕ 清除</button>
+          </template>
           <span class="toolbar-sep"></span>
           <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected">🗑 删除</button>
         </div>
@@ -106,7 +109,7 @@
 
         <!-- Z-Order section -->
         <div class="inspector-section">
-          <div class="section-title">📐 图层</div>
+          <div class="section-title">📐 图层 <span class="hint">（↑↓ 方向键）</span></div>
           <div class="form-row">
             <button class="layer-btn" :disabled="!canMoveUp" @click="moveUp">↑ 上移</button>
             <button class="layer-btn" :disabled="!canMoveDown" @click="moveDown">↓ 下移</button>
@@ -337,6 +340,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   resizeObs?.disconnect();
   document.removeEventListener('keydown', onKeyDown);
+  stopBgmPreview();
 });
 
 watch(
@@ -479,6 +483,16 @@ function onKeyDown(e) {
     e.preventDefault();
     deleteSelected();
   }
+  // Arrow keys for Z-order (when element selected, not editing input)
+  if (selectedId.value && document.activeElement?.tagName !== 'INPUT') {
+    if (e.key === 'ArrowUp' && canMoveUp.value) {
+      e.preventDefault();
+      moveUp();
+    } else if (e.key === 'ArrowDown' && canMoveDown.value) {
+      e.preventDefault();
+      moveDown();
+    }
+  }
 }
 
 // ─── Inspector Setters (flat property model) ────────────
@@ -529,8 +543,36 @@ async function pickBgm() {
 }
 
 function clearBgm() {
+  stopBgmPreview();
   layout.bgm = null;
   saveLayout();
+}
+
+// ─── BGM Preview ────────────────────────────────────────
+const bgmAudio = ref(null);
+const bgmPlaying = ref(false);
+
+function toggleBgmPreview() {
+  if (!layout.bgm) return;
+  if (bgmPlaying.value) {
+    stopBgmPreview();
+  } else {
+    if (!bgmAudio.value) {
+      bgmAudio.value = new Audio();
+      bgmAudio.value.loop = true;
+      bgmAudio.value.addEventListener('ended', () => { bgmPlaying.value = false; });
+    }
+    bgmAudio.value.src = `asset://${layout.bgm}`;
+    bgmAudio.value.play().then(() => { bgmPlaying.value = true; }).catch(() => {});
+  }
+}
+
+function stopBgmPreview() {
+  if (bgmAudio.value) {
+    bgmAudio.value.pause();
+    bgmAudio.value.currentTime = 0;
+  }
+  bgmPlaying.value = false;
 }
 
 async function pickElementImage() {
@@ -860,6 +902,11 @@ function rgbaToHex(rgba) {
   color: #888;
   margin-bottom: 8px;
   letter-spacing: 0.3px;
+}
+
+.section-title .hint {
+  color: #555;
+  font-weight: normal;
 }
 
 .form-grid {

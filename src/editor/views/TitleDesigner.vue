@@ -27,6 +27,7 @@
           <button class="toolbar-btn" v-if="layout.background" @click="clearBackground">✕ 清除背景</button>
           <span class="toolbar-sep"></span>
           <button class="toolbar-btn" @click="pickBgm">🎵 BGM</button>
+          <span v-if="layout.bgm" class="toolbar-info">{{ bgmFilename }}</span>
           <button class="toolbar-btn" v-if="layout.bgm" @click="clearBgm">✕ 清除BGM</button>
           <span class="toolbar-sep"></span>
           <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected">🗑 删除</button>
@@ -222,6 +223,13 @@
       </div>
     </div>
   </div>
+
+  <AssetPickerModal
+    :category="pickerCategory"
+    :visible="pickerVisible"
+    @select="onPickerSelect"
+    @close="onPickerClose"
+  />
 </template>
 
 <script setup>
@@ -229,6 +237,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } 
 import { useScriptStore } from '../stores/script.js';
 import { useAssetStore } from '../stores/assets.js';
 import DraggableElement from '../components/canvas/DraggableElement.vue';
+import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
 
 const scriptStore = useScriptStore();
 const assetStore = useAssetStore();
@@ -252,6 +261,32 @@ const selectedElement = computed(() => {
 });
 
 const customFonts = computed(() => assetStore.fontFamilies);
+
+// ─── Asset Picker State ─────────────────────────────────
+const pickerVisible = ref(false);
+const pickerCategory = ref('backgrounds');
+let pickerResolve = null;
+
+function openPicker(category) {
+  pickerCategory.value = category;
+  pickerVisible.value = true;
+  return new Promise((resolve) => { pickerResolve = resolve; });
+}
+
+function onPickerSelect(path) {
+  pickerVisible.value = false;
+  if (pickerResolve) { pickerResolve(path); pickerResolve = null; }
+}
+
+function onPickerClose() {
+  pickerVisible.value = false;
+  if (pickerResolve) { pickerResolve(null); pickerResolve = null; }
+}
+
+const bgmFilename = computed(() => {
+  if (!layout.bgm) return '';
+  return layout.bgm.split('/').pop();
+});
 
 // ─── Canvas Scaling ─────────────────────────────────────
 const GAME_W = 1280;
@@ -473,14 +508,11 @@ function setSelectProp(key, e) {
 
 // ─── Asset Pickers ──────────────────────────────────────
 async function pickBackground() {
-  if (!window.ipcRenderer) return;
-  try {
-    const result = await window.ipcRenderer.invoke('select-asset', { types: ['backgrounds'] });
-    if (result) {
-      layout.background = result;
-      saveLayout();
-    }
-  } catch { /* user cancelled */ }
+  const result = await openPicker('backgrounds');
+  if (result) {
+    layout.background = result;
+    saveLayout();
+  }
 }
 
 function clearBackground() {
@@ -489,14 +521,11 @@ function clearBackground() {
 }
 
 async function pickBgm() {
-  if (!window.ipcRenderer) return;
-  try {
-    const result = await window.ipcRenderer.invoke('select-asset', { types: ['audio'] });
-    if (result) {
-      layout.bgm = result;
-      saveLayout();
-    }
-  } catch { /* user cancelled */ }
+  const result = await openPicker('audio');
+  if (result) {
+    layout.bgm = result;
+    saveLayout();
+  }
 }
 
 function clearBgm() {
@@ -505,14 +534,12 @@ function clearBgm() {
 }
 
 async function pickElementImage() {
-  if (!window.ipcRenderer || !selectedElement.value) return;
-  try {
-    const result = await window.ipcRenderer.invoke('select-asset', { types: ['backgrounds'] });
-    if (result) {
-      selectedElement.value.src = result;
-      saveLayout();
-    }
-  } catch { /* user cancelled */ }
+  if (!selectedElement.value) return;
+  const result = await openPicker('backgrounds');
+  if (result) {
+    selectedElement.value.src = result;
+    saveLayout();
+  }
 }
 
 // ─── Save Layout ────────────────────────────────────────
@@ -699,6 +726,15 @@ function rgbaToHex(rgba) {
   width: 1px;
   height: 20px;
   background: #333;
+}
+
+.toolbar-info {
+  color: #4ec9b0;
+  font-size: 12px;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Canvas ─── */

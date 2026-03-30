@@ -437,6 +437,22 @@ ipcMain.handle('rename-asset', async (event, { category, oldName, newName }) => 
   }
 });
 
+ipcMain.handle('save-processed-image', async (event, { category, filename, dataBase64 }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+
+    const fullPath = path.join(currentProjectPath, 'assets', category, filename);
+    if (!isInsideProject(fullPath)) return { success: false, error: 'Invalid path' };
+
+    const buffer = Buffer.from(dataBase64, 'base64');
+    await fs.writeFile(fullPath, buffer);
+    return { success: true };
+  } catch (e) {
+    console.error('[save-processed-image] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('list-assets', async (event, { category }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };

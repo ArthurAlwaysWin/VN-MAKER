@@ -39,9 +39,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ## Phases
 
-- [ ] **Phase 6: Asset Library Foundation** - IPC handlers, file validation, auto-naming, font loading infrastructure
+- [x] **Phase 6: Asset Library Foundation** - IPC handlers, file validation, auto-naming, font loading infrastructure (completed 2026-03-29)
 - [x] **Phase 7: Asset Library UI** - Unified asset management view with thumbnails, audio playback, expression editor, and batch import (completed 2026-03-29)
-- [ ] **Phase 8: Title Page Designer** - 3-panel canvas designer for title pages with preset buttons, text labels, and decorative images
+- [x] **Phase 8: Title Page Designer** - 3-panel canvas designer for title pages with preset buttons, text labels, and decorative images (completed 2026-03-31)
 - [ ] **Phase 9: Settings Overlay** - Settings page as slide-in overlay on top of running game with backdrop and dismiss controls
 
 ## Phase Details
@@ -94,8 +94,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Infrastructure: script store getTitleScreen/updateTitleScreen + TitleScreen.js runtime schema extension (image type, quit action, hoverColor fix, BGM)
-- [ ] 08-02-PLAN.md — TitleDesigner.vue full 3-panel designer rewrite + DraggableElement Shift aspect-ratio lock
+- [x] 08-01-PLAN.md — Infrastructure: script store getTitleScreen/updateTitleScreen + TitleScreen.js runtime schema extension (image type, quit action, hoverColor fix, BGM)
+- [x] 08-02-PLAN.md — TitleDesigner.vue full 3-panel designer rewrite + DraggableElement Shift aspect-ratio lock
 
 **UI hint**: yes
 
@@ -121,5 +121,5 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 |-------|----------------|--------|-----------|
 | 6. Asset Library Foundation | 2/2 | ✅ Complete | 2026-03-29 |
 | 7. Asset Library UI | 4/4 | ✅ Complete   | 2026-03-29 |
-| 8. Title Page Designer | 0/? | Not started | - |
+| 8. Title Page Designer | 2/2 | ✅ Complete | 2026-03-31 |
 | 9. Settings Overlay | 0/? | Not started | - |

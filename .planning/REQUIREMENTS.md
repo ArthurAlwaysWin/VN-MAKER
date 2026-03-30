@@ -34,18 +34,18 @@
 
 ### 标题页设计器 (TITLE)
 
-- [ ] **TITLE-01**: 1280×720 画布 + 三面板布局（左侧组件面板 / 中间画布 / 右侧属性面板）
-- [ ] **TITLE-02**: 组件面板包含 4 个预制按钮组件（开始游戏/继续游戏/设置/退出）
-- [ ] **TITLE-03**: 用户可将按钮组件从面板拖放到画布上自由定位
-- [ ] **TITLE-04**: 继续按钮在无存档时显示禁用状态预览（灰色 + 不可点击）
-- [ ] **TITLE-05**: 用户可选择标题页背景图片（从资源库选择）
-- [ ] **TITLE-06**: 用户可选择标题页 BGM（从资源库选择）
-- [ ] **TITLE-07**: 用户可添加文字标签元素到画布（可自定义文本内容和样式）
-- [ ] **TITLE-08**: 用户可添加装饰图片元素到画布（从资源库选择图片）
-- [ ] **TITLE-09**: 用户可自定义按钮文字和样式（颜色/字体/大小/悬停效果）
-- [ ] **TITLE-10**: 属性面板可编辑选中组件的位置/颜色/字体/大小
-- [ ] **TITLE-11**: 支持 Z-order 图层控制（上移/下移调整元素层级）
-- [ ] **TITLE-12**: 撤销/重做（Ctrl+Z/Y）+ 2s 防抖自动保存
+- [x] **TITLE-01**: 1280×720 画布 + 三面板布局（左侧组件面板 / 中间画布 / 右侧属性面板）
+- [x] **TITLE-02**: 组件面板包含 4 个预制按钮组件（开始游戏/继续游戏/设置/退出）
+- [x] **TITLE-03**: 用户可将按钮组件从面板拖放到画布上自由定位
+- [x] **TITLE-04**: 继续按钮在无存档时显示禁用状态预览（灰色 + 不可点击）
+- [x] **TITLE-05**: 用户可选择标题页背景图片（从资源库选择）
+- [x] **TITLE-06**: 用户可选择标题页 BGM（从资源库选择）
+- [x] **TITLE-07**: 用户可添加文字标签元素到画布（可自定义文本内容和样式）
+- [x] **TITLE-08**: 用户可添加装饰图片元素到画布（从资源库选择图片）
+- [x] **TITLE-09**: 用户可自定义按钮文字和样式（颜色/字体/大小/悬停效果）
+- [x] **TITLE-10**: 属性面板可编辑选中组件的位置/颜色/字体/大小
+- [x] **TITLE-11**: 支持 Z-order 图层控制（上移/下移调整元素层级）
+- [x] **TITLE-12**: 撤销/重做（Ctrl+Z/Y）+ 2s 防抖自动保存
 
 ### 设置页叠加层 (OVERLAY)
 
@@ -60,7 +60,7 @@
 
 ### 基础设施 (INFRA)
 
-- [ ] **INFRA-01**: TitleScreen.js 运行时数据格式对齐新设计器 schema（type/style 结构，兼容旧格式迁移）
+- [x] **INFRA-01**: TitleScreen.js 运行时数据格式对齐新设计器 schema（type/style 结构，兼容旧格式迁移）
 - [x] **INFRA-02**: fontLoader.js 共享模块在编辑器和引擎双进程独立加载自定义字体（FontFace API）
 - [x] **INFRA-03**: 实现资源管理 IPC 处理器（select-asset / import-assets / delete-asset / list-assets / load-font-metadata）
 - [x] **INFRA-04**: 所有新 IPC 调用解构 Vue reactive Proxy 为纯对象后再发送
@@ -108,18 +108,18 @@
 | ASSET-12 | Phase 6 | Complete |
 | ASSET-13 | Phase 7 | Complete |
 | ASSET-14 | Phase 7 | Complete |
-| TITLE-01 | Phase 8 | Pending |
-| TITLE-02 | Phase 8 | Pending |
-| TITLE-03 | Phase 8 | Pending |
-| TITLE-04 | Phase 8 | Pending |
-| TITLE-05 | Phase 8 | Pending |
-| TITLE-06 | Phase 8 | Pending |
-| TITLE-07 | Phase 8 | Pending |
-| TITLE-08 | Phase 8 | Pending |
-| TITLE-09 | Phase 8 | Pending |
-| TITLE-10 | Phase 8 | Pending |
-| TITLE-11 | Phase 8 | Pending |
-| TITLE-12 | Phase 8 | Pending |
+| TITLE-01 | Phase 8 | Complete |
+| TITLE-02 | Phase 8 | Complete |
+| TITLE-03 | Phase 8 | Complete |
+| TITLE-04 | Phase 8 | Complete |
+| TITLE-05 | Phase 8 | Complete |
+| TITLE-06 | Phase 8 | Complete |
+| TITLE-07 | Phase 8 | Complete |
+| TITLE-08 | Phase 8 | Complete |
+| TITLE-09 | Phase 8 | Complete |
+| TITLE-10 | Phase 8 | Complete |
+| TITLE-11 | Phase 8 | Complete |
+| TITLE-12 | Phase 8 | Complete |
 | OVERLAY-01 | Phase 9 | Pending |
 | OVERLAY-02 | Phase 9 | Pending |
 | OVERLAY-03 | Phase 9 | Pending |
@@ -128,7 +128,7 @@
 | OVERLAY-06 | Phase 9 | Pending |
 | OVERLAY-07 | Phase 9 | Pending |
 | OVERLAY-08 | Phase 9 | Pending |
-| INFRA-01 | Phase 8 | Pending |
+| INFRA-01 | Phase 8 | Complete |
 | INFRA-02 | Phase 6 | Complete |
 | INFRA-03 | Phase 6 | Complete |
 | INFRA-04 | Phase 6 | Complete |

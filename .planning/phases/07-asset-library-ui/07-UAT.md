@@ -1,5 +1,5 @@
 ---
-status: testing
+status: passed
 phase: 07-asset-library-ui
 source: [07-01-SUMMARY.md, 07-02-SUMMARY.md, 07-03-SUMMARY.md, 07-04-SUMMARY.md, 07-VERIFICATION.md]
 started: 2026-03-30T10:00:00Z
@@ -8,9 +8,7 @@ updated: 2026-03-30T10:00:00Z
 
 ## Current Test
 
-number: 8
-name: 表情导入（文件选择器）
-awaiting: next session
+All tests passed.
 
 ## Tests
 
@@ -48,18 +46,18 @@ note: prompt()在Electron不工作，改为自动生成ID；隐藏ID行(2ffd28f)
 
 ### 8. 表情导入（文件选择器）
 expected: 选中一个角色后，点击"+ 导入表情"按钮。弹出系统原生文件选择对话框（不是手动输入路径）。选择图片后，图片作为表情缩略图显示在角色的表情网格中。
-result: [pending — 下次session继续]
+result: pass
 
 ### 9. 表情右键操作
 expected: 右键点击一个表情缩略图，弹出菜单包含"重命名"和"删除"。重命名修改表情名称（不改变图片文件），删除弹出确认对话框。
-result: [pending — 下次session继续]
+result: pass
 
 ## Summary
 
 total: 9
-passed: 7
+passed: 9
 issues: 0
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 

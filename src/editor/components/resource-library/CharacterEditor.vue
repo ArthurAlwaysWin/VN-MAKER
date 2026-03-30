@@ -260,7 +260,6 @@ const exprEditRefs = {};
 const bgModalVisible = ref(false);
 const bgModalSrc = ref('');
 const bgModalFilename = ref('');
-const bgModalPendingImports = ref([]);
 
 const menuItems = [
   { label: '重命名', action: 'rename' },
@@ -302,33 +301,32 @@ function openBgRemoval(exprName) {
   const filename = exprPath.split('/').pop();
   bgModalSrc.value = `asset://${exprPath}`;
   bgModalFilename.value = filename;
-  bgModalPendingImports.value = [];
   bgModalVisible.value = true;
 }
 
-function advanceBgQueue() {
-  if (bgModalPendingImports.value.length > 0) {
-    const next = bgModalPendingImports.value.shift();
-    bgModalSrc.value = `asset://characters/${next}`;
-    bgModalFilename.value = next;
-    bgModalVisible.value = true;
-  }
-}
-
-function onBgRemovalDone() {
+function onBgRemovalDone({ newFilename, oldFilename }) {
   bgModalVisible.value = false;
   assets.loadCategory('characters');
-  advanceBgQueue();
+
+  // Update expression reference to point to the new .png (original file preserved on disk)
+  if (selectedChar.value && newFilename !== oldFilename) {
+    const exprs = selectedChar.value.expressions;
+    for (const [name, exprPath] of Object.entries(exprs)) {
+      if (exprPath === `characters/${oldFilename}`) {
+        exprs[name] = `characters/${newFilename}`;
+        break;
+      }
+    }
+    script.pushState();
+  }
 }
 
 function onBgRemovalSkip() {
   bgModalVisible.value = false;
-  advanceBgQueue();
 }
 
 function onBgRemovalCancel() {
   bgModalVisible.value = false;
-  bgModalPendingImports.value = [];
 }
 
 /**
@@ -369,14 +367,10 @@ async function handleExpressionFiles(event) {
     }
     script.pushState();
 
-    // Open bg removal modal for files without alpha, one at a time
     const noAlphaFiles = result.imported.filter(item => item.noAlpha);
     if (noAlphaFiles.length > 0) {
-      const first = noAlphaFiles[0];
-      bgModalPendingImports.value = noAlphaFiles.slice(1).map(f => f.saved);
-      bgModalSrc.value = `asset://characters/${first.saved}`;
-      bgModalFilename.value = first.saved;
-      bgModalVisible.value = true;
+      const names = noAlphaFiles.map(f => f.saved).join('、');
+      alert(`⚠️ 以下图片没有透明背景：${names}\n\n可右键点击该表情，选择「去背景」来去除纯色背景。`);
     }
   }
   if (result.errors?.length > 0) {

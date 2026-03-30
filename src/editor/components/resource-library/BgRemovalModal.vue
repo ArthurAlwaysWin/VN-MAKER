@@ -236,14 +236,19 @@ async function confirmRemoval() {
       reader.readAsDataURL(blob);
     });
 
+    // Save as .png — if original is already .png, add _nobg suffix to preserve original
+    const baseName = props.filename.replace(/\.[^.]+$/, '');
+    const ext = props.filename.split('.').pop().toLowerCase();
+    const newFilename = ext === 'png' ? `${baseName}_nobg.png` : `${baseName}.png`;
+
     const result = await window.ipcRenderer.invoke('save-processed-image', {
       category: props.category,
-      filename: props.filename,
+      filename: newFilename,
       dataBase64: base64,
     });
 
     if (result.success) {
-      emit('done');
+      emit('done', { newFilename, oldFilename: props.filename });
     } else {
       alert(`保存失败: ${result.error}`);
     }

@@ -108,6 +108,16 @@
       @select="onExprMenuAction"
       @close="menuVisible = false"
     />
+
+    <BgRemovalModal
+      :visible="bgModalVisible"
+      :image-src="bgModalSrc"
+      :filename="bgModalFilename"
+      category="characters"
+      @done="onBgRemovalDone"
+      @skip="onBgRemovalSkip"
+      @cancel="onBgRemovalCancel"
+    />
   </div>
 </template>
 
@@ -124,6 +134,7 @@ import { useScriptStore } from '../../stores/script.js';
 import { useAssetStore } from '../../stores/assets.js';
 import InlineEdit from './InlineEdit.vue';
 import ContextMenu from './ContextMenu.vue';
+import BgRemovalModal from './BgRemovalModal.vue';
 
 const script = useScriptStore();
 const assets = useAssetStore();
@@ -246,8 +257,14 @@ const menuY = ref(0);
 const menuTarget = ref('');
 const exprEditRefs = {};
 
+const bgModalVisible = ref(false);
+const bgModalSrc = ref('');
+const bgModalFilename = ref('');
+const bgModalPendingImports = ref([]);
+
 const menuItems = [
   { label: '重命名', action: 'rename' },
+  { label: '去背景', action: 'remove-bg' },
   { separator: true },
   { label: '删除', action: 'delete', destructive: true },
 ];
@@ -273,7 +290,48 @@ function onExprMenuAction(action) {
     exprEditRefs[menuTarget.value].startEdit();
   } else if (action === 'delete') {
     deleteExpression(menuTarget.value);
+  } else if (action === 'remove-bg') {
+    openBgRemoval(menuTarget.value);
   }
+}
+
+function openBgRemoval(exprName) {
+  if (!selectedChar.value) return;
+  const exprPath = selectedChar.value.expressions[exprName];
+  if (!exprPath) return;
+  const filename = exprPath.split('/').pop();
+  bgModalSrc.value = `asset://${exprPath}`;
+  bgModalFilename.value = filename;
+  bgModalPendingImports.value = [];
+  bgModalVisible.value = true;
+}
+
+function onBgRemovalDone() {
+  bgModalVisible.value = false;
+  assets.loadCategory('characters');
+
+  if (bgModalPendingImports.value.length > 0) {
+    const next = bgModalPendingImports.value.shift();
+    bgModalSrc.value = `asset://characters/${next}`;
+    bgModalFilename.value = next;
+    bgModalVisible.value = true;
+  }
+}
+
+function onBgRemovalSkip() {
+  bgModalVisible.value = false;
+
+  if (bgModalPendingImports.value.length > 0) {
+    const next = bgModalPendingImports.value.shift();
+    bgModalSrc.value = `asset://characters/${next}`;
+    bgModalFilename.value = next;
+    bgModalVisible.value = true;
+  }
+}
+
+function onBgRemovalCancel() {
+  bgModalVisible.value = false;
+  bgModalPendingImports.value = [];
 }
 
 /**
@@ -307,15 +365,20 @@ async function handleExpressionFiles(event) {
 
   const result = await assets.importAssets('characters', filePaths);
   if (result.success && result.imported.length > 0) {
-    const noAlphaFiles = result.imported.filter(item => item.noAlpha);
     for (const item of result.imported) {
       const exprName = item.saved.replace(/\.[^.]+$/, '');
       selectedChar.value.expressions[exprName] = `characters/${item.saved}`;
     }
     script.pushState();
+
+    // Open bg removal modal for files without alpha, one at a time
+    const noAlphaFiles = result.imported.filter(item => item.noAlpha);
     if (noAlphaFiles.length > 0) {
-      const names = noAlphaFiles.map(f => f.saved).join('、');
-      alert(`⚠️ 以下图片没有透明背景：${names}\n\n角色立绘建议使用透明 PNG 或 WebP 格式，否则在游戏场景中会显示矩形底色。`);
+      const first = noAlphaFiles[0];
+      bgModalPendingImports.value = noAlphaFiles.slice(1).map(f => f.saved);
+      bgModalSrc.value = `asset://characters/${first.saved}`;
+      bgModalFilename.value = first.saved;
+      bgModalVisible.value = true;
     }
   }
   if (result.errors?.length > 0) {

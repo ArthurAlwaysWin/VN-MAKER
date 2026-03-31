@@ -62,7 +62,7 @@ See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
 
 - [x] **Phase 10: Page Data Schema & Engine Adaptation** — Define page-based data format and adapt engine to play it (completed 2026-03-31)
 - [x] **Phase 11: PPT Page Editor** — Slide sidebar + WYSIWYG canvas editor for creating/editing game pages (completed 2026-04-01)
-- [ ] **Phase 12: Resource Pickers** — Visual pickers to select characters, expressions, backgrounds, and audio from the resource library
+- [x] **Phase 12: Resource Pickers** — Visual pickers to select characters, expressions, backgrounds, and audio from the resource library (completed 2026-03-31)
 - [ ] **Phase 13: Transitions & Branching** — Page transition effects and choice-branch pages
 - [ ] **Phase 14: Editor Test Play** — Inline game preview for testing pages without leaving the editor
 
@@ -156,6 +156,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 10. Page Data Schema & Engine Adaptation | 2/2 | Complete   | 2026-03-31 |
 | 11. PPT Page Editor | 3/3 | Complete   | 2026-04-01 |
-| 12. Resource Pickers | 0/? | Not started | - |
+| 12. Resource Pickers | 0/? | Complete    | 2026-03-31 |
 | 13. Transitions & Branching | 0/? | Not started | - |
 | 14. Editor Test Play | 0/? | Not started | - |

@@ -114,7 +114,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 12-01-PLAN.md — Composable state refs + CharacterPicker expression thumbnail grid
+- [x] 12-01-PLAN.md — Composable state refs + CharacterPicker expression thumbnail grid
 - [ ] 12-02-PLAN.md — AudioPicker component + PageInspector picker integration + PageEditor wiring
 
 #### Phase 13: Transitions & Branching

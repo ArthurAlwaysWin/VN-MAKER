@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3
-milestone_name: PPT Page Editor & Resource Pickers
-status: planning
+milestone: v0.1
+milestone_name: — 设置页设计器 ✅
+status: executing
 stopped_at: Phase 12 planned — 2 plans ready for execution
-last_updated: "2026-04-01"
-last_activity: 2026-04-01 -- Phase 12 planning complete
+last_updated: "2026-03-31T23:38:57.727Z"
+last_activity: 2026-03-31 -- Phase 12 execution started
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 2
   percent: 40
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 10 — page-data-schema-engine-adaptation
+**Current focus:** Phase 12 — resource-pickers
 
 ## Current Position
 
-Phase: 12 (resource-pickers) — PLANNED, ready to execute
-Plan: 0 of 2
-Status: Phase 12 plans created, awaiting execution
-Last activity: 2026-04-01 -- Phase 12 planning complete
+Phase: 12 (resource-pickers) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 12
+Last activity: 2026-03-31 -- Phase 12 execution started
 
 Progress: [████░░░░░░] 40% (Phases 10-11 complete, Phase 12 planned)
 

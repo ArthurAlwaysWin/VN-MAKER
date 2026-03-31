@@ -110,11 +110,12 @@ Plans:
   2. Expression picker shows a thumbnail grid of the selected character's available expressions
   3. Background picker shows visual previews of all imported backgrounds; selecting one applies it to the current page
   4. Audio picker lists BGM/SE files with inline play-preview; selecting one assigns it to the page
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md — Composable state refs + CharacterPicker expression thumbnail grid
+- [ ] 12-02-PLAN.md — AudioPicker component + PageInspector picker integration + PageEditor wiring
 
 #### Phase 13: Transitions & Branching
 **Goal**: Users can configure page transition effects and create choice-branch pages with jump destinations

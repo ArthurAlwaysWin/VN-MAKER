@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Phase 11 all plans executed — PPT page editor complete
-last_updated: "2026-03-31T12:29:48.910Z"
-last_activity: 2026-03-31 -- Phase 10 execution started
+milestone: v0.3
+milestone_name: PPT Page Editor & Resource Pickers
+status: planning
+stopped_at: Phase 12 planned — 2 plans ready for execution
+last_updated: "2026-04-01"
+last_activity: 2026-04-01 -- Phase 12 planning complete
 progress:
-  total_phases: 2
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 2
-  percent: 0
+  total_phases: 5
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 5
+  percent: 40
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Current Position
 
-Phase: 10 (page-data-schema-engine-adaptation) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 10
-Last activity: 2026-03-31 -- Phase 10 execution started
+Phase: 12 (resource-pickers) — PLANNED, ready to execute
+Plan: 0 of 2
+Status: Phase 12 plans created, awaiting execution
+Last activity: 2026-04-01 -- Phase 12 planning complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████░░░░░░] 40% (Phases 10-11 complete, Phase 12 planned)
 
 ## Performance Metrics
 
@@ -68,7 +68,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-31T12:29:48.902Z
-Stopped at: Phase 11 all plans executed — PPT page editor complete
-Resume hint: Run /gsd-execute-phase 10 to execute Phase 10
-Next action: Execute Phase 10 (Page Data Schema & Engine Adaptation)
+Last session: 2026-04-01
+Stopped at: Phase 12 planned — 2 plans ready for execution
+Resume hint: Run /gsd-execute-phase 12 to execute Phase 12 (Resource Pickers)
+Next action: Execute Phase 12 Plan 12-01 (CharacterPicker expression grid) then Plan 12-02 (AudioPicker + PageInspector integration)

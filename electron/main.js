@@ -95,9 +95,19 @@ function defaultScript() {
     scenes: {
       start: {
         name: '第一幕',
-        commands: [
-          { type: 'dialogue', speaker: null, text: '故事从这里开始...' },
-          { type: 'end' }
+        pages: [
+          {
+            id: 'p1',
+            type: 'normal',
+            background: null,
+            characters: [],
+            bgm: null,
+            se: null,
+            dialogues: [
+              { speaker: null, text: '故事从这里开始...', expression: null }
+            ],
+            transition: { type: 'fade', duration: 800 }
+          }
         ]
       }
     }

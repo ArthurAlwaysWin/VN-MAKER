@@ -58,7 +58,7 @@ import WelcomeScreen from './views/WelcomeScreen.vue';
 import CreateProjectWizard from './views/CreateProjectWizard.vue';
 import CreateProjectQuick from './views/CreateProjectQuick.vue';
 import TabBar from './components/TabBar.vue';
-import Scenes from './views/Scenes.vue';
+import PageEditor from './views/PageEditor.vue';
 import TitleDesigner from './views/TitleDesigner.vue';
 import SettingsDesigner from './views/SettingsDesigner.vue';
 import ResourceLibrary from './views/ResourceLibrary.vue';
@@ -83,7 +83,7 @@ const tabs = [
 ];
 
 const tabComponents = {
-  'scenes': markRaw(Scenes),
+  'scenes': markRaw(PageEditor),
   'title': markRaw(TitleDesigner),
   'settings-design': markRaw(SettingsDesigner),
   'resource-library': markRaw(ResourceLibrary),

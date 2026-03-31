@@ -39,16 +39,14 @@
 - ✓ 设置组件属性编辑（位置/颜色/字体/大小） — v0.1
 - ✓ 关闭按钮（支持 × 图标/文字两种模式） — v0.1
 - ✓ 窗口模式三选一（窗口/全屏/无边框），radio 按钮样式 — v0.1
-- ✓ 保存按钮 💾 添加到工具栏 — v0.1
+- ✓ 资源库重构：角色+素材+字体统一管理，文件格式验证，自动命名，角色表情管理 — v0.2
+- ✓ 自定义字体导入：整合到资源库，双窗口 FontFace 加载 — v0.2
+- ✓ 标题页设计器：3 面板画布 + 4 预制按钮 + 背景/BGM 选择 + 引擎格式迁移 — v0.2
+- ✓ 设置页叠加层：右侧滑入覆盖层 + 双模式背景 + ESC 优先级链 — v0.2
 
-### Active — v0.2: 资源库 & 标题页 & 设置叠加层
+### Active — v0.3: (待规划)
 
-<!-- 当前里程碑正式需求 -->
-
-- [x] **资源库重构**：角色+素材+字体统一管理，文件格式验证，自动命名（背景-1），角色表情/差分数据管理（导入/分组/命名） — Phase 6 后端 + Phase 7 UI 完成
-- [x] **自定义字体导入**：整合到资源库，字体作为核心资产，支持导入自定义字体文件到项目中使用 — Phase 6 后端 + Phase 7 UI 完成
-- [ ] **标题页设计器**：参考设置页设计器组件拖放模式重新设计，4 个预制按钮组件（开始游戏/继续游戏/设置/退出），画布 + 背景/BGM 选择
-- [ ] **设置页叠加层模式**：设置页全屏覆盖在当前游戏页面上方，滑入/滑出动画，× 关闭按钮
+<!-- 下一里程碑需求 — 通过 /gsd-new-milestone 定义 -->
 
 ### Future — 后续候选
 
@@ -71,12 +69,16 @@
 ## Context
 
 - **技术栈**：Electron 41 + Vue 3 + Pinia + Vite，纯 JavaScript（ES Modules），无 TypeScript
-- **编辑器架构**：component :is + keep-alive 切换标签页，无 vue-router
+- **编辑器架构**：component :is + keep-alive 切换标签页（5 个 tab），无 vue-router
 - **数据格式**：文件夹项目（project.json + script.json + assets/）
 - **引擎架构**：纯 JS，事件驱动（自定义 EventEmitter），DOM 渲染
 - **画布基础设施**：标题页 TitleDesigner.vue + 设置页 SettingsDesigner.vue 均可作为参考
 - **设置页数据**：`ui.settingsScreen = { background, elements[] }` 存在 script.json 中
-- **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认设置页
+- **标题页数据**：`ui.titleScreen = { background, bgm, elements[] }` 存在 script.json 中
+- **资源库**：5 类资源（背景/角色/音频/字体/通用），统一 Pinia store + IPC 管理
+- **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认页面
+- **设置页覆盖层**：右侧滑入 overlay，ESC 优先级链（settings > game menu），stack-based 层管理
+- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）
 
 ### 已知问题
 
@@ -110,18 +112,21 @@
 | fontLoader 独立模块 + asset:// URL | 编辑器和引擎窗口独立加载字体 | ✓ Good |
 | Pinia asset store 统一 IPC 封装 | 所有资源操作走 store，自动 Proxy 解构 | ✓ Good |
 
+| 标题页设计器 3 面板 + 4 预制按钮 | 复用设置页设计器模式，统一设计体验 | ✓ Good |
+| TitleScreen.js schema 前向兼容迁移 | 不破坏旧项目 | ✓ Good |
+| 设置页右侧滑入覆盖层 | 游戏场景持续可见，沉浸感更强 | ✓ Good |
+| ESC 优先级链（settings > menu > game） | 统一按键行为，title screen 也生效 | ✓ Good |
+| Stack-based 层管理（不隐藏底层菜单） | 覆盖层关闭后自然恢复，无需额外逻辑 | ✓ Good |
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-## Current Milestone: v0.2 资源库 & 标题页 & 设置叠加层
+## Current State
 
-**Goal:** 统一资源管理体系，重做标题页设计器，设置页改为游戏内叠加层模式
+v0.2 里程碑已完成。2 个里程碑共 9 个 phase 全部交付。
 
-**Target features:**
-- 资源库重构 — 角色+素材+字体统一管理，表情差分数据管理
-- 标题页设计器 — 参考设置页设计器组件拖放模式重新设计
-- 设置页叠加层 — 全屏覆盖 + 滑入/滑出动画
+**下一步：** 运行 `/gsd-new-milestone` 规划 v0.3 里程碑。
 
 ---
-*Last updated: 2026-03-30 — Phase 7 (Asset Library UI) complete*
+*Last updated: 2026-03-31 after v0.2 milestone*

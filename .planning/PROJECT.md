@@ -44,9 +44,19 @@
 - ✓ 标题页设计器：3 面板画布 + 4 预制按钮 + 背景/BGM 选择 + 引擎格式迁移 — v0.2
 - ✓ 设置页叠加层：右侧滑入覆盖层 + 双模式背景 + ESC 优先级链 — v0.2
 
-### Active — v0.3: (待规划)
+### Active — v0.3: PPT 式游戏内容编辑器
 
-<!-- 下一里程碑需求 — 通过 /gsd-new-milestone 定义 -->
+<!-- 需求将在 REQUIREMENTS.md 中详细定义 -->
+
+**Goal:** 将游戏内容编辑器从命令时间线模式升级为 PPT 页面模式，让用户像编辑幻灯片一样创建游戏内容。
+
+**Target features:**
+- PPT 页面列表（缩略图侧栏 + 可视化画布编辑）
+- 资源选择器（角色/表情/背景/音频从资源库选取）
+- 页面转场效果（淡入淡出/滑动）
+- 选择分支页面（选项连接到不同分支）
+- 编辑器内试玩（一键测试游戏）
+- 数据格式迁移（命令式 → 页面式，兼容旧项目）
 
 ### Future — 后续候选
 
@@ -124,9 +134,9 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.2 里程碑已完成。2 个里程碑共 9 个 phase 全部交付。
+v0.3 里程碑已启动。PPT 式游戏内容编辑器 — 将时间线命令模式升级为页面式可视化编辑。
 
-**下一步：** 运行 `/gsd-new-milestone` 规划 v0.3 里程碑。
+**下一步：** 定义 REQUIREMENTS.md 详细需求后运行 roadmapper。
 
 ---
-*Last updated: 2026-03-31 after v0.2 milestone*
+*Last updated: 2026-03-31 after v0.3 milestone started*

@@ -1,8 +1,14 @@
 /**
- * ScriptEngine — Core game script interpreter
+ * ScriptEngine — Page-based game script interpreter
  *
- * Loads JSON game scripts and executes commands sequentially.
- * Emits events for each command type so UI modules can react.
+ * Loads JSON game scripts with page-based format and plays them
+ * sequentially. Each page is a self-contained visual state (background,
+ * characters, BGM) with a dialogues[] array that advances on player click.
+ *
+ * Page types:
+ *   'normal'    — Visual state + dialogues (player clicks to advance)
+ *   'choice'    — Visual state + prompt/options (player selects an option)
+ *   'condition' — Variable check → jump to target scene (auto, no visual)
  *
  * Events emitted:
  *   'dialogue'        — { speaker, speakerName, speakerColor, text }
@@ -16,6 +22,7 @@
  *   'choice'          — { prompt, options }
  *   'end'             — {}
  *   'scene_enter'     — { sceneId, sceneName }
+ *   'page_enter'      — { sceneId, pageIndex, page }
  */
 
 import { EventEmitter } from './EventEmitter.js';
@@ -30,13 +37,16 @@ export class ScriptEngine extends EventEmitter {
     /** @type {string|null} Current scene ID */
     this.currentScene = null;
 
-    /** @type {number} Current command index within the scene */
-    this.commandIndex = 0;
+    /** @type {number} Current page index within the scene's pages[] */
+    this.pageIndex = 0;
+
+    /** @type {number} Current dialogue index within the page's dialogues[] */
+    this.dialogueIndex = 0;
 
     /** @type {Map<string, *>} Game variables (flags, affection, etc.) */
     this.variables = new Map();
 
-    /** @type {boolean} Whether the engine is waiting for player input (choice, dialogue click) */
+    /** @type {boolean} Whether the engine is waiting for player input */
     this.waiting = false;
 
     /** @type {boolean} Whether the game has ended */
@@ -44,6 +54,14 @@ export class ScriptEngine extends EventEmitter {
 
     /** @type {Array<{speaker: string|null, speakerName: string|null, text: string}>} */
     this.history = [];
+
+    // ─── Render state tracking (for diffing page transitions) ───
+    /** @type {Set<string>} Character IDs visible on previous page */
+    this._prevPageCharIds = new Set();
+    /** @type {string|null} Currently playing BGM file path */
+    this._currentBgmFile = null;
+    /** @type {string|null} Currently displayed background path */
+    this._currentBg = null;
   }
 
   // ─── Loading ──────────────────────────────────────────────
@@ -56,7 +74,7 @@ export class ScriptEngine extends EventEmitter {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load script: ${res.status}`);
     this.script = await res.json();
-    console.log(`[ScriptEngine] Loaded: "${this.script.meta.title}" v${this.script.meta.version}`);
+    console.log(`[ScriptEngine] Loaded: "${this.script.meta?.title || 'Untitled'}" v${this.script.meta?.version || '?'}`);
   }
 
   // ─── Playback control ────────────────────────────────────
@@ -69,19 +87,30 @@ export class ScriptEngine extends EventEmitter {
     this.variables.clear();
     this.history = [];
     this.ended = false;
+    this._resetRenderState();
     this._enterScene(sceneId);
   }
 
   /**
-   * Advance to the next command. Call this when player clicks / taps.
-   * No-op if the engine is not waiting for a click.
+   * Advance to next dialogue or next page. Called on player click/tap.
+   * No-op if engine is not waiting for a click.
    */
   next() {
     if (this.ended) return;
     if (!this.waiting) return;
     this.waiting = false;
-    this.commandIndex++;
-    this._executeCurrentCommand();
+
+    const page = this._currentPage();
+    if (!page || page.type !== 'normal') return;
+
+    // More dialogues in this page? → advance dialogue
+    if (this.dialogueIndex < page.dialogues.length - 1) {
+      this.dialogueIndex++;
+      this._playCurrentDialogue();
+    } else {
+      // All dialogues done → advance to next page
+      this._advancePage();
+    }
   }
 
   /**
@@ -90,10 +119,10 @@ export class ScriptEngine extends EventEmitter {
    */
   selectChoice(optionIndex) {
     if (this.ended) return;
-    const cmd = this._currentCommand();
-    if (!cmd || cmd.type !== 'choice') return;
+    const page = this._currentPage();
+    if (!page || page.type !== 'choice') return;
 
-    const option = cmd.options[optionIndex];
+    const option = page.options[optionIndex];
     if (!option) return;
 
     // Set variables from choice
@@ -107,11 +136,10 @@ export class ScriptEngine extends EventEmitter {
     this.waiting = false;
 
     // Jump to target scene
-    if (option.jump) {
-      this._enterScene(option.jump);
+    if (option.target) {
+      this._enterScene(option.target);
     } else {
-      this.commandIndex++;
-      this._executeCurrentCommand();
+      this._advancePage();
     }
   }
 
@@ -123,7 +151,8 @@ export class ScriptEngine extends EventEmitter {
   getState() {
     return {
       currentScene: this.currentScene,
-      commandIndex: this.commandIndex,
+      pageIndex: this.pageIndex,
+      dialogueIndex: this.dialogueIndex,
       variables: Object.fromEntries(this.variables),
       history: [...this.history],
     };
@@ -135,17 +164,54 @@ export class ScriptEngine extends EventEmitter {
    */
   restoreState(state) {
     this.currentScene = state.currentScene;
-    this.commandIndex = state.commandIndex;
+    this.pageIndex = state.pageIndex ?? 0;
+    this.dialogueIndex = state.dialogueIndex ?? 0;
     this.variables = new Map(Object.entries(state.variables || {}));
     this.history = state.history || [];
     this.ended = false;
     this.waiting = false;
   }
 
+  /**
+   * Clear render tracking state. Call before renderCurrentPage()
+   * after restoreState() so the first render doesn't diff against
+   * stale previous-page data.
+   */
+  resetRenderState() {
+    this._resetRenderState();
+  }
+
+  /**
+   * Render the current page's visual state and start its dialogue/choice.
+   * Public method for use by main.js after restoreState + resetRenderState.
+   */
+  renderCurrentPage() {
+    const page = this._currentPage();
+    if (!page) return;
+
+    if (page.type === 'normal') {
+      this._renderPage(page);
+      this._playCurrentDialogue();
+    } else if (page.type === 'choice') {
+      this._renderPage(page);
+      this._execChoice(page);
+    }
+    // condition pages have no visual — should not be a restore target
+  }
+
   // ─── Internal ─────────────────────────────────────────────
 
   /**
-   * Enter a scene and start executing from command 0
+   * @private
+   */
+  _resetRenderState() {
+    this._prevPageCharIds = new Set();
+    this._currentBgmFile = null;
+    this._currentBg = null;
+  }
+
+  /**
+   * Enter a scene and start from page 0
    * @param {string} sceneId
    * @private
    */
@@ -156,218 +222,237 @@ export class ScriptEngine extends EventEmitter {
       return;
     }
     this.currentScene = sceneId;
-    this.commandIndex = 0;
+    this.pageIndex = 0;
+    this.dialogueIndex = 0;
     this.emit('scene_enter', { sceneId, sceneName: scene.name });
-    this._executeCurrentCommand();
+    this._processCurrentPage();
   }
 
   /**
-   * @returns {Object|null} Current command object
+   * @returns {Object|null} Current page object
    * @private
    */
-  _currentCommand() {
+  _currentPage() {
     const scene = this.script.scenes[this.currentScene];
-    if (!scene) return null;
-    return scene.commands[this.commandIndex] || null;
+    if (!scene || !scene.pages) return null;
+    return scene.pages[this.pageIndex] || null;
   }
 
   /**
-   * Execute the command at the current index. Auto-advances for non-blocking commands.
+   * Process the current page based on its type
    * @private
    */
-  _executeCurrentCommand() {
-    const cmd = this._currentCommand();
-    if (!cmd) {
-      // Ran out of commands in this scene — treat as end
-      console.log('[ScriptEngine] Scene ended (no more commands)');
+  _processCurrentPage() {
+    const page = this._currentPage();
+    if (!page) {
+      // No more pages in this scene
+      const scene = this.script.scenes[this.currentScene];
+      if (scene?.next) {
+        this._enterScene(scene.next);
+      } else {
+        this._execEnd();
+      }
       return;
     }
 
-    switch (cmd.type) {
-      case 'dialogue':
-        this._execDialogue(cmd);
-        break;
-      case 'show_character':
-        this._execShowCharacter(cmd);
-        break;
-      case 'hide_character':
-        this._execHideCharacter(cmd);
-        break;
-      case 'set_expression':
-        this._execSetExpression(cmd);
-        break;
-      case 'set_background':
-        this._execSetBackground(cmd);
-        break;
-      case 'play_bgm':
-        this._execPlayBgm(cmd);
-        break;
-      case 'stop_bgm':
-        this._execStopBgm(cmd);
-        break;
-      case 'play_se':
-        this._execPlaySe(cmd);
+    switch (page.type) {
+      case 'normal':
+        this._renderPage(page);
+        this.dialogueIndex = 0;
+        this._playCurrentDialogue();
         break;
       case 'choice':
-        this._execChoice(cmd);
-        break;
-      case 'jump':
-        this._execJump(cmd);
-        break;
-      case 'set_variable':
-        this._execSetVariable(cmd);
+        this._renderPage(page);
+        this._execChoice(page);
         break;
       case 'condition':
-        this._execCondition(cmd);
-        break;
-      case 'end':
-        this._execEnd();
+        this._execCondition(page);
         break;
       default:
-        console.warn(`[ScriptEngine] Unknown command type: ${cmd.type}`);
-        this.commandIndex++;
-        this._executeCurrentCommand();
+        console.warn(`[ScriptEngine] Unknown page type: ${page.type}`);
+        this._advancePage();
     }
   }
 
-  // ─── Command executors ────────────────────────────────────
+  /**
+   * Render a page's visual state: background, characters, BGM, SE.
+   * Uses diffing against previous page to avoid unnecessary transitions.
+   * @param {Object} page
+   * @private
+   */
+  _renderPage(page) {
+    this.emit('page_enter', {
+      sceneId: this.currentScene,
+      pageIndex: this.pageIndex,
+      page,
+    });
 
-  _execDialogue(cmd) {
-    const char = cmd.speaker ? this.script.characters[cmd.speaker] : null;
+    const transition = page.transition?.type || 'fade';
+    const duration = page.transition?.duration || 800;
+
+    // ─── Background (only emit if changed) ───
+    if (page.background && page.background !== this._currentBg) {
+      this.emit('set_background', {
+        image: page.background,
+        transition,
+        duration,
+      });
+      this._currentBg = page.background;
+    }
+
+    // ─── Characters (diff enter/exit) ───
+    const currentCharIds = new Set((page.characters || []).map(c => c.id));
+
+    // Hide characters no longer on this page
+    for (const id of this._prevPageCharIds) {
+      if (!currentCharIds.has(id)) {
+        this.emit('hide_character', {
+          id,
+          transition: 'fade',
+          duration: 400,
+        });
+      }
+    }
+
+    // Show/update characters on this page
+    for (const char of (page.characters || [])) {
+      const charDef = this.script.characters[char.id];
+      const wasVisible = this._prevPageCharIds.has(char.id);
+
+      this.emit('show_character', {
+        id: char.id,
+        expression: char.expression,
+        position: char.position || 'center',
+        x: char.x,
+        y: char.y,
+        scale: char.scale ?? 1,
+        transition: wasVisible ? 'none' : 'fade',
+        duration: wasVisible ? 0 : 500,
+        image: charDef?.expressions?.[char.expression] || '',
+      });
+    }
+
+    this._prevPageCharIds = currentCharIds;
+
+    // ─── BGM (only change if file differs) ───
+    if (page.bgm && page.bgm.file) {
+      if (this._currentBgmFile !== page.bgm.file) {
+        this.emit('play_bgm', {
+          file: page.bgm.file,
+          volume: page.bgm.volume ?? 0.5,
+          fadeIn: 0,
+        });
+        this._currentBgmFile = page.bgm.file;
+      }
+    } else if (this._currentBgmFile) {
+      // Page has no BGM → stop current
+      this.emit('stop_bgm', { fadeOut: 500 });
+      this._currentBgmFile = null;
+    }
+
+    // ─── Sound Effect (play every time page renders) ───
+    if (page.se && page.se.file) {
+      this.emit('play_se', { file: page.se.file });
+    }
+  }
+
+  /**
+   * Play the dialogue at the current dialogueIndex
+   * @private
+   */
+  _playCurrentDialogue() {
+    const page = this._currentPage();
+    if (!page || page.type !== 'normal') return;
+
+    if (!page.dialogues || this.dialogueIndex >= page.dialogues.length) {
+      // No dialogues or empty → advance to next page
+      this._advancePage();
+      return;
+    }
+
+    const dlg = page.dialogues[this.dialogueIndex];
+    const char = dlg.speaker ? this.script.characters[dlg.speaker] : null;
+
+    // Handle mid-dialogue expression change for the speaking character
+    if (dlg.expression && dlg.speaker) {
+      const charDef = this.script.characters[dlg.speaker];
+      this.emit('set_expression', {
+        id: dlg.speaker,
+        expression: dlg.expression,
+        image: charDef?.expressions?.[dlg.expression] || '',
+      });
+    }
+
+    // Emit dialogue event
     const data = {
-      speaker: cmd.speaker,
+      speaker: dlg.speaker,
       speakerName: char?.name || null,
       speakerColor: char?.color || null,
-      text: cmd.text,
-      style: cmd.style || null,
+      text: dlg.text,
     };
+
     this.history.push({
-      speaker: cmd.speaker,
+      speaker: dlg.speaker,
       speakerName: data.speakerName,
-      text: cmd.text,
+      text: dlg.text,
     });
+
     this.waiting = true;
     this.emit('dialogue', data);
   }
 
-  _execShowCharacter(cmd) {
-    const char = this.script.characters[cmd.id];
-    this.emit('show_character', {
-      id: cmd.id,
-      expression: cmd.expression,
-      position: cmd.position || 'center',
-      x: cmd.x,
-      y: cmd.y,
-      scale: cmd.scale,
-      transition: cmd.transition || 'fade',
-      duration: cmd.duration || 500,
-      image: char?.expressions?.[cmd.expression] || '',
-    });
-    // Auto-advance after brief delay
-    this.commandIndex++;
-    setTimeout(() => this._executeCurrentCommand(), 50);
+  /**
+   * Advance to the next page in the current scene
+   * @private
+   */
+  _advancePage() {
+    this.pageIndex++;
+    this.dialogueIndex = 0;
+    this._processCurrentPage();
   }
 
-  _execHideCharacter(cmd) {
-    this.emit('hide_character', {
-      id: cmd.id,
-      transition: cmd.transition || 'fade',
-      duration: cmd.duration || 400,
-    });
-    this.commandIndex++;
-    setTimeout(() => this._executeCurrentCommand(), 50);
-  }
+  // ─── Page type executors ──────────────────────────────────
 
-  _execSetExpression(cmd) {
-    const char = this.script.characters[cmd.id];
-    this.emit('set_expression', {
-      id: cmd.id,
-      expression: cmd.expression,
-      image: char?.expressions?.[cmd.expression] || '',
-    });
-    this.commandIndex++;
-    this._executeCurrentCommand();
-  }
-
-  _execSetBackground(cmd) {
-    this.emit('set_background', {
-      image: cmd.image,
-      transition: cmd.transition || 'fade',
-      duration: cmd.duration || 800,
-    });
-    // Wait for transition before advancing
-    this.commandIndex++;
-    setTimeout(() => this._executeCurrentCommand(), cmd.duration || 800);
-  }
-
-  _execPlayBgm(cmd) {
-    this.emit('play_bgm', {
-      file: cmd.file,
-      volume: cmd.volume ?? 0.5,
-      fadeIn: cmd.fadeIn || 0,
-    });
-    this.commandIndex++;
-    this._executeCurrentCommand();
-  }
-
-  _execStopBgm(cmd) {
-    this.emit('stop_bgm', {
-      fadeOut: cmd.fadeOut || 0,
-    });
-    this.commandIndex++;
-    this._executeCurrentCommand();
-  }
-
-  _execPlaySe(cmd) {
-    this.emit('play_se', { file: cmd.file });
-    this.commandIndex++;
-    this._executeCurrentCommand();
-  }
-
-  _execChoice(cmd) {
+  /**
+   * @private
+   */
+  _execChoice(page) {
     this.waiting = true;
     this.emit('choice', {
-      prompt: cmd.prompt,
-      options: cmd.options,
-      layout: cmd.layout || 'default',
-      style: cmd.style || null,
+      prompt: page.prompt,
+      options: page.options,
     });
   }
 
-  _execJump(cmd) {
-    this._enterScene(cmd.target);
-  }
-
-  _execSetVariable(cmd) {
-    this.variables.set(cmd.name, cmd.value);
-    this.commandIndex++;
-    this._executeCurrentCommand();
-  }
-
-  _execCondition(cmd) {
-    const val = this.variables.get(cmd.variable) ?? 0;
+  /**
+   * @private
+   */
+  _execCondition(page) {
+    const val = this.variables.get(page.variable) ?? 0;
     let result = false;
 
-    switch (cmd.operator) {
-      case '==':  result = val === cmd.value; break;
-      case '!=':  result = val !== cmd.value; break;
-      case '>':   result = val > cmd.value;   break;
-      case '>=':  result = val >= cmd.value;  break;
-      case '<':   result = val < cmd.value;   break;
-      case '<=':  result = val <= cmd.value;  break;
+    switch (page.operator) {
+      case '==':  result = val === page.value; break;
+      case '!=':  result = val !== page.value; break;
+      case '>':   result = val > page.value;   break;
+      case '>=':  result = val >= page.value;  break;
+      case '<':   result = val < page.value;   break;
+      case '<=':  result = val <= page.value;  break;
       default:
-        console.warn(`[ScriptEngine] Unknown operator: ${cmd.operator}`);
+        console.warn(`[ScriptEngine] Unknown operator: ${page.operator}`);
     }
 
-    const target = result ? cmd.trueJump : cmd.falseJump;
+    const target = result ? page.trueTarget : page.falseTarget;
     if (target) {
       this._enterScene(target);
     } else {
-      this.commandIndex++;
-      this._executeCurrentCommand();
+      this._advancePage();
     }
   }
 
+  /**
+   * @private
+   */
   _execEnd() {
     this.ended = true;
     this.emit('end', {});

@@ -29,112 +29,232 @@
   "scenes": {
     "start": {
       "name": "序章 — 春日邂逅",
-      "commands": [
-        { "type": "set_background", "image": "backgrounds/school_gate.svg", "transition": "fade", "duration": 1000 },
-        { "type": "play_bgm", "file": "audio/bgm_spring.mp3", "volume": 0.6, "fadeIn": 2000 },
-        { "type": "dialogue", "speaker": null, "text": "春风轻轻拂过校园的樱花树，花瓣纷纷扬扬地飘落在小径上。" },
-        { "type": "dialogue", "speaker": null, "text": "新学期的第一天，空气中弥漫着淡淡的花香……" },
-        { "type": "show_character", "id": "sakura", "expression": "normal", "position": "center", "transition": "fade", "duration": 600 },
-        { "type": "dialogue", "speaker": "sakura", "text": "啊……又是一年春天呢。" },
-        { "type": "dialogue", "speaker": "sakura", "text": "不知道今年会发生什么有趣的事情。" },
-        { "type": "play_se", "file": "audio/se_footstep.mp3" },
-        { "type": "show_character", "id": "haruki", "expression": "normal", "position": "left", "transition": "slide_left", "duration": 500 },
-        { "type": "set_expression", "id": "sakura", "expression": "surprised" },
-        { "type": "dialogue", "speaker": "haruki", "text": "你好！请问这里是樱花学园吗？" },
-        { "type": "dialogue", "speaker": "sakura", "text": "啊，是的！你是新来的转学生吗？" },
-        { "type": "set_expression", "id": "haruki", "expression": "smile" },
-        { "type": "dialogue", "speaker": "haruki", "text": "是的，我叫春树。今天第一天来，有点迷路了……" },
-        { "type": "set_expression", "id": "sakura", "expression": "smile" },
-        { "type": "dialogue", "speaker": "sakura", "text": "欢迎你！我叫樱。走吧，我带你去教室。" },
+      "pages": [
         {
+          "id": "p1",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": null,
+          "dialogues": [
+            { "speaker": null, "text": "春风轻轻拂过校园的樱花树，花瓣纷纷扬扬地飘落在小径上。", "expression": null },
+            { "speaker": null, "text": "新学期的第一天，空气中弥漫着淡淡的花香……", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p2",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "normal", "position": "center", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": null,
+          "dialogues": [
+            { "speaker": "sakura", "text": "啊……又是一年春天呢。", "expression": null },
+            { "speaker": "sakura", "text": "不知道今年会发生什么有趣的事情。", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p3",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "surprised", "position": "center", "x": null, "y": null, "scale": 1 },
+            { "id": "haruki", "expression": "normal", "position": "left", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": { "file": "audio/se_footstep.mp3" },
+          "dialogues": [
+            { "speaker": "haruki", "text": "你好！请问这里是樱花学园吗？", "expression": null },
+            { "speaker": "sakura", "text": "啊，是的！你是新来的转学生吗？", "expression": null },
+            { "speaker": "haruki", "text": "是的，我叫春树。今天第一天来，有点迷路了……", "expression": "smile" },
+            { "speaker": "sakura", "text": "欢迎你！我叫樱。走吧，我带你去教室。", "expression": "smile" }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p4",
           "type": "choice",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "smile", "position": "center", "x": null, "y": null, "scale": 1 },
+            { "id": "haruki", "expression": "smile", "position": "left", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": null,
           "prompt": "你要怎么回答？",
           "options": [
-            { "text": "太好了，谢谢你！", "jump": "path_friendly", "setVariable": { "sakura_affection": 1 } },
-            { "text": "不用了，我自己能找到。", "jump": "path_cold", "setVariable": { "sakura_affection": -1 } }
-          ]
+            { "text": "太好了，谢谢你！", "target": "path_friendly", "setVariable": { "sakura_affection": 1 } },
+            { "text": "不用了，我自己能找到。", "target": "path_cold", "setVariable": { "sakura_affection": -1 } }
+          ],
+          "dialogues": [],
+          "transition": { "type": "fade", "duration": 800 }
         }
       ]
     },
     "path_friendly": {
       "name": "温暖的相遇",
-      "commands": [
-        { "type": "set_expression", "id": "sakura", "expression": "smile" },
-        { "type": "set_expression", "id": "haruki", "expression": "smile" },
-        { "type": "dialogue", "speaker": "haruki", "text": "太好了，谢谢你！能在第一天就遇到这么热心的人，真的很幸运。" },
-        { "type": "dialogue", "speaker": "sakura", "text": "哈哈，不客气！那我们走吧～" },
-        { "type": "hide_character", "id": "haruki", "transition": "fade", "duration": 400 },
-        { "type": "hide_character", "id": "sakura", "transition": "fade", "duration": 400 },
-        { "type": "set_background", "image": "backgrounds/classroom.svg", "transition": "fade", "duration": 1000 },
-        { "type": "play_bgm", "file": "audio/bgm_peaceful.mp3", "volume": 0.5, "fadeIn": 1000 },
-        { "type": "show_character", "id": "sakura", "expression": "normal", "position": "right", "transition": "fade", "duration": 500 },
-        { "type": "dialogue", "speaker": "sakura", "text": "这就是我们的教室了。看，你的座位在那边靠窗的位置。" },
-        { "type": "dialogue", "speaker": "haruki", "text": "靠窗的位置啊……视野真好。" },
-        { "type": "set_expression", "id": "sakura", "expression": "smile" },
-        { "type": "dialogue", "speaker": "sakura", "text": "对吧！而且从这里可以看到操场旁边的那棵大樱花树。" },
-        { "type": "dialogue", "speaker": "sakura", "text": "以后有什么不懂的可以尽管来问我哦。" },
-        { "type": "jump", "target": "ending_check" }
+      "next": "ending_check",
+      "pages": [
+        {
+          "id": "p1",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "smile", "position": "center", "x": null, "y": null, "scale": 1 },
+            { "id": "haruki", "expression": "smile", "position": "left", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": null,
+          "dialogues": [
+            { "speaker": "haruki", "text": "太好了，谢谢你！能在第一天就遇到这么热心的人，真的很幸运。", "expression": null },
+            { "speaker": "sakura", "text": "哈哈，不客气！那我们走吧～", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p2",
+          "type": "normal",
+          "background": "backgrounds/classroom.svg",
+          "characters": [
+            { "id": "sakura", "expression": "normal", "position": "right", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_peaceful.mp3", "volume": 0.5 },
+          "se": null,
+          "dialogues": [
+            { "speaker": "sakura", "text": "这就是我们的教室了。看，你的座位在那边靠窗的位置。", "expression": null },
+            { "speaker": "haruki", "text": "靠窗的位置啊……视野真好。", "expression": null },
+            { "speaker": "sakura", "text": "对吧！而且从这里可以看到操场旁边的那棵大樱花树。", "expression": "smile" },
+            { "speaker": "sakura", "text": "以后有什么不懂的可以尽管来问我哦。", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        }
       ]
     },
     "path_cold": {
       "name": "冷淡的开始",
-      "commands": [
-        { "type": "set_expression", "id": "haruki", "expression": "serious" },
-        { "type": "set_expression", "id": "sakura", "expression": "sad" },
-        { "type": "dialogue", "speaker": "haruki", "text": "不用了，我自己能找到的。谢谢。" },
-        { "type": "dialogue", "speaker": "sakura", "text": "啊……好吧，那祝你顺利。教学楼就在前面那栋。" },
-        { "type": "dialogue", "speaker": null, "text": "樱有些失落地目送春树独自走向教学楼的背影。" },
-        { "type": "hide_character", "id": "haruki", "transition": "slide_right", "duration": 600 },
-        { "type": "dialogue", "speaker": "sakura", "text": "（好冷淡啊……不过也许只是紧张吧。）" },
-        { "type": "hide_character", "id": "sakura", "transition": "fade", "duration": 400 },
-        { "type": "set_background", "image": "backgrounds/classroom.svg", "transition": "fade", "duration": 1000 },
-        { "type": "play_bgm", "file": "audio/bgm_peaceful.mp3", "volume": 0.5, "fadeIn": 1000 },
-        { "type": "dialogue", "speaker": null, "text": "春树独自一人走进了教室，找到了自己的座位坐下。" },
-        { "type": "dialogue", "speaker": null, "text": "窗外的樱花依然在飘落，只是此刻显得有些寂寞。" },
-        { "type": "jump", "target": "ending_check" }
+      "next": "ending_check",
+      "pages": [
+        {
+          "id": "p1",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "sad", "position": "center", "x": null, "y": null, "scale": 1 },
+            { "id": "haruki", "expression": "serious", "position": "left", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": null,
+          "dialogues": [
+            { "speaker": "haruki", "text": "不用了，我自己能找到的。谢谢。", "expression": null },
+            { "speaker": "sakura", "text": "啊……好吧，那祝你顺利。教学楼就在前面那栋。", "expression": null },
+            { "speaker": null, "text": "樱有些失落地目送春树独自走向教学楼的背影。", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p2",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "sad", "position": "center", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.6 },
+          "se": null,
+          "dialogues": [
+            { "speaker": "sakura", "text": "（好冷淡啊……不过也许只是紧张吧。）", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p3",
+          "type": "normal",
+          "background": "backgrounds/classroom.svg",
+          "characters": [],
+          "bgm": { "file": "audio/bgm_peaceful.mp3", "volume": 0.5 },
+          "se": null,
+          "dialogues": [
+            { "speaker": null, "text": "春树独自一人走进了教室，找到了自己的座位坐下。", "expression": null },
+            { "speaker": null, "text": "窗外的樱花依然在飘落，只是此刻显得有些寂寞。", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        }
       ]
     },
     "ending_check": {
       "name": "结局判定",
-      "commands": [
+      "pages": [
         {
+          "id": "p1",
           "type": "condition",
           "variable": "sakura_affection",
           "operator": ">=",
           "value": 1,
-          "trueJump": "good_ending",
-          "falseJump": "normal_ending"
+          "trueTarget": "good_ending",
+          "falseTarget": "normal_ending"
         }
       ]
     },
     "good_ending": {
       "name": "Good End — 春樱之约",
-      "commands": [
-        { "type": "set_background", "image": "backgrounds/school_gate.svg", "transition": "fade", "duration": 1500 },
-        { "type": "stop_bgm", "fadeOut": 1000 },
-        { "type": "play_bgm", "file": "audio/bgm_spring.mp3", "volume": 0.7, "fadeIn": 2000 },
-        { "type": "show_character", "id": "sakura", "expression": "smile", "position": "center", "transition": "fade", "duration": 800 },
-        { "type": "dialogue", "speaker": null, "text": "放学后，樱在校门口等着春树。" },
-        { "type": "dialogue", "speaker": "sakura", "text": "春树！一起回家吧？" },
-        { "type": "show_character", "id": "haruki", "expression": "smile", "position": "left", "transition": "slide_left", "duration": 500 },
-        { "type": "dialogue", "speaker": "haruki", "text": "好啊！" },
-        { "type": "dialogue", "speaker": null, "text": "两人并肩走在铺满樱花花瓣的小路上。" },
-        { "type": "dialogue", "speaker": null, "text": "这是一个温暖而美好的春日——也许，这就是故事的开始。" },
-        { "type": "dialogue", "speaker": null, "text": "【GOOD END —— 春樱之约】" },
-        { "type": "end" }
+      "pages": [
+        {
+          "id": "p1",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "smile", "position": "center", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.7 },
+          "se": null,
+          "dialogues": [
+            { "speaker": null, "text": "放学后，樱在校门口等着春树。", "expression": null },
+            { "speaker": "sakura", "text": "春树！一起回家吧？", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        },
+        {
+          "id": "p2",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [
+            { "id": "sakura", "expression": "smile", "position": "center", "x": null, "y": null, "scale": 1 },
+            { "id": "haruki", "expression": "smile", "position": "left", "x": null, "y": null, "scale": 1 }
+          ],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.7 },
+          "se": null,
+          "dialogues": [
+            { "speaker": "haruki", "text": "好啊！", "expression": null },
+            { "speaker": null, "text": "两人并肩走在铺满樱花花瓣的小路上。", "expression": null },
+            { "speaker": null, "text": "这是一个温暖而美好的春日——也许，这就是故事的开始。", "expression": null },
+            { "speaker": null, "text": "【GOOD END —— 春樱之约】", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        }
       ]
     },
     "normal_ending": {
       "name": "Normal End — 各自的春天",
-      "commands": [
-        { "type": "set_background", "image": "backgrounds/school_gate.svg", "transition": "fade", "duration": 1500 },
-        { "type": "stop_bgm", "fadeOut": 1000 },
-        { "type": "play_bgm", "file": "audio/bgm_spring.mp3", "volume": 0.5, "fadeIn": 2000 },
-        { "type": "dialogue", "speaker": null, "text": "放学的钟声响起。" },
-        { "type": "dialogue", "speaker": null, "text": "春树独自一人走出校门，回头望了望那棵樱花树。" },
-        { "type": "dialogue", "speaker": null, "text": "也许明天，会有不同的邂逅也说不定。" },
-        { "type": "dialogue", "speaker": null, "text": "【NORMAL END —— 各自的春天】" },
-        { "type": "end" }
+      "pages": [
+        {
+          "id": "p1",
+          "type": "normal",
+          "background": "backgrounds/school_gate.svg",
+          "characters": [],
+          "bgm": { "file": "audio/bgm_spring.mp3", "volume": 0.5 },
+          "se": null,
+          "dialogues": [
+            { "speaker": null, "text": "放学的钟声响起。", "expression": null },
+            { "speaker": null, "text": "春树独自一人走出校门，回头望了望那棵樱花树。", "expression": null },
+            { "speaker": null, "text": "也许明天，会有不同的邂逅也说不定。", "expression": null },
+            { "speaker": null, "text": "【NORMAL END —— 各自的春天】", "expression": null }
+          ],
+          "transition": { "type": "fade", "duration": 800 }
+        }
       ]
     }
   }

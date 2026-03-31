@@ -286,6 +286,12 @@ quickControls.addEventListener('click', (e) => {
 
 // ─── Keyboard shortcuts ─────────────────────────────────
 document.addEventListener('keydown', (e) => {
+  // D-09: Settings overlay ESC works regardless of play state
+  if (e.key === 'Escape' && settingsScreen.isVisible) {
+    settingsScreen.hide();
+    return;
+  }
+
   if (!isPlaying) return;
 
   switch (e.key) {

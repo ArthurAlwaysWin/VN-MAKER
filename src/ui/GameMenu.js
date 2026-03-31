@@ -57,7 +57,10 @@ export class GameMenu {
       if (!btn) return;
       const action = btn.dataset.action;
 
-      this.hide();
+      // D-08: Don't hide game menu when opening settings — overlay stacks on top
+      if (action !== 'settings') {
+        this.hide();
+      }
 
       switch (action) {
         case 'save': if (this.onSave) this.onSave(); break;

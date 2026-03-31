@@ -1,0 +1,338 @@
+<template>
+  <div class="canvas-wrapper" ref="wrapperRef" @click="onCanvasClick">
+    <div class="canvas-artboard" :style="artboardStyle" v-if="page">
+      <!-- Background -->
+      <div class="canvas-bg" :style="bgStyle"></div>
+
+      <!-- Characters -->
+      <DraggableElement
+        v-for="(char, idx) in page.characters"
+        :key="char.id + '-' + idx"
+        :x="getCharX(char)"
+        :y="getCharY(char)"
+        :scale="char.scale || 1"
+        :is-selected="editor.selectedCharIndex.value === idx"
+        :canvas-scale="canvasScale"
+        @select="editor.selectCharacter(idx)"
+        @move="onCharMove(idx, $event)">
+        <div class="canvas-character">
+          <img v-if="getCharImage(char)" :src="getCharImage(char)" class="char-sprite" />
+          <div v-else class="char-placeholder">
+            <span class="char-icon">🧑</span>
+            <span class="char-label">{{ getCharName(char.id) }}</span>
+          </div>
+        </div>
+      </DraggableElement>
+
+      <!-- Dialogue box -->
+      <div v-if="currentDialogue" class="canvas-dialogue"
+        :class="{ editing: isEditingDialogue }"
+        @dblclick.stop="startInlineEdit"
+        @click.stop="onDialogueClick">
+        <template v-if="!isEditingDialogue">
+          <div class="dlg-speaker" v-if="currentDialogue.speaker">
+            {{ getCharName(currentDialogue.speaker) }}
+          </div>
+          <div class="dlg-speaker" v-else>(旁白)</div>
+          <div class="dlg-text">{{ currentDialogue.text || '...' }}</div>
+        </template>
+        <textarea v-else
+          ref="inlineTextarea"
+          :value="currentDialogue.text"
+          @input="onInlineTextInput($event.target.value)"
+          @blur="stopInlineEdit"
+          @keydown.escape="stopInlineEdit"
+          class="inline-edit-textarea"
+        />
+      </div>
+
+      <!-- Dialogue index navigation pills -->
+      <div v-if="page && page.dialogues && page.dialogues.length > 1" class="dialogue-nav">
+        <button v-for="(dlg, i) in page.dialogues" :key="i"
+          class="dlg-nav-btn" :class="{ active: editor.selectedDialogueIndex.value === i }"
+          @click.stop="editor.selectDialogue(i)">
+          {{ i + 1 }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div v-else class="canvas-empty">
+      <div class="empty-label">未选中页面</div>
+      <div class="empty-hint">在左侧选择一个页面开始编辑</div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import DraggableElement from '../canvas/DraggableElement.vue';
+import { usePageEditor } from '../../composables/usePageEditor.js';
+import { useScriptStore } from '../../stores/script.js';
+
+const editor = usePageEditor();
+const script = useScriptStore();
+const wrapperRef = ref(null);
+const canvasScale = ref(1);
+const isEditingDialogue = ref(false);
+const inlineTextarea = ref(null);
+
+const GAME_W = 1280;
+const GAME_H = 720;
+const PRESET_X = { left: 200, center: 640, right: 1080 };
+const PRESET_Y = 200;
+
+let resizeObserver = null;
+
+const page = computed(() => editor.currentPage.value);
+const currentDialogue = computed(() => editor.currentDialogue.value);
+
+const artboardStyle = computed(() => ({
+  width: GAME_W + 'px',
+  height: GAME_H + 'px',
+  transform: `scale(${canvasScale.value})`,
+  transformOrigin: 'top left',
+}));
+
+const bgStyle = computed(() => {
+  const bg = page.value?.background;
+  if (!bg) return { background: '#1a1a2e' };
+  return {
+    backgroundImage: `url("${resolveAsset(bg)}")`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+});
+
+function resolveAsset(path) {
+  if (!path) return '';
+  if (path.startsWith('asset://') || path.startsWith('http')) return path;
+  return `asset://${path}`;
+}
+
+function updateScale() {
+  if (!wrapperRef.value) return;
+  const rect = wrapperRef.value.getBoundingClientRect();
+  const padded_w = rect.width - 32;
+  const padded_h = rect.height - 32;
+  canvasScale.value = Math.min(padded_w / GAME_W, padded_h / GAME_H, 1);
+}
+
+onMounted(() => {
+  updateScale();
+  if (wrapperRef.value) {
+    resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(wrapperRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+});
+
+// Character helpers
+function getCharX(char) {
+  return char.x != null ? char.x : (PRESET_X[char.position] || PRESET_X.center);
+}
+
+function getCharY(char) {
+  return char.y != null ? char.y : PRESET_Y;
+}
+
+function getCharImage(char) {
+  const path = script.data?.characters?.[char.id]?.expressions?.[char.expression];
+  return path ? resolveAsset(path) : null;
+}
+
+function getCharName(charId) {
+  return script.data?.characters?.[charId]?.name || charId || '';
+}
+
+function onCharMove(charIndex, { x, y }) {
+  const char = page.value?.characters?.[charIndex];
+  if (!char) return;
+  char.x = x;
+  char.y = y;
+  char.position = 'custom';
+  // Continuous drag — do NOT call pushState (Pitfall 4)
+}
+
+function onCanvasClick() {
+  editor.selectCharacter(-1);
+  if (isEditingDialogue.value) stopInlineEdit();
+}
+
+function onDialogueClick() {
+  // Prevent canvas click deselect
+}
+
+function startInlineEdit() {
+  isEditingDialogue.value = true;
+  nextTick(() => {
+    inlineTextarea.value?.focus();
+  });
+}
+
+function onInlineTextInput(value) {
+  if (!currentDialogue.value) return;
+  currentDialogue.value.text = value;
+  // Continuous typing — do NOT call pushState (Pitfall 4)
+}
+
+function stopInlineEdit() {
+  isEditingDialogue.value = false;
+}
+</script>
+
+<style scoped>
+.canvas-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.canvas-artboard {
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.canvas-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-character {
+  cursor: grab;
+}
+
+.canvas-character img.char-sprite {
+  max-height: 400px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.char-placeholder {
+  width: 120px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px dashed #555;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.char-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.canvas-dialogue {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: 140px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 16px 24px;
+  color: #fff;
+  cursor: default;
+  border: 2px solid transparent;
+  border-radius: 0;
+  z-index: 2;
+}
+
+.canvas-dialogue:hover {
+  border-color: rgba(0, 122, 204, 0.3);
+  cursor: text;
+}
+
+.canvas-dialogue.editing {
+  border-color: #007acc;
+}
+
+.dlg-speaker {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #ffd700;
+}
+
+.dlg-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #fff;
+}
+
+.inline-edit-textarea {
+  width: 100%;
+  min-height: 60px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.dialogue-nav {
+  position: absolute;
+  bottom: 148px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+}
+
+.dlg-nav-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #555;
+  background: rgba(0, 0, 0, 0.6);
+  color: #aaa;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dlg-nav-btn.active {
+  background: #007acc;
+  color: white;
+  border-color: #007acc;
+}
+
+.canvas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+}
+
+.empty-label {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: #666;
+}
+</style>

@@ -109,7 +109,10 @@ Plans:
   3. Semi-transparent backdrop with blur effect (backdrop-filter: blur) covers the game scene behind the settings panel
   4. User can close the settings overlay via ESC key, × close button, or clicking the backdrop area outside the panel
 
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 09-01-PLAN.md — CSS slide-in overlay + SettingsScreen.js dual-mode background + GameMenu/ESC integration
 
 ## Progress
 

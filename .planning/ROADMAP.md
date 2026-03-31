@@ -51,3 +51,108 @@ Decimal phases appear between their surrounding integers in numeric order.
 See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
 
 </details>
+
+---
+
+## v0.3 — PPT 式游戏内容编辑器 🚧
+
+**Milestone Goal:** 将游戏内容编辑器从命令时间线模式升级为 PPT 页面模式，让用户像编辑幻灯片一样创建游戏内容。
+
+### Phases
+
+- [ ] **Phase 10: Page Data Schema & Engine Adaptation** — Define page-based data format and adapt engine to play it
+- [ ] **Phase 11: PPT Page Editor** — Slide sidebar + WYSIWYG canvas editor for creating/editing game pages
+- [ ] **Phase 12: Resource Pickers** — Visual pickers to select characters, expressions, backgrounds, and audio from the resource library
+- [ ] **Phase 13: Transitions & Branching** — Page transition effects and choice-branch pages
+- [ ] **Phase 14: Editor Test Play** — Inline game preview for testing pages without leaving the editor
+
+### Phase Details
+
+#### Phase 10: Page Data Schema & Engine Adaptation
+**Goal**: Page-based data format is defined and the engine can play it
+**Depends on**: Nothing (v0.3 foundation)
+**Requirements**: DATA-01, DATA-02, DATA-03
+**Success Criteria** (what must be TRUE):
+  1. New project creates script.json with a pages[] array instead of commands[]
+  2. Each page object stores background, characters[], dialogue, bgm, and transition config
+  3. Engine plays through a page-format script — showing backgrounds, characters, and dialogue in correct sequence
+  4. Engine advances to the next page on user click/tap
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD
+
+#### Phase 11: PPT Page Editor
+**Goal**: Users can create and visually edit game pages like PPT slides
+**Depends on**: Phase 10
+**Requirements**: EDITOR-01, EDITOR-02, EDITOR-03, EDITOR-04, EDITOR-05, EDITOR-06, EDITOR-07, EDITOR-08
+**Success Criteria** (what must be TRUE):
+  1. Left sidebar displays all pages as clickable thumbnail slides; selecting a page loads it on the canvas
+  2. User can add new pages, delete pages (with confirmation), and drag-reorder pages in the sidebar
+  3. Canvas shows 1280×720 WYSIWYG preview of the selected page with background and positioned character sprites
+  4. User can add/remove characters on the canvas and drag them to set position
+  5. Inspector panel allows editing dialogue (speaker + text) and setting BGM/SE for the selected page
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+- [ ] 11-01: TBD
+- [ ] 11-02: TBD
+
+#### Phase 12: Resource Pickers
+**Goal**: Users can select characters, expressions, backgrounds, and audio from the resource library within the page editor
+**Depends on**: Phase 11
+**Requirements**: PICKER-01, PICKER-02, PICKER-03, PICKER-04
+**Success Criteria** (what must be TRUE):
+  1. Character dropdown picker lists all characters imported in the resource library
+  2. Expression picker shows a thumbnail grid of the selected character's available expressions
+  3. Background picker shows visual previews of all imported backgrounds; selecting one applies it to the current page
+  4. Audio picker lists BGM/SE files with inline play-preview; selecting one assigns it to the page
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+- [ ] 12-01: TBD
+
+#### Phase 13: Transitions & Branching
+**Goal**: Users can configure page transition effects and create choice-branch pages with jump destinations
+**Depends on**: Phase 12
+**Requirements**: EFFECT-01, EFFECT-02, BRANCH-01, BRANCH-02, BRANCH-03
+**Success Criteria** (what must be TRUE):
+  1. User can set a transition type (fade / slide-left / slide-right / none) per page from the inspector
+  2. Engine renders the configured transition animation when advancing between pages
+  3. User can create a choice page that displays multiple option buttons on the canvas
+  4. Each choice option can be linked to a target page or scene as its jump destination
+  5. Choice pages are visually distinct in the sidebar with a different badge/icon from normal pages
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+- [ ] 13-01: TBD
+- [ ] 13-02: TBD
+
+#### Phase 14: Editor Test Play
+**Goal**: Users can preview their game directly inside the editor without leaving the editing workflow
+**Depends on**: Phase 13
+**Requirements**: PLAY-01, PLAY-02, PLAY-03
+**Success Criteria** (what must be TRUE):
+  1. User can click a "Play" button to start test play from the current page
+  2. Game preview runs inline within the editor (not a separate window), playing pages with transitions in sequence
+  3. User can stop test play at any time and return to the editor at the page they were editing
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+- [ ] 14-01: TBD
+
+### Progress
+
+**Execution Order:** Phase 10 → 11 → 12 → 13 → 14
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 10. Page Data Schema & Engine Adaptation | 0/? | Not started | - |
+| 11. PPT Page Editor | 0/? | Not started | - |
+| 12. Resource Pickers | 0/? | Not started | - |
+| 13. Transitions & Branching | 0/? | Not started | - |
+| 14. Editor Test Play | 0/? | Not started | - |

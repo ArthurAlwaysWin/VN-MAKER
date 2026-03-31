@@ -80,35 +80,35 @@ Requirements for v0.3 milestone: PPT 式游戏内容编辑器。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EDITOR-01 | — | Pending |
-| EDITOR-02 | — | Pending |
-| EDITOR-03 | — | Pending |
-| EDITOR-04 | — | Pending |
-| EDITOR-05 | — | Pending |
-| EDITOR-06 | — | Pending |
-| EDITOR-07 | — | Pending |
-| EDITOR-08 | — | Pending |
-| PICKER-01 | — | Pending |
-| PICKER-02 | — | Pending |
-| PICKER-03 | — | Pending |
-| PICKER-04 | — | Pending |
-| EFFECT-01 | — | Pending |
-| EFFECT-02 | — | Pending |
-| BRANCH-01 | — | Pending |
-| BRANCH-02 | — | Pending |
-| BRANCH-03 | — | Pending |
-| PLAY-01 | — | Pending |
-| PLAY-02 | — | Pending |
-| PLAY-03 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
+| DATA-01 | Phase 10 | Pending |
+| DATA-02 | Phase 10 | Pending |
+| DATA-03 | Phase 10 | Pending |
+| EDITOR-01 | Phase 11 | Pending |
+| EDITOR-02 | Phase 11 | Pending |
+| EDITOR-03 | Phase 11 | Pending |
+| EDITOR-04 | Phase 11 | Pending |
+| EDITOR-05 | Phase 11 | Pending |
+| EDITOR-06 | Phase 11 | Pending |
+| EDITOR-07 | Phase 11 | Pending |
+| EDITOR-08 | Phase 11 | Pending |
+| PICKER-01 | Phase 12 | Pending |
+| PICKER-02 | Phase 12 | Pending |
+| PICKER-03 | Phase 12 | Pending |
+| PICKER-04 | Phase 12 | Pending |
+| EFFECT-01 | Phase 13 | Pending |
+| EFFECT-02 | Phase 13 | Pending |
+| BRANCH-01 | Phase 13 | Pending |
+| BRANCH-02 | Phase 13 | Pending |
+| BRANCH-03 | Phase 13 | Pending |
+| PLAY-01 | Phase 14 | Pending |
+| PLAY-02 | Phase 14 | Pending |
+| PLAY-03 | Phase 14 | Pending |
 
 **Coverage:**
 - v0.3 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 after roadmap creation*

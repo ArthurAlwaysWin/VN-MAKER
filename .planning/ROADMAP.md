@@ -97,9 +97,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 11-01: Store CRUD helpers + composable + view shell + App.vue integration
-- [ ] 11-02: Scene tree sidebar (SceneTree.vue) with management + drag-reorder
-- [ ] 11-03: Canvas + inspector + character picker + dialogue editing
+- [x] 11-01: Store CRUD helpers + composable + view shell + App.vue integration
+- [x] 11-02: Scene tree sidebar (SceneTree.vue) with management + drag-reorder
+- [x] 11-03: Canvas + inspector + character picker + dialogue editing
 
 #### Phase 12: Resource Pickers
 **Goal**: Users can select characters, expressions, backgrounds, and audio from the resource library within the page editor
@@ -154,7 +154,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. Page Data Schema & Engine Adaptation | 2/2 | Complete   | 2026-03-31 |
-| 11. PPT Page Editor | 0/? | Not started | - |
+| 11. PPT Page Editor | 0/3 | Planned    |  |
 | 12. Resource Pickers | 0/? | Not started | - |
 | 13. Transitions & Branching | 0/? | Not started | - |
 | 14. Editor Test Play | 0/? | Not started | - |

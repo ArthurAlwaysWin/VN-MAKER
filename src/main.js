@@ -127,6 +127,7 @@ engine.on('end', () => {
 
   // Show ending for a moment, then return to title
   setTimeout(() => {
+    engine.resetRenderState();
     characters.clear();
     background.clear();
     showTitle();
@@ -167,75 +168,15 @@ saveLoadScreen.onLoad = (slot) => {
   engine.restoreState(data.state);
   isPlaying = true;
 
-  // Re-render the current scene's commands up to the current point
-  // For simplicity, we replay from the beginning of the scene
-  replayCurrentScene();
+  // Re-render the current page's visual state
+  replayCurrentPage();
 };
 
-function replayCurrentScene() {
-  // Clear visual state
+function replayCurrentPage() {
   characters.clear();
   background.clear();
-
-  // The engine state is already restored; we need to re-execute the current
-  // scene's commands up to the saved commandIndex to restore visuals
-  const scene = engine.script.scenes[engine.currentScene];
-  if (!scene) return;
-
-  const targetIndex = engine.commandIndex;
-
-  // Temporarily mute dialogue events to not show all past dialogues
-  const originalWaiting = engine.waiting;
-
-  // Re-execute all commands up to the target index instantly
-  for (let i = 0; i < targetIndex; i++) {
-    const cmd = scene.commands[i];
-    if (!cmd) break;
-
-    // Only re-execute visual/audio setup commands
-    switch (cmd.type) {
-      case 'set_background':
-        background.setBackground({ ...cmd, transition: 'none', duration: 0 });
-        break;
-      case 'show_character': {
-        const char = engine.script.characters[cmd.id];
-        characters.show({
-          id: cmd.id,
-          expression: cmd.expression,
-          position: cmd.position || 'center',
-          x: cmd.x,
-          y: cmd.y,
-          scale: cmd.scale,
-          transition: 'none',
-          duration: 0,
-          image: char?.expressions?.[cmd.expression] || '',
-        });
-        break;
-      }
-      case 'hide_character':
-        characters.hide({ ...cmd, transition: 'none', duration: 0 });
-        break;
-      case 'set_expression': {
-        const char = engine.script.characters[cmd.id];
-        characters.setExpression({
-          id: cmd.id,
-          expression: cmd.expression,
-          image: char?.expressions?.[cmd.expression] || '',
-        });
-        break;
-      }
-      case 'play_bgm':
-        audio.playBgm({ ...cmd, fadeIn: 0 });
-        break;
-      case 'stop_bgm':
-        audio.stopBgm({ fadeOut: 0 });
-        break;
-    }
-  }
-
-  // Now execute the actual current command
-  engine.waiting = false;
-  engine._executeCurrentCommand();
+  engine.resetRenderState();
+  engine.renderCurrentPage();
 }
 
 // ─── Settings ───────────────────────────────────────────
@@ -258,6 +199,7 @@ gameMenu.onTitle = () => {
   dialogueBox.hide();
   choiceMenu.hide();
   audio.stopBgm({ fadeOut: 500 });
+  engine.resetRenderState();
   characters.clear();
   background.clear();
   showTitle();

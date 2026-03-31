@@ -92,25 +92,7 @@ async function uniqueFilename(dir, originalName) {
 function defaultScript() {
   return {
     characters: {},
-    scenes: {
-      start: {
-        name: '第一幕',
-        pages: [
-          {
-            id: 'p1',
-            type: 'normal',
-            background: null,
-            characters: [],
-            bgm: null,
-            se: null,
-            dialogues: [
-              { speaker: null, text: '故事从这里开始...', expression: null }
-            ],
-            transition: { type: 'fade', duration: 800 }
-          }
-        ]
-      }
-    }
+    scenes: {}
   };
 }
 

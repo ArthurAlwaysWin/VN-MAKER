@@ -7,11 +7,21 @@
 
       <div v-for="[sceneId, scene] in sceneEntries" :key="sceneId" class="scene-node">
         <div class="scene-header"
-          @click.stop="toggleExpand(sceneId)"
-          @dblclick.stop="startRenameScene(sceneId, scene.name)">
+          :class="{ 'scene-active': selectedSceneId === sceneId }"
+          @click.stop="onSelectScene(sceneId)"
+          @dblclick.stop="startRenameScene(sceneId, scene.name)"
+          @contextmenu.prevent.stop="showSceneMenu(sceneId, $event)">
           <span class="expand-icon">{{ expanded[sceneId] ? '▼' : '▶' }}</span>
           <span class="scene-icon">🎬</span>
-          <span class="scene-name">{{ scene.name }}</span>
+          <input v-if="renamingSceneId === sceneId"
+            ref="renameInputRef"
+            class="rename-input"
+            v-model="renameText"
+            @keydown.enter.stop="confirmRename"
+            @keydown.escape.stop="cancelRename"
+            @blur="confirmRename"
+            @click.stop />
+          <span v-else class="scene-name">{{ scene.name }}</span>
           <button class="scene-menu-btn" @click.stop="showSceneMenu(sceneId, $event)" title="场景操作">⋯</button>
         </div>
 
@@ -28,6 +38,8 @@
             }"
             draggable="true"
             @click.stop="onSelectPage(sceneId, idx)"
+            @dblclick.stop="startRenamePage(sceneId, idx, page)"
+            @contextmenu.prevent.stop="showPageMenu(sceneId, idx, $event)"
             @dragstart="onDragStart($event, sceneId, idx)"
             @dragover="onDragOver($event, sceneId, idx)"
             @dragleave="onDragLeave"
@@ -35,7 +47,16 @@
             @dragend="onDragEnd">
             <span class="page-icon">{{ pageIcon(page.type) }}</span>
             <span class="page-number">{{ idx + 1 }}</span>
-            <span class="page-snippet">{{ pageSnippet(page) }}</span>
+            <input v-if="renamingPageSceneId === sceneId && renamingPageIndex === idx"
+              ref="renamePageInputRef"
+              class="rename-input page-rename-input"
+              v-model="renamePageText"
+              placeholder="页面名称"
+              @keydown.enter.stop="confirmPageRename"
+              @keydown.escape.stop="cancelPageRename"
+              @blur="confirmPageRename"
+              @click.stop />
+            <span v-else class="page-snippet">{{ page.name || pageSnippet(page) }}</span>
           </div>
         </div>
       </div>
@@ -47,15 +68,21 @@
     </div>
 
     <div v-if="contextMenu.visible" class="context-menu" :style="contextMenuStyle" @click.stop>
-      <div class="menu-item" @click="onRenameScene">重命名</div>
-      <div class="menu-item" @click="onAddPageToScene">添加页面</div>
-      <div class="menu-item danger" @click="onDeleteScene">删除场景</div>
+      <template v-if="contextMenu.type === 'scene'">
+        <div class="menu-item" @click="onRenameScene">重命名</div>
+        <div class="menu-item" @click="onAddPageToScene">添加页面</div>
+        <div class="menu-item danger" @click="onDeleteScene">删除场景</div>
+      </template>
+      <template v-else-if="contextMenu.type === 'page'">
+        <div class="menu-item" @click="onRenamePageFromMenu">重命名</div>
+        <div class="menu-item danger" @click="onDeletePageFromMenu">删除页面</div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
 
@@ -66,7 +93,32 @@ const script = useScriptStore();
 const expanded = reactive({});
 const dragState = ref({ sceneId: null, fromIndex: -1 });
 const dragTarget = reactive({ sceneId: null, index: -1 });
-const contextMenu = reactive({ visible: false, sceneId: null, x: 0, y: 0 });
+const contextMenu = reactive({ visible: false, type: null, sceneId: null, pageIndex: -1, x: 0, y: 0 });
+
+const renamingSceneId = ref(null);
+const renameText = ref('');
+const renameInputRef = ref(null);
+
+const renamingPageSceneId = ref(null);
+const renamingPageIndex = ref(-1);
+const renamePageText = ref('');
+const renamePageInputRef = ref(null);
+
+watch(renamingSceneId, async (val) => {
+  if (val) {
+    await nextTick();
+    renameInputRef.value?.focus();
+    renameInputRef.value?.select();
+  }
+});
+
+watch(renamingPageSceneId, async (val) => {
+  if (val) {
+    await nextTick();
+    renamePageInputRef.value?.focus();
+    renamePageInputRef.value?.select();
+  }
+});
 
 const sceneEntries = computed(() => Object.entries(script.data?.scenes || {}));
 
@@ -112,6 +164,14 @@ function toggleExpand(sceneId) {
   expanded[sceneId] = !expanded[sceneId];
 }
 
+function onSelectScene(sceneId) {
+  toggleExpand(sceneId);
+  // Also select this scene (first page, or -1 if no pages)
+  const scene = script.data?.scenes?.[sceneId];
+  const pageIdx = scene?.pages?.length > 0 ? 0 : -1;
+  selectPage(sceneId, pageIdx);
+}
+
 function onSelectPage(sceneId, idx) {
   expanded[sceneId] = true;
   selectPage(sceneId, idx);
@@ -120,22 +180,48 @@ function onSelectPage(sceneId, idx) {
 // --- Scene management ---
 
 function onAddScene() {
-  const name = prompt('输入新的场景名称');
-  if (!name || !name.trim()) return;
+  const count = sceneEntries.value.length;
+  const name = '场景 ' + (count + 1);
   const sceneId = 'scene_' + Date.now();
-  script.addScene(sceneId, name.trim());
+  script.addScene(sceneId, name);
   expanded[sceneId] = true;
   selectPage(sceneId, 0);
+  // Enter inline rename so user can customize the name
+  renamingSceneId.value = sceneId;
+  renameText.value = name;
 }
 
 function startRenameScene(sceneId, currentName) {
-  const newName = prompt('输入新的场景名称', currentName);
-  if (!newName || !newName.trim() || newName.trim() === currentName) return;
-  script.renameScene(sceneId, newName.trim());
+  renamingSceneId.value = sceneId;
+  renameText.value = currentName;
+}
+
+function confirmRename() {
+  if (renamingSceneId.value && renameText.value.trim()) {
+    script.renameScene(renamingSceneId.value, renameText.value.trim());
+  }
+  renamingSceneId.value = null;
+  renameText.value = '';
+}
+
+function cancelRename() {
+  renamingSceneId.value = null;
+  renameText.value = '';
 }
 
 function showSceneMenu(sceneId, event) {
+  contextMenu.type = 'scene';
   contextMenu.sceneId = sceneId;
+  contextMenu.pageIndex = -1;
+  contextMenu.x = event.clientX;
+  contextMenu.y = event.clientY;
+  contextMenu.visible = true;
+}
+
+function showPageMenu(sceneId, pageIndex, event) {
+  contextMenu.type = 'page';
+  contextMenu.sceneId = sceneId;
+  contextMenu.pageIndex = pageIndex;
   contextMenu.x = event.clientX;
   contextMenu.y = event.clientY;
   contextMenu.visible = true;
@@ -189,6 +275,60 @@ function onAddPageToScene() {
     expanded[sceneId] = true;
     selectPage(sceneId, result.index);
   }
+}
+
+function onDeletePageFromMenu() {
+  const sceneId = contextMenu.sceneId;
+  const idx = contextMenu.pageIndex;
+  closeMenu();
+  const scene = script.data?.scenes?.[sceneId];
+  if (!scene || idx < 0 || idx >= scene.pages.length) return;
+  if (!confirm('确定删除第 ' + (idx + 1) + ' 页？')) return;
+  script.deletePage(sceneId, idx);
+  // Adjust selection if deleting the currently selected page
+  if (selectedSceneId.value === sceneId) {
+    const remaining = scene.pages.length;
+    if (remaining === 0) {
+      selectedPageIndex.value = -1;
+    } else if (selectedPageIndex.value >= remaining) {
+      selectPage(sceneId, remaining - 1);
+    }
+  }
+}
+
+function onRenamePageFromMenu() {
+  const sceneId = contextMenu.sceneId;
+  const idx = contextMenu.pageIndex;
+  closeMenu();
+  const scene = script.data?.scenes?.[sceneId];
+  if (!scene || idx < 0 || idx >= scene.pages.length) return;
+  startRenamePage(sceneId, idx, scene.pages[idx]);
+}
+
+function startRenamePage(sceneId, idx, page) {
+  renamingPageSceneId.value = sceneId;
+  renamingPageIndex.value = idx;
+  renamePageText.value = page.name || '';
+}
+
+function confirmPageRename() {
+  if (renamingPageSceneId.value) {
+    const scene = script.data?.scenes?.[renamingPageSceneId.value];
+    const page = scene?.pages?.[renamingPageIndex.value];
+    if (page) {
+      page.name = renamePageText.value.trim();
+      script.pushState();
+    }
+  }
+  renamingPageSceneId.value = null;
+  renamingPageIndex.value = -1;
+  renamePageText.value = '';
+}
+
+function cancelPageRename() {
+  renamingPageSceneId.value = null;
+  renamingPageIndex.value = -1;
+  renamePageText.value = '';
 }
 
 function onDeletePage() {
@@ -290,6 +430,12 @@ function onDragEnd() {
   background: #2a2d2e;
 }
 
+.scene-header.scene-active {
+  background: #37373d;
+  border-left: 3px solid #007acc;
+  padding-left: 5px;
+}
+
 .expand-icon {
   width: 16px;
   font-size: 10px;
@@ -306,6 +452,26 @@ function onDragEnd() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rename-input {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #007acc;
+  color: #ccc;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 4px;
+  height: 22px;
+  outline: none;
+  border-radius: 2px;
+  min-width: 0;
+}
+
+.page-rename-input {
+  font-size: 12px;
+  font-weight: 400;
+  height: 20px;
 }
 
 .scene-menu-btn {

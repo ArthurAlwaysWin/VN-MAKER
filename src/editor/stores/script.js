@@ -92,6 +92,7 @@ export const useScriptStore = defineStore('script', () => {
   function createDefaultPage() {
     return {
       id: 'p' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      name: '',
       type: 'normal',
       background: null,
       characters: [],

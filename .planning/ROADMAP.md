@@ -112,7 +112,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 09-01-PLAN.md — CSS slide-in overlay + SettingsScreen.js dual-mode background + GameMenu/ESC integration
+- [x] 09-01-PLAN.md — CSS slide-in overlay + SettingsScreen.js dual-mode background + GameMenu/ESC integration
 
 ## Progress
 

@@ -11,8 +11,11 @@ export function createPageEditor() {
   const selectedDialogueIndex = ref(0);
   const selectedCharIndex = ref(-1);
   const showCharPicker = ref(false);
+  const showBgPicker = ref(false);
+  const showAudioPicker = ref(false);
+  const audioPickerTab = ref('bgm');
 
-  const currentScene = computed(() => {
+  const currentScene= computed(() => {
     if (!script.data || !selectedSceneId.value) return null;
     return script.data.scenes[selectedSceneId.value] || null;
   });
@@ -56,6 +59,9 @@ export function createPageEditor() {
     selectedDialogueIndex,
     selectedCharIndex,
     showCharPicker,
+    showBgPicker,
+    showAudioPicker,
+    audioPickerTab,
     currentScene,
     currentPage,
     currentDialogue,

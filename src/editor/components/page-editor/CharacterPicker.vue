@@ -1,17 +1,30 @@
 <template>
   <div class="char-picker-overlay" @click.self="close">
     <div class="char-picker-panel">
-      <div class="picker-header">选择角色</div>
+      <div class="picker-header">
+        <span>选择角色</span>
+        <button class="picker-close" @click="close">✕</button>
+      </div>
       <div class="picker-list" v-if="characterEntries.length > 0">
-        <div v-for="[charId, char] in characterEntries" :key="charId"
-          class="picker-item" :class="{ selected: pickedCharId === charId }"
-          @click="pickedCharId = charId">
-          <span class="picker-char-name" :style="{ color: char.color || '#ccc' }">{{ char.name }}</span>
-          <select v-model="selectedExpressions[charId]" @click.stop class="picker-expr-select">
-            <option v-for="(path, exprName) in char.expressions" :key="exprName" :value="exprName">
-              {{ exprName }}
-            </option>
-          </select>
+        <div v-for="[charId, char] in characterEntries" :key="charId" class="char-section">
+          <div class="char-name-row" @click="pickedCharId = charId">
+            <span class="char-indicator" :style="{ color: pickedCharId === charId ? '#007acc' : '#555' }">
+              {{ pickedCharId === charId ? '●' : '○' }}
+            </span>
+            <span class="char-name" :style="{ color: char.color || '#ccc' }">{{ char.name }}</span>
+          </div>
+          <div v-if="Object.keys(char.expressions || {}).length > 0" class="expr-grid">
+            <div v-for="(exprPath, exprName) in char.expressions" :key="exprName"
+              class="expr-thumb" :class="{ selected: selectedExpressions[charId] === exprName }"
+              @click="pickedCharId = charId; selectedExpressions[charId] = exprName">
+              <div class="expr-img-wrap">
+                <img :src="`asset://characters/${exprPath}`" :alt="exprName" draggable="false" />
+              </div>
+              <div class="expr-name">{{ exprName }}</div>
+              <span v-if="selectedExpressions[charId] === exprName" class="check-badge">✓</span>
+            </div>
+          </div>
+          <div v-else class="expr-empty">该角色暂无表情图</div>
         </div>
       </div>
       <div v-else class="picker-empty">
@@ -79,25 +92,29 @@ function close() {
 .char-picker-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 9999;
 }
 
 .char-picker-panel {
-  background: #2d2d2d;
-  border: 1px solid #444;
+  background: #1e1e1e;
+  border: 1px solid #333;
   border-radius: 8px;
-  min-width: 300px;
-  max-width: 400px;
-  max-height: 60vh;
+  min-width: 480px;
+  max-width: 560px;
+  max-height: 65vh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 12px 16px;
   font-size: 14px;
   font-weight: 600;
@@ -105,39 +122,124 @@ function close() {
   border-bottom: 1px solid #333;
 }
 
+.picker-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.picker-close:hover {
+  background: #333;
+  color: #ccc;
+}
+
 .picker-list {
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 8px 12px;
+  flex: 1;
 }
 
-.picker-item {
+.char-section {
+  background: #252526;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.char-name-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
+  gap: 8px;
   cursor: pointer;
+  padding: 4px 0;
 }
 
-.picker-item:hover {
-  background: #094771;
-}
-
-.picker-item.selected {
-  background: #094771;
-  outline: 1px solid #007acc;
-}
-
-.picker-char-name {
+.char-indicator {
   font-size: 14px;
+  flex-shrink: 0;
 }
 
-.picker-expr-select {
-  background: #3c3c3c;
-  border: 1px solid #555;
-  color: #ccc;
-  border-radius: 4px;
-  padding: 2px 6px;
+.char-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.expr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.expr-thumb {
+  width: 80px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  overflow: hidden;
+  border: 1px solid #333;
+  transition: border-color 0.15s;
+  position: relative;
+}
+
+.expr-thumb:hover {
+  border-color: #555;
+  background: #222;
+}
+
+.expr-thumb.selected {
+  border: 2px solid #007acc;
+}
+
+.expr-img-wrap {
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expr-img-wrap img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  display: block;
+}
+
+.expr-name {
+  font-size: 11px;
+  color: #aaa;
+  padding: 2px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.check-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007acc;
+  color: #fff;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expr-empty {
+  color: #555;
   font-size: 12px;
+  padding: 8px;
+  text-align: center;
 }
 
 .picker-empty {

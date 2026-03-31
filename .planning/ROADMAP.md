@@ -80,7 +80,7 @@ See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Page data schema & default templates (defaultScript + demo script.json conversion)
+- [x] 10-01-PLAN.md — Page data schema & default templates (defaultScript + demo script.json conversion)
 - [ ] 10-02-PLAN.md — Engine & runtime page playback adaptation (ScriptEngine rewrite + main.js wiring)
 
 #### Phase 11: PPT Page Editor
@@ -152,7 +152,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. Page Data Schema & Engine Adaptation | 0/? | Not started | - |
+| 10. Page Data Schema & Engine Adaptation | 1/2 | In Progress|  |
 | 11. PPT Page Editor | 0/? | Not started | - |
 | 12. Resource Pickers | 0/? | Not started | - |
 | 13. Transitions & Branching | 0/? | Not started | - |

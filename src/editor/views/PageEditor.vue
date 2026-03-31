@@ -7,21 +7,17 @@
 
     <!-- Center: Canvas Area -->
     <div class="canvas-area">
-      <div class="canvas-toolbar-placeholder">工具栏</div>
-      <div class="canvas-placeholder">
-        <div class="placeholder-label">1280×720 画布</div>
-        <div class="placeholder-info" v-if="editor.currentPage.value">
-          当前页面: {{ editor.currentPage.value.id }}
-        </div>
-        <div class="placeholder-info" v-else>未选中页面</div>
-      </div>
+      <CanvasToolbar />
+      <PageCanvas />
     </div>
 
     <!-- Right: Inspector Panel -->
     <div class="inspector">
-      <div class="inspector-header-bar">📋 属性检查器</div>
-      <div class="inspector-placeholder">属性面板将在下一步实现</div>
+      <PageInspector />
     </div>
+
+    <!-- Character Picker Modal -->
+    <CharacterPicker v-if="editor.showCharPicker.value" />
   </div>
 </template>
 
@@ -30,6 +26,10 @@ import { onMounted } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { createPageEditor } from '../composables/usePageEditor.js';
 import SceneTree from '../components/page-editor/SceneTree.vue';
+import CanvasToolbar from '../components/page-editor/CanvasToolbar.vue';
+import PageCanvas from '../components/page-editor/PageCanvas.vue';
+import CharacterPicker from '../components/page-editor/CharacterPicker.vue';
+import PageInspector from '../components/page-editor/PageInspector.vue';
 
 const script = useScriptStore();
 const editor = createPageEditor();
@@ -63,56 +63,11 @@ onMounted(() => editor.initSelection());
   background: #1e1e1e;
 }
 
-.canvas-toolbar-placeholder {
-  height: 36px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #111;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  color: #888;
-  font-size: 12px;
-}
-
-.canvas-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #555;
-}
-
-.placeholder-label {
-  font-size: 18px;
-  margin-bottom: 8px;
-}
-
-.placeholder-info {
-  font-size: 12px;
-  color: #666;
-}
-
 .inspector {
   width: 300px;
   background: #252526;
   border-left: 1px solid #111;
   flex-shrink: 0;
   overflow-y: auto;
-}
-
-.inspector-header-bar {
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #ccc;
-  border-bottom: 1px solid #333;
-}
-
-.inspector-placeholder {
-  padding: 20px;
-  color: #555;
-  font-size: 12px;
-  text-align: center;
 }
 </style>

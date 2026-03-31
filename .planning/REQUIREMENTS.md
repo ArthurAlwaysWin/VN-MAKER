@@ -49,14 +49,14 @@
 
 ### 设置页叠加层 (OVERLAY)
 
-- [ ] **OVERLAY-01**: 设置页以叠加层形式渲染在当前游戏场景上方（z-index overlay）
-- [ ] **OVERLAY-02**: 半透明背景遮罩层
-- [ ] **OVERLAY-03**: 打开时滑入过渡动画
-- [ ] **OVERLAY-04**: 关闭时滑出过渡动画
-- [ ] **OVERLAY-05**: 游戏画面在设置页下方持续显示（不暂停/不隐藏）
-- [ ] **OVERLAY-06**: ESC 键关闭设置页叠加层
+- [x] **OVERLAY-01**: 设置页以叠加层形式渲染在当前游戏场景上方（z-index overlay）
+- [x] **OVERLAY-02**: 半透明背景遮罩层
+- [x] **OVERLAY-03**: 打开时滑入过渡动画
+- [x] **OVERLAY-04**: 关闭时滑出过渡动画
+- [x] **OVERLAY-05**: 游戏画面在设置页下方持续显示（不暂停/不隐藏）
+- [x] **OVERLAY-06**: ESC 键关闭设置页叠加层
 - [ ] **OVERLAY-07**: 点击遮罩区域关闭设置页叠加层
-- [ ] **OVERLAY-08**: 游戏画面背景模糊效果（backdrop-filter: blur）
+- [x] **OVERLAY-08**: 游戏画面背景模糊效果（backdrop-filter: blur）
 
 ### 基础设施 (INFRA)
 
@@ -120,14 +120,14 @@
 | TITLE-10 | Phase 8 | Complete |
 | TITLE-11 | Phase 8 | Complete |
 | TITLE-12 | Phase 8 | Complete |
-| OVERLAY-01 | Phase 9 | Pending |
-| OVERLAY-02 | Phase 9 | Pending |
-| OVERLAY-03 | Phase 9 | Pending |
-| OVERLAY-04 | Phase 9 | Pending |
-| OVERLAY-05 | Phase 9 | Pending |
-| OVERLAY-06 | Phase 9 | Pending |
+| OVERLAY-01 | Phase 9 | Complete |
+| OVERLAY-02 | Phase 9 | Complete |
+| OVERLAY-03 | Phase 9 | Complete |
+| OVERLAY-04 | Phase 9 | Complete |
+| OVERLAY-05 | Phase 9 | Complete |
+| OVERLAY-06 | Phase 9 | Complete |
 | OVERLAY-07 | Phase 9 | Pending |
-| OVERLAY-08 | Phase 9 | Pending |
+| OVERLAY-08 | Phase 9 | Complete |
 | INFRA-01 | Phase 8 | Complete |
 | INFRA-02 | Phase 6 | Complete |
 | INFRA-03 | Phase 6 | Complete |

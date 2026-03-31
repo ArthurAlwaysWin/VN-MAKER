@@ -87,6 +87,69 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  // --- Page CRUD helpers ---
+
+  function createDefaultPage() {
+    return {
+      id: 'p' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      type: 'normal',
+      background: null,
+      characters: [],
+      bgm: null,
+      se: null,
+      dialogues: [{ speaker: null, text: '', expression: null }],
+      transition: { type: 'fade', duration: 800 },
+    };
+  }
+
+  function addScene(sceneId, sceneName) {
+    if (!data.value || data.value.scenes[sceneId]) return;
+    data.value.scenes[sceneId] = {
+      name: sceneName,
+      pages: [createDefaultPage()],
+    };
+    pushState();
+  }
+
+  function deleteScene(sceneId) {
+    if (!data.value?.scenes?.[sceneId]) return;
+    delete data.value.scenes[sceneId];
+    pushState();
+  }
+
+  function renameScene(sceneId, newName) {
+    if (!data.value?.scenes?.[sceneId]) return;
+    data.value.scenes[sceneId].name = newName;
+    pushState();
+  }
+
+  function addPage(sceneId, afterIndex = -1) {
+    const scene = data.value?.scenes?.[sceneId];
+    if (!scene) return null;
+    const newPage = createDefaultPage();
+    const insertAt = afterIndex >= 0 ? afterIndex + 1 : scene.pages.length;
+    scene.pages.splice(insertAt, 0, newPage);
+    pushState();
+    return { page: newPage, index: insertAt };
+  }
+
+  function deletePage(sceneId, pageIndex) {
+    const scene = data.value?.scenes?.[sceneId];
+    if (!scene || pageIndex < 0 || pageIndex >= scene.pages.length) return;
+    scene.pages.splice(pageIndex, 1);
+    pushState();
+  }
+
+  function reorderPages(sceneId, fromIndex, toIndex) {
+    const scene = data.value?.scenes?.[sceneId];
+    if (!scene) return;
+    if (fromIndex < 0 || fromIndex >= scene.pages.length) return;
+    if (toIndex < 0 || toIndex >= scene.pages.length) return;
+    const [moved] = scene.pages.splice(fromIndex, 1);
+    scene.pages.splice(toIndex, 0, moved);
+    pushState();
+  }
+
   // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
   async function loadScript() {
     console.warn('loadScript() is deprecated — use loadFromData() via project store');
@@ -102,6 +165,8 @@ export const useScriptStore = defineStore('script', () => {
     loadFromData, reset,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
+    addScene, deleteScene, renameScene,
+    addPage, deletePage, reorderPages,
     loadScript, saveScript
   };
 });

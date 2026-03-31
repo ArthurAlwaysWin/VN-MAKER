@@ -115,7 +115,7 @@ Plans:
 
 Plans:
 - [x] 12-01-PLAN.md — Composable state refs + CharacterPicker expression thumbnail grid
-- [ ] 12-02-PLAN.md — AudioPicker component + PageInspector picker integration + PageEditor wiring
+- [x] 12-02-PLAN.md — AudioPicker component + PageInspector picker integration + PageEditor wiring
 
 #### Phase 13: Transitions & Branching
 **Goal**: Users can configure page transition effects and create choice-branch pages with jump destinations

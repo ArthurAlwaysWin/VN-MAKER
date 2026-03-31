@@ -77,10 +77,11 @@ See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
   2. Each page object stores background, characters[], dialogue, bgm, and transition config
   3. Engine plays through a page-format script — showing backgrounds, characters, and dialogue in correct sequence
   4. Engine advances to the next page on user click/tap
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-PLAN.md — Page data schema & default templates (defaultScript + demo script.json conversion)
+- [ ] 10-02-PLAN.md — Engine & runtime page playback adaptation (ScriptEngine rewrite + main.js wiring)
 
 #### Phase 11: PPT Page Editor
 **Goal**: Users can create and visually edit game pages like PPT slides

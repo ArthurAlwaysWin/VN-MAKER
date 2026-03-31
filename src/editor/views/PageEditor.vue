@@ -2,8 +2,7 @@
   <div class="page-editor" v-if="script.data">
     <!-- Left: Scene Tree Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-header">📑 场景/页面</div>
-      <div class="sidebar-placeholder">场景树将在下一步实现</div>
+      <SceneTree />
     </div>
 
     <!-- Center: Canvas Area -->
@@ -30,6 +29,7 @@
 import { onMounted } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { createPageEditor } from '../composables/usePageEditor.js';
+import SceneTree from '../components/page-editor/SceneTree.vue';
 
 const script = useScriptStore();
 const editor = createPageEditor();
@@ -52,15 +52,7 @@ onMounted(() => editor.initSelection());
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-}
-
-.sidebar-header {
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #ccc;
-  border-bottom: 1px solid #333;
+  overflow: hidden;
 }
 
 .canvas-area {
@@ -117,7 +109,6 @@ onMounted(() => editor.initSelection());
   border-bottom: 1px solid #333;
 }
 
-.sidebar-placeholder,
 .inspector-placeholder {
   padding: 20px;
   color: #555;

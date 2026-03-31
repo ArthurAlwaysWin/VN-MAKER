@@ -8,9 +8,15 @@
       <div v-if="sections.props" class="section-body">
         <div class="form-group">
           <label>背景</label>
-          <input type="text" :value="page.background || ''" readonly
-            placeholder="未设置背景" class="field-input"
-            @click="alertPicker('背景选择器将在下个版本添加')" />
+          <div class="field-with-clear">
+            <input type="text" :value="page.background ? page.background.replace('backgrounds/', '') : ''"
+              readonly placeholder="点击选择背景..." class="field-input"
+              @click="editor.showBgPicker.value = true" />
+            <button v-if="page.background" class="clear-btn" @click.stop="clearBackground" title="清除背景">✕</button>
+          </div>
+          <div v-if="page.background" class="bg-preview">
+            <img :src="`asset://${page.background}`" alt="背景预览" draggable="false" />
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group half">
@@ -120,9 +126,12 @@
       <div v-if="sections.audio" class="section-body">
         <div class="form-group">
           <label>BGM</label>
-          <input type="text" :value="page.bgm?.file || ''" readonly
-            placeholder="未设置背景音乐" class="field-input"
-            @click="alertPicker('BGM 选择器将在下个版本添加')" />
+          <div class="field-with-clear">
+            <input type="text" :value="page.bgm?.file ? page.bgm.file.replace('audio/', '') : ''"
+              readonly placeholder="点击选择BGM..." class="field-input"
+              @click="openAudioPicker('bgm')" />
+            <button v-if="page.bgm?.file" class="clear-btn" @click.stop="clearBgm" title="清除BGM">✕</button>
+          </div>
         </div>
         <div class="form-group" v-if="page.bgm">
           <label>音量</label>
@@ -136,9 +145,12 @@
         </div>
         <div class="form-group">
           <label>SE</label>
-          <input type="text" :value="page.se?.file || ''" readonly
-            placeholder="未设置音效" class="field-input"
-            @click="alertPicker('音效选择器将在下个版本添加')" />
+          <div class="field-with-clear">
+            <input type="text" :value="page.se?.file ? page.se.file.replace('audio/', '') : ''"
+              readonly placeholder="点击选择音效..." class="field-input"
+              @click="openAudioPicker('se')" />
+            <button v-if="page.se?.file" class="clear-btn" @click.stop="clearSe" title="清除音效">✕</button>
+          </div>
         </div>
       </div>
     </div>
@@ -178,8 +190,27 @@ function truncate(text, len) {
   return text.length > len ? text.slice(0, len) + '…' : text;
 }
 
-function alertPicker(msg) {
-  alert(msg);
+function openAudioPicker(tab) {
+  editor.audioPickerTab.value = tab;
+  editor.showAudioPicker.value = true;
+}
+
+function clearBackground() {
+  if (!page.value) return;
+  page.value.background = '';
+  script.pushState();
+}
+
+function clearBgm() {
+  if (!page.value) return;
+  page.value.bgm = null;
+  script.pushState();
+}
+
+function clearSe() {
+  if (!page.value) return;
+  page.value.se = null;
+  script.pushState();
 }
 
 // Page property setters
@@ -489,6 +520,46 @@ function setBgmVolume(vol) {
   color: #aaa;
   font-size: 12px;
   min-width: 24px;
+}
+
+.field-with-clear {
+  position: relative;
+}
+
+.field-with-clear .field-input {
+  padding-right: 28px;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.clear-btn:hover {
+  color: #a22;
+}
+
+.bg-preview {
+  margin-top: 4px;
+  height: 48px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.bg-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .empty-hint {

@@ -18,6 +18,22 @@
 
     <!-- Character Picker Modal -->
     <CharacterPicker v-if="editor.showCharPicker.value" />
+
+    <!-- Background Picker Modal -->
+    <AssetPickerModal
+      category="backgrounds"
+      :visible="editor.showBgPicker.value"
+      @select="onBgSelect"
+      @close="editor.showBgPicker.value = false"
+    />
+
+    <!-- Audio Picker Modal -->
+    <AudioPicker
+      :visible="editor.showAudioPicker.value"
+      :defaultTab="editor.audioPickerTab.value"
+      @select="onAudioSelect"
+      @close="editor.showAudioPicker.value = false"
+    />
   </div>
 </template>
 
@@ -29,10 +45,33 @@ import SceneTree from '../components/page-editor/SceneTree.vue';
 import CanvasToolbar from '../components/page-editor/CanvasToolbar.vue';
 import PageCanvas from '../components/page-editor/PageCanvas.vue';
 import CharacterPicker from '../components/page-editor/CharacterPicker.vue';
+import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
+import AudioPicker from '../components/page-editor/AudioPicker.vue';
 import PageInspector from '../components/page-editor/PageInspector.vue';
 
 const script = useScriptStore();
 const editor = createPageEditor();
+
+function onBgSelect(path) {
+  const page = editor.currentPage.value;
+  if (!page) return;
+  page.background = path;
+  script.pushState();
+  editor.showBgPicker.value = false;
+}
+
+function onAudioSelect(path) {
+  const page = editor.currentPage.value;
+  if (!page) return;
+  const tab = editor.audioPickerTab.value;
+  if (tab === 'bgm') {
+    page.bgm = { file: path, volume: page.bgm?.volume ?? 0.5 };
+  } else {
+    page.se = { file: path, volume: page.se?.volume ?? 0.5 };
+  }
+  script.pushState();
+  editor.showAudioPicker.value = false;
+}
 
 onMounted(() => editor.initSelection());
 </script>

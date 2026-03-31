@@ -93,12 +93,13 @@ Plans:
   3. Canvas shows 1280×720 WYSIWYG preview of the selected page with background and positioned character sprites
   4. User can add/remove characters on the canvas and drag them to set position
   5. Inspector panel allows editing dialogue (speaker + text) and setting BGM/SE for the selected page
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [ ] 11-01: Store CRUD helpers + composable + view shell + App.vue integration
+- [ ] 11-02: Scene tree sidebar (SceneTree.vue) with management + drag-reorder
+- [ ] 11-03: Canvas + inspector + character picker + dialogue editing
 
 #### Phase 12: Resource Pickers
 **Goal**: Users can select characters, expressions, backgrounds, and audio from the resource library within the page editor

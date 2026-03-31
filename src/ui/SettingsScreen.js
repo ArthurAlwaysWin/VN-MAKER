@@ -27,6 +27,11 @@ export class SettingsScreen {
     this.onChange = null;
   }
 
+  /** Whether the settings overlay is currently showing */
+  get isVisible() {
+    return this.el.classList.contains('visible');
+  }
+
   /** Load a custom layout from script.json ui.settingsScreen */
   setLayout(layout) {
     this.customLayout = layout;
@@ -52,15 +57,26 @@ export class SettingsScreen {
   _renderCustom(layout) {
     this.el.innerHTML = '';
     this.el.classList.add('settings-custom');
+    // Clear any previously set inline background styles
     this.el.style.backgroundImage = '';
+    this.el.style.backgroundSize = '';
+    this.el.style.backgroundPosition = '';
 
     if (layout.background) {
       const safeBg = sanitizeCssValue(layout.background);
       if (safeBg) {
-        this.el.style.backgroundImage = `url("asset://${safeBg}")`;
-        this.el.style.backgroundSize = 'cover';
-        this.el.style.backgroundPosition = 'center';
+        // D-05: Custom bg rendered as semi-transparent child layer
+        // so game scene is faintly visible through it
+        const bgLayer = document.createElement('div');
+        bgLayer.className = 'settings-bg-layer';
+        bgLayer.style.backgroundImage = `url("asset://${safeBg}")`;
+        this.el.appendChild(bgLayer);
+        // Make element bg transparent — backdrop-filter still blurs game behind
+        this.el.style.backgroundColor = 'transparent';
       }
+    } else {
+      // No custom bg — reset to CSS default (dark semi-transparent + blur)
+      this.el.style.backgroundColor = '';
     }
 
     for (const elem of layout.elements) {
@@ -277,6 +293,7 @@ export class SettingsScreen {
   _renderDefault() {
     this.el.classList.remove('settings-custom');
     this.el.style.backgroundImage = '';
+    this.el.style.backgroundColor = '';
     const cfg = this.configManager;
 
     this.el.innerHTML = `

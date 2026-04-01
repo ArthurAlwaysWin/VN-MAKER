@@ -18,7 +18,7 @@
               class="expr-thumb" :class="{ selected: selectedExpressions[charId] === exprName }"
               @click="pickedCharId = charId; selectedExpressions[charId] = exprName">
               <div class="expr-img-wrap">
-                <img :src="`asset://characters/${exprPath}`" :alt="exprName" draggable="false" />
+                <img :src="`asset://${exprPath}`" :alt="exprName" draggable="false" />
               </div>
               <div class="expr-name">{{ exprName }}</div>
               <span v-if="selectedExpressions[charId] === exprName" class="check-badge">✓</span>

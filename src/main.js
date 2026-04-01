@@ -119,6 +119,16 @@ engine.on('choice', (data) => {
 });
 
 engine.on('end', () => {
+  // In preview mode, notify editor instead of returning to title
+  if (engine._previewMode) {
+    isPlaying = false;
+    stopAuto();
+    stopSkip();
+    dialogueBox.hide();
+    window.parent.postMessage({ type: 'ended' }, '*');
+    return;
+  }
+
   isPlaying = false;
   stopAuto();
   stopSkip();
@@ -221,7 +231,7 @@ quickControls.addEventListener('click', (e) => {
       gameMenu.onBacklog();
       break;
     case 'menu':
-      gameMenu.toggle();
+      if (!engine._previewMode) gameMenu.toggle();
       break;
   }
 });
@@ -238,6 +248,7 @@ document.addEventListener('keydown', (e) => {
 
   switch (e.key) {
     case 'Escape':
+      if (engine._previewMode) break;
       gameMenu.toggle();
       break;
     case ' ':
@@ -286,7 +297,7 @@ gameContainer.addEventListener('click', (e) => {
 // Right-click opens game menu
 gameContainer.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (isPlaying) {
+  if (isPlaying && !engine._previewMode) {
     gameMenu.toggle();
   }
 });
@@ -418,4 +429,77 @@ async function init() {
   }
 }
 
-init();
+// ─── Preview mode (iframe) ─────────────────────────────
+function initPreview() {
+  console.log('[GalgameMaker] Preview mode — waiting for start command');
+
+  window.addEventListener('message', (e) => {
+    const msg = e.data;
+    if (!msg || !msg.type) return;
+
+    switch (msg.type) {
+      case 'start': {
+        engine.script = msg.script;
+        engine._previewMode = msg.previewMode ?? true;
+
+        // Apply custom fonts if present
+        if (engine.script.assets?.fonts?.length) {
+          loadAllFonts(engine.script.assets.fonts, 'asset://').catch(() => {});
+        }
+
+        // Start from specified position (per D-05, D-06)
+        engine.restoreState({
+          currentScene: msg.sceneId || 'start',
+          pageIndex: msg.pageIndex || 0,
+          dialogueIndex: 0,
+          variables: {},
+          history: [],
+        });
+
+        titleScreen.hide();
+        isPlaying = true;
+
+        characters.clear();
+        background.clear();
+        engine.resetRenderState();
+        engine.renderCurrentPage();
+        break;
+      }
+      case 'stop': {
+        isPlaying = false;
+        engine.ended = true;
+        engine._previewMode = false;
+        stopAuto();
+        stopSkip();
+        dialogueBox.hide();
+        choiceMenu.hide();
+        audio.stopBgm({ fadeOut: 0 });
+        engine.resetRenderState();
+        characters.clear();
+        background.clear();
+        break;
+      }
+      case 'mute': {
+        if (msg.muted) {
+          audio.setBgmVolume(0);
+          audio.setSeVolume(0);
+        } else {
+          const master = config.get('masterVolume');
+          audio.setBgmVolume(config.get('bgmVolume') * master);
+          audio.setSeVolume(config.get('seVolume') * master);
+        }
+        break;
+      }
+    }
+  });
+
+  // READY handshake (per D-03) — tell editor we're ready to receive commands
+  window.parent.postMessage({ type: 'ready' }, '*');
+}
+
+// Detect iframe context and choose init path
+if (window.parent !== window) {
+  initPreview();
+} else {
+  init();
+}

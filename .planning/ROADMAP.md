@@ -127,12 +127,12 @@ Plans:
   3. User can create a choice page that displays multiple option buttons on the canvas
   4. Each choice option can be linked to a target page or scene as its jump destination
   5. Choice pages are visually distinct in the sidebar with a different badge/icon from normal pages
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
+- [ ] 13-01-PLAN.md — Choice page store helpers (convertPageType, setSceneNext) + SceneTree context menu type toggle
+- [ ] 13-02-PLAN.md — PageInspector choice options editor (prompt + options + targets + setVariable) + scene next dropdown + verification
 
 #### Phase 14: Editor Test Play
 **Goal**: Users can preview their game directly inside the editor without leaving the editing workflow

@@ -13,8 +13,10 @@
         :scale="char.scale || 1"
         :is-selected="editor.selectedCharIndex.value === idx"
         :canvas-scale="canvasScale"
+        :scalable="true"
         @select="editor.selectCharacter(idx)"
-        @move="onCharMove(idx, $event)">
+        @move="onCharMove(idx, $event)"
+        @scale="onCharScale(idx, $event)">
         <div class="canvas-character">
           <img v-if="getCharImage(char)" :src="getCharImage(char)" class="char-sprite" />
           <div v-else class="char-placeholder">
@@ -52,6 +54,16 @@
           class="dlg-nav-btn" :class="{ active: editor.selectedDialogueIndex.value === i }"
           @click.stop="editor.selectDialogue(i)">
           {{ i + 1 }}
+        </button>
+      </div>
+
+      <!-- Choice options preview (choice pages only) -->
+      <div v-if="page && page.type === 'choice'" class="canvas-choices">
+        <div class="choice-prompt" v-if="page.prompt">{{ page.prompt }}</div>
+        <div class="choice-prompt choice-prompt-empty" v-else>请做出选择...</div>
+        <button v-for="(opt, idx) in (page.options || [])" :key="idx"
+          class="choice-btn" @click.stop>
+          {{ opt.text || `选项 ${idx + 1}` }}
         </button>
       </div>
     </div>
@@ -154,6 +166,13 @@ function onCharMove(charIndex, { x, y }) {
   char.x = x;
   char.y = y;
   char.position = 'custom';
+  // Continuous drag — do NOT call pushState (Pitfall 4)
+}
+
+function onCharScale(charIndex, newScale) {
+  const char = page.value?.characters?.[charIndex];
+  if (!char) return;
+  char.scale = newScale;
   // Continuous drag — do NOT call pushState (Pitfall 4)
 }
 
@@ -334,5 +353,45 @@ function stopInlineEdit() {
 .empty-hint {
   font-size: 12px;
   color: #666;
+}
+
+/* ─── Choice Options Preview ─── */
+.canvas-choices {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 400px;
+  padding: 20px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.choice-prompt {
+  color: #fff;
+  font-size: 18px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.choice-prompt-empty {
+  opacity: 0.4;
+}
+
+.choice-btn {
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 16px;
+  min-width: 300px;
+  padding: 12px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  text-align: center;
+  pointer-events: none;
 }
 </style>

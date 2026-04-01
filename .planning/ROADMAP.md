@@ -64,7 +64,7 @@ See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
 - [x] **Phase 11: PPT Page Editor** — Slide sidebar + WYSIWYG canvas editor for creating/editing game pages (completed 2026-04-01)
 - [x] **Phase 12: Resource Pickers** — Visual pickers to select characters, expressions, backgrounds, and audio from the resource library (completed 2026-03-31)
 - [x] **Phase 13: Transitions & Branching** — Page transition effects and choice-branch pages (completed 2026-04-01)
-- [ ] **Phase 14: Editor Test Play** — Inline game preview for testing pages without leaving the editor
+- [x] **Phase 14: Editor Test Play** — Inline game preview for testing pages without leaving the editor (completed 2026-04-01)
 
 ### Phase Details
 
@@ -146,8 +146,8 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 14-01-PLAN.md — Engine preview mode (ScriptEngine _previewMode + main.js postMessage listener + previewMode guards)
-- [ ] 14-02-PLAN.md — Editor preview UI (usePageEditor state/methods + PageEditor iframe toggle + CanvasToolbar play/stop/mute buttons + overlay stop button + read-only mode)
+- [x] 14-01-PLAN.md — Engine preview mode (ScriptEngine _previewMode + main.js postMessage listener + previewMode guards)
+- [x] 14-02-PLAN.md — Editor preview UI (usePageEditor state/methods + PageEditor iframe toggle + CanvasToolbar play/stop/mute buttons + overlay stop button + read-only mode)
 
 ### Progress
 
@@ -159,4 +159,4 @@ Plans:
 | 11. PPT Page Editor | 3/3 | Complete   | 2026-04-01 |
 | 12. Resource Pickers | 0/? | Complete    | 2026-03-31 |
 | 13. Transitions & Branching | 0/? | Complete    | 2026-04-01 |
-| 14. Editor Test Play | 0/? | Not started | - |
+| 14. Editor Test Play | 2/2 | Complete   | 2026-04-01 |

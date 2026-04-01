@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: completed
-stopped_at: Phase 14 context gathered
-last_updated: "2026-04-01T13:07:56.346Z"
+milestone: v0.3
+milestone_name: — PPT 式游戏内容编辑器 ✅
+status: complete
+stopped_at: v0.3 milestone complete
+last_updated: "2026-04-01T16:00:00.000Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 6
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 6
-  percent: 80
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-31)
+See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 13 — transitions-branching
+**Current focus:** v0.3 milestone complete — ready for v0.4
 
 ## Current Position
 
-Phase: 14
-Plan: Not started
-Status: Phase 14 not yet started (Phases 10-13 all complete)
+Phase: 14 (editor-test-play) — COMPLETE
+Plan: 2 of 2 — all done
+Status: Milestone v0.3 complete
 Last activity: 2026-04-01
 
-Progress: [████████░░] 80% (Phases 10-13 complete, Phase 14 pending)
+Progress: [██████████] 100% (All phases 10-14 complete)
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [████████░░] 80% (Phases 10-13 complete, Phase 14 
 |-----------|--------|-------|----------|
 | v0.1 | 5 | 5 | ~2 sessions |
 | v0.2 | 4 | 7 | ~3 days |
+| v0.3 | 5 | 11 | ~2 days |
 
 ## Accumulated Context
 
@@ -54,21 +55,30 @@ Progress: [████████░░] 80% (Phases 10-13 complete, Phase 14 
 - [Phase 09]: ESC priority check before isPlaying guard
 - [Phase 09]: Stack-based layer management (GameMenu + Settings overlay)
 
+**v0.3 decisions:**
+
+- [Phase 10]: Page-based data schema replaces command-based format
+- [Phase 11]: Tab-based navigation, usePageEditor composable (provide/inject)
+- [Phase 12]: Modal pickers for characters, backgrounds, audio
+- [Phase 13]: Choice pages with type toggle, setVariable support
+- [Phase 14]: iframe preview with postMessage protocol, asset:// basePath, read-only CSS overlay
+
 ### Blockers/Concerns
 
 None currently.
 
-### Key Context for v0.3
+### Key Context for v0.4
 
-- Scenes.vue existing editor (~70% done, timeline+canvas) will be replaced by PPT page mode
+- User requested: dialogue font size/color settings, partial text coloring (inline rich text)
+- User requested: dialogue box transparency adjustable
+- User requested: voice/speech system tied to dialogues (galgame core feature)
+- Asset resolution: engine UI layers use basePath property ('asset://' for editor, '/game/' for standalone)
+- Preview iframe: v-show lazy preload, postMessage bidirectional protocol
 - Canvas infrastructure (DraggableElement, CanvasPreview, ResizeObserver scaling) reusable
-- Resource library (Pinia store + IPC) ready — pickers will integrate via it
-- ScriptEngine.js currently plays command-based format — needs page format adaptation
-- No migration from old commands[] needed (no real users yet)
 
 ## Session Continuity
 
-Last session: 2026-04-01T13:07:56.257Z
-Stopped at: Phase 14 context gathered
-Resume hint: Phase 14 (Editor Test Play) needs discuss → plan → execute
-Next action: /gsd-discuss-phase 14 — gather context for the final v0.3 phase
+Last session: 2026-04-01T16:00:00.000Z
+Stopped at: v0.3 milestone complete
+Resume hint: Start v0.4 milestone planning — voice system, font settings, dialogue box transparency
+Next action: /gsd-new-milestone or /gsd-complete-milestone

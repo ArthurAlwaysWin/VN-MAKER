@@ -46,6 +46,7 @@
 - ✓ 页面数据格式 + 引擎适配：pages[] 数组替代 commands[]，引擎按页播放 — v0.3 Phase 10
 - ✓ PPT 页面编辑器：幻灯片侧栏 + WYSIWYG 画布编辑器 + 场景/页面 CRUD — v0.3 Phase 11
 - ✓ 资源选择器：角色表情缩略图网格、背景可视化选取、音频 MiniPlayer 预听 — v0.3 Phase 12
+- ✓ 转场效果与选择分支：选择页编辑器 + 选项目标链接 + 场景跳转 + 页面转场下拉框 — v0.3 Phase 13
 
 ### Active — v0.3: PPT 式游戏内容编辑器
 
@@ -137,9 +138,9 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.3 里程碑进行中。Phase 10-12 已完成 — 页面数据格式、PPT 编辑器、资源选择器全部就绪。
+v0.3 里程碑接近完成。Phase 10-13 已完成 — 页面数据格式、PPT 编辑器、资源选择器、转场与分支全部就绪。
 
-**下一步：** Phase 13（转场效果与选择分支）→ Phase 14（编辑器内试玩）。
+**下一步：** Phase 14（编辑器内试玩）— v0.3 最后一个阶段。
 
 ---
-*Last updated: 2026-04-01 after Phase 12 (Resource Pickers) completed*
+*Last updated: 2026-04-01 after Phase 13 (Transitions & Branching) completed*

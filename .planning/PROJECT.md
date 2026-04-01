@@ -43,6 +43,9 @@
 - ✓ 自定义字体导入：整合到资源库，双窗口 FontFace 加载 — v0.2
 - ✓ 标题页设计器：3 面板画布 + 4 预制按钮 + 背景/BGM 选择 + 引擎格式迁移 — v0.2
 - ✓ 设置页叠加层：右侧滑入覆盖层 + 双模式背景 + ESC 优先级链 — v0.2
+- ✓ 页面数据格式 + 引擎适配：pages[] 数组替代 commands[]，引擎按页播放 — v0.3 Phase 10
+- ✓ PPT 页面编辑器：幻灯片侧栏 + WYSIWYG 画布编辑器 + 场景/页面 CRUD — v0.3 Phase 11
+- ✓ 资源选择器：角色表情缩略图网格、背景可视化选取、音频 MiniPlayer 预听 — v0.3 Phase 12
 
 ### Active — v0.3: PPT 式游戏内容编辑器
 
@@ -134,9 +137,9 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.3 里程碑已启动。PPT 式游戏内容编辑器 — 将时间线命令模式升级为页面式可视化编辑。
+v0.3 里程碑进行中。Phase 10-12 已完成 — 页面数据格式、PPT 编辑器、资源选择器全部就绪。
 
-**下一步：** 定义 REQUIREMENTS.md 详细需求后运行 roadmapper。
+**下一步：** Phase 13（转场效果与选择分支）→ Phase 14（编辑器内试玩）。
 
 ---
-*Last updated: 2026-03-31 after v0.3 milestone started*
+*Last updated: 2026-04-01 after Phase 12 (Resource Pickers) completed*

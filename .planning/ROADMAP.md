@@ -142,11 +142,12 @@ Plans:
   1. User can click a "Play" button to start test play from the current page
   2. Game preview runs inline within the editor (not a separate window), playing pages with transitions in sequence
   3. User can stop test play at any time and return to the editor at the page they were editing
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 14-01: TBD
+- [ ] 14-01-PLAN.md — Engine preview mode (ScriptEngine _previewMode + main.js postMessage listener + previewMode guards)
+- [ ] 14-02-PLAN.md — Editor preview UI (usePageEditor state/methods + PageEditor iframe toggle + CanvasToolbar play/stop/mute buttons + overlay stop button + read-only mode)
 
 ### Progress
 

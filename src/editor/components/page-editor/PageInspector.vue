@@ -56,6 +56,14 @@
             </option>
           </select>
           <button class="delete-x" @click.stop="removeCharacter(idx)" title="移除角色">✕</button>
+          <div v-if="editor.selectedCharIndex.value === idx" class="char-scale-row" @click.stop>
+            <label class="scale-label">缩放</label>
+            <input type="range" min="0.2" max="3" step="0.1"
+              :value="char.scale || 1"
+              @input="setCharScale(idx, parseFloat($event.target.value))"
+              class="scale-slider" />
+            <span class="scale-val">{{ (char.scale || 1).toFixed(1) }}</span>
+          </div>
         </div>
         <div v-if="page.characters.length === 0" class="empty-hint">当前页面无角色</div>
         <button class="add-btn" @click="editor.showCharPicker.value = true">+ 添加角色</button>
@@ -89,15 +97,22 @@
           <div class="editor-divider">── 编辑选中对话 ──</div>
           <div class="form-group">
             <label>说话者</label>
-            <select :value="selectedDialogue.speaker || ''"
-              @change="setSpeaker($event.target.value)" class="field-input">
-              <option value="">（旁白）</option>
-              <option v-for="[charId, char] in characterEntries" :key="charId" :value="charId">
-                {{ char.name }}
-              </option>
-            </select>
+            <div class="speaker-combobox">
+              <input type="text" :value="speakerDisplay"
+                @input="onSpeakerInput($event.target.value)"
+                @focus="showSpeakerDropdown = true"
+                @blur="onSpeakerBlur"
+                class="field-input" placeholder="无（不设置说话者）" />
+              <div v-if="showSpeakerDropdown && pageCharOptions.length > 0" class="speaker-dropdown">
+                <div class="speaker-option" @mousedown.prevent="setSpeaker('')">无</div>
+                <div v-for="opt in pageCharOptions" :key="opt.id"
+                  class="speaker-option" @mousedown.prevent="setSpeaker(opt.id)">
+                  {{ opt.name }}
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="form-group" v-if="selectedDialogue.speaker">
+          <div class="form-group" v-if="selectedDialogue.speaker && isCharId(selectedDialogue.speaker)">
             <label>表情变化</label>
             <select :value="selectedDialogue.expression || ''"
               @change="setDialogueExpression($event.target.value)" class="field-input">
@@ -228,7 +243,7 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
 
@@ -238,11 +253,33 @@ const script = useScriptStore();
 const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true });
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
+const showSpeakerDropdown = ref(false);
 
 const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
 const characterEntries = computed(() => Object.entries(script.data?.characters || {}));
 const allScenes = computed(() => Object.entries(script.data?.scenes || {}));
+
+// Page-scoped character list for speaker combobox
+const pageCharOptions = computed(() => {
+  if (!page.value?.characters) return [];
+  const chars = script.data?.characters || {};
+  return page.value.characters
+    .filter(c => chars[c.id])
+    .map(c => ({ id: c.id, name: chars[c.id].name || c.id }));
+});
+
+// Display text for current speaker
+const speakerDisplay = computed(() => {
+  const dlg = selectedDialogue.value;
+  if (!dlg?.speaker) return '';
+  const char = script.data?.characters?.[dlg.speaker];
+  return char ? char.name : dlg.speaker;
+});
+
+function isCharId(id) {
+  return !!(script.data?.characters?.[id]);
+}
 
 function getCharName(charId) {
   return script.data?.characters?.[charId]?.name || charId || '';
@@ -311,6 +348,12 @@ function removeCharacter(idx) {
   }
 }
 
+function setCharScale(idx, val) {
+  if (!page.value?.characters?.[idx]) return;
+  page.value.characters[idx].scale = val;
+  // Continuous slider — do NOT call pushState
+}
+
 // Dialogue management
 function addDialogue() {
   if (!page.value) return;
@@ -328,10 +371,23 @@ function removeDialogue(idx) {
   }
 }
 
-function setSpeaker(charId) {
+function setSpeaker(val) {
   if (!selectedDialogue.value) return;
-  selectedDialogue.value.speaker = charId || null;
+  selectedDialogue.value.speaker = val || null;
+  showSpeakerDropdown.value = false;
   script.pushState();
+}
+
+function onSpeakerInput(text) {
+  if (!selectedDialogue.value) return;
+  // Free text input — store as custom speaker name directly
+  selectedDialogue.value.speaker = text || null;
+  // Continuous typing — do NOT call pushState
+}
+
+function onSpeakerBlur() {
+  // Delay to allow mousedown on dropdown options to fire first
+  setTimeout(() => { showSpeakerDropdown.value = false; }, 150);
 }
 
 function setDialogueExpression(expr) {
@@ -561,6 +617,7 @@ function onOptDragEnd() {
   padding: 4px 0;
   cursor: pointer;
   border-radius: 3px;
+  flex-wrap: wrap;
 }
 
 .char-row.active {
@@ -789,5 +846,63 @@ function onOptDragEnd() {
 
 .var-value {
   flex: 1;
+}
+
+/* ─── Speaker Combobox ─── */
+.speaker-combobox {
+  position: relative;
+}
+
+.speaker-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  background: #2d2d2d;
+  border: 1px solid #555;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.speaker-option {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.speaker-option:hover {
+  background: #094771;
+  color: #fff;
+}
+
+/* ─── Character Scale ─── */
+.char-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0 0;
+}
+
+.scale-label {
+  color: #888;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.scale-slider {
+  flex: 1;
+  height: 4px;
+}
+
+.scale-val {
+  color: #aaa;
+  font-size: 11px;
+  min-width: 24px;
+  text-align: right;
 }
 </style>

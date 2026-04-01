@@ -1,18 +1,33 @@
 <template>
   <div class="page-editor" v-if="script.data">
     <!-- Left: Scene Tree Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" :class="{ 'preview-readonly': editor.isPreviewMode.value }">
       <SceneTree />
     </div>
 
     <!-- Center: Canvas Area -->
     <div class="canvas-area">
       <CanvasToolbar />
-      <PageCanvas />
+      <div class="canvas-content">
+        <PageCanvas v-show="!editor.isPreviewMode.value" />
+        <iframe
+          v-show="editor.isPreviewMode.value"
+          :ref="onIframeRef"
+          class="preview-iframe"
+          src="/index.html"
+        ></iframe>
+        <!-- Overlay stop button — per D-13, D-14: positioned outside iframe by editor -->
+        <button
+          v-if="editor.isPreviewMode.value"
+          class="preview-overlay-stop"
+          title="停止试玩"
+          @click="editor.stopPreview()"
+        >■ 停止</button>
+      </div>
     </div>
 
     <!-- Right: Inspector Panel -->
-    <div class="inspector">
+    <div class="inspector" :class="{ 'preview-readonly': editor.isPreviewMode.value }">
       <PageInspector />
     </div>
 
@@ -38,7 +53,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { createPageEditor } from '../composables/usePageEditor.js';
 import SceneTree from '../components/page-editor/SceneTree.vue';
@@ -51,6 +66,13 @@ import PageInspector from '../components/page-editor/PageInspector.vue';
 
 const script = useScriptStore();
 const editor = createPageEditor();
+
+const iframeRef = ref(null);
+
+function onIframeRef(el) {
+  iframeRef.value = el;
+  editor.previewIframeRef.value = el;
+}
 
 function onBgSelect(path) {
   const page = editor.currentPage.value;
@@ -73,7 +95,14 @@ function onAudioSelect(path) {
   editor.showAudioPicker.value = false;
 }
 
-onMounted(() => editor.initSelection());
+onMounted(() => {
+  editor.initSelection();
+  window.addEventListener('message', editor.onEngineMessage);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('message', editor.onEngineMessage);
+});
 </script>
 
 <style scoped>
@@ -108,5 +137,46 @@ onMounted(() => editor.initSelection());
   border-left: 1px solid #111;
   flex-shrink: 0;
   overflow-y: auto;
+}
+
+.canvas-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-iframe {
+  width: 100%;
+  flex: 1;
+  border: none;
+  background: #000;
+}
+
+.preview-overlay-stop {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+}
+
+.preview-overlay-stop:hover {
+  background: rgba(180, 30, 30, 0.8);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.preview-readonly {
+  pointer-events: none;
+  opacity: 0.6;
 }
 </style>

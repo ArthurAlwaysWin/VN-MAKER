@@ -35,7 +35,6 @@
           <div class="dlg-speaker" v-if="currentDialogue.speaker">
             {{ getCharName(currentDialogue.speaker) }}
           </div>
-          <div class="dlg-speaker" v-else>(旁白)</div>
           <div class="dlg-text">{{ currentDialogue.text || '...' }}</div>
         </template>
         <textarea v-else

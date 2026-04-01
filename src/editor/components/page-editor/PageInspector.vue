@@ -86,7 +86,7 @@
           @drop="onDlgDrop($event, idx)"
           @dragend="onDlgDragEnd">
           <span class="dlg-index">#{{ idx + 1 }}</span>
-          <span class="dlg-speaker-tag">{{ dlg.speaker ? getCharName(dlg.speaker) : '(旁白)' }}:</span>
+          <span class="dlg-speaker-tag" v-if="dlg.speaker">{{ getCharName(dlg.speaker) }}:</span>
           <span class="dlg-preview">"{{ truncate(dlg.text, 15) }}"</span>
           <button class="delete-x" @click.stop="removeDialogue(idx)">✕</button>
         </div>

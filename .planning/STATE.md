@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.3
-milestone_name: — PPT 式游戏内容编辑器 ✅
-status: complete
-stopped_at: v0.3 milestone complete
-last_updated: "2026-04-01T16:00:00.000Z"
+milestone_name: — PPT 式游戏内容编辑器 ✅ (archived)
+status: archived
+stopped_at: v0.3 archived, ready for v0.4
+last_updated: "2026-04-01T17:00:00.000Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 5
-  completed_phases: 5
+  total_phases: 6
+  completed_phases: 6
   total_plans: 11
   completed_plans: 11
   percent: 100

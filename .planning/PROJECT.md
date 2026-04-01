@@ -47,20 +47,19 @@
 - ✓ PPT 页面编辑器：幻灯片侧栏 + WYSIWYG 画布编辑器 + 场景/页面 CRUD — v0.3 Phase 11
 - ✓ 资源选择器：角色表情缩略图网格、背景可视化选取、音频 MiniPlayer 预听 — v0.3 Phase 12
 - ✓ 转场效果与选择分支：选择页编辑器 + 选项目标链接 + 场景跳转 + 页面转场下拉框 — v0.3 Phase 13
+- ✓ UI 打磨：说话人 combobox、选项预览标签、角色缩放滑块 — v0.3 Phase 13.1
+- ✓ 编辑器内联试玩：iframe + postMessage + 只读覆盖层 + asset:// basePath — v0.3 Phase 14
 
-### Active — v0.3: PPT 式游戏内容编辑器
+### Active — v0.4: 语音 & 富文本 & 对话框定制
 
 <!-- 需求将在 REQUIREMENTS.md 中详细定义 -->
 
-**Goal:** 将游戏内容编辑器从命令时间线模式升级为 PPT 页面模式，让用户像编辑幻灯片一样创建游戏内容。
+**Goal:** 增强对话系统表现力 — 语音绑定、文字样式控制、对话框外观定制。
 
 **Target features:**
-- PPT 页面列表（缩略图侧栏 + 可视化画布编辑）
-- 资源选择器（角色/表情/背景/音频从资源库选取）
-- 页面转场效果（淡入淡出/滑动）
-- 选择分支页面（选项连接到不同分支）
-- 编辑器内试玩（一键测试游戏）
-- 数据格式迁移（命令式 → 页面式，兼容旧项目）
+- 🎤 语音/配音系统：对话绑定语音文件，自动播放 + 手动跳过
+- 🔤 字体设置：字号、颜色、局部文字着色（富文本标记）
+- 🪟 对话框透明度：可调节对话框背景透明度
 
 ### Future — 后续候选
 
@@ -92,7 +91,7 @@
 - **资源库**：5 类资源（背景/角色/音频/字体/通用），统一 Pinia store + IPC 管理
 - **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认页面
 - **设置页覆盖层**：右侧滑入 overlay，ESC 优先级链（settings > game menu），stack-based 层管理
-- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）
+- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）
 
 ### 已知问题
 
@@ -131,6 +130,11 @@
 | 设置页右侧滑入覆盖层 | 游戏场景持续可见，沉浸感更强 | ✓ Good |
 | ESC 优先级链（settings > menu > game） | 统一按键行为，title screen 也生效 | ✓ Good |
 | Stack-based 层管理（不隐藏底层菜单） | 覆盖层关闭后自然恢复，无需额外逻辑 | ✓ Good |
+| pages[] 替代 commands[] 数据格式 | PPT 式操作更直觉，每页一屏所见即所得 | ✓ Good |
+| 引擎按页播放 + 自动推进 | 页面数据天然支持顺序播放和分支跳转 | ✓ Good |
+| provide/inject 共享 pageEditor 状态 | 避免 props drilling，组件树自由访问 | ✓ Good |
+| iframe + postMessage 试玩方案 | 完美 CSS/JS 隔离，引擎零修改 | ✓ Good |
+| asset:// basePath 动态注入 | 编辑器项目和独立模式共用同一引擎代码 | ✓ Good |
 
 ## Evolution
 
@@ -138,9 +142,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.3 里程碑接近完成。Phase 10-13 已完成 — 页面数据格式、PPT 编辑器、资源选择器、转场与分支全部就绪。
+v0.3 里程碑已完成。6 个阶段（10-14 + 13.1）全部交付 — 页面数据格式、PPT 编辑器、资源选择器、转场分支、UI 打磨、编辑器内联试玩全部就绪。里程碑审计 23/23 通过。
 
-**下一步：** Phase 14（编辑器内试玩）— v0.3 最后一个阶段。
+**已发布：** v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）
+
+**下一步：** v0.4 — 语音系统、富文本字体设置、对话框透明度定制。
 
 ---
-*Last updated: 2026-04-01 after Phase 13 (Transitions & Branching) completed*
+*Last updated: 2026-04-01 after v0.3 milestone completed*

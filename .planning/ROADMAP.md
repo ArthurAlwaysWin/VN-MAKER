@@ -54,109 +54,25 @@ See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
 
 ---
 
-## v0.3 — PPT 式游戏内容编辑器 🚧
+## v0.3 — PPT 式游戏内容编辑器 ✅
 
-**Milestone Goal:** 将游戏内容编辑器从命令时间线模式升级为 PPT 页面模式，让用户像编辑幻灯片一样创建游戏内容。
+<details>
+<summary>Phases 10-14 + 13.1 (shipped 2026-04-01)</summary>
 
-### Phases
+- [x] **Phase 10: Page Data Schema & Engine Adaptation** — Page-based data format + engine rewrite (2026-03-31)
+- [x] **Phase 11: PPT Page Editor** — Scene tree sidebar + WYSIWYG canvas + inspector (2026-04-01)
+- [x] **Phase 12: Resource Pickers** — Character/expression/background/audio pickers (2026-03-31)
+- [x] **Phase 13: Transitions & Branching** — Fade/slide transitions + choice pages + scene linking (2026-04-01)
+- [x] **Phase 13.1: UI Polish** — Speaker combobox + choice preview + character scale (INSERTED)
+- [x] **Phase 14: Editor Test Play** — Inline iframe preview with postMessage protocol (2026-04-01)
 
-- [x] **Phase 10: Page Data Schema & Engine Adaptation** — Define page-based data format and adapt engine to play it (completed 2026-03-31)
-- [x] **Phase 11: PPT Page Editor** — Slide sidebar + WYSIWYG canvas editor for creating/editing game pages (completed 2026-04-01)
-- [x] **Phase 12: Resource Pickers** — Visual pickers to select characters, expressions, backgrounds, and audio from the resource library (completed 2026-03-31)
-- [x] **Phase 13: Transitions & Branching** — Page transition effects and choice-branch pages (completed 2026-04-01)
-- [x] **Phase 14: Editor Test Play** — Inline game preview for testing pages without leaving the editor (completed 2026-04-01)
+**Key deliverables:**
+- ✅ 页面式数据架构替代命令时间线 + 引擎完全重写
+- ✅ PPT 风格所见即所得编辑器（场景树 + 1280×720 画布 + 检查器）
+- ✅ 视觉资源选择器（角色表情网格、背景预览、音频播放器）
+- ✅ 转场效果 + 选择分支页 + 场景跳转
+- ✅ 编辑器内联试玩（iframe + postMessage + 只读覆盖层）
 
-### Phase Details
+See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 
-#### Phase 10: Page Data Schema & Engine Adaptation
-**Goal**: Page-based data format is defined and the engine can play it
-**Depends on**: Nothing (v0.3 foundation)
-**Requirements**: DATA-01, DATA-02, DATA-03
-**Success Criteria** (what must be TRUE):
-  1. New project creates script.json with a pages[] array instead of commands[]
-  2. Each page object stores background, characters[], dialogue, bgm, and transition config
-  3. Engine plays through a page-format script — showing backgrounds, characters, and dialogue in correct sequence
-  4. Engine advances to the next page on user click/tap
-**Plans**: 2 plans
-
-Plans:
-- [x] 10-01-PLAN.md — Page data schema & default templates (defaultScript + demo script.json conversion)
-- [x] 10-02-PLAN.md — Engine & runtime page playback adaptation (ScriptEngine rewrite + main.js wiring)
-
-#### Phase 11: PPT Page Editor
-**Goal**: Users can create and visually edit game pages like PPT slides
-**Depends on**: Phase 10
-**Requirements**: EDITOR-01, EDITOR-02, EDITOR-03, EDITOR-04, EDITOR-05, EDITOR-06, EDITOR-07, EDITOR-08
-**Success Criteria** (what must be TRUE):
-  1. Left sidebar displays all pages as clickable thumbnail slides; selecting a page loads it on the canvas
-  2. User can add new pages, delete pages (with confirmation), and drag-reorder pages in the sidebar
-  3. Canvas shows 1280×720 WYSIWYG preview of the selected page with background and positioned character sprites
-  4. User can add/remove characters on the canvas and drag them to set position
-  5. Inspector panel allows editing dialogue (speaker + text) and setting BGM/SE for the selected page
-**Plans**: 3 plans
-**UI hint**: yes
-
-Plans:
-- [x] 11-01: Store CRUD helpers + composable + view shell + App.vue integration
-- [x] 11-02: Scene tree sidebar (SceneTree.vue) with management + drag-reorder
-- [x] 11-03: Canvas + inspector + character picker + dialogue editing
-
-#### Phase 12: Resource Pickers
-**Goal**: Users can select characters, expressions, backgrounds, and audio from the resource library within the page editor
-**Depends on**: Phase 11
-**Requirements**: PICKER-01, PICKER-02, PICKER-03, PICKER-04
-**Success Criteria** (what must be TRUE):
-  1. Character dropdown picker lists all characters imported in the resource library
-  2. Expression picker shows a thumbnail grid of the selected character's available expressions
-  3. Background picker shows visual previews of all imported backgrounds; selecting one applies it to the current page
-  4. Audio picker lists BGM/SE files with inline play-preview; selecting one assigns it to the page
-**Plans**: 2 plans
-**UI hint**: yes
-
-Plans:
-- [x] 12-01-PLAN.md — Composable state refs + CharacterPicker expression thumbnail grid
-- [x] 12-02-PLAN.md — AudioPicker component + PageInspector picker integration + PageEditor wiring
-
-#### Phase 13: Transitions & Branching
-**Goal**: Users can configure page transition effects and create choice-branch pages with jump destinations
-**Depends on**: Phase 12
-**Requirements**: EFFECT-01, EFFECT-02, BRANCH-01, BRANCH-02, BRANCH-03
-**Success Criteria** (what must be TRUE):
-  1. User can set a transition type (fade / slide-left / slide-right / none) per page from the inspector
-  2. Engine renders the configured transition animation when advancing between pages
-  3. User can create a choice page that displays multiple option buttons on the canvas
-  4. Each choice option can be linked to a target page or scene as its jump destination
-  5. Choice pages are visually distinct in the sidebar with a different badge/icon from normal pages
-**Plans**: 2 plans
-**UI hint**: yes
-
-Plans:
-- [x] 13-01-PLAN.md — Choice page store helpers (convertPageType, setSceneNext) + SceneTree context menu type toggle
-- [x] 13-02-PLAN.md — PageInspector choice options editor (prompt + options + targets + setVariable) + scene next dropdown + verification
-
-#### Phase 14: Editor Test Play
-**Goal**: Users can preview their game directly inside the editor without leaving the editing workflow
-**Depends on**: Phase 13
-**Requirements**: PLAY-01, PLAY-02, PLAY-03
-**Success Criteria** (what must be TRUE):
-  1. User can click a "Play" button to start test play from the current page
-  2. Game preview runs inline within the editor (not a separate window), playing pages with transitions in sequence
-  3. User can stop test play at any time and return to the editor at the page they were editing
-**Plans**: 2 plans
-**UI hint**: yes
-
-Plans:
-- [x] 14-01-PLAN.md — Engine preview mode (ScriptEngine _previewMode + main.js postMessage listener + previewMode guards)
-- [x] 14-02-PLAN.md — Editor preview UI (usePageEditor state/methods + PageEditor iframe toggle + CanvasToolbar play/stop/mute buttons + overlay stop button + read-only mode)
-
-### Progress
-
-**Execution Order:** Phase 10 → 11 → 12 → 13 → 14
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 10. Page Data Schema & Engine Adaptation | 2/2 | Complete   | 2026-03-31 |
-| 11. PPT Page Editor | 3/3 | Complete   | 2026-04-01 |
-| 12. Resource Pickers | 0/? | Complete    | 2026-03-31 |
-| 13. Transitions & Branching | 0/? | Complete    | 2026-04-01 |
-| 14. Editor Test Play | 2/2 | Complete   | 2026-04-01 |
+</details>

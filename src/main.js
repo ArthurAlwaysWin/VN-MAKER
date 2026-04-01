@@ -433,6 +433,11 @@ async function init() {
 function initPreview() {
   console.log('[GalgameMaker] Preview mode — waiting for start command');
 
+  // Editor projects use asset:// protocol for resource files
+  background.basePath = 'asset://';
+  characters.basePath = 'asset://';
+  audio.basePath = 'asset://';
+
   window.addEventListener('message', (e) => {
     const msg = e.data;
     if (!msg || !msg.type) return;

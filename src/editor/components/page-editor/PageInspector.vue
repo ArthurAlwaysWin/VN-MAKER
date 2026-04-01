@@ -62,8 +62,8 @@
       </div>
     </div>
 
-    <!-- Section 3: Dialogues -->
-    <div class="inspector-section">
+    <!-- Section 3: Dialogues (normal pages only) -->
+    <div class="inspector-section" v-if="!page || page.type !== 'choice'">
       <div class="section-toggle" @click="sections.dialogues = !sections.dialogues">
         {{ sections.dialogues ? '▼' : '▶' }} 💬 对话列表
       </div>
@@ -118,6 +118,71 @@
       </div>
     </div>
 
+    <!-- Section 3b: Choice Options (choice pages only) -->
+    <div class="inspector-section" v-if="page && page.type === 'choice'">
+      <div class="section-toggle" @click="sections.choices = !sections.choices">
+        {{ sections.choices ? '▼' : '▶' }} 🔀 选项编辑
+      </div>
+      <div v-if="sections.choices" class="section-body">
+        <div class="form-group">
+          <label>提示文本</label>
+          <input type="text" :value="page.prompt || ''"
+            @input="setPrompt($event.target.value)"
+            class="field-input" placeholder="请做出选择..." />
+        </div>
+
+        <div class="options-list">
+          <div v-for="(opt, idx) in page.options" :key="idx"
+            class="option-card"
+            draggable="true"
+            @dragstart="onOptDragStart($event, idx)"
+            @dragover.prevent="onOptDragOver($event, idx)"
+            @drop="onOptDrop($event, idx)"
+            @dragend="onOptDragEnd">
+            <div class="option-header">
+              <span class="option-index">#{{ idx + 1 }}</span>
+              <span class="option-drag-handle">⠿</span>
+              <button class="delete-x" @click.stop="removeOption(idx)" title="删除选项">✕</button>
+            </div>
+            <div class="form-group">
+              <label>选项文本</label>
+              <input type="text" :value="opt.text"
+                @input="setOptionText(idx, $event.target.value)"
+                class="field-input" placeholder="选项内容..." />
+            </div>
+            <div class="form-group">
+              <label>跳转场景</label>
+              <select :value="opt.target || ''"
+                @change="setOptionTarget(idx, $event.target.value)"
+                class="field-input">
+                <option value="">（不跳转 — 继续下一页）</option>
+                <option v-for="[sId, s] in allScenes" :key="sId" :value="sId">
+                  {{ s.name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group option-variable">
+              <label>设置变量</label>
+              <div class="variable-row">
+                <input type="text" :value="optionVarKey(opt)"
+                  @input="setOptionVarKey(idx, $event.target.value)"
+                  class="field-input var-key" placeholder="变量名" />
+                <span class="var-eq">=</span>
+                <input type="number" :value="optionVarValue(opt)"
+                  @input="setOptionVarValue(idx, $event.target.value)"
+                  class="field-input var-value" placeholder="值" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!page.options || page.options.length === 0" class="empty-hint">
+          暂无选项，点击下方按钮添加
+        </div>
+        <button class="add-btn" @click="addOption">+ 添加选项</button>
+      </div>
+    </div>
+
     <!-- Section 4: Audio -->
     <div class="inspector-section">
       <div class="section-toggle" @click="sections.audio = !sections.audio">
@@ -154,6 +219,27 @@
         </div>
       </div>
     </div>
+
+    <!-- Section 5: Scene Jump -->
+    <div class="inspector-section">
+      <div class="section-toggle" @click="sections.sceneJump = !sections.sceneJump">
+        {{ sections.sceneJump ? '▼' : '▶' }} 🔗 场景跳转
+      </div>
+      <div v-if="sections.sceneJump" class="section-body">
+        <div class="form-group">
+          <label>下一场景</label>
+          <select :value="currentSceneNext"
+            @change="onSetSceneNext($event.target.value)"
+            class="field-input">
+            <option value="">（按顺序播放）</option>
+            <option v-for="[sId, s] in otherScenes" :key="sId" :value="sId">
+              {{ s.name }}
+            </option>
+          </select>
+        </div>
+        <div class="scene-jump-hint">设置本场景结束后跳转的目标场景，用于分支汇合</div>
+      </div>
+    </div>
   </div>
 
   <!-- Empty state -->
@@ -170,12 +256,24 @@ import { useScriptStore } from '../../stores/script.js';
 const editor = usePageEditor();
 const script = useScriptStore();
 
-const sections = reactive({ props: true, chars: true, dialogues: true, audio: true });
+const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, sceneJump: false });
 const dlgDragState = reactive({ fromIndex: -1 });
+const optDragState = reactive({ fromIndex: -1 });
 
 const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
 const characterEntries = computed(() => Object.entries(script.data?.characters || {}));
+const allScenes = computed(() => Object.entries(script.data?.scenes || {}));
+
+const otherScenes = computed(() => {
+  const currentId = editor.selectedSceneId.value;
+  return allScenes.value.filter(([sId]) => sId !== currentId);
+});
+
+const currentSceneNext = computed(() => {
+  const scene = script.data?.scenes?.[editor.selectedSceneId.value];
+  return scene?.next || '';
+});
 
 function getCharName(charId) {
   return script.data?.characters?.[charId]?.name || charId || '';
@@ -308,6 +406,106 @@ function setBgmVolume(vol) {
   if (!page.value?.bgm) return;
   page.value.bgm.volume = vol;
   // Continuous slider — do NOT call pushState (Pitfall 4)
+}
+
+// ─── Choice option helpers ──────────────────────────────
+
+function setPrompt(text) {
+  if (!page.value || page.value.type !== 'choice') return;
+  page.value.prompt = text;
+  // Continuous typing — do NOT call pushState
+}
+
+function addOption() {
+  if (!page.value || page.value.type !== 'choice') return;
+  if (!page.value.options) page.value.options = [];
+  page.value.options.push({ text: '', target: null, setVariable: null });
+  script.pushState();
+}
+
+function removeOption(idx) {
+  if (!page.value?.options) return;
+  page.value.options.splice(idx, 1);
+  script.pushState();
+}
+
+function setOptionText(idx, text) {
+  if (!page.value?.options?.[idx]) return;
+  page.value.options[idx].text = text;
+  // Continuous typing — do NOT call pushState
+}
+
+function setOptionTarget(idx, target) {
+  if (!page.value?.options?.[idx]) return;
+  page.value.options[idx].target = target || null;
+  script.pushState();
+}
+
+function optionVarKey(opt) {
+  if (!opt.setVariable) return '';
+  const keys = Object.keys(opt.setVariable);
+  return keys.length > 0 ? keys[0] : '';
+}
+
+function optionVarValue(opt) {
+  if (!opt.setVariable) return '';
+  const keys = Object.keys(opt.setVariable);
+  return keys.length > 0 ? opt.setVariable[keys[0]] : '';
+}
+
+function setOptionVarKey(idx, newKey) {
+  if (!page.value?.options?.[idx]) return;
+  const opt = page.value.options[idx];
+  const oldValue = opt.setVariable ? Object.values(opt.setVariable)[0] ?? 0 : 0;
+  if (newKey.trim()) {
+    opt.setVariable = { [newKey.trim()]: oldValue };
+  } else {
+    opt.setVariable = null;
+  }
+  // Continuous typing — do NOT call pushState
+}
+
+function setOptionVarValue(idx, newVal) {
+  if (!page.value?.options?.[idx]) return;
+  const opt = page.value.options[idx];
+  const oldKey = opt.setVariable ? Object.keys(opt.setVariable)[0] : '';
+  if (oldKey) {
+    opt.setVariable = { [oldKey]: parseFloat(newVal) || 0 };
+    script.pushState();
+  }
+}
+
+// Option drag reorder
+function onOptDragStart(e, idx) {
+  optDragState.fromIndex = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(idx));
+}
+
+function onOptDragOver(e, toIndex) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function onOptDrop(e, toIndex) {
+  e.preventDefault();
+  const fromIndex = optDragState.fromIndex;
+  if (fromIndex === toIndex || fromIndex < 0) return;
+  if (!page.value?.options) return;
+  const [moved] = page.value.options.splice(fromIndex, 1);
+  const adjusted = fromIndex < toIndex ? toIndex - 1 : toIndex;
+  page.value.options.splice(adjusted, 0, moved);
+  script.pushState();
+  optDragState.fromIndex = -1;
+}
+
+function onOptDragEnd() {
+  optDragState.fromIndex = -1;
+}
+
+// Scene next
+function onSetSceneNext(sceneId) {
+  script.setSceneNext(editor.selectedSceneId.value, sceneId);
 }
 </script>
 
@@ -567,5 +765,71 @@ function setBgmVolume(vol) {
   font-size: 13px;
   text-align: center;
   padding: 8px 0;
+}
+
+/* ─── Choice Options ─── */
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.option-card {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: grab;
+}
+
+.option-card:active {
+  cursor: grabbing;
+}
+
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.option-index {
+  color: #007acc;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.option-drag-handle {
+  color: #666;
+  font-size: 14px;
+  cursor: grab;
+  flex: 1;
+}
+
+.option-variable .variable-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.var-key {
+  flex: 2;
+}
+
+.var-eq {
+  color: #888;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.var-value {
+  flex: 1;
+}
+
+.scene-jump-hint {
+  color: #666;
+  font-size: 11px;
+  margin-top: 4px;
 }
 </style>

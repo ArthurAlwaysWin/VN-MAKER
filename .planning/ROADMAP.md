@@ -131,8 +131,8 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 13-01-PLAN.md — Choice page store helpers (convertPageType, setSceneNext) + SceneTree context menu type toggle
-- [ ] 13-02-PLAN.md — PageInspector choice options editor (prompt + options + targets + setVariable) + scene next dropdown + verification
+- [x] 13-01-PLAN.md — Choice page store helpers (convertPageType, setSceneNext) + SceneTree context menu type toggle
+- [x] 13-02-PLAN.md — PageInspector choice options editor (prompt + options + targets + setVariable) + scene next dropdown + verification
 
 #### Phase 14: Editor Test Play
 **Goal**: Users can preview their game directly inside the editor without leaving the editing workflow

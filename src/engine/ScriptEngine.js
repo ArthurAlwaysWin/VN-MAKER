@@ -62,6 +62,9 @@ export class ScriptEngine extends EventEmitter {
     this._currentBgmFile = null;
     /** @type {string|null} Currently displayed background path */
     this._currentBg = null;
+
+    /** @type {boolean} Preview mode — hides game menus when running inside editor iframe */
+    this._previewMode = false;
   }
 
   // ─── Loading ──────────────────────────────────────────────

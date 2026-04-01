@@ -12,6 +12,12 @@
       class="resize-handle"
       @mousedown.stop="onResizeStart">
     </div>
+    <!-- Scale handle (top-right corner) -->
+    <div
+      v-if="isSelected && scalable"
+      class="scale-handle"
+      @mousedown.stop="onScaleStart">
+    </div>
   </div>
 </template>
 
@@ -26,10 +32,11 @@ const props = defineProps({
   scale: { type: Number, default: 1 },
   isSelected: { type: Boolean, default: false },
   resizable: { type: Boolean, default: false },
+  scalable: { type: Boolean, default: false },
   canvasScale: { type: Number, default: 1 },
 });
 
-const emit = defineEmits(['select', 'move', 'resize']);
+const emit = defineEmits(['select', 'move', 'resize', 'scale']);
 
 const isDragging = ref(false);
 const dragStart = ref({ mx: 0, my: 0, ex: 0, ey: 0 });
@@ -105,6 +112,28 @@ function onResizeStart(e) {
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
+
+function onScaleStart(e) {
+  if (e.button !== 0) return;
+  e.stopPropagation();
+  const startScale = props.scale || 1;
+  const startY = e.clientY;
+
+  const onMove = (ev) => {
+    const dy = -(ev.clientY - startY) / props.canvasScale;
+    const delta = dy / 200;
+    const newScale = Math.min(3, Math.max(0.2, +(startScale + delta).toFixed(2)));
+    emit('scale', newScale);
+  };
+
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
 </script>
 
 <style scoped>
@@ -133,6 +162,19 @@ function onResizeStart(e) {
   background: #007acc;
   border: 1px solid #fff;
   cursor: nwse-resize;
+  z-index: 10;
+}
+
+.scale-handle {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  background: #e0a020;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  cursor: ns-resize;
   z-index: 10;
 }
 </style>

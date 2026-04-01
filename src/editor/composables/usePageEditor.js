@@ -15,6 +15,12 @@ export function createPageEditor() {
   const showAudioPicker = ref(false);
   const audioPickerTab = ref('bgm');
 
+  // ─── Preview mode state ─────────────────────────────────
+  const isPreviewMode = ref(false);
+  const isMuted = ref(false);
+  const isEngineReady = ref(false);
+  const previewIframeRef = ref(null);
+
   const currentScene= computed(() => {
     if (!script.data || !selectedSceneId.value) return null;
     return script.data.scenes[selectedSceneId.value] || null;
@@ -53,6 +59,58 @@ export function createPageEditor() {
     }
   }
 
+  // ─── Preview mode methods ───────────────────────────────
+  function startPreview() {
+    if (!previewIframeRef.value || !isEngineReady.value) return;
+    if (!script.data || !selectedSceneId.value) return;
+
+    // Deep-copy script data to strip Vue Proxy (per D-08)
+    const snapshot = JSON.parse(JSON.stringify(script.data));
+
+    previewIframeRef.value.contentWindow.postMessage({
+      type: 'start',
+      script: snapshot,
+      sceneId: selectedSceneId.value,
+      pageIndex: selectedPageIndex.value,
+      previewMode: true,
+    }, '*');
+
+    isPreviewMode.value = true;
+    isMuted.value = false;
+  }
+
+  function stopPreview() {
+    if (previewIframeRef.value?.contentWindow) {
+      previewIframeRef.value.contentWindow.postMessage({ type: 'stop' }, '*');
+    }
+    isPreviewMode.value = false;
+  }
+
+  function toggleMute() {
+    isMuted.value = !isMuted.value;
+    if (previewIframeRef.value?.contentWindow) {
+      previewIframeRef.value.contentWindow.postMessage({
+        type: 'mute',
+        muted: isMuted.value,
+      }, '*');
+    }
+  }
+
+  function onEngineMessage(event) {
+    const msg = event.data;
+    if (!msg || !msg.type) return;
+    if (previewIframeRef.value && event.source !== previewIframeRef.value.contentWindow) return;
+
+    switch (msg.type) {
+      case 'ready':
+        isEngineReady.value = true;
+        break;
+      case 'ended':
+        stopPreview();
+        break;
+    }
+  }
+
   const editor = {
     selectedSceneId,
     selectedPageIndex,
@@ -69,6 +127,14 @@ export function createPageEditor() {
     selectDialogue,
     selectCharacter,
     initSelection,
+    isPreviewMode,
+    isMuted,
+    isEngineReady,
+    previewIframeRef,
+    startPreview,
+    stopPreview,
+    toggleMute,
+    onEngineMessage,
   };
 
   provide(PAGE_EDITOR_KEY, editor);

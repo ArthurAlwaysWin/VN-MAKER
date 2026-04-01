@@ -22,6 +22,7 @@
             @blur="confirmRename"
             @click.stop />
           <span v-else class="scene-name">{{ scene.name }}</span>
+          <span v-if="scene.next" class="scene-jump-badge" :title="'跳转到: ' + getSceneName(scene.next)">🔗</span>
           <button class="scene-menu-btn" @click.stop="showSceneMenu(sceneId, $event)" title="场景操作">⋯</button>
         </div>
 
@@ -71,6 +72,16 @@
       <template v-if="contextMenu.type === 'scene'">
         <div class="menu-item" @click="onRenameScene">重命名</div>
         <div class="menu-item" @click="onAddPageToScene">添加页面</div>
+        <div class="menu-divider"></div>
+        <div class="menu-label">🔗 场景跳转</div>
+        <div v-for="[sId, s] in otherScenesForMenu" :key="sId"
+          class="menu-item" :class="{ selected: contextSceneNext === sId }"
+          @click="onMenuSetSceneNext(sId)">
+          {{ contextSceneNext === sId ? '✓ ' : '' }}{{ s.name }}
+        </div>
+        <div v-if="otherScenesForMenu.length === 0" class="menu-item disabled">无其他场景</div>
+        <div v-if="contextSceneNext" class="menu-item" @click="onMenuClearSceneNext">✕ 清除跳转</div>
+        <div class="menu-divider"></div>
         <div class="menu-item danger" @click="onDeleteScene">删除场景</div>
       </template>
       <template v-else-if="contextMenu.type === 'page'">
@@ -134,6 +145,19 @@ const contextMenuPageIsChoice = computed(() => {
   const scene = script.data?.scenes?.[contextMenu.sceneId];
   return scene?.pages?.[contextMenu.pageIndex]?.type === 'choice';
 });
+
+const otherScenesForMenu = computed(() => {
+  const id = contextMenu.sceneId;
+  return Object.entries(script.data?.scenes || {}).filter(([sId]) => sId !== id);
+});
+
+const contextSceneNext = computed(() => {
+  return script.data?.scenes?.[contextMenu.sceneId]?.next || '';
+});
+
+function getSceneName(sceneId) {
+  return script.data?.scenes?.[sceneId]?.name || sceneId;
+}
 
 onMounted(() => {
   // Auto-expand first scene
@@ -324,6 +348,18 @@ function onTogglePageType() {
     if (!confirm('转换为普通页将丢弃选项数据，确定继续？')) return;
   }
   script.convertPageType(sceneId, idx);
+}
+
+function onMenuSetSceneNext(targetSceneId) {
+  const sceneId = contextMenu.sceneId;
+  closeMenu();
+  script.setSceneNext(sceneId, targetSceneId);
+}
+
+function onMenuClearSceneNext() {
+  const sceneId = contextMenu.sceneId;
+  closeMenu();
+  script.setSceneNext(sceneId, '');
 }
 
 function startRenamePage(sceneId, idx, page) {
@@ -624,5 +660,37 @@ function onDragEnd() {
   color: #555;
   font-size: 13px;
   text-align: center;
+}
+
+.scene-jump-badge {
+  font-size: 12px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #444;
+  margin: 4px 0;
+}
+
+.menu-label {
+  padding: 4px 16px;
+  font-size: 11px;
+  color: #888;
+  font-weight: 600;
+}
+
+.menu-item.selected {
+  color: #007acc;
+}
+
+.menu-item.disabled {
+  color: #555;
+  cursor: default;
+}
+
+.menu-item.disabled:hover {
+  background: transparent;
 }
 </style>

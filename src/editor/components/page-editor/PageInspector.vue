@@ -219,27 +219,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Section 5: Scene Jump -->
-    <div class="inspector-section">
-      <div class="section-toggle" @click="sections.sceneJump = !sections.sceneJump">
-        {{ sections.sceneJump ? '▼' : '▶' }} 🔗 场景跳转
-      </div>
-      <div v-if="sections.sceneJump" class="section-body">
-        <div class="form-group">
-          <label>下一场景</label>
-          <select :value="currentSceneNext"
-            @change="onSetSceneNext($event.target.value)"
-            class="field-input">
-            <option value="">（按顺序播放）</option>
-            <option v-for="[sId, s] in otherScenes" :key="sId" :value="sId">
-              {{ s.name }}
-            </option>
-          </select>
-        </div>
-        <div class="scene-jump-hint">设置本场景结束后跳转的目标场景，用于分支汇合</div>
-      </div>
-    </div>
   </div>
 
   <!-- Empty state -->
@@ -256,7 +235,7 @@ import { useScriptStore } from '../../stores/script.js';
 const editor = usePageEditor();
 const script = useScriptStore();
 
-const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, sceneJump: false });
+const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true });
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
 
@@ -264,16 +243,6 @@ const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
 const characterEntries = computed(() => Object.entries(script.data?.characters || {}));
 const allScenes = computed(() => Object.entries(script.data?.scenes || {}));
-
-const otherScenes = computed(() => {
-  const currentId = editor.selectedSceneId.value;
-  return allScenes.value.filter(([sId]) => sId !== currentId);
-});
-
-const currentSceneNext = computed(() => {
-  const scene = script.data?.scenes?.[editor.selectedSceneId.value];
-  return scene?.next || '';
-});
 
 function getCharName(charId) {
   return script.data?.characters?.[charId]?.name || charId || '';
@@ -501,11 +470,6 @@ function onOptDrop(e, toIndex) {
 
 function onOptDragEnd() {
   optDragState.fromIndex = -1;
-}
-
-// Scene next
-function onSetSceneNext(sceneId) {
-  script.setSceneNext(editor.selectedSceneId.value, sceneId);
 }
 </script>
 
@@ -825,11 +789,5 @@ function onSetSceneNext(sceneId) {
 
 .var-value {
   flex: 1;
-}
-
-.scene-jump-hint {
-  color: #666;
-  font-size: 11px;
-  margin-top: 4px;
 }
 </style>

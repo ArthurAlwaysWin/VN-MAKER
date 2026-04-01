@@ -75,6 +75,9 @@
       </template>
       <template v-else-if="contextMenu.type === 'page'">
         <div class="menu-item" @click="onRenamePageFromMenu">重命名</div>
+        <div class="menu-item" @click="onTogglePageType">
+          {{ contextMenuPageIsChoice ? '转换为普通页' : '转换为选择页' }}
+        </div>
         <div class="menu-item danger" @click="onDeletePageFromMenu">删除页面</div>
       </template>
     </div>
@@ -126,6 +129,11 @@ const contextMenuStyle = computed(() => ({
   left: contextMenu.x + 'px',
   top: contextMenu.y + 'px',
 }));
+
+const contextMenuPageIsChoice = computed(() => {
+  const scene = script.data?.scenes?.[contextMenu.sceneId];
+  return scene?.pages?.[contextMenu.pageIndex]?.type === 'choice';
+});
 
 onMounted(() => {
   // Auto-expand first scene
@@ -303,6 +311,19 @@ function onRenamePageFromMenu() {
   const scene = script.data?.scenes?.[sceneId];
   if (!scene || idx < 0 || idx >= scene.pages.length) return;
   startRenamePage(sceneId, idx, scene.pages[idx]);
+}
+
+function onTogglePageType() {
+  const sceneId = contextMenu.sceneId;
+  const idx = contextMenu.pageIndex;
+  closeMenu();
+  const scene = script.data?.scenes?.[sceneId];
+  if (!scene || idx < 0 || idx >= scene.pages.length) return;
+  const page = scene.pages[idx];
+  if (page.type === 'choice') {
+    if (!confirm('转换为普通页将丢弃选项数据，确定继续？')) return;
+  }
+  script.convertPageType(sceneId, idx);
 }
 
 function startRenamePage(sceneId, idx, page) {

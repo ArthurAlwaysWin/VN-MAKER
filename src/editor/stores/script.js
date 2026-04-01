@@ -151,6 +151,37 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function convertPageType(sceneId, pageIndex) {
+    const scene = data.value?.scenes?.[sceneId];
+    if (!scene) return;
+    const page = scene.pages?.[pageIndex];
+    if (!page) return;
+
+    if (page.type === 'normal' || !page.type) {
+      page.type = 'choice';
+      page.prompt = '';
+      page.options = [
+        { text: '', target: null, setVariable: null },
+        { text: '', target: null, setVariable: null },
+      ];
+    } else if (page.type === 'choice') {
+      page.type = 'normal';
+      delete page.prompt;
+      delete page.options;
+      if (!page.dialogues || page.dialogues.length === 0) {
+        page.dialogues = [{ speaker: null, text: '', expression: null }];
+      }
+    }
+    pushState();
+  }
+
+  function setSceneNext(sceneId, nextSceneId) {
+    const scene = data.value?.scenes?.[sceneId];
+    if (!scene) return;
+    scene.next = nextSceneId || null;
+    pushState();
+  }
+
   // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
   async function loadScript() {
     console.warn('loadScript() is deprecated — use loadFromData() via project store');
@@ -168,6 +199,7 @@ export const useScriptStore = defineStore('script', () => {
     getTitleScreen, updateTitleScreen,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
+    convertPageType, setSceneNext,
     loadScript, saveScript
   };
 });

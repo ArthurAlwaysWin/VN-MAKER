@@ -76,3 +76,71 @@ See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
 See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v0.4 — 语音 & 全局字体设置
+
+### Phases
+
+- [ ] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control
+- [ ] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming
+- [ ] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview
+- [ ] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait
+
+### Phase Details
+
+#### Phase 15: Voice Engine Foundation
+**Goal**: Engine can play voice audio alongside dialogue with independent volume control
+**Depends on**: Phase 14 (v0.3 complete)
+**Requirements**: VOICE-01, VOICE-04, VOICE-05, VOICE-06
+**Success Criteria** (what must be TRUE):
+  1. Page JSON stores a `voice` file path per dialogue entry, persisting through save/load cycles
+  2. Engine plays the bound voice audio when displaying a dialogue line
+  3. Engine stops the previous voice when advancing to the next line
+  4. Player can adjust voice volume independently via the settings page slider
+  5. Voice volume respects master volume (multiplicative scaling)
+**Plans**: TBD
+
+#### Phase 16: Voice Editor Integration
+**Goal**: Creators can bind, preview, and batch-assign voice files to dialogue in the editor
+**Depends on**: Phase 15
+**Requirements**: VOICE-02, VOICE-03, VOICE-07
+**Success Criteria** (what must be TRUE):
+  1. Each dialogue entry in the Inspector shows a voice picker to select or clear a voice file
+  2. Creator can click ▶ next to a dialogue entry to preview its bound voice in the editor
+  3. Batch naming tool scans audio folder and auto-binds files matching `{charId}_{scene}_{page}_{line}` convention
+  4. Batch binding shows matched results for confirmation before applying
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 17: Global Font Settings
+**Goal**: Creators can customize dialogue box typography globally with live preview in editor and engine
+**Depends on**: None (independent of voice; sequenced after Phase 16 for workflow)
+**Requirements**: FONT-01, FONT-02, FONT-03, FONT-04
+**Success Criteria** (what must be TRUE):
+  1. `script.json` stores dialogue box font settings (fontSize, fontFamily, textColor, nameplateFontSize) with sensible defaults
+  2. Engine dialogue box renders text using global font settings via CSS custom properties
+  3. Editor provides font settings UI — font dropdown (imported + system fonts), size slider, color picker, nameplate font size
+  4. Changing font settings in editor immediately updates the canvas dialogue box preview
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 18: Voice Polish
+**Goal**: Voice playback integrates seamlessly with backlog review and auto-play mode
+**Depends on**: Phase 15
+**Requirements**: VOICE-08, VOICE-09
+**Success Criteria** (what must be TRUE):
+  1. Backlog (回想) screen shows ▶ button on entries with bound voice; clicking replays the voice
+  2. Auto-mode waits for voice audio to finish before advancing to the next line
+  3. Auto-mode advances at normal timing interval when dialogue has no voice bound
+**Plans**: TBD
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 15. Voice Engine Foundation | 0/? | Not started | - |
+| 16. Voice Editor Integration | 0/? | Not started | - |
+| 17. Global Font Settings | 0/? | Not started | - |
+| 18. Voice Polish | 0/? | Not started | - |

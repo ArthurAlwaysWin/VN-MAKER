@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.4
-milestone_name: 语音 & 富文本
-status: defining_requirements
-stopped_at: Defining requirements for v0.4
-last_updated: "2026-04-01T23:37:00.000Z"
-last_activity: 2026-04-01
+milestone_name: 语音 & 全局字体设置
+status: roadmap_complete
+stopped_at: Roadmap created, Phase 15 ready to plan
+last_updated: "2025-07-18T00:00:00.000Z"
+last_activity: 2025-07-18
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v0.4 — 语音配音系统、富文本字体设置
+**Current focus:** v0.4 — 语音配音系统、全局字体设置
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 15 — Voice Engine Foundation (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-01 — Milestone v0.4 started
+Status: Roadmap complete, ready to plan Phase 15
+Last activity: 2025-07-18 — Roadmap created for v0.4
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0% (0/4 phases)
 
 ## Performance Metrics
 
@@ -69,16 +69,19 @@ None currently.
 
 ### Key Context for v0.4
 
-- DialogueBox 当前用 textContent，需重构为 innerHTML + sanitize + 标记解析
-- 打字机效果需从字符索引追踪改为 DOM 节点追踪
-- AudioManager 已有 BGM/SE 基础，voice 字段加到 dialogue 对象
-- Inspector 已有音频选择器（AudioPicker）可复用
+- AudioManager 已有 BGM (_bgm) + SE (_se) 双通道，voice 为第 3 个 HTMLAudioElement
+- Inspector 已有 AudioPicker 组件可复用于语音选择器
+- DialogueBox 有 `_applyStyle()` 方法接受 font size/family/color — 全局字体设置直接扩展
+- ConfigManager 已管理 bgmVolume/seVolume/masterVolume — voiceVolume 同模式添加
+- SETTING_DEFS 注册表 + 工厂函数 — 语音音量滑块只需加注册表条目
 - 对话框透明度设置组件已存在于 SETTING_DEFS
-- v0.5 规划：UI 美化系统（图片按钮、样式编辑器、预设库）
+- BacklogScreen.js 已有历史记录渲染 — 语音重放添加 ▶ 按钮
+- 资源库 5 类资源（背景/角色/音频/字体/通用） — 语音文件归入音频类
+- v0.4 descoped: 局部文字着色 [color] 标记 + innerHTML 重构，延后到独立里程碑
 
 ## Session Continuity
 
-Last session: 2026-04-01T23:37:00.000Z
-Stopped at: v0.4 milestone started, defining requirements
-Resume hint: Continue requirements definition → research → roadmap
-Next action: Define REQUIREMENTS.md for v0.4
+Last session: 2025-07-18T00:00:00.000Z
+Stopped at: Roadmap created for v0.4 (4 phases, 13 requirements)
+Resume hint: Plan Phase 15 — Voice Engine Foundation
+Next action: `/gsd-plan-phase 15`

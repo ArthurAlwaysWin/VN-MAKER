@@ -56,24 +56,24 @@ v0.4 里程碑：语音系统 & 全局字体设置。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VOICE-01 | TBD | Pending |
-| VOICE-02 | TBD | Pending |
-| VOICE-03 | TBD | Pending |
-| VOICE-04 | TBD | Pending |
-| VOICE-05 | TBD | Pending |
-| VOICE-06 | TBD | Pending |
-| VOICE-07 | TBD | Pending |
-| VOICE-08 | TBD | Pending |
-| VOICE-09 | TBD | Pending |
-| FONT-01 | TBD | Pending |
-| FONT-02 | TBD | Pending |
-| FONT-03 | TBD | Pending |
-| FONT-04 | TBD | Pending |
+| VOICE-01 | Phase 15 | Pending |
+| VOICE-02 | Phase 16 | Pending |
+| VOICE-03 | Phase 16 | Pending |
+| VOICE-04 | Phase 15 | Pending |
+| VOICE-05 | Phase 15 | Pending |
+| VOICE-06 | Phase 15 | Pending |
+| VOICE-07 | Phase 16 | Pending |
+| VOICE-08 | Phase 18 | Pending |
+| VOICE-09 | Phase 18 | Pending |
+| FONT-01 | Phase 17 | Pending |
+| FONT-02 | Phase 17 | Pending |
+| FONT-03 | Phase 17 | Pending |
+| FONT-04 | Phase 17 | Pending |
 
 **Coverage:**
 - v0.4 requirements: 13 total
-- Mapped to phases: 0 (awaiting roadmap)
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13/13 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2025-07-18*

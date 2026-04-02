@@ -54,12 +54,15 @@
 
 <!-- 需求将在 REQUIREMENTS.md 中详细定义 -->
 
-**Goal:** 增强对话系统表现力 — 语音配音绑定、文字样式与局部着色、全局字体设置。
+**Goal:** 增强对话系统表现力 — 语音配音系统、全局字体设置。
 
 **Target features:**
-- 🎤 语音/配音系统：Inspector 逐条绑定 + 批量命名匹配，voice 字段存在页面数据
-- 🔤 富文本 & 字体设置：全局字号/颜色/字体 + 局部可视化着色（编辑器所见即所得，引擎解析标记）
-- 🔧 引擎重构：DialogueBox textContent → innerHTML + 标记解析 + 打字机效果适配富文本
+- 🎤 语音/配音系统：Inspector 逐条绑定 + 批量命名匹配，voice 字段存在页面数据，独立语音音量，回想屏重放，自动模式等语音
+- 🔤 全局字体设置：字号/字体/颜色/名牌字号，CSS 自定义属性，编辑器实时预览
+
+**Descoped (deferred):**
+- ❌ 局部文字着色（[color] 标记）— 需 innerHTML 重构，风险高，移至后续里程碑
+- ❌ DialogueBox textContent → innerHTML 引擎重构 — 与着色标记同步推迟
 
 ### Future — 后续候选
 

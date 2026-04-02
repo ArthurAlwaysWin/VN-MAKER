@@ -1,5 +1,5 @@
 /**
- * AudioManager — Handles BGM and SE playback
+ * AudioManager — Handles BGM, SE, and voice playback
  */
 export class AudioManager {
   /**
@@ -16,6 +16,10 @@ export class AudioManager {
     this.seVolume = 0.8;
     /** @type {number|null} Fade interval ID */
     this._fadeTimer = null;
+    /** @type {HTMLAudioElement|null} Currently playing voice clip */
+    this._voice = null;
+    /** @type {number} Voice channel volume (0-1) */
+    this.voiceVolume = 0.8;
     /** @type {boolean} Whether audio context has been unlocked */
     this._unlocked = false;
 
@@ -111,6 +115,40 @@ export class AudioManager {
   }
 
   /**
+   * Play a voice clip. Stops any currently playing voice first (D-01).
+   * @param {string} file — voice file path (relative to basePath)
+   */
+  playVoice(file) {
+    this.stopVoice();
+    if (!file) return;
+    this._voice = new Audio(this.basePath + file);
+    this._voice.volume = this.voiceVolume;
+    this._voice.play().catch(() => {});
+  }
+
+  /**
+   * Stop the currently playing voice clip.
+   */
+  stopVoice() {
+    if (this._voice) {
+      this._voice.pause();
+      this._voice.currentTime = 0;
+      this._voice = null;
+    }
+  }
+
+  /**
+   * Update voice volume. Applies immediately to playing voice.
+   * @param {number} vol — 0-1 (already multiplied by master)
+   */
+  setVoiceVolume(vol) {
+    this.voiceVolume = vol;
+    if (this._voice) {
+      this._voice.volume = vol;
+    }
+  }
+
+  /**
    * Fade volume from start to end over duration ms
    * @private
    */
@@ -141,5 +179,6 @@ export class AudioManager {
    */
   clear() {
     this.stopBgm({ fadeOut: 0 });
+    this.stopVoice();
   }
 }

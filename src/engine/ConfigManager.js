@@ -9,6 +9,7 @@ export class ConfigManager {
     this.defaults = {
       bgmVolume: 0.5,
       seVolume: 0.8,
+      voiceVolume: 0.8,     // 0–1, voice channel volume
       textSpeed: 30,        // ms per character
       autoSpeed: 2000,      // ms wait after line completes in auto mode
       fullscreen: false,        // deprecated, kept for backward compat

@@ -31,6 +31,15 @@ export const SETTING_DEFS = {
     step: 0.01,
     default: 0.8,
   },
+  'voice-volume': {
+    type: 'slider',
+    settingKey: 'voiceVolume',
+    label: '语音音量',
+    min: 0,
+    max: 1,
+    step: 0.01,
+    default: 0.8,
+  },
   'text-speed': {
     type: 'slider',
     settingKey: 'textSpeed',

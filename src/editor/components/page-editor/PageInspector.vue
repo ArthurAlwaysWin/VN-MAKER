@@ -86,6 +86,7 @@
           @drop="onDlgDrop($event, idx)"
           @dragend="onDlgDragEnd">
           <span class="dlg-index">#{{ idx + 1 }}</span>
+          <span v-if="dlg.voice" class="dlg-voice-badge" title="已绑定语音">🔊</span>
           <span class="dlg-speaker-tag" v-if="dlg.speaker">{{ getCharName(dlg.speaker) }}:</span>
           <span class="dlg-preview">"{{ truncate(dlg.text, 15) }}"</span>
           <button class="delete-x" @click.stop="removeDialogue(idx)">✕</button>
@@ -121,6 +122,23 @@
                 {{ expr }}
               </option>
             </select>
+          </div>
+          <div class="form-group">
+            <label>语音</label>
+            <div class="voice-field">
+              <input type="text"
+                :value="selectedDialogue.voice ? selectedDialogue.voice.replace('audio/', '') : ''"
+                readonly placeholder="点击选择语音..."
+                class="field-input"
+                @click="showVoicePicker = true" />
+              <button v-if="selectedDialogue.voice" class="voice-preview-btn"
+                @click.stop="toggleVoicePreview"
+                :title="isVoicePlaying ? '停止' : '试听'">
+                {{ isVoicePlaying ? '⏹' : '▶' }}
+              </button>
+              <button v-if="selectedDialogue.voice" class="voice-clear-btn"
+                @click.stop="clearDialogueVoice" title="清除语音">✕</button>
+            </div>
           </div>
           <div class="form-group">
             <label>内容</label>
@@ -240,12 +258,20 @@
   <div class="page-inspector empty" v-else>
     <div class="empty-hint">选择一个页面以编辑属性</div>
   </div>
+
+  <AudioPicker
+    :visible="showVoicePicker"
+    mode="voice"
+    @select="onVoiceSelect"
+    @close="showVoicePicker = false"
+  />
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue';
+import { reactive, ref, computed, watch, onBeforeUnmount } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import AudioPicker from './AudioPicker.vue';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -254,6 +280,9 @@ const sections = reactive({ props: true, chars: true, dialogues: true, audio: tr
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
 const showSpeakerDropdown = ref(false);
+const showVoicePicker = ref(false);
+const isVoicePlaying = ref(false);
+let previewAudio = null;
 
 const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
@@ -357,7 +386,7 @@ function setCharScale(idx, val) {
 // Dialogue management
 function addDialogue() {
   if (!page.value) return;
-  page.value.dialogues.push({ speaker: null, text: '', expression: null });
+  page.value.dialogues.push({ speaker: null, text: '', expression: null, voice: null });
   script.pushState();
   editor.selectDialogue(page.value.dialogues.length - 1);
 }
@@ -401,6 +430,55 @@ function setDialogueText(text) {
   selectedDialogue.value.text = text;
   // Continuous typing — do NOT call pushState (Pitfall 4)
 }
+
+// ─── Voice management ──────────────────────────────────
+function setDialogueVoice(path) {
+  if (!selectedDialogue.value) return;
+  selectedDialogue.value.voice = path || null;
+  script.pushState();
+}
+
+function clearDialogueVoice() {
+  if (!selectedDialogue.value) return;
+  stopVoicePreview();
+  selectedDialogue.value.voice = null;
+  script.pushState();
+}
+
+function onVoiceSelect(path) {
+  setDialogueVoice(path);
+  showVoicePicker.value = false;
+}
+
+function toggleVoicePreview() {
+  if (isVoicePlaying.value) {
+    stopVoicePreview();
+    return;
+  }
+  const voice = selectedDialogue.value?.voice;
+  if (!voice) return;
+  stopVoicePreview();
+  previewAudio = new Audio(`asset://${voice}`);
+  previewAudio.play().catch(() => {});
+  isVoicePlaying.value = true;
+  previewAudio.addEventListener('ended', () => {
+    isVoicePlaying.value = false;
+  });
+}
+
+function stopVoicePreview() {
+  if (previewAudio) {
+    previewAudio.pause();
+    previewAudio.removeAttribute('src');
+    previewAudio.load();
+    previewAudio = null;
+  }
+  isVoicePlaying.value = false;
+}
+
+watch(() => editor.selectedDialogueIndex.value, () => stopVoicePreview());
+watch(() => editor.selectedPageIndex.value, () => stopVoicePreview());
+onBeforeUnmount(() => stopVoicePreview());
 
 // Dialogue drag-reorder
 function onDlgDragStart(e, idx) {
@@ -904,5 +982,47 @@ function onOptDragEnd() {
   font-size: 11px;
   min-width: 24px;
   text-align: right;
+}
+
+/* ─── Voice Field ─── */
+.dlg-voice-badge {
+  font-size: 11px;
+  margin-right: 2px;
+  opacity: 0.7;
+}
+
+.voice-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.voice-field .field-input {
+  flex: 1;
+  cursor: pointer;
+}
+
+.voice-preview-btn,
+.voice-clear-btn {
+  background: none;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.voice-preview-btn:hover {
+  background: #007acc;
+  border-color: #007acc;
+  color: #fff;
+}
+
+.voice-clear-btn:hover {
+  background: #a22;
+  border-color: #a22;
+  color: #fff;
 }
 </style>

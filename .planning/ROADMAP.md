@@ -83,7 +83,7 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control
+- [x] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control (completed 2026-04-02)
 - [ ] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming
 - [ ] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview
 - [ ] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait
@@ -103,7 +103,7 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 15-01-PLAN.md — Voice audio channel, data model, engine wiring, volume settings
+- [x] 15-01-PLAN.md — Voice audio channel, data model, engine wiring, volume settings
 
 #### Phase 16: Voice Editor Integration
 **Goal**: Creators can bind, preview, and batch-assign voice files to dialogue in the editor
@@ -143,7 +143,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 15. Voice Engine Foundation | 0/? | Not started | - |
+| 15. Voice Engine Foundation | 1/1 | Complete    | 2026-04-02 |
 | 16. Voice Editor Integration | 0/? | Not started | - |
 | 17. Global Font Settings | 0/? | Not started | - |
 | 18. Voice Polish | 0/? | Not started | - |

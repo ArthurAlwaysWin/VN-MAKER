@@ -130,8 +130,12 @@ Plans:
   2. Engine dialogue box renders text using global font settings via CSS custom properties
   3. Editor provides font settings UI — font dropdown (imported + system fonts), size slider, color picker, nameplate font size
   4. Changing font settings in editor immediately updates the canvas dialogue box preview
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 17-01-PLAN.md — Data model (script store 6-field dialogueBox) + engine consumption (applyGlobalStyle, _applyStyle refactor, main.js wiring)
+- [ ] 17-02-PLAN.md — Editor font settings UI (DialogueBoxSettings panel in Project Settings, mini preview) + canvas live preview + per-page font override in PageInspector
 
 #### Phase 18: Voice Polish
 **Goal**: Voice playback integrates seamlessly with backlog review and auto-play mode

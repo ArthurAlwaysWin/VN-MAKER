@@ -118,7 +118,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 16-01-PLAN.md — Voice picker, preview playback, and voice badge in PageInspector
+- [x] 16-01-PLAN.md — Voice picker, preview playback, and voice badge in PageInspector
 - [ ] 16-02-PLAN.md — Batch voice matching composable, preview modal, SceneTree buttons
 
 #### Phase 17: Global Font Settings
@@ -148,6 +148,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 15. Voice Engine Foundation | 1/1 | Complete    | 2026-04-02 |
-| 16. Voice Editor Integration | 0/? | Not started | - |
+| 16. Voice Editor Integration | 1/2 | In Progress|  |
 | 17. Global Font Settings | 0/? | Not started | - |
 | 18. Voice Polish | 0/? | Not started | - |

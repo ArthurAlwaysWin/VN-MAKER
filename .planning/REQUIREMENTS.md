@@ -10,8 +10,8 @@ v0.4 里程碑：语音系统 & 全局字体设置。
 ### 语音系统
 
 - [ ] **VOICE-01**: 对话数据模型添加 `voice` 字段（文件路径字符串，可空），存储于页面 JSON
-- [ ] **VOICE-02**: Inspector 每句对话旁提供语音选择器（复用 AudioPicker 组件），支持选择/清除语音文件
-- [ ] **VOICE-03**: 编辑器语音试听——对话旁 ▶ 按钮播放绑定语音，× 按钮解除绑定
+- [x] **VOICE-02**: Inspector 每句对话旁提供语音选择器（复用 AudioPicker 组件），支持选择/清除语音文件
+- [x] **VOICE-03**: 编辑器语音试听——对话旁 ▶ 按钮播放绑定语音，× 按钮解除绑定
 - [ ] **VOICE-04**: AudioManager 新增独立 voice 通道（第 3 个 HTMLAudioElement），提供 `playVoice(src)` / `stopVoice()` API
 - [ ] **VOICE-05**: 引擎播放对话时，自动播放绑定语音；推进到下一句时停止上一句语音
 - [ ] **VOICE-06**: 独立语音音量控制（`voiceVolume` 加入 ConfigManager），设置页显示语音音量滑块，受 masterVolume 乘法影响
@@ -57,8 +57,8 @@ v0.4 里程碑：语音系统 & 全局字体设置。
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | VOICE-01 | Phase 15 | Pending |
-| VOICE-02 | Phase 16 | Pending |
-| VOICE-03 | Phase 16 | Pending |
+| VOICE-02 | Phase 16 | Complete |
+| VOICE-03 | Phase 16 | Complete |
 | VOICE-04 | Phase 15 | Pending |
 | VOICE-05 | Phase 15 | Pending |
 | VOICE-06 | Phase 15 | Pending |

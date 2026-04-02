@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.4
-milestone_name: 语音 & 全局字体设置
-status: planning
-stopped_at: Phase 16 plan-phase step 5 (research gate)
-last_updated: "2025-07-19"
-last_activity: 2025-07-19
+milestone: v0.1
+milestone_name: — 设置页设计器 ✅
+status: executing
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-04-02T05:15:33.937Z"
+last_activity: 2026-04-02
 progress:
-  total_phases: 4
+  total_phases: 2
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_plans: 3
+  completed_plans: 2
   percent: 25
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 16 — voice-editor-integration (plan-phase workflow)
+**Current focus:** Phase 16 — voice-editor-integration
 
 ## Current Position
 
-Phase: 16
-Plan: 2 plans (16-01 wave 1, 16-02 wave 2) — ready to execute
-Status: Phase 15 complete, Phase 16 planned
+Phase: 16 (voice-editor-integration) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-02
 
 Progress: [██░░░░░░░░] 25% (1/4 phases)
@@ -41,6 +41,7 @@ Progress: [██░░░░░░░░] 25% (1/4 phases)
 | v0.1 | 5 | 5 | ~2 sessions |
 | v0.2 | 4 | 7 | ~3 days |
 | v0.3 | 5 | 11 | ~2 days |
+| Phase 16 P01 | 3.7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Progress: [██░░░░░░░░] 25% (1/4 phases)
 - [Phase 16]: D-05 editor voice preview via new Audio() — no iframe dependency
 - [Phase 16]: D-06 dual-entry batch match — per-scene 🔊 + global button in SceneTree
 - [Phase 16]: D-07 match preview dialog — confirm before applying batch bindings
+- [Phase 16]: D-04 AudioPicker mode prop reuses existing picker for voice selection
+- [Phase 16]: D-05 Editor voice preview via new Audio() independent of iframe engine
 
 ### Key Context for v0.4
 
@@ -87,7 +90,7 @@ Progress: [██░░░░░░░░] 25% (1/4 phases)
 
 ## Session Continuity
 
-Last session: 2026-04-02
-Stopped at: Phase 16 planned, ready to execute
+Last session: 2026-04-02T05:15:33.933Z
+Stopped at: Completed 16-01-PLAN.md
 Resume hint: Execute Phase 16 — Voice Editor Integration
 Next action: `/gsd-execute-phase 16`

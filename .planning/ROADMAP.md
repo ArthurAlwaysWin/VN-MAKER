@@ -84,7 +84,7 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 ### Phases
 
 - [x] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control (completed 2026-04-02)
-- [ ] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming
+- [ ] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming (2 plans)
 - [ ] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview
 - [ ] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait
 
@@ -114,8 +114,12 @@ Plans:
   2. Creator can click ▶ next to a dialogue entry to preview its bound voice in the editor
   3. Batch naming tool scans audio folder and auto-binds files matching `{charId}_{scene}_{page}_{line}` convention
   4. Batch binding shows matched results for confirmation before applying
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 16-01-PLAN.md — Voice picker, preview playback, and voice badge in PageInspector
+- [ ] 16-02-PLAN.md — Batch voice matching composable, preview modal, SceneTree buttons
 
 #### Phase 17: Global Font Settings
 **Goal**: Creators can customize dialogue box typography globally with live preview in editor and engine

@@ -87,6 +87,29 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  /** Get or initialize the ui.dialogueBox font settings */
+  function getDialogueBox() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.dialogueBox ??= {
+      fontSize: 18,
+      fontFamily: null,
+      textColor: null,
+      nameplateFontSize: 20,
+      nameplateFontFamily: null,
+      nameplateColor: null,
+    };
+    return data.value.ui.dialogueBox;
+  }
+
+  /** Replace the entire dialogueBox settings and push undo state */
+  function updateDialogueBox(dialogueBox) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.dialogueBox = dialogueBox;
+    pushState();
+  }
+
   // --- Page CRUD helpers ---
 
   function createDefaultPage() {
@@ -197,6 +220,7 @@ export const useScriptStore = defineStore('script', () => {
     loadFromData, reset,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
+    getDialogueBox, updateDialogueBox,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
     convertPageType, setSceneNext,

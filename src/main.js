@@ -92,6 +92,11 @@ applyConfig();
 // ─── Engine event handlers ──────────────────────────────
 engine.on('dialogue', (data) => {
   choiceMenu.hide();
+
+  // Inject per-page font override into dialogue data
+  const currentPage = engine.script.scenes[engine.currentScene]?.pages[engine.pageIndex];
+  data.fontOverride = currentPage?.fontOverride || null;
+
   dialogueBox.show(data);
 
   // Voice playback — only play if voice is bound (D-01)
@@ -427,6 +432,11 @@ async function init() {
       settingsScreen.setLayout(engine.script.ui.settingsScreen);
     }
 
+    // Apply global dialogue box font settings if defined in script
+    if (engine.script.ui?.dialogueBox) {
+      dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
+    }
+
     showTitle();
     console.log('[GalgameMaker] Ready!');
   } catch (err) {
@@ -460,6 +470,11 @@ function initPreview() {
         // Apply custom fonts if present
         if (engine.script.assets?.fonts?.length) {
           loadAllFonts(engine.script.assets.fonts, 'asset://').catch(() => {});
+        }
+
+        // Apply global dialogue box font settings for preview
+        if (engine.script.ui?.dialogueBox) {
+          dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
         }
 
         // Start from specified position (per D-05, D-06)

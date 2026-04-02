@@ -40,6 +40,10 @@ export class DialogueBox {
     this.typeSpeed = 30;
     /** @type {Function|null} Callback when player clicks to advance */
     this.onAdvance = null;
+    /** @type {Object} Global font settings from script.json ui.dialogueBox */
+    this._globalSettings = {};
+    /** @type {string|null} Active nameplate color (from global or per-page override) */
+    this._activeNameplateColor = null;
 
     // Hidden by default
     this.hide();
@@ -58,13 +62,14 @@ export class DialogueBox {
   show(data) {
     this.el.classList.add('visible');
 
-    // Apply custom style if provided
-    this._applyStyle(data.style);
+    // Apply custom style if provided, with font override support
+    this._applyStyle(data.style, data.fontOverride);
 
     // Speaker name
     if (data.speakerName) {
       this.nameEl.textContent = data.speakerName;
-      this.nameEl.style.color = data.speakerColor || '#fff';
+      // Priority: per-character color > active nameplate color (global/override) > white
+      this.nameEl.style.color = data.speakerColor || this._activeNameplateColor || '#fff';
       this.nameEl.parentElement.classList.add('visible');
     } else {
       this.nameEl.textContent = '';
@@ -81,13 +86,22 @@ export class DialogueBox {
     this._startTypewriter();
   }
 
-  _applyStyle(style) {
-    // Reset to CSS defaults when no custom style
-    if (!style) {
-      this.el.style.cssText = '';
-      this.textEl.style.cssText = '';
-      return;
+  _applyStyle(style, fontOverride) {
+    // 1. Reset all inline styles
+    this.el.style.cssText = '';
+    this.textEl.style.cssText = '';
+    this.nameEl.style.cssText = '';
+
+    // 2. Re-apply global font settings as baseline
+    this._applyFontSettings(this._globalSettings);
+
+    // 3. Apply per-page font override if active
+    if (fontOverride && !fontOverride.useGlobal) {
+      this._applyFontSettings(fontOverride);
     }
+
+    // 4. Apply per-dialogue position/size/style overrides
+    if (!style) return;
     const s = style;
     if (s.x !== undefined) this.el.style.left = `${clampField('x', s.x)}px`;
     if (s.y !== undefined) {
@@ -111,6 +125,50 @@ export class DialogueBox {
     if (s.padding) {
       const p = Array.isArray(s.padding) ? s.padding : [s.padding, s.padding, s.padding, s.padding];
       this.el.style.padding = p.map(v => `${clampField('padding', v)}px`).join(' ');
+    }
+  }
+
+  // ─── Global font settings ────────────────────────────────
+
+  /**
+   * Apply global dialogue box style from script settings.
+   * Called once at engine init; values persist as baseline for _applyStyle resets.
+   * @param {Object} settings — ui.dialogueBox from script.json
+   */
+  applyGlobalStyle(settings) {
+    this._globalSettings = settings || {};
+    this._applyFontSettings(this._globalSettings);
+  }
+
+  /**
+   * Apply font settings to dialogue text and nameplate elements.
+   * @param {Object} s — font settings object (global or per-page override)
+   * @private
+   */
+  _applyFontSettings(s) {
+    if (!s) return;
+
+    // Dialogue text
+    if (s.fontSize) {
+      const fs = clampField('fontSize', s.fontSize);
+      if (fs) this.textEl.style.fontSize = fs + 'px';
+    }
+    const ff = sanitizeCssValue(s.fontFamily);
+    if (ff) this.textEl.style.fontFamily = ff;
+    const tc = sanitizeCssValue(s.textColor);
+    if (tc) this.textEl.style.color = tc;
+
+    // Nameplate (fully independent)
+    if (s.nameplateFontSize) {
+      const nfs = clampField('fontSize', s.nameplateFontSize);
+      if (nfs) this.nameEl.style.fontSize = nfs + 'px';
+    }
+    const nff = sanitizeCssValue(s.nameplateFontFamily);
+    if (nff) this.nameEl.style.fontFamily = nff;
+    const nc = sanitizeCssValue(s.nameplateColor);
+    if (nc) {
+      this.nameEl.style.color = nc;
+      this._activeNameplateColor = nc;
     }
   }
 

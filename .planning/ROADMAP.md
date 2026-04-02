@@ -148,6 +148,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 15. Voice Engine Foundation | 1/1 | Complete    | 2026-04-02 |
-| 16. Voice Editor Integration | 2/2 | Complete   | 2026-04-02 |
+| 16. Voice Editor Integration | 2/2 | Complete    | 2026-04-02 |
 | 17. Global Font Settings | 0/? | Not started | - |
 | 18. Voice Polish | 0/? | Not started | - |

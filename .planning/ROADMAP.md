@@ -100,7 +100,10 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
   3. Engine stops the previous voice when advancing to the next line
   4. Player can adjust voice volume independently via the settings page slider
   5. Voice volume respects master volume (multiplicative scaling)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 15-01-PLAN.md — Voice audio channel, data model, engine wiring, volume settings
 
 #### Phase 16: Voice Editor Integration
 **Goal**: Creators can bind, preview, and batch-assign voice files to dialogue in the editor

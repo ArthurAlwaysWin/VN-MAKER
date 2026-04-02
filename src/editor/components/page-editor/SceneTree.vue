@@ -23,6 +23,7 @@
             @click.stop />
           <span v-else class="scene-name">{{ scene.name }}</span>
           <span v-if="scene.next" class="scene-jump-badge" :title="'跳转到: ' + getSceneName(scene.next)">🔗</span>
+          <button class="scene-voice-btn" @click.stop="onBatchMatchScene(sceneId)" title="批量语音匹配">🔊</button>
           <button class="scene-menu-btn" @click.stop="showSceneMenu(sceneId, $event)" title="场景操作">⋯</button>
         </div>
 
@@ -66,6 +67,7 @@
     <div class="tree-footer">
       <button class="footer-btn" @click.stop="onAddPage" :disabled="!selectedSceneId">+ 添加页面</button>
       <button class="footer-btn" @click.stop="onAddScene">+ 添加场景</button>
+      <button class="footer-btn" @click.stop="onBatchMatchAll">🔊 批量语音匹配</button>
     </div>
 
     <div v-if="contextMenu.visible" class="context-menu" :style="contextMenuStyle" @click.stop>
@@ -92,6 +94,13 @@
         <div class="menu-item danger" @click="onDeletePageFromMenu">删除页面</div>
       </template>
     </div>
+
+    <VoiceMatchPreview
+      :visible="showMatchPreview"
+      :result="matchResult"
+      @close="showMatchPreview = false"
+      @apply="onMatchApply"
+    />
   </div>
 </template>
 
@@ -99,11 +108,18 @@
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import { useVoiceMatch } from '../../composables/useVoiceMatch.js';
+import { useAssetStore } from '../../stores/assets.js';
+import VoiceMatchPreview from './VoiceMatchPreview.vue';
 
 const editor = usePageEditor();
 const { selectedSceneId, selectedPageIndex, selectPage } = editor;
 const script = useScriptStore();
 
+const assetStore = useAssetStore();
+const { buildMatches, applyMatches } = useVoiceMatch();
+const showMatchPreview = ref(false);
+const matchResult = ref({ matches: [], alreadyBound: 0, newBindings: 0 });
 const expanded = reactive({});
 const dragState = ref({ sceneId: null, fromIndex: -1 });
 const dragTarget = reactive({ sceneId: null, index: -1 });
@@ -455,6 +471,33 @@ function onDragEnd() {
   // Reset opacity on all page items
   document.querySelectorAll('.page-item').forEach(el => { el.style.opacity = ''; });
 }
+
+// ─── Batch voice matching ──────────────────────────────
+async function onBatchMatchScene(sceneId) {
+  await assetStore.loadCategory('audio');
+  matchResult.value = buildMatches(sceneId);
+  if (matchResult.value.matches.length > 0) {
+    showMatchPreview.value = true;
+  } else {
+    alert('未找到匹配的语音文件');
+  }
+}
+
+async function onBatchMatchAll() {
+  await assetStore.loadCategory('audio');
+  matchResult.value = buildMatches('all');
+  if (matchResult.value.matches.length > 0) {
+    showMatchPreview.value = true;
+  } else {
+    alert('未找到匹配的语音文件');
+  }
+}
+
+function onMatchApply(overwrite) {
+  const applied = applyMatches(matchResult.value.matches, overwrite);
+  showMatchPreview.value = false;
+  alert(`已绑定 ${applied} 条语音`);
+}
 </script>
 
 <style scoped>
@@ -692,5 +735,26 @@ function onDragEnd() {
 
 .menu-item.disabled:hover {
   background: transparent;
+}
+
+.scene-voice-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.scene-header:hover .scene-voice-btn {
+  opacity: 1;
+}
+
+.scene-voice-btn:hover {
+  color: #007acc;
+  background: rgba(0, 122, 204, 0.15);
 }
 </style>

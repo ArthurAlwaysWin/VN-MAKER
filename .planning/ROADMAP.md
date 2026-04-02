@@ -134,7 +134,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 17-01-PLAN.md — Data model (script store 6-field dialogueBox) + engine consumption (applyGlobalStyle, _applyStyle refactor, main.js wiring)
+- [x] 17-01-PLAN.md — Data model (script store 6-field dialogueBox) + engine consumption (applyGlobalStyle, _applyStyle refactor, main.js wiring)
 - [ ] 17-02-PLAN.md — Editor font settings UI (DialogueBoxSettings panel in Project Settings, mini preview) + canvas live preview + per-page font override in PageInspector
 
 #### Phase 18: Voice Polish
@@ -153,5 +153,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 15. Voice Engine Foundation | 1/1 | Complete    | 2026-04-02 |
 | 16. Voice Editor Integration | 2/2 | Complete    | 2026-04-02 |
-| 17. Global Font Settings | 0/? | Not started | - |
+| 17. Global Font Settings | 1/2 | In Progress|  |
 | 18. Voice Polish | 0/? | Not started | - |

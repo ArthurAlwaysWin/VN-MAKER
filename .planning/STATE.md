@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Phase 15 context gathered
-last_updated: "2026-04-02T03:43:57.705Z"
-last_activity: 2026-04-02
+milestone: v0.4
+milestone_name: 语音 & 全局字体设置
+status: planning
+stopped_at: Phase 16 plan-phase step 5 (research gate)
+last_updated: "2025-07-19"
+last_activity: 2025-07-19
 progress:
-  total_phases: 1
+  total_phases: 4
   completed_phases: 1
   total_plans: 1
   completed_plans: 1
-  percent: 0
+  percent: 25
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 15 — voice-engine-foundation
+**Current focus:** Phase 16 — voice-editor-integration (plan-phase workflow)
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Executing Phase 15
-Last activity: 2026-04-02
+Phase: 16
+Plan: Not started (plan-phase at step 5 — research gate)
+Status: Phase 15 complete, Phase 16 context gathered, planning in progress
+Last activity: 2025-07-19
 
-Progress: [░░░░░░░░░░] 0% (0/4 phases)
+Progress: [██░░░░░░░░] 25% (1/4 phases)
 
 ## Performance Metrics
 
@@ -63,9 +63,15 @@ Progress: [░░░░░░░░░░] 0% (0/4 phases)
 - [Phase 13]: Choice pages with type toggle, setVariable support
 - [Phase 14]: iframe preview with postMessage protocol, asset:// basePath, read-only CSS overlay
 
-### Blockers/Concerns
+**v0.4 decisions:**
 
-None currently.
+- [Phase 15]: D-01 voice stop timing — playVoice() internally stops previous, no explicit stopVoice on advance without voice
+- [Phase 15]: D-02 pure path string — dialogue.voice = "audio/xxx.mp3" or null
+- [Phase 15]: D-03 no migration — null default backward-compatible
+- [Phase 16]: D-04 AudioPicker mode prop — mode="voice" hides tab bar
+- [Phase 16]: D-05 editor voice preview via new Audio() — no iframe dependency
+- [Phase 16]: D-06 dual-entry batch match — per-scene 🔊 + global button in SceneTree
+- [Phase 16]: D-07 match preview dialog — confirm before applying batch bindings
 
 ### Key Context for v0.4
 
@@ -81,7 +87,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-04-02T02:48:47.139Z
-Stopped at: Phase 15 context gathered
-Resume hint: Plan Phase 15 — Voice Engine Foundation
-Next action: `/gsd-plan-phase 15`
+Last session: 2025-07-19
+Stopped at: Phase 16 plan-phase step 5 (research gate)
+Resume hint: Continue planning Phase 16 — Voice Editor Integration
+Next action: `/gsd-plan-phase 16`

@@ -72,6 +72,7 @@ function applyConfig() {
   const master = config.get('masterVolume');
   audio.setBgmVolume(config.get('bgmVolume') * master);
   audio.setSeVolume(config.get('seVolume') * master);
+  audio.setVoiceVolume(config.get('voiceVolume') * master);
   dialogueBox.typeSpeed = config.get('textSpeed');
 
   // Dialogue box opacity
@@ -92,6 +93,12 @@ applyConfig();
 engine.on('dialogue', (data) => {
   choiceMenu.hide();
   dialogueBox.show(data);
+
+  // Voice playback — only play if voice is bound (D-01)
+  if (data.voice) {
+    audio.playVoice(data.voice);
+  }
+  // D-01: NO stopVoice() when data.voice is null — let current voice play to completion
 
   // Auto mode
   if (autoMode) {
@@ -125,6 +132,7 @@ engine.on('end', () => {
     stopAuto();
     stopSkip();
     dialogueBox.hide();
+    audio.stopVoice();
     window.parent.postMessage({ type: 'ended' }, '*');
     return;
   }
@@ -134,6 +142,7 @@ engine.on('end', () => {
   stopSkip();
   dialogueBox.hide();
   audio.stopBgm({ fadeOut: 2000 });
+  audio.stopVoice();
 
   // Show ending for a moment, then return to title
   setTimeout(() => {
@@ -209,6 +218,7 @@ gameMenu.onTitle = () => {
   dialogueBox.hide();
   choiceMenu.hide();
   audio.stopBgm({ fadeOut: 500 });
+  audio.stopVoice();
   engine.resetRenderState();
   characters.clear();
   background.clear();
@@ -479,6 +489,7 @@ function initPreview() {
         dialogueBox.hide();
         choiceMenu.hide();
         audio.stopBgm({ fadeOut: 0 });
+        audio.stopVoice();
         engine.resetRenderState();
         characters.clear();
         background.clear();
@@ -488,10 +499,12 @@ function initPreview() {
         if (msg.muted) {
           audio.setBgmVolume(0);
           audio.setSeVolume(0);
+          audio.setVoiceVolume(0);
         } else {
           const master = config.get('masterVolume');
           audio.setBgmVolume(config.get('bgmVolume') * master);
           audio.setSeVolume(config.get('seVolume') * master);
+          audio.setVoiceVolume(config.get('voiceVolume') * master);
         }
         break;
       }

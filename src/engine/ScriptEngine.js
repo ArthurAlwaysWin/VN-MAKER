@@ -392,12 +392,14 @@ export class ScriptEngine extends EventEmitter {
       speakerName: char?.name || null,
       speakerColor: char?.color || null,
       text: dlg.text,
+      voice: dlg.voice || null,
     };
 
     this.history.push({
       speaker: dlg.speaker,
       speakerName: data.speakerName,
       text: dlg.text,
+      voice: dlg.voice || null,
     });
 
     this.waiting = true;

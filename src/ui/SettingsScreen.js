@@ -318,6 +318,11 @@ export class SettingsScreen {
           <span class="settings-value" id="s-se-val">${Math.round(cfg.get('seVolume') * 100)}%</span>
         </div>
         <div class="settings-item">
+          <span class="settings-label">语音音量</span>
+          <input type="range" class="settings-slider" id="s-voice-vol" min="0" max="100" value="${Math.round(cfg.get('voiceVolume') * 100)}" />
+          <span class="settings-value" id="s-voice-val">${Math.round(cfg.get('voiceVolume') * 100)}%</span>
+        </div>
+        <div class="settings-item">
           <span class="settings-label">文字速度</span>
           <input type="range" class="settings-slider" id="s-text-speed" min="1" max="10" value="${this._msToSpeed(cfg.get('textSpeed'))}" />
           <span class="settings-value" id="s-text-val">${this._msToSpeed(cfg.get('textSpeed'))}</span>
@@ -359,6 +364,12 @@ export class SettingsScreen {
 
     this._bindSlider('s-se-vol', 's-se-val', (v) => {
       cfg.set('seVolume', v / 100);
+      this._notifyChange();
+      return `${Math.round(v)}%`;
+    });
+
+    this._bindSlider('s-voice-vol', 's-voice-val', (v) => {
+      cfg.set('voiceVolume', v / 100);
       this._notifyChange();
       return `${Math.round(v)}%`;
     });

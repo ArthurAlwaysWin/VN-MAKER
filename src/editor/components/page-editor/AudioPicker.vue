@@ -3,11 +3,11 @@
     <div v-if="visible" class="audio-picker-overlay" @click="onOverlayClick">
       <div class="audio-picker-modal">
         <div class="picker-header">
-          <span class="picker-title">选择音频</span>
+          <span class="picker-title">{{ mode === 'voice' ? '选择语音文件' : '选择音频' }}</span>
           <button class="picker-close" @click="$emit('close')">✕</button>
         </div>
 
-        <div class="tab-bar">
+        <div class="tab-bar" v-if="mode !== 'voice'">
           <button class="tab-btn" :class="{ active: activeTab === 'bgm' }" @click="switchTab('bgm')">BGM</button>
           <button class="tab-btn" :class="{ active: activeTab === 'se' }" @click="switchTab('se')">SE</button>
         </div>
@@ -55,6 +55,7 @@ import MiniPlayer from '../resource-library/MiniPlayer.vue';
 const props = defineProps({
   visible: { type: Boolean, default: false },
   defaultTab: { type: String, default: 'bgm' },
+  mode: { type: String, default: 'audio' },
 });
 
 const emit = defineEmits(['select', 'close']);

@@ -98,7 +98,7 @@ export const useScriptStore = defineStore('script', () => {
       characters: [],
       bgm: null,
       se: null,
-      dialogues: [{ speaker: null, text: '', expression: null }],
+      dialogues: [{ speaker: null, text: '', expression: null, voice: null }],
       transition: { type: 'fade', duration: 800 },
     };
   }
@@ -169,7 +169,7 @@ export const useScriptStore = defineStore('script', () => {
       delete page.prompt;
       delete page.options;
       if (!page.dialogues || page.dialogues.length === 0) {
-        page.dialogues = [{ speaker: null, text: '', expression: null }];
+        page.dialogues = [{ speaker: null, text: '', expression: null, voice: null }];
       }
     }
     pushState();

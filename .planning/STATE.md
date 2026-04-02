@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-04-02T05:15:33.937Z"
+status: verifying
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-04-02T05:21:01.498Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 25
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 Phase: 16 (voice-editor-integration) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-02
 
 Progress: [██░░░░░░░░] 25% (1/4 phases)
@@ -42,6 +42,7 @@ Progress: [██░░░░░░░░] 25% (1/4 phases)
 | v0.2 | 4 | 7 | ~3 days |
 | v0.3 | 5 | 11 | ~2 days |
 | Phase 16 P01 | 3.7min | 2 tasks | 3 files |
+| Phase 16-02 P02 | 2.8min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,7 @@ Progress: [██░░░░░░░░] 25% (1/4 phases)
 - [Phase 16]: D-07 match preview dialog — confirm before applying batch bindings
 - [Phase 16]: D-04 AudioPicker mode prop reuses existing picker for voice selection
 - [Phase 16]: D-05 Editor voice preview via new Audio() independent of iframe engine
+- [Phase 16-02]: Narrator fallback uses _narrator; single pushState after batch apply; overwrite option for already-bound entries
 
 ### Key Context for v0.4
 
@@ -90,7 +92,7 @@ Progress: [██░░░░░░░░] 25% (1/4 phases)
 
 ## Session Continuity
 
-Last session: 2026-04-02T05:15:33.933Z
-Stopped at: Completed 16-01-PLAN.md
+Last session: 2026-04-02T05:21:01.495Z
+Stopped at: Completed 16-02-PLAN.md
 Resume hint: Execute Phase 16 — Voice Editor Integration
 Next action: `/gsd-execute-phase 16`

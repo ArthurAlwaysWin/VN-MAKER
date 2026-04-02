@@ -84,7 +84,7 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 ### Phases
 
 - [x] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control (completed 2026-04-02)
-- [ ] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming (2 plans)
+- [x] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming (2 plans) (completed 2026-04-02)
 - [ ] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview
 - [ ] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait
 
@@ -119,7 +119,7 @@ Plans:
 
 Plans:
 - [x] 16-01-PLAN.md — Voice picker, preview playback, and voice badge in PageInspector
-- [ ] 16-02-PLAN.md — Batch voice matching composable, preview modal, SceneTree buttons
+- [x] 16-02-PLAN.md — Batch voice matching composable, preview modal, SceneTree buttons
 
 #### Phase 17: Global Font Settings
 **Goal**: Creators can customize dialogue box typography globally with live preview in editor and engine
@@ -148,6 +148,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 15. Voice Engine Foundation | 1/1 | Complete    | 2026-04-02 |
-| 16. Voice Editor Integration | 1/2 | In Progress|  |
+| 16. Voice Editor Integration | 2/2 | Complete   | 2026-04-02 |
 | 17. Global Font Settings | 0/? | Not started | - |
 | 18. Voice Polish | 0/? | Not started | - |

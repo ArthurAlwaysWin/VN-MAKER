@@ -79,79 +79,24 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 
 ---
 
-## v0.4 — 语音 & 全局字体设置
 
-### Phases
+## v0.4 — 语音 & 全局字体设置 ✅
 
-- [x] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control (completed 2026-04-02)
-- [x] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming (2 plans) (completed 2026-04-02)
-- [x] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview (completed 2026-04-03)
-- [x] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait (completed 2026-04-03)
+<details>
+<summary>Phases 15-18 (shipped 2026-04-03)</summary>
 
-### Phase Details
+- [x] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control (2026-04-02)
+- [x] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming (2026-04-02)
+- [x] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview (2026-04-03)
+- [x] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait (2026-04-03)
 
-#### Phase 15: Voice Engine Foundation
-**Goal**: Engine can play voice audio alongside dialogue with independent volume control
-**Depends on**: Phase 14 (v0.3 complete)
-**Requirements**: VOICE-01, VOICE-04, VOICE-05, VOICE-06
-**Success Criteria** (what must be TRUE):
-  1. Page JSON stores a `voice` file path per dialogue entry, persisting through save/load cycles
-  2. Engine plays the bound voice audio when displaying a dialogue line
-  3. Engine stops the previous voice when advancing to the next line
-  4. Player can adjust voice volume independently via the settings page slider
-  5. Voice volume respects master volume (multiplicative scaling)
-**Plans**: 1 plan
+**Key deliverables:**
+- ✅ 语音引擎（独立通道 + 音量控制 + D-01 停止语义）
+- ✅ 编辑器语音集成（AudioPicker + 批量命名匹配 + 试听）
+- ✅ 全局字体设置（数据模型 + 引擎消费 + 编辑器 UI + 画布实时预览）
+- ✅ 回想屏语音重放（▶/■ 按钮 + 高亮反馈）
+- ✅ 自动模式语音感知（Promise.all 等待 + 300ms 微延迟）
 
-Plans:
-- [x] 15-01-PLAN.md — Voice audio channel, data model, engine wiring, volume settings
+See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 
-#### Phase 16: Voice Editor Integration
-**Goal**: Creators can bind, preview, and batch-assign voice files to dialogue in the editor
-**Depends on**: Phase 15
-**Requirements**: VOICE-02, VOICE-03, VOICE-07
-**Success Criteria** (what must be TRUE):
-  1. Each dialogue entry in the Inspector shows a voice picker to select or clear a voice file
-  2. Creator can click ▶ next to a dialogue entry to preview its bound voice in the editor
-  3. Batch naming tool scans audio folder and auto-binds files matching `{charId}_{scene}_{page}_{line}` convention
-  4. Batch binding shows matched results for confirmation before applying
-**Plans**: 2 plans
-**UI hint**: yes
-
-Plans:
-- [x] 16-01-PLAN.md — Voice picker, preview playback, and voice badge in PageInspector
-- [x] 16-02-PLAN.md — Batch voice matching composable, preview modal, SceneTree buttons
-
-#### Phase 17: Global Font Settings
-**Goal**: Creators can customize dialogue box typography globally with live preview in editor and engine
-**Depends on**: None (independent of voice; sequenced after Phase 16 for workflow)
-**Requirements**: FONT-01, FONT-02, FONT-03, FONT-04
-**Success Criteria** (what must be TRUE):
-  1. `script.json` stores dialogue box font settings (fontSize, fontFamily, textColor, nameplateFontSize) with sensible defaults
-  2. Engine dialogue box renders text using global font settings via CSS custom properties
-  3. Editor provides font settings UI — font dropdown (imported + system fonts), size slider, color picker, nameplate font size
-  4. Changing font settings in editor immediately updates the canvas dialogue box preview
-**Plans**: 2 plans
-**UI hint**: yes
-
-Plans:
-- [x] 17-01-PLAN.md — Data model (script store 6-field dialogueBox) + engine consumption (applyGlobalStyle, _applyStyle refactor, main.js wiring)
-- [x] 17-02-PLAN.md — Editor font settings UI (DialogueBoxSettings panel in Project Settings, mini preview) + canvas live preview + per-page font override in PageInspector
-
-#### Phase 18: Voice Polish
-**Goal**: Voice playback integrates seamlessly with backlog review and auto-play mode
-**Depends on**: Phase 15
-**Requirements**: VOICE-08, VOICE-09
-**Success Criteria** (what must be TRUE):
-  1. Backlog (回想) screen shows ▶ button on entries with bound voice; clicking replays the voice
-  2. Auto-mode waits for voice audio to finish before advancing to the next line
-  3. Auto-mode advances at normal timing interval when dialogue has no voice bound
-**Plans**: 18-01 (Wave 1: AudioManager Promise + BacklogScreen replay + auto-mode voice wait + CSS)
-
-### Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 15. Voice Engine Foundation | 1/1 | Complete    | 2026-04-02 |
-| 16. Voice Editor Integration | 2/2 | Complete    | 2026-04-02 |
-| 17. Global Font Settings | 2/2 | Complete   | 2026-04-03 |
-| 18. Voice Polish | 0/? | Not started | - |
+</details>

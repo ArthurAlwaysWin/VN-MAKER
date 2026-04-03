@@ -145,7 +145,7 @@ Plans:
   1. Backlog (回想) screen shows ▶ button on entries with bound voice; clicking replays the voice
   2. Auto-mode waits for voice audio to finish before advancing to the next line
   3. Auto-mode advances at normal timing interval when dialogue has no voice bound
-**Plans**: TBD
+**Plans**: 18-01 (Wave 1: AudioManager Promise + BacklogScreen replay + auto-mode voice wait + CSS)
 
 ### Progress
 

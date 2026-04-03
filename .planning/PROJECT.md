@@ -49,17 +49,22 @@
 - ✓ 转场效果与选择分支：选择页编辑器 + 选项目标链接 + 场景跳转 + 页面转场下拉框 — v0.3 Phase 13
 - ✓ UI 打磨：说话人 combobox、选项预览标签、角色缩放滑块 — v0.3 Phase 13.1
 - ✓ 编辑器内联试玩：iframe + postMessage + 只读覆盖层 + asset:// basePath — v0.3 Phase 14
+- ✓ 语音引擎基础：独立通道 + 音量控制 + 引擎播放 + 设置页预制组件 — v0.4
+- ✓ 编辑器语音集成：AudioPicker 语音选择 + 批量命名匹配 + 试听预览 — v0.4
+- ✓ 全局字体设置：字号/字体/颜色/名牌字号 + CSS 自定义属性 + 编辑器实时预览 — v0.4
+- ✓ 语音打磨：回想屏语音重放 + 自动模式语音等待 — v0.4
 
-### Active — v0.4: 语音 & 全局字体设置 ✅
+### Active — v0.5: 游戏 UI 补全
 
-**已完成** — 全部 13 个需求交付：
+<!-- 需求将在 REQUIREMENTS.md 中详细定义 -->
 
-- ✓ 语音/配音系统：Inspector 逐条绑定 + 批量命名匹配，voice 字段存在页面数据，独立语音音量，回想屏重放，自动模式等语音 — v0.4
-- ✓ 全局字体设置：字号/字体/颜色/名牌字号，CSS 自定义属性，编辑器实时预览 — v0.4
+**Goal:** 补全核心游戏交互 UI — 快捷按钮栏 + 存读档界面 + 快进模式。
 
-**Descoped (deferred):**
-- ❌ 局部文字着色（[color] 标记）— 需 innerHTML 重构，风险高，移至后续里程碑
-- ❌ DialogueBox textContent → innerHTML 引擎重构 — 与着色标记同步推迟
+**Target features:**
+- 🎮 快捷按钮栏：对话框底部 6 个按钮（存档/读档/回想/设置/自动/快进），固定布局 + 属性自定义
+- 💾 存读档界面：全屏替换式 UI，缩略图卡片网格（10×10=100 槽），html2canvas 截图 + 对话文字
+- ⏩ 快进模式：全部跳过 / 只跳已读两种模式，引擎已读页面追踪，设置页开关
+- 🔧 存档系统升级：文件系统 saves/ 目录替代 localStorage，IPC handlers
 
 ### Future — 后续候选
 
@@ -135,6 +140,8 @@
 | provide/inject 共享 pageEditor 状态 | 避免 props drilling，组件树自由访问 | ✓ Good |
 | iframe + postMessage 试玩方案 | 完美 CSS/JS 隔离，引擎零修改 | ✓ Good |
 | asset:// basePath 动态注入 | 编辑器项目和独立模式共用同一引擎代码 | ✓ Good |
+| playVoice() 返回 Promise + D-01 内部停止 | 简化调用方、自动模式可 await | ✓ Good |
+| 文件系统 saves/ 替代 localStorage | 容量无限、可移植、支持截图文件 | Pending |
 
 ## Evolution
 
@@ -142,11 +149,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.4 里程碑已完成。4 个阶段（15-18）全部交付 — 语音引擎基础、编辑器语音集成、全局字体设置、回想屏重放 + 自动模式语音等待。13/13 需求全部满足，审计通过。
+v0.5 里程碑已启动 — 游戏 UI 补全（快捷按钮栏 + 存读档界面 + 快进模式）。
 
 **已发布：** v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）
 
-**下一步：** v0.5 — 待规划（UI 美化系统？游戏导出？）
+**当前：** v0.5 — 定义需求中。
 
 ---
-*Last updated: 2026-04-03 after v0.4 milestone completed*
+*Last updated: 2026-04-03 after v0.5 milestone started*

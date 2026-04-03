@@ -28,3 +28,21 @@
 **Archives:** milestones/v0.3-ROADMAP.md, milestones/v0.3-REQUIREMENTS.md
 
 ---
+
+## v0.4 语音 & 全局字体设置 (Shipped: 2026-04-03)
+
+**Phases completed:** 4 phases (15-18), 6 plans, 13 requirements
+
+**Key accomplishments:**
+
+- 语音引擎（独立通道 + 音量控制 + D-01 停止语义）
+- 编辑器语音集成（AudioPicker + 批量命名匹配 + 试听）
+- 全局字体设置（数据模型 + 引擎 CSS 自定义属性 + 编辑器 UI + 画布实时预览）
+- 回想屏语音重放（▶/■ 按钮 + 高亮反馈）
+- 自动模式语音感知（Promise.all 等待 + 300ms 微延迟）
+
+**Milestone audit:** 13/13 requirements passed — see v0.4-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v0.4-ROADMAP.md, milestones/v0.4-REQUIREMENTS.md
+
+---

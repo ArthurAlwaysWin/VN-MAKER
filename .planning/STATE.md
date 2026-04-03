@@ -1,98 +1,73 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Phase 18 context gathered
-last_updated: "2026-04-03T09:38:54.999Z"
-last_activity: 2026-04-02 -- Phase 17 execution started
+milestone: v0.5
+milestone_name: "— \u6E38\u620F UI \u8865\u5168"
+status: defining_requirements
+stopped_at: Milestone v0.5 started
+last_updated: "2026-04-04T02:27:36.342Z"
+last_activity: 2026-04-04 -- Milestone v0.5 started
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 25
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-01)
+See: .planning/PROJECT.md (updated 2026-04-04)
 
-**Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 17 — global-font-settings
+**Core value:** \u5F00\u53D1\u8005\u4E0D\u78B0\u903B\u8F91 \u2014 \u53EA\u505A\u89C6\u89C9\u8BBE\u8BA1\uFF0C\u5F15\u64CE\u5904\u7406\u4E00\u5207\u6E38\u620F\u903B\u8F91
+**Current focus:** Defining v0.5 requirements
 
 ## Current Position
 
-Phase: 17 (global-font-settings) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 17
-Last activity: 2026-04-02 -- Phase 17 execution started
-
-Progress: [██░░░░░░░░] 25% (1/4 phases)
+Phase: Not started (defining requirements)
+Plan: \u2014
+Status: Defining requirements
+Last activity: 2026-04-04 -- Milestone v0.5 started
 
 ## Performance Metrics
 
 **Previous milestones:**
 
-| Milestone | Phases | Plans | Timeline |
-|-----------|--------|-------|----------|
-| v0.1 | 5 | 5 | ~2 sessions |
-| v0.2 | 4 | 7 | ~3 days |
-| v0.3 | 5 | 11 | ~2 days |
-| Phase 16 P01 | 3.7min | 2 tasks | 3 files |
-| Phase 16-02 P02 | 2.8min | 2 tasks | 3 files |
+| Milestone | Phases | Plans | Requirements |
+|-----------|--------|-------|--------------|
+| v0.1 | 5 | 5 | ~15 |
+| v0.2 | 4 | 7 | 14 |
+| v0.3 | 6 | 11 | 23 |
+| v0.4 | 4 | 6 | 13 |
 
 ## Accumulated Context
 
 ### Decisions
 
-**v0.2 decisions (carried forward):**
+**v0.4 decisions (carried forward):**
 
-- [Phase 06]: 12-format magic bytes validation with RIFF sub-checks
-- [Phase 06]: Asset store uses Composition API defineStore with ref/computed
-- [Phase 07]: App.vue reduced from 6 to 5 tabs — 素材库+角色 merged into 资源库
-- [Phase 07]: Expression path format: characters/{filename} matching asset:// protocol
-- [Phase 09]: ESC priority check before isPlaying guard
-- [Phase 09]: Stack-based layer management (GameMenu + Settings overlay)
+- [Phase 15]: D-01 voice stop timing \u2014 playVoice() internally stops previous
+- [Phase 15]: D-02 pure path string \u2014 dialogue.voice = "audio/xxx.mp3" or null
+- [Phase 16]: D-04 AudioPicker mode prop \u2014 mode="voice" hides tab bar
+- [Phase 16]: D-05 editor voice preview via new Audio() \u2014 no iframe dependency
+- [Phase 16]: D-06 dual-entry batch match \u2014 per-scene + global button in SceneTree
+- [Phase 17]: Global font settings \u2014 CSS custom properties, editor live preview
+- [Phase 18]: BacklogScreen voice replay \u2014 \u25B6/\u25A0 button, audio dependency injection
+- [Phase 18]: Auto-mode voice wait \u2014 Promise.all + VOICE_END_DELAY=300ms
 
-**v0.3 decisions:**
+### Key Context for v0.5
 
-- [Phase 10]: Page-based data schema replaces command-based format
-- [Phase 11]: Tab-based navigation, usePageEditor composable (provide/inject)
-- [Phase 12]: Modal pickers for characters, backgrounds, audio
-- [Phase 13]: Choice pages with type toggle, setVariable support
-- [Phase 14]: iframe preview with postMessage protocol, asset:// basePath, read-only CSS overlay
-
-**v0.4 decisions:**
-
-- [Phase 15]: D-01 voice stop timing — playVoice() internally stops previous, no explicit stopVoice on advance without voice
-- [Phase 15]: D-02 pure path string — dialogue.voice = "audio/xxx.mp3" or null
-- [Phase 15]: D-03 no migration — null default backward-compatible
-- [Phase 16]: D-04 AudioPicker mode prop — mode="voice" hides tab bar
-- [Phase 16]: D-05 editor voice preview via new Audio() — no iframe dependency
-- [Phase 16]: D-06 dual-entry batch match — per-scene 🔊 + global button in SceneTree
-- [Phase 16]: D-07 match preview dialog — confirm before applying batch bindings
-- [Phase 16]: D-04 AudioPicker mode prop reuses existing picker for voice selection
-- [Phase 16]: D-05 Editor voice preview via new Audio() independent of iframe engine
-- [Phase 16-02]: Narrator fallback uses _narrator; single pushState after batch apply; overwrite option for already-bound entries
-
-### Key Context for v0.4
-
-- AudioManager 已有 BGM (_bgm) + SE (_se) 双通道，voice 为第 3 个 HTMLAudioElement
-- Inspector 已有 AudioPicker 组件可复用于语音选择器
-- DialogueBox 有 `_applyStyle()` 方法接受 font size/family/color — 全局字体设置直接扩展
-- ConfigManager 已管理 bgmVolume/seVolume/masterVolume — voiceVolume 同模式添加
-- SETTING_DEFS 注册表 + 工厂函数 — 语音音量滑块只需加注册表条目
-- 对话框透明度设置组件已存在于 SETTING_DEFS
-- BacklogScreen.js 已有历史记录渲染 — 语音重放添加 ▶ 按钮
-- 资源库 5 类资源（背景/角色/音频/字体/通用） — 语音文件归入音频类
-- v0.4 descoped: 局部文字着色 [color] 标记 + innerHTML 重构，延后到独立里程碑
+- \u5F53\u524D\u5B58\u6863\u7CFB\u7EDF\uFF1AlocalStorage 8 \u69FD\u4F4D\uFF0C\u9700\u5347\u7EA7\u4E3A\u6587\u4EF6\u7CFB\u7EDF saves/ \u76EE\u5F55
+- html2canvas \u4E3A\u65B0\u589E npm \u4F9D\u8D56\uFF08\u622A\u56FE\u529F\u80FD\uFF09
+- \u6309\u94AE\u680F 6 \u4E2A\u6309\u94AE\uFF1A\u5B58\u6863/\u8BFB\u6863/\u56DE\u60F3/\u8BBE\u7F6E/\u81EA\u52A8/\u5FEB\u8FDB
+- \u8FD4\u56DE\u6807\u9898\u529F\u80FD\u4FDD\u7559\u5728\u8BBE\u7F6E\u9875/ESC \u83DC\u5355
+- \u5FEB\u8FDB\u6A21\u5F0F\u9700\u5F15\u64CE\u5DF2\u8BFB\u9875\u9762\u8FFD\u8E2A + \u8BBE\u7F6E\u9875\u300C\u53EA\u8DF3\u8FC7\u5DF2\u8BFB\u300D\u5F00\u5173
+- \u5B58\u8BFB\u6863\u754C\u9762\uFF1A\u5168\u5C4F\u66FF\u6362\uFF0C10\u00D710=100 \u69FD\u4F4D\uFF0C\u7F29\u7565\u56FE\u5361\u7247\u7F51\u683C
 
 ## Session Continuity
 
-Last session: 2026-04-03T09:38:54.984Z
-Stopped at: Phase 18 context gathered
-Resume hint: Plan Phase 17 — Global Font Settings
-Next action: `/gsd-plan-phase 17`
+Last session: 2026-04-04T02:27:36.345Z
+Stopped at: Milestone v0.5 started — defining requirements
+Resume hint: Define v0.5 requirements and create roadmap
+Next action: Continue new-milestone workflow (requirements + roadmap)

@@ -68,6 +68,7 @@ Last activity: 2026-04-04 -- Milestone v0.5 started
 ## Session Continuity
 
 Last session: 2026-04-04T02:27:36.345Z
-Stopped at: Milestone v0.5 started — defining requirements
-Resume hint: Define v0.5 requirements and create roadmap
-Next action: Continue new-milestone workflow (requirements + roadmap)
+Stopped at: Milestone v0.5 started — research/requirements pending
+Resume hint: Continue new-milestone workflow — research decision then requirements + roadmap
+Next action: `/gsd-resume-work` — continue v0.5 requirements definition
+

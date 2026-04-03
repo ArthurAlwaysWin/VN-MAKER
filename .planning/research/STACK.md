@@ -1,222 +1,355 @@
-# Technology Stack
+# Stack Research — v0.5: Game UI Completion
 
-**Project:** Galgame Maker v0.4 — Voice & Rich Text
-**Researched:** 2025-07-14
+**Project:** Galgame Maker v0.5 — 游戏 UI 补全
+**Researched:** 2025-07-18
 **Overall confidence:** HIGH
 
 ## Verdict: ZERO New npm Dependencies
 
-All three v0.4 features (voice binding, rich text rendering, global font settings) are achievable using **built-in browser APIs only**. This aligns with the project's established ZERO new npm deps policy from v0.2 onward.
+All v0.5 features (quick action bar, save/load UI with thumbnails, fast-forward mode, file system save upgrade) are achievable using **Electron native APIs + built-in browser APIs only**. This continues the project's ZERO new npm deps policy from v0.2 onward.
+
+The project description mentions "html2canvas 截图" — research shows `webContents.capturePage()` is the superior approach for Electron, eliminating the need for any screenshot library.
 
 ## Existing Stack (Unchanged)
 
 | Technology | Version | Purpose | Status |
 |------------|---------|---------|--------|
-| Electron | 41 | Desktop shell (Chromium 134+) | Existing |
+| Electron | 41 (Chromium 134+) | Desktop shell | Existing |
 | Vue 3 | 3.5.x | Editor UI framework | Existing |
 | Pinia | 3.0.x | Editor state management | Existing |
 | Vite | 6.3.x | Build tooling | Existing |
 | Pure JavaScript (ES Modules) | ES2022+ | No TypeScript | Existing constraint |
-| HTMLAudioElement | Built-in | BGM/SE playback | Existing — **extend for voice** |
-| FontFace API | Built-in | Custom font loading | Existing via `fontLoader.js` |
-| CSS Custom Properties | Built-in | Dynamic styling | Existing in settings sliders |
+| Node.js `fs/promises` | Built-in | File system operations | Existing in `electron/main.js` |
+| `atomicWrite()` | In-house | Safe file writes (temp→rename) | Existing utility |
+| `ipcMain.handle` / `ipcRenderer.invoke` | Electron | Renderer↔Main communication | Existing pattern |
+| `asset://` protocol | Custom | Serve project assets securely | Existing |
+| CSS Grid/Flexbox | Built-in | Layout | Existing |
 
-## New Components (Built In-House)
+## New Dependencies
 
-### 1. Voice Channel — HTMLAudioElement Extension
+**None.** Every v0.5 feature maps to existing capabilities:
 
-| Component | Technology | Rationale |
-|-----------|-----------|-----------|
-| Voice playback | `HTMLAudioElement` (3rd audio channel) | Same proven pattern as BGM/SE. Voice is sequential one-at-a-time playback — no need for Web Audio API complexity. |
-| Voice volume | Independent `voiceVolume` property + `ConfigManager` | Every visual novel separates Voice/BGM/SE volumes. Players expect this. |
-| Voice picker | Vue component reusing AudioPicker + MiniPlayer pattern | Existing `AudioPicker.vue` and `MiniPlayer.vue` are the template. Voice picker is a per-dialogue audio selector. |
+| Feature | Technology | Already Available |
+|---------|-----------|-------------------|
+| Save thumbnails | `webContents.capturePage()` | Electron 41 native API |
+| File system saves | `fs/promises` + `atomicWrite()` | Existing in `electron/main.js` |
+| Quick action bar | DOM elements + CSS | Same pattern as existing `#quick-controls` |
+| Save/Load grid UI | CSS Grid + DOM | Same pattern as existing `SaveLoadScreen.js` |
+| Page pagination (10 pages × 10 slots) | Pure DOM | Trivial tab/button switching |
+| Read-page tracking | `Set<string>` + `localStorage` | Browser built-in |
+| Thumbnail display | `<img>` + `asset://` or data URL | Existing protocol |
 
-**Integration point:** `AudioManager.js` — Add `playVoice(data)`, `stopVoice()`, `setVoiceVolume(vol)` methods. Voice differs from SE in one critical way: voice must **stop the previous line** when a new line plays (`this._voice.pause()` before creating new instance).
+## Key Technical Decisions
 
-```javascript
-// AudioManager — new voice channel
-this._voice = null;          // HTMLAudioElement | null
-this.voiceVolume = 0.8;      // Independent voice volume
+### 1. Screenshots — `webContents.capturePage()` (NOT html2canvas)
 
-playVoice(data) {
-  this.stopVoice();           // Stop previous line
-  if (!data?.file) return;
-  this._voice = new Audio(this.basePath + data.file);
-  this._voice.volume = this.voiceVolume;
-  this._voice.play().catch(() => {});
-}
+**Recommendation:** Use Electron's native `webContents.capturePage(rect)` instead of any DOM screenshot library.
 
-stopVoice() {
-  if (!this._voice) return;
-  this._voice.pause();
-  this._voice.currentTime = 0;
-  this._voice = null;
-}
-```
+**Why this is better than html2canvas for this project:**
 
-**Why not Web Audio API?** Overkill. Web Audio API is for real-time audio processing, mixing, effects, spatial audio. Voice playback is "play file, stop previous" — HTMLAudioElement handles this perfectly, as already proven by the existing BGM/SE implementation.
+| Criterion | `webContents.capturePage()` | html2canvas | modern-screenshot |
+|-----------|---------------------------|-------------|-------------------|
+| Dependencies | Zero | npm package (abandoned Jan 2022) | npm package |
+| CSS accuracy | Perfect (captures rendered pixels) | Re-renders CSS manually (known bugs) | SVG foreignObject (generally good) |
+| Custom fonts | ✅ Captures what Chromium renders | ⚠️ May fail with @font-face | ⚠️ Needs font inlining |
+| `asset://` protocol | ✅ No cross-origin issues | ⚠️ CORS/tainted canvas risk | ⚠️ Needs fetch + inline to data URL |
+| CSS animations/transitions | ✅ Captures current frame | ❌ Static snapshot of computed styles | ❌ Static snapshot |
+| Performance | Fast (native screengrab) | Slow (re-parse entire DOM + CSS) | Moderate (SVG serialization) |
+| Reliability | Guaranteed (Chromium internal) | Library bugs, edge cases | Library bugs possible |
 
-### 2. Rich Text — Custom BBCode Parser + innerHTML
+**Library status check (npm registry, verified 2025-07-18):**
 
-| Component | Technology | Rationale |
-|-----------|-----------|-----------|
-| Tag syntax | `[color=#hex]text[/color]` (BBCode-like) | Familiar to VN/game creators. Safe to store in JSON. Visible in raw text. |
-| Tag parser | Regex + `escapeHtml()` in pure JS | Simple allow-only approach: escape all HTML first, then apply our safe tags. ~30 lines. |
-| Typewriter | TreeWalker API (text node iteration) | Walk pre-built DOM tree, reveal text nodes character-by-character. No innerHTML re-parsing per tick. |
-| Sanitization | `escapeHtml()` + output allowlist | Escape user text first (prevent XSS), then only our parser generates `<span>` tags. Defense-in-depth. |
-| Editor input | Textarea + color toolbar + live preview | Insert `[color]` tags around selected text. Preview pane below shows rendered result. |
+| Library | Latest Version | Last Published | Status |
+|---------|---------------|----------------|--------|
+| html2canvas | 1.4.1 | **Jan 2022** | ⚠️ Abandoned (3.5+ years stale) |
+| modern-screenshot | 4.6.8 | Jan 2026 | Active |
+| html-to-image | 1.11.13 | Feb 2025 | Active |
 
-**Markup design decision — Why `[color]` BBCode, not raw HTML:**
+Even if a library were needed, **html2canvas would be the worst choice** — it's been abandoned since 2022. But no library is needed at all.
 
-| Criterion | `[color=#hex]...[/color]` | Raw HTML in data |
-|-----------|--------------------------|------------------|
-| XSS safety | ✅ Parse → escape → generate safe spans | ❌ Must sanitize user HTML (error-prone) |
-| JSON readability | ✅ Plain text with visible tags | ❌ Escaped angle brackets everywhere |
-| Editor UX | ✅ Works in textarea, easy to type/edit | ❌ Needs rich text editor component |
-| Familiarity | ✅ BBCode is standard in game engines | ❌ HTML knowledge not expected of VN creators |
-
-**Parser implementation (escape-first approach):**
+**Implementation approach:**
 
 ```javascript
-const COLOR_RE = /\[color=(#[0-9a-fA-F]{3,8})\](.*?)\[\/color\]/gs;
-
-function parseRichText(raw) {
-  let safe = escapeHtml(raw);           // Escape ALL HTML first
-  safe = safe.replace(COLOR_RE,         // Then apply our safe markup
-    '<span style="color:$1">$2</span>'
-  );
-  return safe;
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-}
+// electron/main.js — new IPC handler
+ipcMain.handle('capture-game-screenshot', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  // Capture the 1280×720 game area
+  const image = await win.webContents.capturePage({ x: 0, y: 0, width: 1280, height: 720 });
+  // Resize to thumbnail (e.g., 320×180 for save slot cards)
+  const thumb = image.resize({ width: 320, height: 180 });
+  return thumb.toJPEG(80); // Returns Buffer — compact for 100 slots
+});
 ```
 
-**HTML-aware typewriter (TreeWalker approach):**
+**Capture flow:**
+1. User triggers save → renderer calls `ipcRenderer.invoke('capture-game-screenshot')` **before** showing Save UI
+2. Main process captures + resizes → returns JPEG Buffer to renderer
+3. Renderer caches the Buffer, opens Save/Load UI showing preview
+4. User picks a slot → renderer sends `ipcRenderer.invoke('save-game', { slot, state, screenshot, previewText })`
+5. Main process writes `saves/slot_XX.json` (state) + `saves/slot_XX.jpg` (thumbnail)
 
-The current typewriter in `DialogueBox.js` (line 130-138) uses `textContent` substring:
+**Confidence: HIGH** — `webContents.capturePage()` has been stable since Electron 1.x. The `rect` parameter and `NativeImage.resize()` are well-documented, stable APIs.
+
+### 2. File System Saves — Extend Existing IPC Patterns
+
+**Current state:** `SaveManager.js` uses `localStorage` with 8 slots. Simple key-value JSON storage.
+
+**Target state:** `saves/` directory inside project folder, 100 slots, JSON state + JPEG thumbnails.
+
+**No new technology needed.** The project already has every building block:
+
+| Building Block | Where | Reuse For |
+|---------------|-------|-----------|
+| `atomicWrite(filePath, content)` | `electron/main.js:67` | Writing save state JSON safely |
+| `fs.writeFile(path, buffer)` | `electron/main.js:263` | Writing JPEG thumbnails |
+| `fs.readdir(dir)` | `electron/main.js:249` | Listing save slots |
+| `fs.unlink(path)` | `electron/main.js:398` | Deleting save slots |
+| `isInsideProject(path)` | `electron/main.js:55` | Path security for saves/ |
+| `fs.mkdir(dir, { recursive: true })` | `electron/main.js:105` | Creating saves/ directory |
+
+**New IPC handlers needed (4 total):**
+
 ```javascript
-// CURRENT (plain text only):
-this.textEl.textContent = this._fullText.substring(0, this._charIndex);
-```
-
-This **cannot work with HTML** because substring would break tags mid-character. The solution:
-
-1. Parse full rich text to HTML once → set `innerHTML` on a template element
-2. Clone the DOM subtree into the display element
-3. Collect all text nodes via `TreeWalker`
-4. Set all text nodes to empty string initially
-5. On each typewriter tick, reveal one character from the current text node
-6. When a text node is fully revealed, move to the next
-
-This approach creates the DOM structure once and only mutates text content — no DOM thrashing, no re-parsing.
-
-### 3. Global Font Settings — CSS Custom Properties
-
-| Component | Technology | Rationale |
-|-----------|-----------|-----------|
-| Data storage | `script.json → ui.dialogueBox` | Same pattern as `ui.titleScreen` and `ui.settingsScreen`. Authored content, not player preference. |
-| Engine application | CSS Custom Properties on `#dialogue-box` | `--dlg-font-size`, `--dlg-font-family`, `--dlg-text-color`. DialogueBox reads at render time. |
-| Editor UI | Vue form (dropdown + slider + color input) | Font family dropdown from asset store's `fontFamilies` computed, plus system defaults. |
-
-**Data schema (new `ui.dialogueBox` key):**
-
-```json
-{
-  "ui": {
-    "dialogueBox": {
-      "fontSize": 18,
-      "fontFamily": "Noto Sans SC",
-      "textColor": "rgba(255, 255, 255, 0.92)",
-      "nameplateFontFamily": "Noto Serif SC",
-      "nameplateFontSize": 20
-    }
+// 1. save-game — write state + thumbnail
+ipcMain.handle('save-game', async (event, { slot, state, screenshot, previewText }) => {
+  const savesDir = path.join(currentProjectPath, 'saves');
+  await fs.mkdir(savesDir, { recursive: true });
+  // Atomic write for state JSON (prevents corruption)
+  await atomicWrite(path.join(savesDir, `slot_${slot}.json`), JSON.stringify({
+    state, previewText, timestamp: Date.now(), date: new Date().toLocaleString('zh-CN')
+  }, null, 2));
+  // Write thumbnail (non-atomic OK — worst case: missing thumbnail)
+  if (screenshot) {
+    await fs.writeFile(path.join(savesDir, `slot_${slot}.jpg`), Buffer.from(screenshot));
   }
+});
+
+// 2. load-game — read state
+ipcMain.handle('load-game', async (event, { slot }) => { ... });
+
+// 3. delete-save — remove slot files
+ipcMain.handle('delete-save', async (event, { slot }) => { ... });
+
+// 4. list-saves — metadata for all slots (for grid display)
+ipcMain.handle('list-saves', async () => { ... });
+```
+
+**Save file structure:**
+```
+project-folder/
+├── saves/
+│   ├── slot_0.json      # Game state + metadata
+│   ├── slot_0.jpg       # Thumbnail (320×180 JPEG)
+│   ├── slot_1.json
+│   ├── slot_1.jpg
+│   └── ...              # Up to slot_99
+├── assets/
+├── project.json
+└── script.json
+```
+
+**Thumbnail display in Save/Load UI:**
+- Option A: Extend `asset://` protocol to also serve from `saves/` → `<img src="asset://saves/slot_0.jpg">`
+- Option B: `list-saves` IPC returns thumbnail as base64 data URL
+- **Recommend Option A** — cleaner, uses existing protocol infrastructure, no base64 bloat in IPC messages. The `asset://` handler in `main.js:615` already resolves against `currentProjectPath`; extending it to serve from `saves/` alongside `assets/` is a small change to the path resolution.
+
+### 3. Read-Page Tracking (for Skip-Read-Only Mode)
+
+**No new technology.** This is an engine-internal feature using `Set<string>`.
+
+**Design:**
+```javascript
+// In ScriptEngine or a new ReadTracker
+// Key format: "sceneId:pageIndex" — uniquely identifies every page
+const readPages = new Set();
+
+// Mark page as read when dialogue completes
+function markRead(sceneId, pageIndex) {
+  readPages.add(`${sceneId}:${pageIndex}`);
+}
+
+// Check if page has been read (for skip-read-only mode)
+function isRead(sceneId, pageIndex) {
+  return readPages.has(`${sceneId}:${pageIndex}`);
 }
 ```
 
-**Why `ui.dialogueBox` in script.json, not ConfigManager?** Global font settings are *authored content* — the game creator decides the font style for their game. ConfigManager stores *player preferences* (volume, text speed). Different games should have different default fonts.
+**Persistence:** Read-page data should persist across game sessions. Two options:
+- **localStorage** (keyed by gameId) — simplest, doesn't pollute save files, survives save deletion
+- **Separate file** `saves/read-history.json` — portable with project
 
-## Alternatives Considered
+**Recommend localStorage** — read history is player-specific data (like config), not project data. Different players of the same game have different read histories. This follows the same pattern as `ConfigManager.js` which already uses localStorage.
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Voice API | HTMLAudioElement | Web Audio API | WAA is for real-time processing/mixing. Voice is simple sequential playback. |
-| Markup syntax | `[color=#hex]...[/color]` | Ren'Py-style `{color=#hex}...{/color}` | Curly braces conflict with JSON escaping; brackets are visually distinct in text. |
-| Markup syntax | `[color=#hex]...[/color]` | RPG Maker-style `\C[hex]` | Less readable; harder to extend to future tag types. |
-| Markup syntax | `[color=#hex]...[/color]` | Markdown-like `**bold**` | Markdown doesn't support inline color — the primary need. |
-| Editor input | Textarea + toolbar | contenteditable div | Cursor management nightmare, paste brings unwanted HTML, undo stack fights Vue reactivity. Not worth complexity for one markup type. |
-| Editor input | Textarea + toolbar | Tiptap / ProseMirror / Quill | Massive deps (100KB+ gzipped). Violates zero-deps policy. Overkill for "wrap text in color tags." |
-| Tag parser | Regex (escape-first) | State machine | State machine is more robust for deeply nested tags, but we only support `[color]` — no nesting needed. Regex is simpler and sufficient. If future tags need nesting, upgrade then. |
-| Sanitization | escapeHtml + regex allowlist | DOMPurify library | Extra dependency. Our allowed set is exactly `<span style="color:...">` and `<br>`. Custom approach is ~15 lines. |
-| Typewriter | TreeWalker | Rebuild innerHTML each tick | DOM thrashing, flicker, event listener loss. TreeWalker is dramatically more efficient. |
-| Voice volume | Separate `voiceVolume` | Reuse `seVolume` | Every VN engine separates voice/SE volume. Players expect this. Industry standard. |
-| Font settings | `script.json → ui.dialogueBox` | ConfigManager | Font is authored content, not player preference. |
+### 4. Quick Action Bar — DOM Extension
 
-## Integration Impact Map
+**No new technology.** The existing `#quick-controls` in `main.js:54-62` already implements 4 buttons (AUTO, SKIP, LOG, MENU). v0.5 changes this to 6 buttons (存档, 读档, 回想, 设置, 自动, 快进).
 
-| Existing File | Required Changes | Risk |
-|---------------|-----------------|------|
-| `AudioManager.js` | Add `playVoice()`, `stopVoice()`, `voiceVolume`, `setVoiceVolume()` | Low — additive, follows BGM/SE pattern exactly |
-| `ScriptEngine.js` | Include `voice` field in `'dialogue'` event data (~line 393) | Low — one-line addition to data object |
-| `DialogueBox.js` | Replace `textContent` → `innerHTML`, add rich text parser, refactor typewriter to TreeWalker | **Medium** — biggest refactor in this milestone |
-| `main.js` (engine) | Wire `voice` to `audio.playVoice()` in dialogue handler; add voiceVolume to `applyConfig()` | Low — follows existing pattern |
-| `ConfigManager.js` | Add `voiceVolume: 0.8` default | Low — one line |
-| `settingDefs.js` | Add `voiceVolume` setting type registration | Low — follows existing SETTING_DEFS pattern |
-| `PageInspector.vue` | Add voice picker per dialogue, add color toolbar for textarea | Medium — new UI in existing component |
-| `PageEditor.vue` | Wire voice picker modal event handlers | Low — follows AudioPicker pattern |
-| `sanitize.js` | Add `escapeHtml()` utility function | Low — pure function, no side effects |
-| `style.css` | Add CSS custom property fallbacks for dialogue font settings | Low |
+This is a pure DOM restructure — same `document.createElement('div')` + event delegation pattern.
+
+### 5. Save/Load UI — CSS Grid + Pagination
+
+**No new technology.** The existing `SaveLoadScreen.js` already renders a slot grid. v0.5 upgrades from 8 text-only slots to 100 thumbnail card slots with 10 pages.
+
+| UI Element | Technology | Notes |
+|-----------|-----------|-------|
+| 10×10 grid layout | `display: grid; grid-template-columns: repeat(5, 1fr)` | 5 columns × 2 rows per page = 10 slots visible |
+| Page tabs | DOM buttons with click handlers | 10 page tabs at bottom |
+| Thumbnail cards | `<img>` + `<div>` text overlay | JPEG via `asset://` + previewText |
+| Active slot highlight | CSS `:hover` + `.selected` class | Standard |
+| Delete confirmation | Inline "确定删除?" with confirm/cancel | No modal library needed |
+
+## Existing Stack Reuse
+
+| Existing Component | Reused For | How |
+|-------------------|-----------|-----|
+| `SaveManager.js` | **Replace entirely** — new `SaveManager` uses IPC instead of localStorage | Rewrite class, same public API (`save`, `load`, `delete`, `getAllSlots`, `hasAnySave`) |
+| `SaveLoadScreen.js` | **Rewrite** — new UI with grid, thumbnails, pagination | Same class structure, new `_render()` implementation |
+| `ConfigManager.js` | **Extend** — add `skipMode: 'all'` setting (`'all'` \| `'readOnly'`) | One new default field |
+| `settingDefs.js` | **Extend** — add skip mode toggle to settings page presets | One new SETTING_DEF entry |
+| `GameMenu.js` | **Minor update** — menu still opens save/load, wire to new SaveManager | Minimal change |
+| `main.js` (engine runtime) | **Extend** — new quick bar buttons, skip-read-only logic, screenshot capture trigger | Moderate updates to event wiring |
+| `ScriptEngine.js` | **Extend** — add read-page tracking Set, emit `page_read` event | Small addition |
+| `electron/main.js` | **Extend** — add 5 new IPC handlers (save/load/delete/list/screenshot) | Follows existing patterns exactly |
+| `asset://` protocol handler | **Extend** — serve from `saves/` directory for thumbnails | Small path resolution change |
+
+## Integration Notes
+
+### IPC Architecture (Critical)
+
+The save system upgrade is the biggest architectural change: **SaveManager moves from synchronous localStorage to async IPC**.
+
+**Current (synchronous):**
+```javascript
+// SaveManager.js — current
+save(slot, state, previewText) {
+  localStorage.setItem(this._key(slot), JSON.stringify(data));
+}
+load(slot) {
+  return JSON.parse(localStorage.getItem(this._key(slot)));
+}
+```
+
+**New (async IPC):**
+```javascript
+// SaveManager.js — new
+async save(slot, state, previewText, screenshot) {
+  return await window.ipcRenderer.invoke('save-game', { slot, state, previewText, screenshot });
+}
+async load(slot) {
+  return await window.ipcRenderer.invoke('load-game', { slot });
+}
+```
+
+**Impact:** All call sites that use `saveManager.save()` and `saveManager.load()` must become `async/await`. This affects:
+- `main.js:180-200` — `saveLoadScreen.onSave` / `saveLoadScreen.onLoad`
+- `main.js:405` — `saveManager.hasAnySave()` (title screen continue button)
+- `SaveLoadScreen.js` — slot click handlers
+
+This is manageable but must be done carefully to avoid race conditions.
+
+### Screenshot Timing (Critical)
+
+The screenshot must be captured **before** the Save/Load UI appears (otherwise the screenshot shows the UI overlay, not the game scene). The flow:
+
+1. User clicks Save button → `ipcRenderer.invoke('capture-game-screenshot')`
+2. Await screenshot Buffer return
+3. Cache the Buffer in SaveLoadScreen instance
+4. Show the Save UI overlay
+5. When user clicks a slot, use the cached screenshot
+
+### asset:// Protocol Extension for Saves
+
+Current `asset://` resolves against `{projectPath}/assets/`. For thumbnails, extend to also serve from `{projectPath}/saves/`:
+
+```javascript
+// In protocol.handle('asset', ...) — add saves path resolution
+const basePaths = {
+  assets: path.join(currentProjectPath, 'assets'),
+  saves: path.join(currentProjectPath, 'saves'),
+};
+// Route based on first path segment: asset://saves/slot_0.jpg vs asset://backgrounds/bg1.png
+```
+
+Alternative: Add a dedicated `save://` protocol. But extending `asset://` is simpler and consistent.
+
+### ConfigManager — Skip Mode Setting
+
+Add to `ConfigManager.js` defaults:
+```javascript
+skipMode: 'all',  // 'all' = skip everything, 'readOnly' = skip only read pages
+```
+
+This is a **player preference** (not authored content), so ConfigManager is the correct location. The settings page gets a new toggle component.
 
 ## What NOT to Add
 
-| Technology | Reason |
-|------------|--------|
-| **Any npm package** | Zero-deps policy. All features use browser APIs. |
-| **Web Audio API** | Overkill for sequential voice playback. |
-| **contenteditable** | Cursor management hell. Textarea + toolbar is simpler and more reliable. |
-| **Tiptap / Quill / ProseMirror** | Massive deps for wrapping text in color tags. |
-| **DOMPurify** | Allowed set is 2 elements. Custom allowlist is trivial. |
-| **Markdown parser** | Doesn't support inline color. Wrong tool. |
-| **Monaco Editor** | Code editor for dialogue text? No. |
+| Technology | Why It Might Seem Relevant | Why NOT to Add |
+|------------|---------------------------|----------------|
+| **html2canvas** | Project description mentions it | Abandoned since Jan 2022. `webContents.capturePage()` is superior in every way for Electron. |
+| **modern-screenshot** | Active, zero-dep screenshot lib | Unnecessary — Electron native capture is simpler, more reliable, and has zero cross-origin issues with `asset://` protocol. |
+| **html-to-image** | SVG foreignObject screenshot lib | Same as above — Electron native is better. |
+| **Any thumbnail/image processing library** | For resizing screenshots | `NativeImage.resize()` is built into Electron. Handles JPEG/PNG encoding natively. |
+| **better-sqlite3 / nedb / lowdb** | For save data management | Overkill. JSON files are perfect for save slots. Each slot is one read/write. No queries needed. |
+| **fs-extra** | Extended file operations | Node.js `fs/promises` covers all needs (mkdir, readFile, writeFile, unlink, readdir). |
+| **uuid** | For save slot IDs | Numbered slots (0–99) are the design. No UUIDs needed. |
+| **Virtual scroll library** | For 100-slot grid | Only 10 slots visible per page (paginated). No virtual scrolling needed. |
+| **date-fns / dayjs** | For date formatting | `new Date().toLocaleString('zh-CN')` already used in current `SaveManager.js`. |
+| **Vue component library (Element Plus, etc.)** | For Save/Load UI | Engine UI is pure DOM (not Vue). Save/Load screen is a runtime component. |
 
 ## Browser API Compatibility (Electron 41 / Chromium 134+)
 
 | API | Status | Used For |
 |-----|--------|----------|
-| `HTMLAudioElement` | ✅ Stable | Voice playback (already used for BGM/SE) |
-| `innerHTML` | ✅ Stable | Rich text rendering |
-| `TreeWalker` | ✅ Stable | HTML-aware typewriter effect |
-| `DOMParser` | ✅ Stable | Sanitization fallback |
-| `FontFace` | ✅ Stable | Custom font loading (already used) |
-| CSS Custom Properties | ✅ Stable | Dynamic dialogue font styling |
-| `selectionStart/End` | ✅ Stable | Textarea markup insertion |
+| `webContents.capturePage(rect)` | ✅ Stable (since Electron 1.x) | Save slot thumbnails |
+| `NativeImage.resize()` | ✅ Stable | Thumbnail resizing |
+| `NativeImage.toJPEG(quality)` | ✅ Stable | Compact thumbnail encoding |
+| `fs.promises` | ✅ Stable (Node 18+) | File system save operations |
+| `Set` | ✅ Stable (ES2015) | Read-page tracking |
+| `localStorage` | ✅ Stable | Read history + config persistence |
+| `CSS Grid` | ✅ Stable | Save/load slot grid layout |
+| `crypto.randomUUID()` | ✅ Stable (not needed but available) | — |
 
-**All APIs are long-stable web standards. No compatibility risk.**
+**All APIs are stable. No compatibility risk.**
 
-## Voice Data Schema Extension
+## Save Data Schema
+
+### Slot State File (`saves/slot_XX.json`)
 
 ```json
-// Per-dialogue voice field (in page.dialogues[])
 {
-  "speaker": "sakura",
-  "text": "おはよう！",
-  "expression": null,
-  "voice": "audio/voice/sakura_001.mp3"
+  "state": {
+    "currentScene": "scene_1",
+    "pageIndex": 3,
+    "dialogueIndex": 1,
+    "variables": { "met_sakura": true, "affection": 5 },
+    "history": [
+      { "speaker": "sakura", "speakerName": "さくら", "text": "おはよう！" }
+    ]
+  },
+  "previewText": "おはよう！今日はいい天気ですね。",
+  "timestamp": 1721318400000,
+  "date": "2025/7/18 12:00:00"
 }
 ```
 
-## Batch Voice Naming Convention
+### Slot Thumbnail (`saves/slot_XX.jpg`)
 
-Audio files matching pattern `{sceneId}_{pageIndex}_{dialogueIndex}` auto-bind to dialogues when "batch match" is triggered in editor. This is an editor-side convenience that writes `voice` fields into data — engine just reads the field.
+- Format: JPEG (quality 80)
+- Size: 320×180 pixels (16:9 aspect, matching 1280×720 game area)
+- Typical file size: ~15-30 KB per thumbnail
+- 100 slots max = ~3 MB total thumbnail storage (negligible)
+
+### Read History (`localStorage` key: `{gameId}_read_pages`)
+
+```json
+["start:0", "start:1", "start:2", "scene_1:0", "scene_1:1"]
+```
+
+Compact string array, serialized to localStorage. Typical game: 200-500 unique pages ≈ 5-15 KB.
 
 ## Sources
 
-- **Codebase analysis** (HIGH): `AudioManager.js`, `DialogueBox.js`, `ScriptEngine.js`, `PageInspector.vue`, `sanitize.js`, `fontLoader.js`, `ConfigManager.js`, `settingDefs.js`
-- **HTML5 Audio API** (HIGH): MDN Web Docs — stable, universal
-- **TreeWalker API** (HIGH): MDN Web Docs — DOM Level 2 Traversal, supported since IE9
+- **Codebase analysis** (HIGH): `SaveManager.js`, `SaveLoadScreen.js`, `main.js` (engine runtime), `electron/main.js` (IPC handlers), `ConfigManager.js`, `preload.js`, `ScriptEngine.js`, `GameMenu.js`, `index.html`, `editor.html`
+- **npm registry** (HIGH): Verified versions and publish dates for html2canvas (1.4.1, Jan 2022), modern-screenshot (4.6.8, Jan 2026), html-to-image (1.11.13, Feb 2025)
+- **Electron API** (HIGH): `webContents.capturePage()`, `NativeImage` — stable since Electron 1.x, well-documented
 - **Project constraint** (HIGH): ZERO new npm deps policy established in v0.2, per PROJECT.md

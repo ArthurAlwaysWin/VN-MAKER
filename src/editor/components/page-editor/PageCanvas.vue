@@ -28,14 +28,15 @@
 
       <!-- Dialogue box -->
       <div v-if="currentDialogue" class="canvas-dialogue"
+        :style="dialogueBoxStyle"
         :class="{ editing: isEditingDialogue }"
         @dblclick.stop="startInlineEdit"
         @click.stop="onDialogueClick">
         <template v-if="!isEditingDialogue">
-          <div class="dlg-speaker" v-if="currentDialogue.speaker">
+          <div class="dlg-speaker" v-if="currentDialogue.speaker" :style="speakerStyle">
             {{ getCharName(currentDialogue.speaker) }}
           </div>
-          <div class="dlg-text">{{ currentDialogue.text || '...' }}</div>
+          <div class="dlg-text" :style="dialogueTextStyle">{{ currentDialogue.text || '...' }}</div>
         </template>
         <textarea v-else
           ref="inlineTextarea"
@@ -200,6 +201,53 @@ function onInlineTextInput(value) {
 function stopInlineEdit() {
   isEditingDialogue.value = false;
 }
+
+// Global + per-page font settings for canvas dialogue
+const dialogueBoxStyle = computed(() => {
+  const globalFont = script.data?.ui?.dialogueBox;
+  const override = page.value?.fontOverride;
+  const useOverride = override && !override.useGlobal;
+  const s = {};
+  if (globalFont?.fontFamily) s.fontFamily = globalFont.fontFamily;
+  if (useOverride && override.fontFamily) s.fontFamily = override.fontFamily;
+  return s;
+});
+
+const dialogueTextStyle = computed(() => {
+  const globalFont = script.data?.ui?.dialogueBox;
+  const override = page.value?.fontOverride;
+  const useOverride = override && !override.useGlobal;
+  const s = {};
+  if (globalFont) {
+    if (globalFont.fontSize) s.fontSize = globalFont.fontSize + 'px';
+    if (globalFont.textColor) s.color = globalFont.textColor;
+    if (globalFont.fontFamily) s.fontFamily = globalFont.fontFamily;
+  }
+  if (useOverride) {
+    if (override.fontSize) s.fontSize = override.fontSize + 'px';
+    if (override.textColor) s.color = override.textColor;
+    if (override.fontFamily) s.fontFamily = override.fontFamily;
+  }
+  return s;
+});
+
+const speakerStyle = computed(() => {
+  const globalFont = script.data?.ui?.dialogueBox;
+  const override = page.value?.fontOverride;
+  const useOverride = override && !override.useGlobal;
+  const s = {};
+  if (globalFont) {
+    if (globalFont.nameplateFontSize) s.fontSize = globalFont.nameplateFontSize + 'px';
+    if (globalFont.nameplateFontFamily) s.fontFamily = globalFont.nameplateFontFamily;
+    if (globalFont.nameplateColor) s.color = globalFont.nameplateColor;
+  }
+  if (useOverride) {
+    if (override.nameplateFontSize) s.fontSize = override.nameplateFontSize + 'px';
+    if (override.nameplateFontFamily) s.fontFamily = override.nameplateFontFamily;
+    if (override.nameplateColor) s.color = override.nameplateColor;
+  }
+  return s;
+});
 </script>
 
 <style scoped>

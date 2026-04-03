@@ -26,11 +26,13 @@
         <span class="info-value path">{{ project.projectPath }}</span>
       </div>
     </form>
+    <DialogueBoxSettings />
   </div>
 </template>
 
 <script setup>
 import { useProjectStore } from '../stores/project.js';
+import DialogueBoxSettings from '../components/DialogueBoxSettings.vue';
 const project = useProjectStore();
 </script>
 

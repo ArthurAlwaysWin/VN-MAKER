@@ -252,9 +252,100 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Empty state -->
+    <!-- Section 6: Per-page Font Override -->
+    <div class="inspector-section">
+      <div class="section-toggle" @click="sections.fonts = !sections.fonts">
+        {{ sections.fonts ? '▼' : '▶' }} 🔤 字体
+      </div>
+      <div v-if="sections.fonts" class="section-body">
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" :checked="useGlobalFont" @change="toggleUseGlobal" />
+            使用全局字体设置
+          </label>
+          <div v-if="useGlobalFont" class="override-hint">当前使用项目全局字体，取消勾选可为本页单独设置</div>
+        </div>
+
+        <template v-if="!useGlobalFont">
+          <div class="form-group">
+            <label>对话字号</label>
+            <div class="slider-row">
+              <input type="range" min="12" max="36" step="1"
+                :value="fontOverride.fontSize || 18"
+                @input="setOverrideField('fontSize', parseInt($event.target.value))"
+                @change="script.pushState()"
+                class="volume-slider" />
+              <span class="volume-val">{{ fontOverride.fontSize || 18 }}px</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>对话字体</label>
+            <select class="field-input"
+              :value="fontOverride.fontFamily || ''"
+              @change="setOverrideField('fontFamily', $event.target.value || null); script.pushState()">
+              <option value="">默认</option>
+              <optgroup label="系统字体">
+                <option v-for="sf in systemFonts" :key="'ov-' + sf.value"
+                  :value="sf.value">{{ sf.label }}</option>
+              </optgroup>
+              <optgroup label="已导入字体" v-if="assets.fontFamilies.length">
+                <option v-for="f in assets.fontFamilies" :key="'ov-' + f.value"
+                  :value="f.value">{{ f.label }}</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>文字颜色</label>
+            <div class="color-row">
+              <input type="color"
+                :value="fontOverride.textColor || '#ffffff'"
+                @input="setOverrideField('textColor', $event.target.value)"
+                @change="script.pushState()" />
+              <button v-if="fontOverride.textColor" class="reset-btn" @click="setOverrideField('textColor', null); script.pushState()">重置</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>铭牌字号</label>
+            <div class="slider-row">
+              <input type="range" min="12" max="36" step="1"
+                :value="fontOverride.nameplateFontSize || 20"
+                @input="setOverrideField('nameplateFontSize', parseInt($event.target.value))"
+                @change="script.pushState()"
+                class="volume-slider" />
+              <span class="volume-val">{{ fontOverride.nameplateFontSize || 20 }}px</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>铭牌字体</label>
+            <select class="field-input"
+              :value="fontOverride.nameplateFontFamily || ''"
+              @change="setOverrideField('nameplateFontFamily', $event.target.value || null); script.pushState()">
+              <option value="">默认</option>
+              <optgroup label="系统字体">
+                <option v-for="sf in systemFonts" :key="'ovnp-' + sf.value"
+                  :value="sf.value">{{ sf.label }}</option>
+              </optgroup>
+              <optgroup label="已导入字体" v-if="assets.fontFamilies.length">
+                <option v-for="f in assets.fontFamilies" :key="'ovnp-' + f.value"
+                  :value="f.value">{{ f.label }}</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>铭牌颜色</label>
+            <div class="color-row">
+              <input type="color"
+                :value="fontOverride.nameplateColor || '#ffffff'"
+                @input="setOverrideField('nameplateColor', $event.target.value)"
+                @change="script.pushState()" />
+              <button v-if="fontOverride.nameplateColor" class="reset-btn" @click="setOverrideField('nameplateColor', null); script.pushState()">重置</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
   <div class="page-inspector empty" v-else>
     <div class="empty-hint">选择一个页面以编辑属性</div>
   </div>
@@ -271,12 +362,14 @@
 import { reactive, ref, computed, watch, onBeforeUnmount } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import { useAssetStore } from '../../stores/assets.js';
 import AudioPicker from './AudioPicker.vue';
 
 const editor = usePageEditor();
 const script = useScriptStore();
+const assets = useAssetStore();
 
-const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true });
+const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, fonts: false });
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
 const showSpeakerDropdown = ref(false);
@@ -305,6 +398,41 @@ const speakerDisplay = computed(() => {
   const char = script.data?.characters?.[dlg.speaker];
   return char ? char.name : dlg.speaker;
 });
+
+// ─── Per-page font override ──────────────────────────────
+const systemFonts = [
+  { label: 'Noto Sans SC', value: "'Noto Sans SC', sans-serif" },
+  { label: 'Noto Serif SC', value: "'Noto Serif SC', serif" },
+  { label: 'Sans Serif', value: 'sans-serif' },
+  { label: 'Serif', value: 'serif' },
+  { label: 'Monospace', value: 'monospace' },
+];
+
+const fontOverride = computed(() => page.value?.fontOverride || {});
+
+const useGlobalFont = computed(() => {
+  const fo = page.value?.fontOverride;
+  return !fo || fo.useGlobal !== false;
+});
+
+function toggleUseGlobal() {
+  if (!page.value) return;
+  if (useGlobalFont.value) {
+    // Switch to per-page override
+    page.value.fontOverride = { useGlobal: false };
+  } else {
+    // Revert to global
+    page.value.fontOverride = { useGlobal: true };
+  }
+  script.pushState();
+}
+
+function setOverrideField(field, value) {
+  if (!page.value) return;
+  if (!page.value.fontOverride) page.value.fontOverride = { useGlobal: false };
+  page.value.fontOverride[field] = value;
+  // pushState called by @change handler for undo/redo commit
+}
 
 function isCharId(id) {
   return !!(script.data?.characters?.[id]);
@@ -1024,5 +1152,62 @@ function onOptDragEnd() {
   background: #a22;
   border-color: #a22;
   color: #fff;
+}
+
+/* ─── Font Override ─── */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: #007acc;
+}
+
+.override-hint {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-row input[type="color"] {
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.reset-btn {
+  background: transparent;
+  border: 1px solid #555;
+  color: #aaa;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.reset-btn:hover {
+  background: #444;
+  color: #ccc;
 }
 </style>

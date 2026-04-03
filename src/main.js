@@ -43,7 +43,7 @@ const choiceMenu = new ChoiceMenu(uiOverlay);
 // Settings, save/load, and backlog use gameContainer directly (not uiOverlay)
 // so their z-index 200 is in the same stacking context as TitleScreen (z-index 100)
 const saveLoadScreen = new SaveLoadScreen(gameContainer, saveManager);
-const backlogScreen = new BacklogScreen(gameContainer);
+const backlogScreen = new BacklogScreen(gameContainer, audio);
 const settingsScreen = new SettingsScreen(gameContainer, config);
 const gameMenu = new GameMenu(uiOverlay);
 
@@ -65,6 +65,8 @@ dialogueLayer.appendChild(quickControls);
 let autoMode = false;
 let skipMode = false;
 let autoTimer = null;
+let currentVoicePromise = null;
+const VOICE_END_DELAY = 300;
 let isPlaying = false; // whether the game is actively playing (not on title)
 
 // ─── Apply config ───────────────────────────────────────
@@ -101,9 +103,10 @@ engine.on('dialogue', (data) => {
 
   // Voice playback — only play if voice is bound (D-01)
   if (data.voice) {
-    audio.playVoice(data.voice);
+    currentVoicePromise = audio.playVoice(data.voice);
+  } else {
+    currentVoicePromise = null;
   }
-  // D-01: NO stopVoice() when data.voice is null — let current voice play to completion
 
   // Auto mode
   if (autoMode) {
@@ -337,18 +340,31 @@ function stopAuto() {
 
 function startAutoTimer() {
   clearAutoTimer();
-  // Wait for typewriter to finish, then wait autoSpeed before advancing
-  const checkInterval = setInterval(() => {
-    if (dialogueBox.isComplete()) {
-      clearInterval(checkInterval);
-      autoTimer = setTimeout(() => {
-        if (autoMode && engine.waiting) {
-          engine.next();
-        }
-      }, config.get('autoSpeed'));
+
+  // Text completion wait: poll isComplete(), then wait autoSpeed (existing behavior)
+  const textWait = new Promise((resolve) => {
+    const check = setInterval(() => {
+      if (dialogueBox.isComplete()) {
+        clearInterval(check);
+        const t = setTimeout(resolve, config.get('autoSpeed'));
+        autoTimer = t;
+      }
+    }, 100);
+    autoTimer = check;
+  });
+
+  // Voice wait: if voice is playing, wait for it + micro-delay (D-04, D-05)
+  const voiceWait = currentVoicePromise
+    ? currentVoicePromise.then(() => new Promise(r => setTimeout(r, VOICE_END_DELAY)))
+    : null;
+
+  // D-04: max(voiceDuration, textComplete + autoSpeed) — Promise.all = whoever is longer
+  const waits = voiceWait ? [textWait, voiceWait] : [textWait];
+  Promise.all(waits).then(() => {
+    if (autoMode && engine.waiting) {
+      engine.next();
     }
-  }, 100);
-  autoTimer = checkInterval;
+  });
 }
 
 function clearAutoTimer() {

@@ -1,12 +1,15 @@
 /**
- * BacklogScreen — Shows dialogue history
+ * BacklogScreen — Shows dialogue history with voice replay
  */
 export class BacklogScreen {
   /**
    * @param {HTMLElement} container
+   * @param {import('../engine/AudioManager').AudioManager|null} audio
    */
-  constructor(container) {
+  constructor(container, audio = null) {
     this.container = container;
+    this.audio = audio;
+    this._playingEntry = null;
     this.el = document.createElement('div');
     this.el.id = 'backlog-screen';
     this.el.classList.add('hidden');
@@ -14,7 +17,7 @@ export class BacklogScreen {
   }
 
   /**
-   * @param {Array<{speaker:string|null, speakerName:string|null, text:string}>} history
+   * @param {Array<{speaker:string|null, speakerName:string|null, text:string, voice:string|null}>} history
    * @param {Object} characters — character definitions (for colors)
    */
   show(history, characters = {}) {
@@ -42,6 +45,19 @@ export class BacklogScreen {
            <div class="backlog-text">${entry.text}</div>`
         : `<div class="backlog-text" style="font-style:italic">${entry.text}</div>`;
 
+      // Voice replay button (D-01, D-02)
+      if (entry.voice && this.audio) {
+        const btn = document.createElement('button');
+        btn.className = 'backlog-voice-btn';
+        btn.textContent = '▶';
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this._playVoice(div, btn, entry.voice);
+        });
+        div.insertBefore(btn, div.firstChild);
+        div.classList.add('backlog-has-voice');
+      }
+
       content.appendChild(div);
     });
 
@@ -54,7 +70,49 @@ export class BacklogScreen {
     });
   }
 
+  /** @private */
+  _playVoice(entryEl, btn, voiceFile) {
+    // Clicking same entry that's playing → stop (D-02)
+    if (this._playingEntry === entryEl) {
+      this._stopCurrentVoice();
+      return;
+    }
+
+    // Stop previous if any (D-01 — clicking another replaces)
+    this._stopCurrentVoice();
+
+    this._playingEntry = entryEl;
+    btn.textContent = '■';
+    entryEl.classList.add('backlog-playing');
+
+    this.audio.playVoice(voiceFile).then(() => {
+      if (this._playingEntry === entryEl) {
+        this._restoreEntry(entryEl, btn);
+      }
+    });
+  }
+
+  /** @private */
+  _stopCurrentVoice() {
+    if (this._playingEntry) {
+      const entry = this._playingEntry;
+      const btn = entry.querySelector('.backlog-voice-btn');
+      this._playingEntry = null;
+      this.audio.stopVoice();
+      if (btn) btn.textContent = '▶';
+      entry.classList.remove('backlog-playing');
+    }
+  }
+
+  /** @private */
+  _restoreEntry(entryEl, btn) {
+    this._playingEntry = null;
+    btn.textContent = '▶';
+    entryEl.classList.remove('backlog-playing');
+  }
+
   hide() {
+    this._stopCurrentVoice(); // D-03: stop voice on close
     this.el.classList.remove('visible');
     this.el.classList.add('hidden');
   }

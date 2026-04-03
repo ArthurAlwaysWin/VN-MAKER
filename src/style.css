@@ -906,8 +906,55 @@ body {
 }
 
 .backlog-entry {
-  padding: 12px 0;
+  padding: 12px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
+  position: relative;
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+}
+
+.backlog-has-voice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.backlog-has-voice .backlog-text,
+.backlog-has-voice .backlog-speaker {
+  min-width: 0;
+}
+
+.backlog-voice-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.backlog-voice-btn:hover {
+  color: rgba(255,255,255,0.9);
+  border-color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.05);
+}
+
+.backlog-playing {
+  background-color: rgba(255,255,255,0.05);
+}
+
+.backlog-playing .backlog-voice-btn {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.4);
 }
 
 .backlog-speaker {

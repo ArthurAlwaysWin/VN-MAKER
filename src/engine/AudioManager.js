@@ -116,14 +116,22 @@ export class AudioManager {
 
   /**
    * Play a voice clip. Stops any currently playing voice first (D-01).
+   * Returns a Promise that resolves when the clip finishes (D-06).
    * @param {string} file — voice file path (relative to basePath)
+   * @returns {Promise<void>}
    */
   playVoice(file) {
     this.stopVoice();
-    if (!file) return;
+    if (!file) return Promise.resolve();
     this._voice = new Audio(this.basePath + file);
     this._voice.volume = this.voiceVolume;
-    this._voice.play().catch(() => {});
+
+    return new Promise((resolve) => {
+      const voice = this._voice;
+      voice.onended = () => resolve();
+      voice.onerror = () => resolve();
+      voice.play().catch(() => resolve());
+    });
   }
 
   /**
@@ -131,9 +139,11 @@ export class AudioManager {
    */
   stopVoice() {
     if (this._voice) {
-      this._voice.pause();
-      this._voice.currentTime = 0;
+      const voice = this._voice;
       this._voice = null;
+      voice.pause();
+      voice.currentTime = 0;
+      if (voice.onended) voice.onended();
     }
   }
 

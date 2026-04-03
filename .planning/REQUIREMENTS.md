@@ -16,8 +16,8 @@ v0.4 里程碑：语音系统 & 全局字体设置。
 - [ ] **VOICE-05**: 引擎播放对话时，自动播放绑定语音；推进到下一句时停止上一句语音
 - [ ] **VOICE-06**: 独立语音音量控制（`voiceVolume` 加入 ConfigManager），设置页显示语音音量滑块，受 masterVolume 乘法影响
 - [x] **VOICE-07**: 批量命名匹配——扫描音频文件夹，按 `{characterId}_{sceneIndex}_{pageIndex}_{dialogueIndex}.{ext}` 命名规则自动绑定语音到对话
-- [ ] **VOICE-08**: 回想屏（Backlog）语音重放——历史记录中有语音的条目显示 ▶ 按钮可重听
-- [ ] **VOICE-09**: 自动模式等待语音播完再推进；**无语音绑定时按正常间隔推进，不等待**
+- [x] **VOICE-08**: 回想屏（Backlog）语音重放——历史记录中有语音的条目显示 ▶ 按钮可重听
+- [x] **VOICE-09**: 自动模式等待语音播完再推进；**无语音绑定时按正常间隔推进，不等待**
 
 ### 全局字体设置
 
@@ -63,8 +63,8 @@ v0.4 里程碑：语音系统 & 全局字体设置。
 | VOICE-05 | Phase 15 | Pending |
 | VOICE-06 | Phase 15 | Pending |
 | VOICE-07 | Phase 16 | Complete |
-| VOICE-08 | Phase 18 | Pending |
-| VOICE-09 | Phase 18 | Pending |
+| VOICE-08 | Phase 18 | Complete |
+| VOICE-09 | Phase 18 | Complete |
 | FONT-01 | Phase 17 | Pending |
 | FONT-02 | Phase 17 | Pending |
 | FONT-03 | Phase 17 | Pending |

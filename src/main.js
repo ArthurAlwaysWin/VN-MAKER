@@ -221,14 +221,24 @@ choiceMenu.onSelect = (index) => {
 // ─── Save / Load ────────────────────────────────────────
 saveLoadScreen.onSave = async (slot) => {
   const state = engine.getState();
-  const lastDialogue = engine.history.length > 0
-    ? engine.history[engine.history.length - 1].text
-    : '';
-  const result = await saveManager.save(
-    slot, state, lastDialogue.substring(0, 60), cachedScreenshot,
-  );
+
+  // Build preview text: choice prompt+options on choice pages, last dialogue otherwise
+  let previewText = '';
+  const page = engine._currentPage();
+  if (page && page.type === 'choice') {
+    const prompt = page.prompt || '';
+    const opts = (page.options || []).map((o, i) => `${i + 1}.${o.text}`).join(' ');
+    previewText = `${prompt} ${opts}`.substring(0, 80);
+  } else {
+    const lastDialogue = engine.history.length > 0
+      ? engine.history[engine.history.length - 1].text
+      : '';
+    previewText = lastDialogue.substring(0, 60);
+  }
+
+  const result = await saveManager.save(slot, state, previewText, cachedScreenshot);
   if (!result.success) {
-    showToast(`存档失败：${result.error}`); // D-12
+    showToast(`存档失败：${result.error}`);
   }
 };
 

@@ -101,7 +101,7 @@ async function captureGameScreenshot() {
 
   // Restore UI immediately after capture
   quickControls.style.display = '';
-  if (dlgWasVisible) dialogueBox.show();
+  if (dlgWasVisible) dialogueBox.el.classList.add('visible');
 
   if (!result.success) {
     console.error('[GalgameMaker] Screenshot failed:', result.error);
@@ -402,6 +402,16 @@ gameContainer.addEventListener('contextmenu', (e) => {
     quickControls.style.display = '';
   }
 });
+
+// Scroll wheel up → open backlog
+gameContainer.addEventListener('wheel', (e) => {
+  if (!isPlaying || e.deltaY >= 0) return;
+  if (!backlogScreen.el.classList.contains('hidden')) return; // already open
+  if (!gameMenu.el.classList.contains('hidden')) return;
+  if (!saveLoadScreen.el.classList.contains('hidden')) return;
+  if (settingsScreen.isVisible) return;
+  gameMenu.onBacklog();
+}, { passive: true });
 
 // ─── Auto / Skip helpers ────────────────────────────────
 function toggleAuto() {

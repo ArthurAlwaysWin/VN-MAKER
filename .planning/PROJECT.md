@@ -153,7 +153,7 @@ v0.5 里程碑已启动 — 游戏 UI 补全（快捷按钮栏 + 存读档界面
 
 **已发布：** v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）
 
-**当前：** v0.5 — 定义需求中。
+**当前：** v0.5 — Phase 19 (Save System Upgrade) 完成，Phase 20 待开始。
 
 ---
-*Last updated: 2026-04-03 after v0.5 milestone started*
+*Last updated: 2026-04-04 after Phase 19 complete*

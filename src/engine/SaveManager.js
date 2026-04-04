@@ -1,72 +1,178 @@
 /**
- * SaveManager — Handles save/load game state to localStorage
+ * SaveManager — Async file-system save/load via Electron IPC
+ *
+ * Replaces the old localStorage-based SaveManager with a 100-slot
+ * file system backend accessed through IPC handlers in electron/main.js.
+ * All methods are async. Includes lazy migration from legacy localStorage saves.
  */
 export class SaveManager {
-  /**
-   * @param {string} gameId — unique game identifier for localStorage namespace
-   */
-  constructor(gameId = 'galgame-maker') {
-    this.gameId = gameId;
-    this.slotCount = 8;
+  constructor() {
+    /** @type {number} Maximum save slots */
+    this.slotCount = 100;
+
+    /** @type {Map<number, Object>} In-memory cache of slot metadata */
+    this._cache = new Map();
+
+    /** @type {boolean} Whether migration from localStorage has been checked */
+    this._migrationChecked = false;
+
+    /** @type {number} Number of saves migrated in last _checkMigration call */
+    this._lastMigrationCount = 0;
   }
 
-  _key(slot) {
-    return `${this.gameId}_save_${slot}`;
-  }
+  // ─── Public API (all async) ────────────────────────────────
 
   /**
    * Save game state to a slot
-   * @param {number} slot — slot index (0-7)
+   * @param {number} slot — slot number (1-100)
    * @param {Object} state — engine state from ScriptEngine.getState()
-   * @param {string} [previewText] — preview text for the save slot display
+   * @param {string} previewText — truncated dialogue text for display
+   * @param {Uint8Array|null} [thumbnail=null] — JPEG bytes from capture-screenshot
+   * @returns {Promise<{success: boolean, error?: string}>}
    */
-  save(slot, state, previewText = '') {
-    const data = {
-      state,
-      previewText,
-      timestamp: Date.now(),
-      date: new Date().toLocaleString('zh-CN'),
-    };
-    localStorage.setItem(this._key(slot), JSON.stringify(data));
+  async save(slot, state, previewText, thumbnail = null) {
+    // Deep-clone to strip Vue Proxy wrappers (P11 prevention)
+    const plainState = JSON.parse(JSON.stringify(state));
+
+    // Truncate history to 50 entries (D-07, SAVE-08)
+    if (plainState.history && plainState.history.length > 50) {
+      plainState.history = plainState.history.slice(-50);
+    }
+
+    const result = await window.ipcRenderer.invoke('save-slot', {
+      slot,
+      state: plainState,
+      previewText: previewText || '',
+      thumbnail,
+    });
+
+    if (result.success) {
+      this._cache.set(slot, {
+        slot,
+        previewText: previewText || '',
+        sceneName: plainState.currentScene || '',
+        timestamp: Date.now(),
+        date: new Date().toLocaleString('zh-CN'),
+        hasThumbnail: !!thumbnail,
+      });
+    }
+
+    return result;
   }
 
   /**
    * Load game state from a slot
    * @param {number} slot
-   * @returns {Object|null} — { state, previewText, timestamp, date } or null
+   * @returns {Promise<Object|null>} — { version, state, previewText, sceneName, timestamp, date } or null
    */
-  load(slot) {
-    const raw = localStorage.getItem(this._key(slot));
-    return raw ? JSON.parse(raw) : null;
+  async load(slot) {
+    const result = await window.ipcRenderer.invoke('load-slot', { slot });
+    if (!result.success) {
+      console.error('[SaveManager] Load failed:', result.error);
+      return null;
+    }
+    return result.data;
   }
 
   /**
    * Delete a save slot
    * @param {number} slot
+   * @returns {Promise<{success: boolean, error?: string}>}
    */
-  delete(slot) {
-    localStorage.removeItem(this._key(slot));
+  async delete(slot) {
+    const result = await window.ipcRenderer.invoke('delete-slot', { slot });
+    if (result.success) {
+      this._cache.delete(slot);
+    }
+    return result;
   }
 
   /**
-   * Get all save slots info (for display)
-   * @returns {Array<Object|null>}
+   * Get all save slot metadata — single IPC call (P15 prevention)
+   * Triggers lazy migration on first call.
+   * @returns {Promise<Array<Object>>}
    */
-  getAllSlots() {
-    const slots = [];
-    for (let i = 0; i < this.slotCount; i++) {
-      slots.push(this.load(i));
+  async getAllSlots() {
+    if (!this._migrationChecked) {
+      await this._checkMigration();
     }
-    return slots;
+
+    const result = await window.ipcRenderer.invoke('list-saves');
+    if (!result.success) {
+      console.error('[SaveManager] list-saves failed:', result.error);
+      return [];
+    }
+
+    // Rebuild cache from fresh data
+    this._cache.clear();
+    for (const slot of result.data) {
+      this._cache.set(slot.slot, slot);
+    }
+
+    return result.data;
   }
 
   /**
-   * Check if any saves exist (for "Continue" button on title)
+   * Check if any saves exist — for "继续游戏" button on title screen
+   * @returns {Promise<boolean>}
    */
-  hasAnySave() {
-    for (let i = 0; i < this.slotCount; i++) {
-      if (localStorage.getItem(this._key(i))) return true;
+  async hasAnySave() {
+    const slots = await this.getAllSlots();
+    return slots.length > 0;
+  }
+
+  // ─── Legacy Migration (D-09, D-10, SAVE-05) ───────────────
+
+  /**
+   * Check for and migrate legacy localStorage saves on first call.
+   * Reads old keys `galgame-maker_save_0` through `_save_7`, sends to
+   * main process via migrate-legacy-saves IPC, sets markers.
+   * @returns {Promise<number>} Number of saves migrated (0 if already done)
+   * @private
+   */
+  async _checkMigration() {
+    this._migrationChecked = true;
+
+    // Skip if no IPC available (iframe preview — D-13)
+    if (!window.ipcRenderer) return 0;
+
+    // Skip if already migrated (renderer-side flag)
+    if (localStorage.getItem('galgame-maker_migrated')) return 0;
+
+    // Collect old saves from localStorage
+    const oldSaves = [];
+    for (let i = 0; i < 8; i++) {
+      const key = `galgame-maker_save_${i}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          oldSaves.push({ slot: i, data: JSON.parse(raw) });
+        } catch {
+          // Skip corrupt entries
+        }
+      }
     }
-    return false;
+
+    if (oldSaves.length === 0) {
+      // No old saves — mark as checked so we don't re-read localStorage
+      localStorage.setItem('galgame-maker_migrated', '1');
+      return 0;
+    }
+
+    // Send to main process for file writing
+    const result = await window.ipcRenderer.invoke('migrate-legacy-saves', {
+      saves: oldSaves,
+    });
+
+    if (result.success) {
+      // Set renderer-side flag to avoid re-reading localStorage
+      localStorage.setItem('galgame-maker_migrated', '1');
+      console.log(`[SaveManager] Migrated ${result.migrated} legacy saves`);
+      this._lastMigrationCount = result.migrated;
+      return result.migrated;
+    }
+
+    console.error('[SaveManager] Migration failed:', result.error);
+    return 0;
   }
 }

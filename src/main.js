@@ -59,7 +59,7 @@ quickControls.innerHTML = `
   <button class="quick-btn" data-action="backlog">LOG</button>
   <button class="quick-btn" data-action="menu">MENU</button>
 `;
-dialogueLayer.appendChild(quickControls);
+gameContainer.appendChild(quickControls);
 
 // ─── State ──────────────────────────────────────────────
 let autoMode = false;
@@ -403,14 +403,25 @@ gameContainer.addEventListener('contextmenu', (e) => {
   }
 });
 
-// Scroll wheel up → open backlog
+// Scroll wheel: up → open backlog, down → close backlog or advance dialogue
 gameContainer.addEventListener('wheel', (e) => {
-  if (!isPlaying || e.deltaY >= 0) return;
-  if (!backlogScreen.el.classList.contains('hidden')) return; // already open
-  if (!gameMenu.el.classList.contains('hidden')) return;
-  if (!saveLoadScreen.el.classList.contains('hidden')) return;
-  if (settingsScreen.isVisible) return;
-  gameMenu.onBacklog();
+  if (!isPlaying) return;
+
+  if (e.deltaY < 0) {
+    // Scroll up → open backlog (if no overlay is open)
+    if (!backlogScreen.el.classList.contains('hidden')) return;
+    if (!gameMenu.el.classList.contains('hidden')) return;
+    if (!saveLoadScreen.el.classList.contains('hidden')) return;
+    if (settingsScreen.isVisible) return;
+    gameMenu.onBacklog();
+  } else if (e.deltaY > 0) {
+    // Scroll down → close backlog, or advance dialogue
+    if (!backlogScreen.el.classList.contains('hidden')) {
+      backlogScreen.hide();
+    } else if (engine.waiting && !engine.ended) {
+      dialogueBox._handleClick();
+    }
+  }
 }, { passive: true });
 
 // ─── Auto / Skip helpers ────────────────────────────────

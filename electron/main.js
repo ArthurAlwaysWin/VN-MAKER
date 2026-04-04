@@ -221,6 +221,9 @@ ipcMain.handle('load-project', async (event, projectPath) => {
     // D-08: Auto-create fonts/ directory for legacy projects
     await fs.mkdir(path.join(projectPath, 'assets', 'fonts'), { recursive: true });
 
+    // SAVE-08: Auto-create saves/ directory on project open
+    await fs.mkdir(path.join(projectPath, 'saves'), { recursive: true });
+
     await addToRecent(projectPath, projectData.name);
     return { success: true, project: projectData, script: scriptData, path: projectPath };
   } catch (e) {
@@ -489,6 +492,142 @@ ipcMain.handle('close-project', () => {
   currentProjectPath = null;
 });
 
+// ─── Save System IPC ──────────────────────────────────────────────────
+
+ipcMain.handle('save-slot', async (event, { slot, state, previewText, thumbnail }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const savesDir = path.join(currentProjectPath, 'saves');
+    await fs.mkdir(savesDir, { recursive: true });
+    const padded = String(slot).padStart(3, '0');
+    const jsonPath = path.join(savesDir, `slot_${padded}.json`);
+    const jpgPath = path.join(savesDir, `slot_${padded}.jpg`);
+    if (!isInsideProject(jsonPath)) return { success: false, error: 'Invalid path' };
+    const data = {
+      version: 2,
+      state,
+      previewText: previewText || '',
+      sceneName: state?.currentScene || '',
+      timestamp: Date.now(),
+      date: new Date().toLocaleString('zh-CN'),
+    };
+    await atomicWrite(jsonPath, JSON.stringify(data, null, 2));
+    if (thumbnail) {
+      await fs.writeFile(jpgPath, thumbnail);
+    }
+    return { success: true };
+  } catch (e) {
+    console.error('[save-slot] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('load-slot', async (event, { slot }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const padded = String(slot).padStart(3, '0');
+    const jsonPath = path.join(currentProjectPath, 'saves', `slot_${padded}.json`);
+    if (!isInsideProject(jsonPath)) return { success: false, error: 'Invalid path' };
+    const raw = await fs.readFile(jsonPath, 'utf-8');
+    return { success: true, data: JSON.parse(raw) };
+  } catch (e) {
+    if (e.code === 'ENOENT') return { success: true, data: null };
+    console.error('[load-slot] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('delete-slot', async (event, { slot }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const padded = String(slot).padStart(3, '0');
+    const jsonPath = path.join(currentProjectPath, 'saves', `slot_${padded}.json`);
+    const jpgPath = path.join(currentProjectPath, 'saves', `slot_${padded}.jpg`);
+    if (!isInsideProject(jsonPath)) return { success: false, error: 'Invalid path' };
+    await fs.unlink(jsonPath).catch(() => {});
+    await fs.unlink(jpgPath).catch(() => {});
+    return { success: true };
+  } catch (e) {
+    console.error('[delete-slot] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('list-saves', async () => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const savesDir = path.join(currentProjectPath, 'saves');
+    await fs.mkdir(savesDir, { recursive: true });
+    const files = await fs.readdir(savesDir);
+    const slots = [];
+    for (const file of files) {
+      const match = file.match(/^slot_(\d{3})\.json$/);
+      if (!match) continue;
+      try {
+        const raw = await fs.readFile(path.join(savesDir, file), 'utf-8');
+        const data = JSON.parse(raw);
+        slots.push({
+          slot: parseInt(match[1], 10),
+          previewText: data.previewText || '',
+          sceneName: data.sceneName || data.state?.currentScene || '',
+          timestamp: data.timestamp,
+          date: data.date,
+          hasThumbnail: files.includes(`slot_${match[1]}.jpg`),
+        });
+      } catch { /* skip corrupt saves */ }
+    }
+    return { success: true, data: slots };
+  } catch (e) {
+    console.error('[list-saves] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('capture-screenshot', async () => {
+  try {
+    const targetWin = previewWin || getMainWindow();
+    if (!targetWin) return { success: false, error: 'No window available' };
+    const image = await targetWin.webContents.capturePage();
+    const resized = image.resize({ width: 320, height: 180 });
+    const jpegBuffer = resized.toJPEG(80);
+    return { success: true, data: jpegBuffer };
+  } catch (e) {
+    console.error('[capture-screenshot] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('migrate-legacy-saves', async (event, { saves }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const savesDir = path.join(currentProjectPath, 'saves');
+    await fs.mkdir(savesDir, { recursive: true });
+    const migratedPath = path.join(savesDir, '.migrated');
+    if (existsSync(migratedPath)) return { success: true, migrated: 0 };
+    let count = 0;
+    for (const { slot, data } of saves) {
+      const padded = String(slot + 1).padStart(3, '0');
+      const jsonPath = path.join(savesDir, `slot_${padded}.json`);
+      if (!isInsideProject(jsonPath)) continue;
+      const upgraded = {
+        version: 2,
+        state: data.state,
+        previewText: data.previewText || '',
+        sceneName: data.state?.currentScene || '',
+        timestamp: data.timestamp,
+        date: data.date,
+      };
+      await atomicWrite(jsonPath, JSON.stringify(upgraded, null, 2));
+      count++;
+    }
+    await fs.writeFile(migratedPath, '', 'utf-8');
+    return { success: true, migrated: count };
+  } catch (e) {
+    console.error('[migrate-legacy-saves] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('set-window-mode', (event, mode) => {
   const w = getMainWindow();
   if (!w) return;
@@ -546,6 +685,9 @@ ipcMain.handle('open-preview', (event, projectPath) => {
   previewWin = new BrowserWindow({
     width: 1280, height: 720,
     autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+    },
   });
 
   const projectParam = projectPath ? `?project=${encodeURIComponent(projectPath)}` : '';

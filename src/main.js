@@ -69,6 +69,47 @@ let currentVoicePromise = null;
 const VOICE_END_DELAY = 300;
 let isPlaying = false; // whether the game is actively playing (not on title)
 
+// ─── Toast notifications (D-11, D-12) ──────────────────
+function showToast(message, duration = 3000) {
+  const toast = document.createElement('div');
+  toast.className = 'game-toast';
+  toast.textContent = message;
+  toast.style.cssText = 'position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:10px 24px;border-radius:6px;font-size:14px;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.3s;';
+  gameContainer.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity = '1'; });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// ─── Screenshot capture (D-01, D-02, D-03) ─────────────
+let cachedScreenshot = null;
+
+async function captureGameScreenshot() {
+  if (!window.ipcRenderer) return null; // iframe preview guard (D-13)
+
+  // D-02: Hide dialogue box and quick controls for cleaner screenshot
+  const dlgWasVisible = !dialogueBox.el?.classList.contains('hidden');
+  dialogueBox.hide();
+  quickControls.style.display = 'none';
+
+  // Wait one frame for DOM update
+  await new Promise(r => requestAnimationFrame(r));
+
+  const result = await window.ipcRenderer.invoke('capture-screenshot');
+
+  // Restore quick controls (dialogue restored when save screen closes)
+  quickControls.style.display = '';
+
+  if (!result.success) {
+    console.error('[GalgameMaker] Screenshot failed:', result.error);
+    return null;
+  }
+
+  return result.data; // JPEG Buffer — cache until user confirms or cancels
+}
+
 // ─── Apply config ───────────────────────────────────────
 function applyConfig() {
   const master = config.get('masterVolume');
@@ -177,21 +218,27 @@ choiceMenu.onSelect = (index) => {
 };
 
 // ─── Save / Load ────────────────────────────────────────
-saveLoadScreen.onSave = (slot) => {
+saveLoadScreen.onSave = async (slot) => {
   const state = engine.getState();
   const lastDialogue = engine.history.length > 0
     ? engine.history[engine.history.length - 1].text
     : '';
-  saveManager.save(slot, state, lastDialogue.substring(0, 60));
+  const result = await saveManager.save(
+    slot, state, lastDialogue.substring(0, 60), cachedScreenshot,
+  );
+  if (!result.success) {
+    showToast(`存档失败：${result.error}`); // D-12
+  }
 };
 
-saveLoadScreen.onLoad = (slot) => {
-  const data = saveManager.load(slot);
+saveLoadScreen.onLoad = async (slot) => {
+  const data = await saveManager.load(slot);
   if (!data) return;
 
   // Hide title screen if it's still showing (loading from "继续游戏")
   titleScreen.hide();
 
+  audio.stopVoice(); // Stop lingering voice from previous state
   engine.restoreState(data.state);
   isPlaying = true;
 
@@ -212,7 +259,10 @@ settingsScreen.onChange = () => {
 };
 
 // ─── Game menu wiring ───────────────────────────────────
-gameMenu.onSave = () => saveLoadScreen.show('save');
+gameMenu.onSave = async () => {
+  cachedScreenshot = await captureGameScreenshot(); // D-03: capture before showing UI
+  saveLoadScreen.show('save');
+};
 gameMenu.onLoad = () => saveLoadScreen.show('load');
 gameMenu.onBacklog = () => {
   const chars = engine.script?.characters || {};
@@ -397,12 +447,13 @@ function updateQuickBtnStates() {
 }
 
 // ─── Title screen ───────────────────────────────────────
-function showTitle() {
+async function showTitle() {
   const titleLayout = engine.script?.ui?.titleScreen;
   if (titleLayout?.bgm) {
     audio.playBgm({ file: titleLayout.bgm, volume: 1, loop: true });
   }
-  titleScreen.show(saveManager.hasAnySave());
+  const hasSaves = await saveManager.hasAnySave();
+  titleScreen.show(hasSaves);
 }
 
 titleScreen.onStart = () => {
@@ -453,7 +504,13 @@ async function init() {
       dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
     }
 
-    showTitle();
+    await showTitle();
+
+    // D-11: Show one-time migration toast if legacy saves were migrated
+    if (saveManager._lastMigrationCount > 0) {
+      showToast('检测到旧存档，已自动迁移');
+    }
+
     console.log('[GalgameMaker] Ready!');
   } catch (err) {
     console.error('[GalgameMaker] Failed to initialize:', err);

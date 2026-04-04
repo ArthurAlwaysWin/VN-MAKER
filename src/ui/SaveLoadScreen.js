@@ -38,8 +38,7 @@ export class SaveLoadScreen {
     this.el.classList.add('hidden');
   }
 
-  _render() {
-    const slots = this.saveManager.getAllSlots();
+  async _render() {
     const title = this.mode === 'save' ? '存 档' : '读 档';
 
     this.el.innerHTML = `
@@ -53,26 +52,36 @@ export class SaveLoadScreen {
     this.el.querySelector('.save-load-close').addEventListener('click', () => this.hide());
 
     const grid = this.el.querySelector('.save-load-grid');
-    slots.forEach((slot, i) => {
+    const allSlots = await this.saveManager.getAllSlots();
+
+    // Build a lookup map: slot number → metadata
+    const slotMap = new Map();
+    for (const s of allSlots) {
+      slotMap.set(s.slot, s);
+    }
+
+    // Render 8 slots (keeping current UI layout — Phase 21 expands to 100)
+    for (let i = 1; i <= 8; i++) {
+      const slot = slotMap.get(i) || null;
       const slotEl = document.createElement('div');
       slotEl.className = `save-slot ${slot ? '' : 'empty'}`;
-      
+
       if (slot) {
         slotEl.innerHTML = `
-          <div class="save-slot-label">存档 ${i + 1}</div>
+          <div class="save-slot-label">存档 ${i}</div>
           <div class="save-slot-text">${slot.previewText || '(无预览)'}</div>
           <div class="save-slot-time">${slot.date}</div>
         `;
       } else {
         slotEl.innerHTML = `
-          <div class="save-slot-label">存档 ${i + 1} — 空</div>
+          <div class="save-slot-label">存档 ${i} — 空</div>
         `;
       }
 
       slotEl.addEventListener('click', () => {
         if (this.mode === 'save') {
           if (this.onSave) this.onSave(i);
-          this._render(); // refresh to show updated slot
+          this._render(); // refresh after save (async, fire-and-forget)
         } else {
           if (slot && this.onLoad) {
             this.onLoad(i);
@@ -82,6 +91,6 @@ export class SaveLoadScreen {
       });
 
       grid.appendChild(slotEl);
-    });
+    }
   }
 }

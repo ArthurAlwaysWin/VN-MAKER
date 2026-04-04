@@ -361,12 +361,12 @@ gameContainer.addEventListener('click', (e) => {
   // Don't interfere with UI element clicks
   const target = e.target;
   if (target.closest('#quick-controls')) return;
-  if (target.closest('#choice-menu:not(.hidden)')) return;
-  if (target.closest('#game-menu:not(.hidden)')) return;
-  if (target.closest('#save-load-screen:not(.hidden)')) return;
-  if (target.closest('#settings-screen:not(.hidden)')) return;
-  if (target.closest('#backlog-screen:not(.hidden)')) return;
-  if (target.closest('#title-screen:not(.hidden)')) return;
+  if (target.closest('#choice-menu')) return;
+  if (target.closest('#game-menu')) return;
+  if (target.closest('#save-load-screen')) return;
+  if (target.closest('#settings-screen')) return;
+  if (target.closest('#backlog-screen')) return;
+  if (target.closest('#title-screen')) return;
 
   // Advance dialogue
   if (engine.waiting) {

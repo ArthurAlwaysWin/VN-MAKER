@@ -98,10 +98,10 @@ export class SaveLoadScreen {
         `;
       }
 
-      slotEl.addEventListener('click', () => {
+      slotEl.addEventListener('click', async () => {
         if (this.mode === 'save') {
-          if (this.onSave) this.onSave(i);
-          this._render();
+          if (this.onSave) await this.onSave(i);
+          await this._render();
         } else {
           if (slot && this.onLoad) {
             this.onLoad(i);

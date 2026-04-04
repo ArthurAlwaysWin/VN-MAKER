@@ -757,6 +757,21 @@ app.whenReady().then(() => {
   protocol.handle('asset', async (request) => {
     const url = new URL(request.url);
     const filePath = decodeURIComponent(url.hostname + url.pathname);
+
+    // ─── saves/ prefix: resolve from project saves directory (SAVE-06) ───
+    if (filePath.startsWith('saves/') || filePath.startsWith('saves\\')) {
+      if (!currentProjectPath) {
+        return new Response('No project loaded', { status: 404 });
+      }
+      const fullPath = path.resolve(path.join(currentProjectPath, filePath));
+      const resolvedBase = path.resolve(path.join(currentProjectPath, 'saves'));
+      if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      return net.fetch(pathToFileURL(fullPath).toString());
+    }
+
+    // ─── Existing assets/ resolution (unchanged) ───
     const base = currentProjectPath
       ? path.join(currentProjectPath, 'assets')
       : path.join(process.env.APP_ROOT, 'public', 'game');

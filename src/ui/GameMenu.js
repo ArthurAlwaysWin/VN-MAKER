@@ -57,10 +57,7 @@ export class GameMenu {
       if (!btn) return;
       const action = btn.dataset.action;
 
-      // D-08: Don't hide game menu when opening settings — overlay stacks on top
-      if (action !== 'settings') {
-        this.hide();
-      }
+      this.hide();
 
       switch (action) {
         case 'save': if (this.onSave) this.onSave(); break;
@@ -68,7 +65,6 @@ export class GameMenu {
         case 'backlog': if (this.onBacklog) this.onBacklog(); break;
         case 'settings': if (this.onSettings) this.onSettings(); break;
         case 'title': if (this.onTitle) this.onTitle(); break;
-        case 'close': break; // already hidden
       }
     });
   }

@@ -246,6 +246,13 @@ saveLoadScreen.onLoad = async (slot) => {
   replayCurrentPage();
 };
 
+saveLoadScreen.onDelete = async (slot) => {
+  const result = await saveManager.delete(slot);
+  if (!result.success) {
+    showToast(`删除失败：${result.error}`);
+  }
+};
+
 function replayCurrentPage() {
   characters.clear();
   background.clear();

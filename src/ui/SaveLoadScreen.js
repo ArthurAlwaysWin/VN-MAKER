@@ -21,6 +21,8 @@ export class SaveLoadScreen {
     this.onSave = null;
     /** @type {Function|null} */
     this.onLoad = null;
+    /** @type {Function|null} */
+    this.onDelete = null;
   }
 
   /**
@@ -54,34 +56,52 @@ export class SaveLoadScreen {
     const grid = this.el.querySelector('.save-load-grid');
     const allSlots = await this.saveManager.getAllSlots();
 
-    // Build a lookup map: slot number → metadata
     const slotMap = new Map();
     for (const s of allSlots) {
       slotMap.set(s.slot, s);
     }
 
-    // Render 8 slots (keeping current UI layout — Phase 21 expands to 100)
+    // Render 8 slots (Phase 21 expands to 100 with pagination)
     for (let i = 1; i <= 8; i++) {
       const slot = slotMap.get(i) || null;
       const slotEl = document.createElement('div');
       slotEl.className = `save-slot ${slot ? '' : 'empty'}`;
 
       if (slot) {
+        const padded = String(i).padStart(3, '0');
+        const thumbHtml = slot.hasThumbnail
+          ? `<img class="save-slot-thumb" src="asset://saves/slot_${padded}.jpg" alt="" />`
+          : `<div class="save-slot-thumb save-slot-no-thumb"></div>`;
+
         slotEl.innerHTML = `
-          <div class="save-slot-label">存档 ${i}</div>
-          <div class="save-slot-text">${slot.previewText || '(无预览)'}</div>
-          <div class="save-slot-time">${slot.date}</div>
+          ${thumbHtml}
+          <div class="save-slot-info">
+            <div class="save-slot-label">存档 ${i}</div>
+            <div class="save-slot-text">${slot.previewText || '(无预览)'}</div>
+            <div class="save-slot-time">${slot.date}</div>
+          </div>
+          <button class="save-slot-delete" title="删除存档">✕</button>
         `;
+
+        // Delete button
+        slotEl.querySelector('.save-slot-delete').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (this.onDelete) await this.onDelete(i);
+          this._render();
+        });
       } else {
         slotEl.innerHTML = `
-          <div class="save-slot-label">存档 ${i} — 空</div>
+          <div class="save-slot-no-thumb"></div>
+          <div class="save-slot-info">
+            <div class="save-slot-label">存档 ${i} — 空</div>
+          </div>
         `;
       }
 
       slotEl.addEventListener('click', () => {
         if (this.mode === 'save') {
           if (this.onSave) this.onSave(i);
-          this._render(); // refresh after save (async, fire-and-forget)
+          this._render();
         } else {
           if (slot && this.onLoad) {
             this.onLoad(i);

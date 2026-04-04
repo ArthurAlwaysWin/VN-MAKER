@@ -107,7 +107,7 @@ See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 19: Save System Upgrade** — File system saves with 100-slot capacity, IPC handlers, screenshots, migration
+- [x] **Phase 19: Save System Upgrade** — File system saves with 100-slot capacity, IPC handlers, screenshots, migration (completed 2026-04-04)
 - [ ] **Phase 20: Quick Action Bar** — 6-button dialogue bar with auto/skip state indicators and overlay sync
 - [ ] **Phase 21: Save/Load UI** — Full-screen 100-slot grid with thumbnails, pagination, ESC stack, context-aware return
 - [ ] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only modes, audio suppression, settings toggle
@@ -124,11 +124,11 @@ See .planning/milestones/v0.4-ROADMAP.md for full phase details.
   3. Old localStorage saves from previous versions appear automatically in the new system on first project open
   4. Screenshot thumbnails load in `<img>` tags via `asset://saves/slot_NNN.jpg` without errors
   5. Deleting a save slot removes both JSON and JPEG files, confirmed by `list-saves` returning updated data
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 19-01-PLAN.md — Electron backend: IPC handlers (save/load/delete/list/capture/migrate) + asset:// saves/ protocol + preview preload fix + saves/ auto-creation
-- [ ] 19-02-PLAN.md — Async SaveManager rewrite + caller migration + screenshot capture flow + toast utility + legacy localStorage migration
+- [x] 19-02-PLAN.md — Async SaveManager rewrite + caller migration + screenshot capture flow + toast utility + legacy localStorage migration
 
 #### Phase 20: Quick Action Bar
 **Goal**: Players have persistent one-click access to all game functions during dialogue
@@ -172,7 +172,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 19. Save System Upgrade | 1/2 | In Progress|  |
+| 19. Save System Upgrade | 2/2 | Complete   | 2026-04-04 |
 | 20. Quick Action Bar | 0/? | Not started | - |
 | 21. Save/Load UI | 0/? | Not started | - |
 | 22. Skip Mode | 0/? | Not started | - |

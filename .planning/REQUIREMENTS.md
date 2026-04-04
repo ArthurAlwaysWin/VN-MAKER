@@ -9,14 +9,14 @@
 
 ## SAVE — 存档系统升级
 
-- [ ] **SAVE-01**: 存档数据保存到项目 `saves/` 目录，每槽独立文件（`slot_001.json` + `slot_001.jpg`），使用原子写入防止数据损坏
-- [ ] **SAVE-02**: 提供 IPC handlers（save-slot / load-slot / delete-slot / list-saves / capture-screenshot），编辑器和引擎通过 IPC 访问存档
+- [x] **SAVE-01**: 存档数据保存到项目 `saves/` 目录，每槽独立文件（`slot_001.json` + `slot_001.jpg`），使用原子写入防止数据损坏
+- [x] **SAVE-02**: 提供 IPC handlers（save-slot / load-slot / delete-slot / list-saves / capture-screenshot），编辑器和引擎通过 IPC 访问存档
 - [ ] **SAVE-03**: SaveManager 重写为异步模式（所有调用者使用 async/await），支持 100 个存档槽位
-- [ ] **SAVE-04**: 使用 `webContents.capturePage()` 截取游戏画面，缩放为 320×180 JPEG（quality 80）作为存档缩略图
+- [x] **SAVE-04**: 使用 `webContents.capturePage()` 截取游戏画面，缩放为 320×180 JPEG（quality 80）作为存档缩略图
 - [ ] **SAVE-05**: 首次运行时自动迁移旧 localStorage 8 槽存档到文件系统，写入 `.migrated` 标记防止重复迁移
-- [ ] **SAVE-06**: 扩展 `asset://` 协议支持 `saves/` 目录，缩略图通过 `asset://saves/slot_001.jpg` 加载
-- [ ] **SAVE-07**: 存档 JSON 包含 `version: 2` 字段，为后续存档格式升级预留兼容性
-- [ ] **SAVE-08**: 打开项目时自动创建 `saves/` 目录；历史记录截断为 50 条（完整历史保留在内存中）
+- [x] **SAVE-06**: 扩展 `asset://` 协议支持 `saves/` 目录，缩略图通过 `asset://saves/slot_001.jpg` 加载
+- [x] **SAVE-07**: 存档 JSON 包含 `version: 2` 字段，为后续存档格式升级预留兼容性
+- [x] **SAVE-08**: 打开项目时自动创建 `saves/` 目录；历史记录截断为 50 条（完整历史保留在内存中）
 
 ## BAR — 快捷按钮栏
 
@@ -77,14 +77,14 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| SAVE-01 | Phase 19 | Pending |
-| SAVE-02 | Phase 19 | Pending |
+| SAVE-01 | Phase 19 | Complete |
+| SAVE-02 | Phase 19 | Complete |
 | SAVE-03 | Phase 19 | Pending |
-| SAVE-04 | Phase 19 | Pending |
+| SAVE-04 | Phase 19 | Complete |
 | SAVE-05 | Phase 19 | Pending |
-| SAVE-06 | Phase 19 | Pending |
-| SAVE-07 | Phase 19 | Pending |
-| SAVE-08 | Phase 19 | Pending |
+| SAVE-06 | Phase 19 | Complete |
+| SAVE-07 | Phase 19 | Complete |
+| SAVE-08 | Phase 19 | Complete |
 | BAR-01 | Phase 20 | Pending |
 | BAR-02 | Phase 20 | Pending |
 | BAR-03 | Phase 20 | Pending |

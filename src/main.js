@@ -269,7 +269,7 @@ gameMenu.onBacklog = () => {
   backlogScreen.show(engine.history, chars);
 };
 gameMenu.onSettings = () => settingsScreen.show();
-gameMenu.onTitle = () => {
+gameMenu.onTitle = async () => {
   isPlaying = false;
   stopAuto();
   stopSkip();
@@ -280,7 +280,7 @@ gameMenu.onTitle = () => {
   engine.resetRenderState();
   characters.clear();
   background.clear();
-  showTitle();
+  await showTitle();
 };
 
 // ─── Quick controls ─────────────────────────────────────
@@ -306,10 +306,11 @@ quickControls.addEventListener('click', (e) => {
 
 // ─── Keyboard shortcuts ─────────────────────────────────
 document.addEventListener('keydown', (e) => {
-  // D-09: Settings overlay ESC works regardless of play state
-  if (e.key === 'Escape' && settingsScreen.isVisible) {
-    settingsScreen.hide();
-    return;
+  // ESC priority chain — overlays first, regardless of play state or preview mode
+  if (e.key === 'Escape') {
+    if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
+    if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
+    if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
   }
 
   if (!isPlaying) return;
@@ -336,7 +337,11 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'l':
     case 'L':
-      gameMenu.onBacklog();
+      if (!backlogScreen.el.classList.contains('hidden')) {
+        backlogScreen.hide();
+      } else {
+        gameMenu.onBacklog();
+      }
       break;
   }
 });

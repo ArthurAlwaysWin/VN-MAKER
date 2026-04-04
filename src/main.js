@@ -89,7 +89,7 @@ let cachedScreenshot = null;
 async function captureGameScreenshot() {
   if (!window.ipcRenderer) return null; // iframe preview guard (D-13)
 
-  // D-02: Hide dialogue box and quick controls for cleaner screenshot
+  // Hide dialogue box and quick controls for cleaner screenshot
   const dlgWasVisible = !dialogueBox.el?.classList.contains('hidden');
   dialogueBox.hide();
   quickControls.style.display = 'none';
@@ -99,15 +99,16 @@ async function captureGameScreenshot() {
 
   const result = await window.ipcRenderer.invoke('capture-screenshot');
 
-  // Restore quick controls (dialogue restored when save screen closes)
+  // Restore UI immediately after capture
   quickControls.style.display = '';
+  if (dlgWasVisible) dialogueBox.show();
 
   if (!result.success) {
     console.error('[GalgameMaker] Screenshot failed:', result.error);
     return null;
   }
 
-  return result.data; // JPEG Buffer — cache until user confirms or cancels
+  return result.data;
 }
 
 // ─── Apply config ───────────────────────────────────────
@@ -318,14 +319,21 @@ document.addEventListener('keydown', (e) => {
     if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
     if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
     if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
+    if (!gameMenu.el.classList.contains('hidden')) { gameMenu.hide(); return; }
   }
 
   if (!isPlaying) return;
 
   switch (e.key) {
     case 'Escape':
-      if (engine._previewMode) break;
-      gameMenu.toggle();
+      // Toggle dialogue box visibility (same as right-click)
+      if (dialogueBox.el.classList.contains('visible')) {
+        dialogueBox.el.classList.remove('visible');
+        quickControls.style.display = 'none';
+      } else {
+        dialogueBox.el.classList.add('visible');
+        quickControls.style.display = '';
+      }
       break;
     case ' ':
     case 'Enter':
@@ -374,11 +382,24 @@ gameContainer.addEventListener('click', (e) => {
   }
 });
 
-// Right-click opens game menu
+// Right-click: close overlays, or toggle dialogue box visibility
 gameContainer.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (isPlaying && !engine._previewMode) {
-    gameMenu.toggle();
+  if (!isPlaying) return;
+
+  // Close overlays first (priority: backlog > save/load > settings > game menu)
+  if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
+  if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
+  if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
+  if (!gameMenu.el.classList.contains('hidden')) { gameMenu.hide(); return; }
+
+  // Toggle dialogue box + quick controls visibility
+  if (dialogueBox.el.classList.contains('visible')) {
+    dialogueBox.el.classList.remove('visible');
+    quickControls.style.display = 'none';
+  } else {
+    dialogueBox.el.classList.add('visible');
+    quickControls.style.display = '';
   }
 });
 

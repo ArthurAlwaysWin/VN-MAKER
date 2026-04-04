@@ -77,10 +77,33 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| SAVE-01 ~ SAVE-08 | TBD | Pending |
-| BAR-01 ~ BAR-05 | TBD | Pending |
-| SLUI-01 ~ SLUI-07 | TBD | Pending |
-| SKIP-01 ~ SKIP-07 | TBD | Pending |
+| SAVE-01 | Phase 19 | Pending |
+| SAVE-02 | Phase 19 | Pending |
+| SAVE-03 | Phase 19 | Pending |
+| SAVE-04 | Phase 19 | Pending |
+| SAVE-05 | Phase 19 | Pending |
+| SAVE-06 | Phase 19 | Pending |
+| SAVE-07 | Phase 19 | Pending |
+| SAVE-08 | Phase 19 | Pending |
+| BAR-01 | Phase 20 | Pending |
+| BAR-02 | Phase 20 | Pending |
+| BAR-03 | Phase 20 | Pending |
+| BAR-04 | Phase 20 | Pending |
+| BAR-05 | Phase 20 | Pending |
+| SLUI-01 | Phase 21 | Pending |
+| SLUI-02 | Phase 21 | Pending |
+| SLUI-03 | Phase 21 | Pending |
+| SLUI-04 | Phase 21 | Pending |
+| SLUI-05 | Phase 21 | Pending |
+| SLUI-06 | Phase 21 | Pending |
+| SLUI-07 | Phase 21 | Pending |
+| SKIP-01 | Phase 22 | Pending |
+| SKIP-02 | Phase 22 | Pending |
+| SKIP-03 | Phase 22 | Pending |
+| SKIP-04 | Phase 22 | Pending |
+| SKIP-05 | Phase 22 | Pending |
+| SKIP-06 | Phase 22 | Pending |
+| SKIP-07 | Phase 22 | Pending |
 
 ---
 

@@ -100,3 +100,75 @@ See .planning/milestones/v0.3-ROADMAP.md for full phase details.
 See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v0.5 — 游戏 UI 补全
+
+### Phases
+
+- [ ] **Phase 19: Save System Upgrade** — File system saves with 100-slot capacity, IPC handlers, screenshots, migration
+- [ ] **Phase 20: Quick Action Bar** — 6-button dialogue bar with auto/skip state indicators and overlay sync
+- [ ] **Phase 21: Save/Load UI** — Full-screen 100-slot grid with thumbnails, pagination, ESC stack, context-aware return
+- [ ] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only modes, audio suppression, settings toggle
+
+### Phase Details
+
+#### Phase 19: Save System Upgrade
+**Goal**: Game saves persist to the project file system with 100-slot capacity and screenshot thumbnails
+**Depends on**: Nothing (v0.5 foundation — all other phases build on this)
+**Requirements**: SAVE-01, SAVE-02, SAVE-03, SAVE-04, SAVE-05, SAVE-06, SAVE-07, SAVE-08
+**Success Criteria** (what must be TRUE):
+  1. Saving a game creates `slot_NNN.json` + `slot_NNN.jpg` in the project's `saves/` directory, surviving app restart
+  2. Loading a saved slot restores exact game state (scene, page, dialogue history, audio) via async IPC
+  3. Old localStorage saves from previous versions appear automatically in the new system on first project open
+  4. Screenshot thumbnails load in `<img>` tags via `asset://saves/slot_NNN.jpg` without errors
+  5. Deleting a save slot removes both JSON and JPEG files, confirmed by `list-saves` returning updated data
+**Plans**: TBD
+
+#### Phase 20: Quick Action Bar
+**Goal**: Players have persistent one-click access to all game functions during dialogue
+**Depends on**: Phase 19 (save/load buttons need working save backend)
+**Requirements**: BAR-01, BAR-02, BAR-03, BAR-04, BAR-05
+**Success Criteria** (what must be TRUE):
+  1. Six labeled buttons (自動 / 快進 / 回想 / 存档 / 読档 / 設置) appear at the dialogue box bottom during gameplay
+  2. Clicking Auto or Skip toggles the mode and shows a visible active-state indicator (highlight or icon change)
+  3. Button bar hides automatically when choice pages appear, menus open, or any overlay displays
+  4. Clicking any bar button does NOT advance dialogue to the next line
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 21: Save/Load UI
+**Goal**: Players can visually browse, save, and load from 100 slots with thumbnail previews
+**Depends on**: Phase 19 (async SaveManager, screenshot pipeline, file-based slots)
+**Requirements**: SLUI-01, SLUI-02, SLUI-03, SLUI-04, SLUI-05, SLUI-06, SLUI-07
+**Success Criteria** (what must be TRUE):
+  1. Full-screen save/load interface shows 5×2 = 10 slots per page across 10 navigable page tabs (100 slots total)
+  2. Each occupied slot card displays a screenshot thumbnail, save timestamp, dialogue text preview, and scene name; empty slots show "— 空 —"
+  3. Save/Load mode switches via header tabs without closing the interface; overwriting an existing save shows inline confirmation before proceeding
+  4. ESC key closes the save/load screen respecting stack-based overlay priority (SaveLoad > Settings > Backlog > GameMenu)
+  5. Closing the interface returns to the correct context: game menu → game menu, quick bar → gameplay, title screen → title screen
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 22: Skip Mode
+**Goal**: Players can fast-forward through dialogue with intelligent read-page tracking
+**Depends on**: Phase 20 (skip button in quick bar triggers this mode)
+**Requirements**: SKIP-01, SKIP-02, SKIP-03, SKIP-04, SKIP-05, SKIP-06, SKIP-07
+**Success Criteria** (what must be TRUE):
+  1. Activating skip mode rapidly advances through pages with a visible "▶▶ SKIP" overlay indicator
+  2. In "skip read only" mode, skip automatically stops at any unread page and resumes normal reading speed
+  3. All audio events (BGM/SE/voice) are suppressed during skip, with correct final audio state applied when skip ends
+  4. A new settings page toggle lets users switch between "skip all" and "skip read only" modes (persisted in ConfigManager)
+  5. Skip stops automatically at choice pages and when the user clicks, presses a key, or hits ESC
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|---------------|--------|-----------|
+| 19. Save System Upgrade | 0/? | Not started | - |
+| 20. Quick Action Bar | 0/? | Not started | - |
+| 21. Save/Load UI | 0/? | Not started | - |
+| 22. Skip Mode | 0/? | Not started | - |

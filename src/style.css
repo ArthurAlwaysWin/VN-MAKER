@@ -1082,43 +1082,48 @@ body {
 }
 
 /* ============================================
-   Quick Controls (top-right during gameplay)
+   Quick Action Bar (embedded in #dialogue-box)
    ============================================ */
-#quick-controls {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 15;
+#quick-action-bar {
   display: flex;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 0 8px;
 }
 
-#game-container:hover #quick-controls {
-  opacity: 1;
-}
-
-.quick-btn {
-  padding: 4px 12px;
-  font-size: 12px;
-  font-family: 'Noto Sans SC', sans-serif;
-  color: rgba(255,255,255,0.4);
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 3px;
+.qab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  letter-spacing: 1px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.quick-btn:hover {
-  color: rgba(255,255,255,0.8);
-  background: rgba(60,50,100,0.4);
-  border-color: rgba(255,255,255,0.15);
+.qab-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(60, 50, 100, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
-.quick-btn.active {
+.qab-btn.active {
   color: rgba(180, 160, 255, 0.9);
   border-color: rgba(180, 160, 255, 0.3);
+}
+
+.qab-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.qab-btn svg {
+  width: 20px;
+  height: 20px;
 }

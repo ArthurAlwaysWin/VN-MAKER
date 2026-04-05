@@ -20,6 +20,7 @@ import { BacklogScreen } from './ui/BacklogScreen.js';
 import { SettingsScreen } from './ui/SettingsScreen.js';
 import { TitleScreen } from './ui/TitleScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
+import { QuickActionBar } from './ui/QuickActionBar.js';
 import { loadAllFonts } from './engine/fontLoader.js';
 
 // ─── DOM references ─────────────────────────────────────
@@ -47,19 +48,11 @@ const backlogScreen = new BacklogScreen(gameContainer, audio);
 const settingsScreen = new SettingsScreen(gameContainer, config);
 const gameMenu = new GameMenu(uiOverlay);
 
+// Quick action bar (embedded in dialogue box — D-01)
+const quickBar = new QuickActionBar(dialogueBox.el);
+
 // Title screen is appended to the game container itself (z-index 100)
 const titleScreen = new TitleScreen(gameContainer, '');
-
-// Quick controls (Auto, Skip, Log, Menu)
-const quickControls = document.createElement('div');
-quickControls.id = 'quick-controls';
-quickControls.innerHTML = `
-  <button class="quick-btn" data-action="auto">AUTO</button>
-  <button class="quick-btn" data-action="skip">SKIP</button>
-  <button class="quick-btn" data-action="backlog">LOG</button>
-  <button class="quick-btn" data-action="menu">MENU</button>
-`;
-gameContainer.appendChild(quickControls);
 
 // ─── State ──────────────────────────────────────────────
 let autoMode = false;
@@ -83,16 +76,29 @@ function showToast(message, duration = 3000) {
   }, duration);
 }
 
+// ─── Preview text builder ───────────────────────────────
+function buildPreviewText() {
+  const page = engine._currentPage();
+  if (page && page.type === 'choice') {
+    const prompt = page.prompt || '';
+    const opts = (page.options || []).map((o, i) => `${i + 1}.${o.text}`).join(' ');
+    return `${prompt} ${opts}`.substring(0, 80);
+  }
+  const lastDialogue = engine.history.length > 0
+    ? engine.history[engine.history.length - 1].text
+    : '';
+  return lastDialogue.substring(0, 60);
+}
+
 // ─── Screenshot capture (D-01, D-02, D-03) ─────────────
 let cachedScreenshot = null;
 
 async function captureGameScreenshot() {
   if (!window.ipcRenderer) return null; // iframe preview guard (D-13)
 
-  // Hide dialogue box and quick controls for cleaner screenshot
+  // Hide dialogue box for cleaner screenshot (bar follows as DOM child)
   const dlgWasVisible = !dialogueBox.el?.classList.contains('hidden');
   dialogueBox.hide();
-  quickControls.style.display = 'none';
 
   // Wait one frame for DOM update
   await new Promise(r => requestAnimationFrame(r));
@@ -100,7 +106,6 @@ async function captureGameScreenshot() {
   const result = await window.ipcRenderer.invoke('capture-screenshot');
 
   // Restore UI immediately after capture
-  quickControls.style.display = '';
   if (dlgWasVisible) dialogueBox.el.classList.add('visible');
 
   if (!result.success) {
@@ -221,21 +226,7 @@ choiceMenu.onSelect = (index) => {
 // ─── Save / Load ────────────────────────────────────────
 saveLoadScreen.onSave = async (slot) => {
   const state = engine.getState();
-
-  // Build preview text: choice prompt+options on choice pages, last dialogue otherwise
-  let previewText = '';
-  const page = engine._currentPage();
-  if (page && page.type === 'choice') {
-    const prompt = page.prompt || '';
-    const opts = (page.options || []).map((o, i) => `${i + 1}.${o.text}`).join(' ');
-    previewText = `${prompt} ${opts}`.substring(0, 80);
-  } else {
-    const lastDialogue = engine.history.length > 0
-      ? engine.history[engine.history.length - 1].text
-      : '';
-    previewText = lastDialogue.substring(0, 60);
-  }
-
+  const previewText = buildPreviewText();
   const result = await saveManager.save(slot, state, previewText, cachedScreenshot);
   if (!result.success) {
     showToast(`存档失败：${result.error}`);
@@ -301,26 +292,54 @@ gameMenu.onTitle = async () => {
   await showTitle();
 };
 
-// ─── Quick controls ─────────────────────────────────────
-quickControls.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-
-  switch (btn.dataset.action) {
-    case 'auto':
-      toggleAuto();
-      break;
-    case 'skip':
-      toggleSkip();
-      break;
-    case 'backlog':
-      gameMenu.onBacklog();
-      break;
-    case 'menu':
-      if (!engine._previewMode) gameMenu.toggle();
-      break;
+// ─── Quick action bar wiring ────────────────────────────
+quickBar.onAuto = () => toggleAuto();
+quickBar.onSkip = () => toggleSkip();
+quickBar.onBacklog = () => {
+  const chars = engine.script?.characters || {};
+  backlogScreen.show(engine.history, chars);
+};
+quickBar.onSave = async () => {
+  stopAuto();
+  stopSkip();
+  cachedScreenshot = await captureGameScreenshot();
+  saveLoadScreen.show('save');
+};
+quickBar.onLoad = () => {
+  stopAuto();
+  stopSkip();
+  saveLoadScreen.show('load');
+};
+quickBar.onQuickSave = async () => {
+  const state = engine.getState();
+  const previewText = buildPreviewText();
+  const screenshot = await captureGameScreenshot();
+  const result = await saveManager.quickSave(state, previewText, screenshot);
+  if (result.success) {
+    showToast('快速存档完成');
+    quickBar.setQuickLoadEnabled(true);
+  } else {
+    showToast(`快速存档失败：${result.error}`);
   }
-});
+};
+quickBar.onQuickLoad = async () => {
+  if (!quickBar.isQuickLoadEnabled) return;
+  const data = await saveManager.quickLoad();
+  if (!data) return;
+  stopAuto();
+  stopSkip();
+  titleScreen.hide();
+  audio.stopVoice();
+  engine.restoreState(data.state);
+  isPlaying = true;
+  replayCurrentPage();
+  showToast('快速读档完成');
+};
+quickBar.onSettings = () => {
+  stopAuto();
+  stopSkip();
+  settingsScreen.show();
+};
 
 // ─── Keyboard shortcuts ─────────────────────────────────
 document.addEventListener('keydown', (e) => {
@@ -504,10 +523,8 @@ function stopSkip() {
 }
 
 function updateQuickBtnStates() {
-  const autoBtn = quickControls.querySelector('[data-action="auto"]');
-  const skipBtn = quickControls.querySelector('[data-action="skip"]');
-  autoBtn.classList.toggle('active', autoMode);
-  skipBtn.classList.toggle('active', skipMode);
+  quickBar.setAutoActive(autoMode);
+  quickBar.setSkipActive(skipMode);
 }
 
 // ─── Title screen ───────────────────────────────────────
@@ -569,6 +586,10 @@ async function init() {
     }
 
     await showTitle();
+
+    // Initialize quickload button state (D-13)
+    const hasQuick = await saveManager.hasQuickSave();
+    quickBar.setQuickLoadEnabled(hasQuick);
 
     // D-11: Show one-time migration toast if legacy saves were migrated
     if (saveManager._lastMigrationCount > 0) {

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: verifying
-stopped_at: v0.5 milestone complete — all 4 phases (19-22) done
-last_updated: "2026-04-05T12:00:00.000Z"
+milestone: v0.5
+milestone_name: 游戏 UI 补全 ✅ (archived)
+status: archived
+stopped_at: v0.5 archived — ready for v0.6
+last_updated: "2026-04-05T13:00:00.000Z"
 last_activity: 2026-04-05
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 14
-  completed_plans: 14
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
@@ -50,7 +50,7 @@ v0.5 Progress: [████████████████████] 4/
 | v0.2 | 4 | 7 | 14 |
 | v0.3 | 6 | 11 | 23 |
 | v0.4 | 4 | 6 | 13 |
-| v0.5 | 4 | TBD | 27 |
+| v0.5 | 4 | 8 | 27 |
 | Phase 19 P01 | 2.6 min | 2 tasks | 1 files |
 | Phase 19 P02 | 5 min | 2 tasks | 3 files |
 | Phase 20 P01 | 4min | 3 tasks | 3 files |
@@ -119,7 +119,7 @@ v0.5 Progress: [████████████████████] 4/
 
 ## Session Continuity
 
-Last session: 2026-04-05T11:35:13.722Z
-Stopped at: v0.5 milestone complete — all 4 phases done
+Last session: 2026-04-05
+Stopped at: v0.5 archived — ready for v0.6
 Resume hint: Start v0.6 with `/gsd-new-milestone`
-Next action: `/gsd-new-milestone` or `/gsd-progress`
+Next action: `/gsd-new-milestone`

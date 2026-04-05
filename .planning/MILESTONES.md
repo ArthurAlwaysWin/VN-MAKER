@@ -1,5 +1,24 @@
 # Milestones
 
+## v0.5 游戏 UI 补全 (Shipped: 2026-04-05)
+
+**Phases completed:** 4 phases (19-22), 8 plans, 27 requirements
+**Git range:** a6617a4..471c75a (~51 commits)
+**Files:** 48 changed, +10120/-308 lines
+
+**Key accomplishments:**
+
+- 存档系统升级：文件系统 `saves/` 目录 + 6 个 IPC handlers + 100 槽位 + 截图缩略图 + localStorage 迁移
+- 快捷按钮栏：对话框底部 8 个 Lucide SVG 图标按钮 + 快速存读档(F5/F9) + 激活状态指示
+- 存读档界面：全屏 3×3×12 网格（108 槽）+ 分页导航 + 内联确认 + 来源路由返回
+- 快进模式：30ms 循环 + 已读追踪(ReadHistory) + BGM 影子状态 + 6 种停止触发器
+
+**Milestone audit:** 27/27 requirements passed — see v0.5-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v0.5-ROADMAP.md, milestones/v0.5-REQUIREMENTS.md
+
+---
+
 ## v0.2 资源库 & 标题页 & 设置叠加层 (Shipped: 2026-03-31)
 
 **Phases completed:** 4 phases, 7 plans, 14 tasks

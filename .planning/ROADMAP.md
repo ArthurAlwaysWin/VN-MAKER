@@ -103,90 +103,22 @@ See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 
 ---
 
-## v0.5 — 游戏 UI 补全
+## v0.5 — 游戏 UI 补全 ✅
 
-### Phases
+<details>
+<summary>Phases 19-22 (shipped 2026-04-05)</summary>
 
-- [x] **Phase 19: Save System Upgrade** — File system saves with 100-slot capacity, IPC handlers, screenshots, migration (completed 2026-04-04)
-- [x] **Phase 20: Quick Action Bar** — 6-button dialogue bar with auto/skip state indicators and overlay sync (completed 2026-04-05)
-- [x] **Phase 21: Save/Load UI** — Full-screen 100-slot grid with thumbnails, pagination, ESC stack, context-aware return (completed 2026-04-05)
-- [x] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only modes, audio suppression, settings toggle (completed 2026-04-05)
+- [x] **Phase 19: Save System Upgrade** — File system saves with 108-slot capacity, IPC handlers, screenshots, migration (2026-04-04)
+- [x] **Phase 20: Quick Action Bar** — 8-button dialogue bar with quicksave/quickload, F5/F9, auto/skip indicators (2026-04-05)
+- [x] **Phase 21: Save/Load UI** — Full-screen 3×3×12 grid (108 slots), thumbnails, pagination, ESC stack, source-routed close (2026-04-05)
+- [x] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only, audio suppression, settings toggle (2026-04-05)
 
-### Phase Details
+**Key deliverables:**
+- ✅ 文件系统存档管线：SaveManager → IPC → atomicWrite + capturePage 截图
+- ✅ 快捷按钮栏 8 按钮 + 快存快读(F5/F9) + 激活状态紫色高亮
+- ✅ 全屏存读档界面 108 槽位 + 分页 + 内联确认 + 来源路由返回
+- ✅ 快进模式 30ms 循环 + ReadHistory + BGM 影子追踪 + 6 种停止触发器
 
-#### Phase 19: Save System Upgrade
-**Goal**: Game saves persist to the project file system with 100-slot capacity and screenshot thumbnails
-**Depends on**: Nothing (v0.5 foundation — all other phases build on this)
-**Requirements**: SAVE-01, SAVE-02, SAVE-03, SAVE-04, SAVE-05, SAVE-06, SAVE-07, SAVE-08
-**Success Criteria** (what must be TRUE):
-  1. Saving a game creates `slot_NNN.json` + `slot_NNN.jpg` in the project's `saves/` directory, surviving app restart
-  2. Loading a saved slot restores exact game state (scene, page, dialogue history, audio) via async IPC
-  3. Old localStorage saves from previous versions appear automatically in the new system on first project open
-  4. Screenshot thumbnails load in `<img>` tags via `asset://saves/slot_NNN.jpg` without errors
-  5. Deleting a save slot removes both JSON and JPEG files, confirmed by `list-saves` returning updated data
-**Plans:** 2/2 plans complete
+See .planning/milestones/v0.5-ROADMAP.md for full phase details.
 
-Plans:
-- [x] 19-01-PLAN.md — Electron backend: IPC handlers (save/load/delete/list/capture/migrate) + asset:// saves/ protocol + preview preload fix + saves/ auto-creation
-- [x] 19-02-PLAN.md — Async SaveManager rewrite + caller migration + screenshot capture flow + toast utility + legacy localStorage migration
-
-#### Phase 20: Quick Action Bar
-**Goal**: Players have persistent one-click access to all game functions during dialogue
-**Depends on**: Phase 19 (save/load buttons need working save backend)
-**Requirements**: BAR-01, BAR-02, BAR-03, BAR-04, BAR-05
-**Success Criteria** (what must be TRUE):
-  1. Six labeled buttons (自動 / 快進 / 回想 / 存档 / 読档 / 設置) appear at the dialogue box bottom during gameplay
-  2. Clicking Auto or Skip toggles the mode and shows a visible active-state indicator (highlight or icon change)
-  3. Button bar hides automatically when choice pages appear, menus open, or any overlay displays
-  4. Clicking any bar button does NOT advance dialogue to the next line
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 20-01-PLAN.md — QuickActionBar UI class + quicksave IPC handlers + SaveManager extensions
-- [x] 20-02-PLAN.md — main.js integration, CSS replacement, F5/F9 shortcuts, legacy cleanup
-**UI hint**: yes
-
-#### Phase 21: Save/Load UI
-**Goal**: Players can visually browse, save, and load from 100 slots with thumbnail previews
-**Depends on**: Phase 19 (async SaveManager, screenshot pipeline, file-based slots)
-**Requirements**: SLUI-01, SLUI-02, SLUI-03, SLUI-04, SLUI-05, SLUI-06, SLUI-07
-**Success Criteria** (what must be TRUE):
-  1. Full-screen save/load interface shows 5×2 = 10 slots per page across 10 navigable page tabs (100 slots total)
-  2. Each occupied slot card displays a screenshot thumbnail, save timestamp, dialogue text preview, and scene name; empty slots show "— 空 —"
-  3. Save/Load mode switches via header tabs without closing the interface; overwriting an existing save shows inline confirmation before proceeding
-  4. ESC key closes the save/load screen respecting stack-based overlay priority (SaveLoad > Settings > Backlog > GameMenu)
-  5. Closing the interface returns to the correct context: game menu → game menu, quick bar → gameplay, title screen → title screen
-**Plans**: 2 plans
-
-Plans:
-- [x] 21-01-PLAN.md — SaveLoadScreen rewrite (3×3×12 grid, pagination, inline confirmations) + CSS + SaveManager slotCount bump
-- [x] 21-02-PLAN.md — main.js integration wiring (source params, onClose routing, ESC priority fix, save toast)
-
-**UI hint**: yes
-
-#### Phase 22: Skip Mode
-**Goal**: Players can fast-forward through dialogue with intelligent read-page tracking
-**Depends on**: Phase 20 (skip button in quick bar triggers this mode)
-**Requirements**: SKIP-01, SKIP-02, SKIP-03, SKIP-04, SKIP-05, SKIP-06, SKIP-07
-**Success Criteria** (what must be TRUE):
-  1. Activating skip mode rapidly advances through pages with a visible "▶▶ SKIP" overlay indicator
-  2. In "skip read only" mode, skip automatically stops at any unread page and resumes normal reading speed
-  3. All audio events (BGM/SE/voice) are suppressed during skip, with correct final audio state applied when skip ends
-  4. A new settings page toggle lets users switch between "skip all" and "skip read only" modes (persisted in ConfigManager)
-  5. Skip stops automatically at choice pages and when the user clicks, presses a key, or hits ESC
-**Plans**: 2 plans
-
-Plans:
-- [x] 22-01-PLAN.md — ReadHistory module + skip-mode settings infrastructure (settingDefs, ConfigManager, SettingsScreen)
-- [x] 22-02-PLAN.md — main.js skip mode orchestration: indicator, 30ms loop, audio suppression, transition override, interaction handlers
-
-**UI hint**: yes
-
-### Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|---------------|--------|-----------|
-| 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
-| 20. Quick Action Bar | 2/2 | Complete   | 2026-04-05 |
-| 21. Save/Load UI | 2/2 | Complete    | 2026-04-05 |
-| 22. Skip Mode | 2/2 | Complete    | 2026-04-05 |
+</details>

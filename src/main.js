@@ -355,14 +355,8 @@ document.addEventListener('keydown', (e) => {
 
   switch (e.key) {
     case 'Escape':
-      // Toggle dialogue box visibility (same as right-click)
-      if (dialogueBox.el.classList.contains('visible')) {
-        dialogueBox.el.classList.remove('visible');
-        quickControls.style.display = 'none';
-      } else {
-        dialogueBox.el.classList.add('visible');
-        quickControls.style.display = '';
-      }
+      // Toggle dialogue box visibility — bar follows automatically (DOM child)
+      dialogueBox.el.classList.toggle('visible');
       break;
     case ' ':
     case 'Enter':
@@ -387,6 +381,16 @@ document.addEventListener('keydown', (e) => {
         gameMenu.onBacklog();
       }
       break;
+    case 'F5':
+      e.preventDefault();
+      // Quicksave — same as clicking 快存 button
+      if (quickBar.onQuickSave) quickBar.onQuickSave();
+      break;
+    case 'F9':
+      e.preventDefault();
+      // Quickload — same as clicking 快読 button (guarded by isQuickLoadEnabled)
+      if (quickBar.isQuickLoadEnabled && quickBar.onQuickLoad) quickBar.onQuickLoad();
+      break;
   }
 });
 
@@ -397,7 +401,7 @@ gameContainer.addEventListener('click', (e) => {
 
   // Don't interfere with UI element clicks
   const target = e.target;
-  if (target.closest('#quick-controls')) return;
+  if (target.closest('#quick-action-bar')) return;
   if (target.closest('#choice-menu')) return;
   if (target.closest('#game-menu')) return;
   if (target.closest('#save-load-screen')) return;
@@ -422,14 +426,8 @@ gameContainer.addEventListener('contextmenu', (e) => {
   if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
   if (!gameMenu.el.classList.contains('hidden')) { gameMenu.hide(); return; }
 
-  // Toggle dialogue box + quick controls visibility
-  if (dialogueBox.el.classList.contains('visible')) {
-    dialogueBox.el.classList.remove('visible');
-    quickControls.style.display = 'none';
-  } else {
-    dialogueBox.el.classList.add('visible');
-    quickControls.style.display = '';
-  }
+  // Toggle dialogue box visibility — bar follows automatically (DOM child)
+  dialogueBox.el.classList.toggle('visible');
 });
 
 // Scroll wheel: up → open backlog, down → close backlog or advance dialogue

@@ -53,7 +53,7 @@ Exceptions:
 | Close button | 16px | 400 | 1.0 | `'Noto Sans SC', sans-serif` | 0 |
 | Slot label | 13px | 400 | 1.2 | `'Noto Sans SC', sans-serif` | 1px |
 | Slot preview text | 14px | 400 | 1.5 | `'Noto Sans SC', sans-serif` | 0 |
-| Slot timestamp | 12px | 400 | 1.2 | `'Noto Sans SC', sans-serif` | 0 |
+| Slot timestamp | 13px | 400 | 1.2 | `'Noto Sans SC', sans-serif` | 0 |
 | Page tab number | 13px | 400 (inactive) / 600 (active) | 1.0 | `'Noto Sans SC', sans-serif` | 0 |
 | Confirm prompt text | 14px | 400 | 1.4 | `'Noto Sans SC', sans-serif` | 0 |
 | Confirm button text | 13px | 400 | 1.0 | `'Noto Sans SC', sans-serif` | 0 |
@@ -265,20 +265,21 @@ CSS approach: color set dynamically via inline style in JS (not CSS class), sinc
 | Line height | `1.5` |
 | Clamping | `-webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden` |
 
-### .save-slot-time (existing — unchanged)
+### .save-slot-time (existing — modified)
 
 | Property | Value |
 |----------|-------|
-| Font size | `12px` |
+| Font size | `13px` |
 | Color | `rgba(255,255,255,0.3)` |
 | Margin top | `6px` |
 
-### .save-slot-delete (existing — unchanged)
+### .save-slot-delete (existing — modified)
 
 | Property | Value |
 |----------|-------|
 | Position | `absolute; top: 6px; right: 8px` |
 | Text | `✕` |
+| Title attribute | `title="删除"` (accessibility) |
 | Font size | `14px` |
 | Default state | `opacity: 0` — hidden until card hover |
 | Card hover | `opacity: 1` |
@@ -426,7 +427,7 @@ Height breakdown (720px total):
 │  ┌──────────┐  ┌── .save-slot-info ───────────────────────┐  [✕] │
 │  │ 128×72   │  │ 存档 1                (slot-label 13px)  │      │
 │  │ thumbnail│  │ 对话预览文本最多两行...  (slot-text 14px) │      │
-│  │          │  │ 2026-04-05 14:32      (slot-time 12px)   │      │
+│  │          │  │ 2026-04-05 14:32      (slot-time 13px)   │      │
 │  └──────────┘  └──────────────────────────────────────────┘      │
 └───────────────────────────────────────────────────────────────────┘
 ```
@@ -460,7 +461,7 @@ Height breakdown (720px total):
 │  ┌── .save-confirm-overlay (absolute inset:0) ────────────────┐  │
 │  │                                                            │  │
 │  │                    确定覆盖?                               │  │
-│  │              [确认]    [取消]                               │  │
+│  │              [覆盖]    [取消]                               │  │
 │  │                                                            │  │
 │  └────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────────────────────┘
@@ -490,8 +491,8 @@ Height breakdown (720px total):
 
 1. User clicks occupied slot in save mode
 2. `.save-confirm-overlay` appended inside the clicked `.save-slot` (absolute positioned)
-3. Overlay shows "确定覆盖?" + `[确认]` + `[取消]`
-4. **确认 clicked:** call `onSave(slotNum)`, remove overlay, re-render grid
+3. Overlay shows "确定覆盖?" + `[覆盖]` + `[取消]`
+4. **覆盖 clicked:** call `onSave(slotNum)`, remove overlay, re-render grid
 5. **取消 clicked:** remove overlay, card returns to normal
 6. Clicking outside the confirming card: no effect (confirmation stays)
 
@@ -597,7 +598,7 @@ SaveLoadScreen already occupies the highest overlay priority. No ESC chain chang
 | Slot label (empty, old) | 存档 {N} — 空 | removed — empty slots no longer show label |
 | Empty slot text | — 空 — | zh-CN (centered in card) |
 | Overwrite confirmation | 确定覆盖? | zh-CN |
-| Overwrite confirm button | 确认 | zh-CN |
+| Overwrite confirm button | 覆盖 | zh-CN |
 | Delete confirmation | 确定删除? | zh-CN |
 | Delete confirm button | 删除 | zh-CN |
 | Cancel button (all confirmations) | 取消 | zh-CN |
@@ -623,7 +624,7 @@ SaveLoadScreen already occupies the highest overlay priority. No ESC chain chang
 
 | Action | Confirmation | Confirm Button | Cancel Button |
 |--------|-------------|----------------|---------------|
-| Overwrite existing save | Inline overlay "确定覆盖?" | 确认 (purple) | 取消 (grey) |
+| Overwrite existing save | Inline overlay "确定覆盖?" | 覆盖 (purple) | 取消 (grey) |
 | Delete save | Inline overlay "确定删除?" | 删除 (red) | 取消 (grey) |
 
 ---
@@ -823,7 +824,7 @@ SaveLoadScreen already occupies the highest overlay priority. No ESC chain chang
 }
 
 .save-slot-time {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.3);
   margin-top: 6px;
 }

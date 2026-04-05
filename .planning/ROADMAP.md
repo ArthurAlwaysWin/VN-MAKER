@@ -183,5 +183,5 @@ Plans:
 |-------|---------------|--------|-----------|
 | 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
 | 20. Quick Action Bar | 2/2 | Complete   | 2026-04-05 |
-| 21. Save/Load UI | 2/2 | Complete   | 2026-04-05 |
+| 21. Save/Load UI | 2/2 | Complete    | 2026-04-05 |
 | 22. Skip Mode | 0/? | Not started | - |

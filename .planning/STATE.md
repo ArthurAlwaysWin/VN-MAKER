@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
 status: verifying
-stopped_at: Completed 22-02-PLAN.md
-last_updated: "2026-04-05T11:41:04.353Z"
+stopped_at: v0.5 milestone complete — all 4 phases (19-22) done
+last_updated: "2026-04-05T12:00:00.000Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 22 — skip-mode
+**Current focus:** v0.5 milestone complete ✅
 
 ## Current Position
 
 Phase: 22
-Plan: Not started
-Status: Phase complete — ready for verification
+Plan: Complete
+Status: v0.5 milestone complete — all phases verified
 Last activity: 2026-04-05
 
 ```
-v0.5 Progress: [███████████████░░░░░] 3/4 phases
+v0.5 Progress: [████████████████████] 4/4 phases ✅
 ```
 
 | Phase | Name | Status |
@@ -38,7 +38,7 @@ v0.5 Progress: [███████████████░░░░░] 3/
 | 19 | Save System Upgrade | ✅ Complete |
 | 20 | Quick Action Bar | ✅ Complete |
 | 21 | Save/Load UI | ✅ Complete |
-| 22 | Skip Mode | ✅ Planned — ready for execution ← NEXT |
+| 22 | Skip Mode | ✅ Complete |
 
 ## Performance Metrics
 
@@ -120,6 +120,6 @@ v0.5 Progress: [███████████████░░░░░] 3/
 ## Session Continuity
 
 Last session: 2026-04-05T11:35:13.722Z
-Stopped at: Completed 22-02-PLAN.md
-Resume hint: Execute with `/gsd-execute-phase 22`
-Next action: `/gsd-execute-phase 22`
+Stopped at: v0.5 milestone complete — all 4 phases done
+Resume hint: Start v0.6 with `/gsd-new-milestone`
+Next action: `/gsd-new-milestone` or `/gsd-progress`

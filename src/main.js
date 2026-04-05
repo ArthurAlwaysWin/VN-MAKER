@@ -9,6 +9,7 @@ import { ScriptEngine } from './engine/ScriptEngine.js';
 import { AudioManager } from './engine/AudioManager.js';
 import { SaveManager } from './engine/SaveManager.js';
 import { ConfigManager } from './engine/ConfigManager.js';
+import { ReadHistory } from './engine/ReadHistory.js';
 
 // UI
 import { DialogueBox } from './ui/DialogueBox.js';
@@ -51,6 +52,13 @@ const gameMenu = new GameMenu(uiOverlay);
 // Quick action bar (embedded in dialogue box — D-01)
 const quickBar = new QuickActionBar(dialogueBox.el);
 
+// Skip indicator overlay (D-02, D-10)
+const skipIndicator = document.createElement('div');
+skipIndicator.id = 'skip-indicator';
+skipIndicator.textContent = '▶▶ SKIP';
+skipIndicator.classList.add('hidden');
+gameContainer.appendChild(skipIndicator);
+
 // Title screen is appended to the game container itself (z-index 100)
 const titleScreen = new TitleScreen(gameContainer, '');
 
@@ -58,6 +66,9 @@ const titleScreen = new TitleScreen(gameContainer, '');
 let autoMode = false;
 let skipMode = false;
 let autoTimer = null;
+let skipTimer = null;
+let pendingBgm = undefined; // undefined=no change, null=stopped, {file,volume,...}=new BGM
+let readHistory = null;
 let currentVoicePromise = null;
 const VOICE_END_DELAY = 300;
 let isPlaying = false; // whether the game is actively playing (not on title)
@@ -210,6 +221,20 @@ engine.on('end', () => {
 
 engine.on('scene_enter', (data) => {
   console.log(`[Scene] ${data.sceneId}: ${data.sceneName}`);
+});
+
+engine.on('page_enter', (data) => {
+  if (!readHistory) return; // Guard for preview mode
+  // Check read status BEFORE marking — critical ordering for SKIP-03
+  const wasRead = readHistory.isRead(data.sceneId, data.pageIndex);
+
+  // Always mark as read on page_enter (D-04)
+  readHistory.markRead(data.sceneId, data.pageIndex);
+
+  // Stop skip at unread pages in read-only mode (SKIP-03)
+  if (skipMode && !wasRead && config.get('skipMode') === 'readOnly') {
+    stopSkip();
+  }
 });
 
 // ─── Dialogue advancement ───────────────────────────────
@@ -516,18 +541,74 @@ function clearAutoTimer() {
   }
 }
 
-function toggleSkip() {
-  skipMode = !skipMode;
+function startSkip() {
+  if (skipMode) return;
+  skipMode = true;
   autoMode = false;
+  clearAutoTimer();
+  audio.stopVoice(); // Stop any playing voice immediately
   updateQuickBtnStates();
-  if (skipMode && engine.waiting) {
-    engine.next();
+  skipIndicator.classList.remove('hidden');
+
+  // Mute current BGM (D-07)
+  if (audio._bgm) {
+    audio._bgm.volume = 0;
   }
+  pendingBgm = undefined; // No BGM change pending yet
+
+  // Start 30ms skip loop (D-01)
+  skipTimer = setInterval(() => {
+    if (!skipMode || engine.ended) {
+      stopSkip();
+      return;
+    }
+    if (engine.waiting) {
+      engine.next();
+    }
+  }, 30);
 }
 
 function stopSkip() {
+  if (!skipMode && !skipTimer) return;
+  const wasSkipping = skipMode;
   skipMode = false;
+  if (skipTimer) {
+    clearInterval(skipTimer);
+    skipTimer = null;
+  }
+  skipIndicator.classList.add('hidden');
   updateQuickBtnStates();
+  if (wasSkipping) {
+    restoreBgmAfterSkip();
+  }
+}
+
+function restoreBgmAfterSkip() {
+  const master = config.get('masterVolume');
+  const bgmVol = config.get('bgmVolume') * master;
+
+  if (pendingBgm === undefined) {
+    // No BGM change during skip — just unmute current
+    if (audio._bgm) {
+      audio._bgm.volume = bgmVol;
+    }
+  } else if (pendingBgm === null) {
+    // stop_bgm was the final event during skip
+    audio.stopBgm({ fadeOut: 0 });
+  } else {
+    // play_bgm was the final event — play the new track
+    audio.stopBgm({ fadeOut: 0 });
+    audio.playBgm(pendingBgm);
+  }
+  pendingBgm = undefined;
+}
+
+function toggleSkip() {
+  if (skipMode) {
+    stopSkip();
+  } else {
+    startSkip();
+  }
 }
 
 function updateQuickBtnStates() {
@@ -566,6 +647,9 @@ async function init() {
 
   try {
     await engine.load('/game/script.json');
+
+    // ReadHistory — cross-save shared read tracking (D-03, D-12)
+    readHistory = new ReadHistory(engine.script.meta.title || 'untitled');
 
     // Load custom fonts before any rendering (INFRA-02)
     if (engine.script.assets?.fonts?.length) {

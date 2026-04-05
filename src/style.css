@@ -43,6 +43,26 @@ body {
   border-radius: 2px;
 }
 
+/* --- Skip indicator (D-02, D-10) --- */
+#skip-indicator {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 12px;
+  border-radius: 12px;
+  z-index: 15;
+  pointer-events: none;
+  user-select: none;
+}
+
+#skip-indicator.hidden {
+  display: none;
+}
+
 /* --- Layers (stacking order) --- */
 #background-layer {
   position: absolute;

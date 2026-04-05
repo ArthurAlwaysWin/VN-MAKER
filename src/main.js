@@ -228,7 +228,9 @@ saveLoadScreen.onSave = async (slot) => {
   const state = engine.getState();
   const previewText = buildPreviewText();
   const result = await saveManager.save(slot, state, previewText, cachedScreenshot);
-  if (!result.success) {
+  if (result.success) {
+    showToast('存档完成');
+  } else {
     showToast(`存档失败：${result.error}`);
   }
 };
@@ -255,6 +257,14 @@ saveLoadScreen.onDelete = async (slot) => {
   }
 };
 
+saveLoadScreen.onClose = (source) => {
+  if (source === 'menu') {
+    gameMenu.show();
+  }
+  // 'bar' → no action (return to gameplay)
+  // 'title' → no action (title screen still visible underneath)
+};
+
 function replayCurrentPage() {
   characters.clear();
   background.clear();
@@ -270,9 +280,9 @@ settingsScreen.onChange = () => {
 // ─── Game menu wiring ───────────────────────────────────
 gameMenu.onSave = async () => {
   cachedScreenshot = await captureGameScreenshot(); // D-03: capture before showing UI
-  saveLoadScreen.show('save');
+  saveLoadScreen.show('save', 'menu');
 };
-gameMenu.onLoad = () => saveLoadScreen.show('load');
+gameMenu.onLoad = () => saveLoadScreen.show('load', 'menu');
 gameMenu.onBacklog = () => {
   const chars = engine.script?.characters || {};
   backlogScreen.show(engine.history, chars);
@@ -303,12 +313,12 @@ quickBar.onSave = async () => {
   stopAuto();
   stopSkip();
   cachedScreenshot = await captureGameScreenshot();
-  saveLoadScreen.show('save');
+  saveLoadScreen.show('save', 'bar');
 };
 quickBar.onLoad = () => {
   stopAuto();
   stopSkip();
-  saveLoadScreen.show('load');
+  saveLoadScreen.show('load', 'bar');
 };
 quickBar.onQuickSave = async () => {
   const state = engine.getState();
@@ -345,9 +355,9 @@ quickBar.onSettings = () => {
 document.addEventListener('keydown', (e) => {
   // ESC priority chain — overlays first, regardless of play state or preview mode
   if (e.key === 'Escape') {
+    if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
     if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
     if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
-    if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
     if (!gameMenu.el.classList.contains('hidden')) { gameMenu.hide(); return; }
   }
 
@@ -420,10 +430,10 @@ gameContainer.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   if (!isPlaying) return;
 
-  // Close overlays first (priority: backlog > save/load > settings > game menu)
-  if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
+  // Close overlays first (priority: save/load > settings > backlog > game menu)
   if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
   if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
+  if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
   if (!gameMenu.el.classList.contains('hidden')) { gameMenu.hide(); return; }
 
   // Toggle dialogue box visibility — bar follows automatically (DOM child)
@@ -543,7 +553,7 @@ titleScreen.onStart = () => {
 };
 
 titleScreen.onContinue = () => {
-  saveLoadScreen.show('load');
+  saveLoadScreen.show('load', 'title');
 };
 
 titleScreen.onSettings = () => {

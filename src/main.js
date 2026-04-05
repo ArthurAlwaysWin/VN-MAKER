@@ -157,6 +157,14 @@ engine.on('dialogue', (data) => {
   const currentPage = engine.script.scenes[engine.currentScene]?.pages[engine.pageIndex];
   data.fontOverride = currentPage?.fontOverride || null;
 
+  // During skip — show text instantly, suppress voice, no auto timer (D-07)
+  if (skipMode) {
+    dialogueBox.show(data);
+    dialogueBox._finishLine(); // Instant text display
+    currentVoicePromise = null; // Don't play voice
+    return; // Skip interval handles advancement — no setTimeout chain
+  }
+
   dialogueBox.show(data);
 
   // Voice playback — only play if voice is bound (D-01)
@@ -170,19 +178,56 @@ engine.on('dialogue', (data) => {
   if (autoMode) {
     startAutoTimer();
   }
-  // Skip mode
-  if (skipMode) {
-    setTimeout(() => engine.next(), 50);
-  }
 });
 
-engine.on('show_character', (data) => characters.show(data));
-engine.on('hide_character', (data) => characters.hide(data));
+// ─── Visual events (skip-aware transitions D-08) ─────────
+engine.on('show_character', (data) => {
+  if (skipMode) {
+    characters.show({ ...data, duration: 0, transition: 'none' });
+    return;
+  }
+  characters.show(data);
+});
+
+engine.on('hide_character', (data) => {
+  if (skipMode) {
+    characters.hide({ ...data, duration: 0 });
+    return;
+  }
+  characters.hide(data);
+});
+
 engine.on('set_expression', (data) => characters.setExpression(data));
-engine.on('set_background', (data) => background.setBackground(data));
-engine.on('play_bgm', (data) => audio.playBgm(data));
-engine.on('stop_bgm', (data) => audio.stopBgm(data));
-engine.on('play_se', (data) => audio.playSe(data));
+
+engine.on('set_background', (data) => {
+  if (skipMode) {
+    background.setBackground({ ...data, duration: 0, transition: 'cut' });
+    return;
+  }
+  background.setBackground(data);
+});
+
+// ─── Audio events (skip-aware D-07) ──────────────────────
+engine.on('play_bgm', (data) => {
+  if (skipMode) {
+    pendingBgm = { ...data }; // Track but don't play
+    return;
+  }
+  audio.playBgm(data);
+});
+
+engine.on('stop_bgm', (data) => {
+  if (skipMode) {
+    pendingBgm = null; // BGM should be stopped on skip end
+    return;
+  }
+  audio.stopBgm(data);
+});
+
+engine.on('play_se', (data) => {
+  if (skipMode) return; // Suppress SE entirely (D-07)
+  audio.playSe(data);
+});
 
 engine.on('choice', (data) => {
   dialogueBox.hide();
@@ -304,15 +349,23 @@ settingsScreen.onChange = () => {
 
 // ─── Game menu wiring ───────────────────────────────────
 gameMenu.onSave = async () => {
+  stopSkip();
   cachedScreenshot = await captureGameScreenshot(); // D-03: capture before showing UI
   saveLoadScreen.show('save', 'menu');
 };
-gameMenu.onLoad = () => saveLoadScreen.show('load', 'menu');
+gameMenu.onLoad = () => {
+  stopSkip();
+  saveLoadScreen.show('load', 'menu');
+};
 gameMenu.onBacklog = () => {
+  stopSkip();
   const chars = engine.script?.characters || {};
   backlogScreen.show(engine.history, chars);
 };
-gameMenu.onSettings = () => settingsScreen.show();
+gameMenu.onSettings = () => {
+  stopSkip();
+  settingsScreen.show();
+};
 gameMenu.onTitle = async () => {
   isPlaying = false;
   stopAuto();
@@ -331,6 +384,7 @@ gameMenu.onTitle = async () => {
 quickBar.onAuto = () => toggleAuto();
 quickBar.onSkip = () => toggleSkip();
 quickBar.onBacklog = () => {
+  stopSkip();
   const chars = engine.script?.characters || {};
   backlogScreen.show(engine.history, chars);
 };
@@ -388,6 +442,12 @@ document.addEventListener('keydown', (e) => {
 
   if (!isPlaying) return;
 
+  // D-06: Any key stops skip (except ESC which is handled above)
+  if (skipMode) {
+    stopSkip();
+    return;
+  }
+
   switch (e.key) {
     case 'Escape':
       // Toggle dialogue box visibility — bar follows automatically (DOM child)
@@ -444,6 +504,12 @@ gameContainer.addEventListener('click', (e) => {
   if (target.closest('#backlog-screen')) return;
   if (target.closest('#title-screen')) return;
 
+  // D-06: Click stops skip — do NOT also advance dialogue (Pitfall 7)
+  if (skipMode) {
+    stopSkip();
+    return;
+  }
+
   // Advance dialogue
   if (engine.waiting) {
     dialogueBox._handleClick();
@@ -454,6 +520,12 @@ gameContainer.addEventListener('click', (e) => {
 gameContainer.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   if (!isPlaying) return;
+
+  // D-06: Right-click stops skip — don't open anything
+  if (skipMode) {
+    stopSkip();
+    return;
+  }
 
   // Close overlays first (priority: save/load > settings > backlog > game menu)
   if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
@@ -471,6 +543,7 @@ gameContainer.addEventListener('wheel', (e) => {
 
   if (e.deltaY < 0) {
     // Scroll up → open backlog (if no overlay is open)
+    if (skipMode) { stopSkip(); return; }
     if (!backlogScreen.el.classList.contains('hidden')) return;
     if (!gameMenu.el.classList.contains('hidden')) return;
     if (!saveLoadScreen.el.classList.contains('hidden')) return;
@@ -488,8 +561,8 @@ gameContainer.addEventListener('wheel', (e) => {
 
 // ─── Auto / Skip helpers ────────────────────────────────
 function toggleAuto() {
+  if (skipMode) stopSkip(); // Properly clean up skip mode
   autoMode = !autoMode;
-  skipMode = false;
   updateQuickBtnStates();
   if (autoMode && dialogueBox.isComplete() && engine.waiting) {
     startAutoTimer();

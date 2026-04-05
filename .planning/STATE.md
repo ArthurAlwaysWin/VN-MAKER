@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: verifying
-stopped_at: Completed 20-02-PLAN.md
-last_updated: "2026-04-05T03:25:39.908Z"
+milestone: v0.5
+milestone_name: 游戏 UI 补全
+status: idle
+stopped_at: Phase 20 complete — verified
+last_updated: "2026-04-05T04:00:00.000Z"
 last_activity: 2026-04-05
 progress:
-  total_phases: 6
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 9
+  total_phases: 4
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -20,24 +20,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 20 — quick-action-bar
+**Current focus:** v0.5 — Phase 21 next
 
 ## Current Position
 
-Phase: 20 (quick-action-bar) — EXECUTING
+Phase: 20 (quick-action-bar) — COMPLETE ✅
 Plan: 2 of 2
-Status: Phase complete — ready for verification
+Status: Phase verified and complete
 Last activity: 2026-04-05
 
 ```
-v0.5 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/4 phases
+v0.5 Progress: [██████████░░░░░░░░░░] 2/4 phases
 ```
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 19 | Save System Upgrade | Not started ← NEXT |
-| 20 | Quick Action Bar | Not started |
-| 21 | Save/Load UI | Not started |
+| 19 | Save System Upgrade | ✅ Complete |
+| 20 | Quick Action Bar | ✅ Complete |
+| 21 | Save/Load UI | Not started ← NEXT |
 | 22 | Skip Mode | Not started |
 
 ## Performance Metrics

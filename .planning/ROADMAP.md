@@ -174,7 +174,12 @@ Plans:
   3. All audio events (BGM/SE/voice) are suppressed during skip, with correct final audio state applied when skip ends
   4. A new settings page toggle lets users switch between "skip all" and "skip read only" modes (persisted in ConfigManager)
   5. Skip stops automatically at choice pages and when the user clicks, presses a key, or hits ESC
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — ReadHistory module + skip-mode settings infrastructure (settingDefs, ConfigManager, SettingsScreen)
+- [ ] 22-02-PLAN.md — main.js skip mode orchestration: indicator, 30ms loop, audio suppression, transition override, interaction handlers
+
 **UI hint**: yes
 
 ### Progress

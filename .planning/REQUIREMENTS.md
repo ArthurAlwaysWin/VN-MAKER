@@ -28,11 +28,11 @@
 
 ## SLUI — 存读档界面
 
-- [ ] **SLUI-01**: 全屏替换式存读档界面，5 列 × 2 行 = 每页 10 槽位，10 页共 100 槽，页码标签导航
-- [ ] **SLUI-02**: 每个槽位卡片显示缩略图截图、保存时间、对话文字预览、场景名称；空槽位灰色显示 "— 空 —"
-- [ ] **SLUI-03**: 存档/读档模式通过顶部标签切换，无需关闭界面
-- [ ] **SLUI-04**: 覆盖已有存档时在槽位卡片内显示内联确认（"确定覆盖?" + 确认/取消按钮）
-- [ ] **SLUI-05**: 支持删除单个存档（带确认提示）
+- [x] **SLUI-01**: 全屏替换式存读档界面，5 列 × 2 行 = 每页 10 槽位，10 页共 100 槽，页码标签导航
+- [x] **SLUI-02**: 每个槽位卡片显示缩略图截图、保存时间、对话文字预览、场景名称；空槽位灰色显示 "— 空 —"
+- [x] **SLUI-03**: 存档/读档模式通过顶部标签切换，无需关闭界面
+- [x] **SLUI-04**: 覆盖已有存档时在槽位卡片内显示内联确认（"确定覆盖?" + 确认/取消按钮）
+- [x] **SLUI-05**: 支持删除单个存档（带确认提示）
 - [ ] **SLUI-06**: ESC 键可关闭存读档界面，采用栈式覆盖层优先级管理（SaveLoad > Settings > Backlog > GameMenu > Game）
 - [ ] **SLUI-07**: 关闭存读档界面时根据来源上下文返回正确位置（从游戏菜单打开 → 返回游戏菜单；从快捷栏打开 → 返回游戏；从标题页打开 → 返回标题页）
 
@@ -90,11 +90,11 @@
 | BAR-03 | Phase 20 | Complete |
 | BAR-04 | Phase 20 | Complete |
 | BAR-05 | Phase 20 | Complete |
-| SLUI-01 | Phase 21 | Pending |
-| SLUI-02 | Phase 21 | Pending |
-| SLUI-03 | Phase 21 | Pending |
-| SLUI-04 | Phase 21 | Pending |
-| SLUI-05 | Phase 21 | Pending |
+| SLUI-01 | Phase 21 | Complete |
+| SLUI-02 | Phase 21 | Complete |
+| SLUI-03 | Phase 21 | Complete |
+| SLUI-04 | Phase 21 | Complete |
+| SLUI-05 | Phase 21 | Complete |
 | SLUI-06 | Phase 21 | Pending |
 | SLUI-07 | Phase 21 | Pending |
 | SKIP-01 | Phase 22 | Pending |

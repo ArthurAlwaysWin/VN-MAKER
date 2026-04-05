@@ -159,7 +159,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 21-01-PLAN.md — SaveLoadScreen rewrite (3×3×12 grid, pagination, inline confirmations) + CSS + SaveManager slotCount bump
+- [x] 21-01-PLAN.md — SaveLoadScreen rewrite (3×3×12 grid, pagination, inline confirmations) + CSS + SaveManager slotCount bump
 - [ ] 21-02-PLAN.md — main.js integration wiring (source params, onClose routing, ESC priority fix, save toast)
 
 **UI hint**: yes
@@ -183,5 +183,5 @@ Plans:
 |-------|---------------|--------|-----------|
 | 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
 | 20. Quick Action Bar | 2/2 | Complete   | 2026-04-05 |
-| 21. Save/Load UI | 0/2 | Planning complete | - |
+| 21. Save/Load UI | 1/2 | In Progress|  |
 | 22. Skip Mode | 0/? | Not started | - |

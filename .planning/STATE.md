@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
-status: verifying
-stopped_at: Phase 21 plans verified — ready for execution
-last_updated: "2026-04-05T06:29:55.536Z"
+status: executing
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-04-05T08:11:35.393Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v0.5 — Phase 21 next
+**Current focus:** Phase 21 — save-load-ui
 
 ## Current Position
 
-Phase: 21 (save-load-ui) — PLANNED ✅
-Plan: 2 plans (Wave 1: SaveLoadScreen+CSS+SaveManager, Wave 2: main.js wiring)
-Status: Plans verified, ready for execution
+Phase: 21 (save-load-ui) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-05
 
 ```
@@ -55,6 +55,7 @@ v0.5 Progress: [██████████░░░░░░░░░░] 2/
 | Phase 19 P02 | 5 min | 2 tasks | 3 files |
 | Phase 20 P01 | 4min | 3 tasks | 3 files |
 | Phase 20 P02 | 4min | 2 tasks | 2 files |
+| Phase 21 P01 | 3.5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ v0.5 Progress: [██████████░░░░░░░░░░] 2/
 - [Phase 20]: Fixed quicksave.json/jpg filenames per D-11
 - [Phase 20]: QuickActionBar embedded as DOM child of dialogueBox — ESC/right-click simplified
 - [Phase 20]: F5/F9 inside isPlaying guard, buildPreviewText shared helper
+- [Phase 21]: Partial re-render for grid/pagination avoids full innerHTML rebuild flicker
+- [Phase 21]: Source-routed hide(skipRoute) for load-success vs close-to-menu flow
+- [Phase 21]: CSS data-mode attribute selector for load-mode empty slot disabling
 
 ### Key Context for v0.5
 
@@ -106,7 +110,7 @@ v0.5 Progress: [██████████░░░░░░░░░░] 2/
 
 ## Session Continuity
 
-Last session: 2026-04-05T06:29:55.522Z
-Stopped at: Phase 21 plans verified — ready for execution
+Last session: 2026-04-05T08:11:35.389Z
+Stopped at: Completed 21-01-PLAN.md
 Resume hint: Execute with `/gsd-execute-phase 21`
 Next action: `/gsd-execute-phase 21`

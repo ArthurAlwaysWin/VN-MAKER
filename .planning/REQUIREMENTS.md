@@ -67,7 +67,31 @@
 
 ## Traceability
 
-<!-- 由 roadmapper 填充 -->
-
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
+| TKN-01 | Phase 23 | — |
+| TKN-02 | Phase 23 | — |
+| TKN-03 | Phase 23 | — |
+| TKN-04 | Phase 23 | — |
+| TKN-05 | Phase 23 | — |
+| TKN-06 | Phase 23 | — |
+| ENG-01 | Phase 24 | — |
+| ENG-02 | Phase 24 | — |
+| ENG-03 | Phase 24 | — |
+| 9SL-01 | Phase 25 | — |
+| 9SL-02 | Phase 25 | — |
+| 9SL-03 | Phase 25 | — |
+| 9SL-04 | Phase 25 | — |
+| CLR-01 | Phase 25 | — |
+| CLR-02 | Phase 25 | — |
+| CLR-03 | Phase 25 | — |
+| EDT-01 | Phase 26 | — |
+| EDT-02 | Phase 26 | — |
+| EDT-03 | Phase 26 | — |
+| EDT-04 | Phase 26 | — |
+| EDT-05 | Phase 26 | — |
+| PRE-01 | Phase 27 | — |
+| PRE-02 | Phase 27 | — |
+| PKG-01 | Phase 27 | — |
+| PKG-02 | Phase 27 | — |
+| PKG-03 | Phase 27 | — |

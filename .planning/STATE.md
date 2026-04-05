@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v0.6
 milestone_name: 主题包系统
-status: defining-requirements
-stopped_at: v0.6 milestone started — defining requirements
-last_updated: "2026-04-05T14:00:00.000Z"
-last_activity: 2026-04-05
+status: roadmap-complete
+stopped_at: Roadmap created — 5 phases (23-27), 26 requirements mapped
+last_updated: "2026-07-22T00:00:00.000Z"
+last_activity: 2026-07-22
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v0.6 主题包系统 — 定义需求中
+**Current focus:** v0.6 主题包系统 — Roadmap complete, ready to plan Phase 23
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 23 (Token Foundation) — not yet planned
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-05 — Milestone v0.6 started
+Status: Roadmap complete — ready for `/gsd-plan-phase 23`
+Last activity: 2026-07-22 — Roadmap created with 5 phases (23-27)
 
 ## Performance Metrics
 

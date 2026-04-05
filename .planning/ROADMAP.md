@@ -122,3 +122,121 @@ See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 See .planning/milestones/v0.5-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v0.6 — 主题包系统
+
+### Phases
+
+- [ ] **Phase 23: Token Foundation** — CSS variable migration: replace all hardcoded styles with `--gm-*` custom properties
+- [ ] **Phase 24: ThemeManager Engine** — ThemeManager.js reads ui.theme, injects CSS vars, postMessage preview
+- [ ] **Phase 25: 9-Slice + Color Harmony** — 9-slice border-image via ::before, 3-state buttons, HSL harmony, WCAG contrast
+- [ ] **Phase 26: Visual Theme Editor** — ThemeDesigner.vue with color pickers, 9-slice config, live preview iframe, palette generator
+- [ ] **Phase 27: Theme Presets + Export/Import** — 3-4 built-in presets, .theme ZIP via fflate, formatVersion
+
+### Phase Details
+
+#### Phase 23: Token Foundation
+**Goal**: Game UI renders entirely through CSS custom properties, enabling external theme control
+**Depends on**: Nothing (first phase of v0.6; builds on v0.5 completed codebase)
+**Requirements**: TKN-01, TKN-02, TKN-03, TKN-04, TKN-05, TKN-06
+**Success Criteria** (what must be TRUE):
+  1. All game UI visual properties (colors, fonts, radii, opacity) are driven by ~35-40 `--gm-*` CSS custom properties with hardcoded fallbacks in `var()`
+  2. Changing any `--gm-*` property on `#game-container` via DevTools instantly changes the corresponding UI element appearance
+  3. Without any theme applied, the game looks pixel-identical to v0.5 (zero visual regression across all screens)
+  4. Panel backgrounds (game menu, save/load, settings overlay, choice menu) all consume unified `--gm-panel-bg` token instead of 6 different hardcoded values
+  5. All button types (quick bar, menu, save/load grid, settings page) consume the same button token group (bg/text/hover/pressed)
+**Plans**: TBD
+
+#### Phase 24: ThemeManager Engine
+**Goal**: Engine automatically applies theme data from script.json and supports live preview from editor
+**Depends on**: Phase 23 (CSS must consume tokens before ThemeManager can inject them)
+**Requirements**: ENG-01, ENG-02, ENG-03
+**Success Criteria** (what must be TRUE):
+  1. When `ui.theme` contains token overrides in script.json, the game UI reflects those overrides immediately on startup
+  2. Theme data at `ui.theme` participates in auto-save and undo/redo (same behavior as `ui.titleScreen` / `ui.settingsScreen`)
+  3. User can reset theme to defaults via one action, and the game instantly reverts to its original v0.5 appearance
+  4. Editor preview iframe receives `update-theme` postMessage and reflects token changes in real time
+**Plans**: TBD
+
+#### Phase 25: 9-Slice + Color Harmony
+**Goal**: Users can apply image-based UI skins and generate coordinated color palettes with accessibility guarantees
+**Depends on**: Phase 24 (ThemeManager must exist for 9-slice apply and token injection)
+**Requirements**: 9SL-01, 9SL-02, 9SL-03, 9SL-04, CLR-01, CLR-02, CLR-03
+**Success Criteria** (what must be TRUE):
+  1. User can set a 9-slice background image on the dialogue box that stretches correctly without distortion at any size
+  2. Panels (game menu, save/load screen, settings overlay) accept 9-slice background images that tile/stretch properly
+  3. Buttons display three distinct 9-slice images for normal/hover/pressed states with smooth visual transitions
+  4. 9-slice images and CSS border-radius coexist on the same element (::before pseudo-element approach — no mutual exclusion)
+  5. User selects one primary color → system generates a complete coordinated palette (accent/bg/text/border) that passes WCAG contrast checks (≥4.5:1 normal text, ≥3:1 large text)
+**Plans**: TBD
+
+#### Phase 26: Visual Theme Editor
+**Goal**: Users can visually customize all theme aspects through a dedicated editor tab with instant preview
+**Depends on**: Phase 25 (editor previews engine features that must already work)
+**Requirements**: EDT-01, EDT-02, EDT-03, EDT-04, EDT-05
+**Success Criteria** (what must be TRUE):
+  1. Editor navigation shows a "🎨 主题" tab that opens a full visual theme editing interface
+  2. User can adjust colors (picker), fonts (selector), border radius (slider), and opacity (slider) — all controls map to theme tokens
+  3. User can upload 9-slice images and configure slice parameters (top/right/bottom/left insets) through a visual interface
+  4. Every token change in the editor is instantly visible in the embedded engine preview iframe (no save/reload required)
+  5. User can pick a primary color → preview a generated palette → apply the entire palette to tokens with one click
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 27: Theme Presets + Export/Import
+**Goal**: Users can start from professional presets and share themes as portable packages
+**Depends on**: Phase 26 (presets validate the full system; editor must exist for preset selection UI)
+**Requirements**: PRE-01, PRE-02, PKG-01, PKG-02, PKG-03
+**Success Criteria** (what must be TRUE):
+  1. User can select from 3-4 built-in theme presets (Modern, Traditional Japanese, Fantasy, Minimal) and apply with one click for an instant professional look
+  2. After applying a preset, user can fine-tune any individual token without losing the preset's other values
+  3. User can export current theme as a .theme file (ZIP containing token JSON + all referenced 9-slice image assets)
+  4. User can import a .theme file — images are extracted to project assets directory, tokens are applied automatically
+  5. Every .theme file contains a `formatVersion` field ensuring future versions can migrate older theme packs
+**Plans**: TBD
+**UI hint**: yes
+
+### Coverage
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| TKN-01 | Phase 23 | Pending |
+| TKN-02 | Phase 23 | Pending |
+| TKN-03 | Phase 23 | Pending |
+| TKN-04 | Phase 23 | Pending |
+| TKN-05 | Phase 23 | Pending |
+| TKN-06 | Phase 23 | Pending |
+| ENG-01 | Phase 24 | Pending |
+| ENG-02 | Phase 24 | Pending |
+| ENG-03 | Phase 24 | Pending |
+| 9SL-01 | Phase 25 | Pending |
+| 9SL-02 | Phase 25 | Pending |
+| 9SL-03 | Phase 25 | Pending |
+| 9SL-04 | Phase 25 | Pending |
+| CLR-01 | Phase 25 | Pending |
+| CLR-02 | Phase 25 | Pending |
+| CLR-03 | Phase 25 | Pending |
+| EDT-01 | Phase 26 | Pending |
+| EDT-02 | Phase 26 | Pending |
+| EDT-03 | Phase 26 | Pending |
+| EDT-04 | Phase 26 | Pending |
+| EDT-05 | Phase 26 | Pending |
+| PRE-01 | Phase 27 | Pending |
+| PRE-02 | Phase 27 | Pending |
+| PKG-01 | Phase 27 | Pending |
+| PKG-02 | Phase 27 | Pending |
+| PKG-03 | Phase 27 | Pending |
+
+**Mapped: 26/26 ✓ — No orphaned requirements**
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 23. Token Foundation | 0/? | Not started | - |
+| 24. ThemeManager Engine | 0/? | Not started | - |
+| 25. 9-Slice + Color Harmony | 0/? | Not started | - |
+| 26. Visual Theme Editor | 0/? | Not started | - |
+| 27. Theme Presets + Export/Import | 0/? | Not started | - |

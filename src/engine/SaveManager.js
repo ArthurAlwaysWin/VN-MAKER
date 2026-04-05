@@ -1,14 +1,14 @@
 /**
  * SaveManager — Async file-system save/load via Electron IPC
  *
- * Replaces the old localStorage-based SaveManager with a 100-slot
+ * Replaces the old localStorage-based SaveManager with a 108-slot
  * file system backend accessed through IPC handlers in electron/main.js.
  * All methods are async. Includes lazy migration from legacy localStorage saves.
  */
 export class SaveManager {
   constructor() {
     /** @type {number} Maximum save slots */
-    this.slotCount = 100;
+    this.slotCount = 108;
 
     /** @type {Map<number, Object>} In-memory cache of slot metadata */
     this._cache = new Map();
@@ -27,7 +27,7 @@ export class SaveManager {
 
   /**
    * Save game state to a slot
-   * @param {number} slot — slot number (1-100)
+   * @param {number} slot — slot number (1-108)
    * @param {Object} state — engine state from ScriptEngine.getState()
    * @param {string} previewText — truncated dialogue text for display
    * @param {Uint8Array|null} [thumbnail=null] — JPEG bytes from capture-screenshot

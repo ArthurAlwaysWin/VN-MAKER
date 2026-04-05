@@ -177,7 +177,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — ReadHistory module + skip-mode settings infrastructure (settingDefs, ConfigManager, SettingsScreen)
+- [x] 22-01-PLAN.md — ReadHistory module + skip-mode settings infrastructure (settingDefs, ConfigManager, SettingsScreen)
 - [ ] 22-02-PLAN.md — main.js skip mode orchestration: indicator, 30ms loop, audio suppression, transition override, interaction handlers
 
 **UI hint**: yes
@@ -189,4 +189,4 @@ Plans:
 | 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
 | 20. Quick Action Bar | 2/2 | Complete   | 2026-04-05 |
 | 21. Save/Load UI | 2/2 | Complete    | 2026-04-05 |
-| 22. Skip Mode | 0/? | Not started | - |
+| 22. Skip Mode | 1/2 | In Progress|  |

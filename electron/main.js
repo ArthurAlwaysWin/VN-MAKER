@@ -583,6 +583,54 @@ ipcMain.handle('list-saves', async () => {
   }
 });
 
+// ─── Quicksave IPC ──────────────────────────────────────────────────
+
+ipcMain.handle('save-quickslot', async (event, { state, previewText, thumbnail }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const savesDir = path.join(currentProjectPath, 'saves');
+    await fs.mkdir(savesDir, { recursive: true });
+    const jsonPath = path.join(savesDir, 'quicksave.json');
+    const jpgPath = path.join(savesDir, 'quicksave.jpg');
+    if (!isInsideProject(jsonPath)) return { success: false, error: 'Invalid path' };
+
+    const data = {
+      version: 2,
+      state,
+      previewText: previewText || '',
+      sceneName: state?.currentScene || '',
+      timestamp: Date.now(),
+      date: new Date().toLocaleString('zh-CN'),
+    };
+
+    await atomicWrite(jsonPath, JSON.stringify(data, null, 2));
+
+    if (thumbnail) {
+      await fs.writeFile(jpgPath, thumbnail);
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.error('[save-quickslot] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('load-quickslot', async () => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const jsonPath = path.join(currentProjectPath, 'saves', 'quicksave.json');
+    if (!isInsideProject(jsonPath)) return { success: false, error: 'Invalid path' };
+
+    const raw = await fs.readFile(jsonPath, 'utf-8');
+    return { success: true, data: JSON.parse(raw) };
+  } catch (e) {
+    if (e.code === 'ENOENT') return { success: true, data: null };
+    console.error('[load-quickslot] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('capture-screenshot', async () => {
   try {
     const targetWin = previewWin || getMainWindow();

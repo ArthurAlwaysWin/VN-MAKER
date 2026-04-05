@@ -62,7 +62,12 @@
 
 ### Active
 
-<!-- 后续版本候选功能 -->
+<!-- v0.6 目标功能 -->
+
+- [ ] Design Tokens 数据模型 + 引擎全 UI 改用 CSS 自定义属性渲染
+- [ ] 可视化主题编辑器（Token 编辑 + 配色和谐算法 + 实时预览）
+- [ ] 九宫格图片系统（对话框/面板/按钮背景图替换，三态按钮）
+- [ ] 内置主题预设（3-4 套精品）+ 主题导入/导出（.theme 包）
 
 ### Future — 后续候选
 
@@ -145,13 +150,23 @@
 
 This document evolves at phase transitions and milestone boundaries.
 
+## Current Milestone: v0.6 主题包系统
+
+**Goal:** 建立分层主题系统（Design Tokens + 九宫格图片 + 配色防呆），让游戏 UI 实现"拉高下限、保证上限"的差异化美术风格。
+
+**Target features:**
+- Design Tokens 数据模型 + 引擎全 UI 改用 CSS 自定义属性渲染
+- 可视化主题编辑器（Token 编辑 + 配色和谐算法 + 实时预览）
+- 九宫格图片系统（对话框/面板/按钮背景图替换，三态按钮）
+- 内置主题预设（3-4 套精品）+ 主题导入/导出（.theme 包）
+
 ## Current State
 
-v0.5 里程碑已归档 — 游戏 UI 补全（快捷按钮栏 + 存读档界面 + 快进模式 + 快存快读）。
+v0.6 里程碑已启动 — 主题包系统。
 
-**已发布：** v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）+ v0.5（游戏 UI 补全）
+**已发布：** v0.1 ~ v0.5（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全）
 
-**当前：** 准备 v0.6 里程碑规划。
+**当前：** v0.6 — 定义需求中。
 
 ---
-*Last updated: 2026-04-05 after v0.5 milestone archived*
+*Last updated: 2026-04-05 after v0.6 milestone started*

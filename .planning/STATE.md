@@ -1,44 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: 游戏 UI 补全 ✅ (archived)
-status: archived
-stopped_at: v0.5 archived — ready for v0.6
-last_updated: "2026-04-05T13:00:00.000Z"
+milestone: v0.6
+milestone_name: 主题包系统
+status: defining-requirements
+stopped_at: v0.6 milestone started — defining requirements
+last_updated: "2026-04-05T14:00:00.000Z"
 last_activity: 2026-04-05
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-04)
+See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v0.5 milestone complete ✅
+**Current focus:** v0.6 主题包系统 — 定义需求中
 
 ## Current Position
 
-Phase: 22
-Plan: Complete
-Status: v0.5 milestone complete — all phases verified
-Last activity: 2026-04-05
-
-```
-v0.5 Progress: [████████████████████] 4/4 phases ✅
-```
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 19 | Save System Upgrade | ✅ Complete |
-| 20 | Quick Action Bar | ✅ Complete |
-| 21 | Save/Load UI | ✅ Complete |
-| 22 | Skip Mode | ✅ Complete |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-05 — Milestone v0.6 started
 
 ## Performance Metrics
 
@@ -120,6 +109,6 @@ v0.5 Progress: [████████████████████] 4/
 ## Session Continuity
 
 Last session: 2026-04-05
-Stopped at: v0.5 archived — ready for v0.6
-Resume hint: Start v0.6 with `/gsd-new-milestone`
-Next action: `/gsd-new-milestone`
+Stopped at: v0.6 milestone started — defining requirements
+Resume hint: Continue with requirements definition and roadmap creation
+Next action: Define REQUIREMENTS.md → create ROADMAP.md

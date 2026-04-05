@@ -18,6 +18,9 @@ export class SaveManager {
 
     /** @type {number} Number of saves migrated in last _checkMigration call */
     this._lastMigrationCount = 0;
+
+    /** @type {boolean|undefined} Whether a quicksave file exists (lazy-loaded) */
+    this._hasQuickSave = undefined;
   }
 
   // ─── Public API (all async) ────────────────────────────────
@@ -119,6 +122,61 @@ export class SaveManager {
   async hasAnySave() {
     const slots = await this.getAllSlots();
     return slots.length > 0;
+  }
+
+  // ─── Quicksave API (D-10, D-11, D-12) ────────────────────
+
+  /**
+   * Save game state to the quicksave slot (always overwrites — D-11)
+   * @param {Object} state — engine state from ScriptEngine.getState()
+   * @param {string} previewText — truncated dialogue text for display
+   * @param {Uint8Array|null} [thumbnail=null] — JPEG bytes from capture-screenshot
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async quickSave(state, previewText, thumbnail = null) {
+    // Deep-clone to strip Vue Proxy wrappers (same as save())
+    const plainState = JSON.parse(JSON.stringify(state));
+
+    // Truncate history to 50 entries (same as save())
+    if (plainState.history && plainState.history.length > 50) {
+      plainState.history = plainState.history.slice(-50);
+    }
+
+    const result = await window.ipcRenderer.invoke('save-quickslot', {
+      state: plainState,
+      previewText: previewText || '',
+      thumbnail,
+    });
+
+    if (result.success) {
+      this._hasQuickSave = true;
+    }
+
+    return result;
+  }
+
+  /**
+   * Load game state from the quicksave slot
+   * @returns {Promise<Object|null>} — { version, state, previewText, ... } or null
+   */
+  async quickLoad() {
+    const result = await window.ipcRenderer.invoke('load-quickslot');
+    if (!result.success) {
+      console.error('[SaveManager] Quick load failed:', result.error);
+      return null;
+    }
+    return result.data;
+  }
+
+  /**
+   * Check if a quicksave exists — used for quickload button state (D-13)
+   * @returns {Promise<boolean>}
+   */
+  async hasQuickSave() {
+    if (this._hasQuickSave !== undefined) return this._hasQuickSave;
+    const result = await window.ipcRenderer.invoke('load-quickslot');
+    this._hasQuickSave = result.success && result.data !== null;
+    return this._hasQuickSave;
   }
 
   // ─── Legacy Migration (D-09, D-10, SAVE-05) ───────────────

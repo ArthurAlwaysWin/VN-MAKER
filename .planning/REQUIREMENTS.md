@@ -33,8 +33,8 @@
 - [x] **SLUI-03**: 存档/读档模式通过顶部标签切换，无需关闭界面
 - [x] **SLUI-04**: 覆盖已有存档时在槽位卡片内显示内联确认（"确定覆盖?" + 确认/取消按钮）
 - [x] **SLUI-05**: 支持删除单个存档（带确认提示）
-- [ ] **SLUI-06**: ESC 键可关闭存读档界面，采用栈式覆盖层优先级管理（SaveLoad > Settings > Backlog > GameMenu > Game）
-- [ ] **SLUI-07**: 关闭存读档界面时根据来源上下文返回正确位置（从游戏菜单打开 → 返回游戏菜单；从快捷栏打开 → 返回游戏；从标题页打开 → 返回标题页）
+- [x] **SLUI-06**: ESC 键可关闭存读档界面，采用栈式覆盖层优先级管理（SaveLoad > Settings > Backlog > GameMenu > Game）
+- [x] **SLUI-07**: 关闭存读档界面时根据来源上下文返回正确位置（从游戏菜单打开 → 返回游戏菜单；从快捷栏打开 → 返回游戏；从标题页打开 → 返回标题页）
 
 ## SKIP — 快进模式
 
@@ -95,8 +95,8 @@
 | SLUI-03 | Phase 21 | Complete |
 | SLUI-04 | Phase 21 | Complete |
 | SLUI-05 | Phase 21 | Complete |
-| SLUI-06 | Phase 21 | Pending |
-| SLUI-07 | Phase 21 | Pending |
+| SLUI-06 | Phase 21 | Complete |
+| SLUI-07 | Phase 21 | Complete |
 | SKIP-01 | Phase 22 | Pending |
 | SKIP-02 | Phase 22 | Pending |
 | SKIP-03 | Phase 22 | Pending |

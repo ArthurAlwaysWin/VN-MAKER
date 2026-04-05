@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Completed 21-01-PLAN.md
-last_updated: "2026-04-05T08:11:35.393Z"
+status: verifying
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-04-05T08:15:09.151Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 Phase: 21 (save-load-ui) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-05
 
 ```
@@ -56,6 +56,7 @@ v0.5 Progress: [██████████░░░░░░░░░░] 2/
 | Phase 20 P01 | 4min | 3 tasks | 3 files |
 | Phase 20 P02 | 4min | 2 tasks | 2 files |
 | Phase 21 P01 | 3.5min | 2 tasks | 3 files |
+| Phase 21 P02 | 1min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ v0.5 Progress: [██████████░░░░░░░░░░] 2/
 - [Phase 21]: Partial re-render for grid/pagination avoids full innerHTML rebuild flicker
 - [Phase 21]: Source-routed hide(skipRoute) for load-success vs close-to-menu flow
 - [Phase 21]: CSS data-mode attribute selector for load-mode empty slot disabling
+- [Phase 21]: SaveLoad screen highest ESC/right-click priority (SLUI-06)
+- [Phase 21]: onClose routes only menu source to gameMenu.show(); bar/title are no-ops
 
 ### Key Context for v0.5
 
@@ -110,7 +113,7 @@ v0.5 Progress: [██████████░░░░░░░░░░] 2/
 
 ## Session Continuity
 
-Last session: 2026-04-05T08:11:35.389Z
-Stopped at: Completed 21-01-PLAN.md
+Last session: 2026-04-05T08:15:09.148Z
+Stopped at: Completed 21-02-PLAN.md
 Resume hint: Execute with `/gsd-execute-phase 21`
 Next action: `/gsd-execute-phase 21`

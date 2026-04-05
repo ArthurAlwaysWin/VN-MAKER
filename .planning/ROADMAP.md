@@ -109,7 +109,7 @@ See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 
 - [x] **Phase 19: Save System Upgrade** — File system saves with 100-slot capacity, IPC handlers, screenshots, migration (completed 2026-04-04)
 - [x] **Phase 20: Quick Action Bar** — 6-button dialogue bar with auto/skip state indicators and overlay sync (completed 2026-04-05)
-- [ ] **Phase 21: Save/Load UI** — Full-screen 100-slot grid with thumbnails, pagination, ESC stack, context-aware return
+- [x] **Phase 21: Save/Load UI** — Full-screen 100-slot grid with thumbnails, pagination, ESC stack, context-aware return (completed 2026-04-05)
 - [ ] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only modes, audio suppression, settings toggle
 
 ### Phase Details
@@ -160,7 +160,7 @@ Plans:
 
 Plans:
 - [x] 21-01-PLAN.md — SaveLoadScreen rewrite (3×3×12 grid, pagination, inline confirmations) + CSS + SaveManager slotCount bump
-- [ ] 21-02-PLAN.md — main.js integration wiring (source params, onClose routing, ESC priority fix, save toast)
+- [x] 21-02-PLAN.md — main.js integration wiring (source params, onClose routing, ESC priority fix, save toast)
 
 **UI hint**: yes
 
@@ -183,5 +183,5 @@ Plans:
 |-------|---------------|--------|-----------|
 | 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
 | 20. Quick Action Bar | 2/2 | Complete   | 2026-04-05 |
-| 21. Save/Load UI | 1/2 | In Progress|  |
+| 21. Save/Load UI | 2/2 | Complete   | 2026-04-05 |
 | 22. Skip Mode | 0/? | Not started | - |

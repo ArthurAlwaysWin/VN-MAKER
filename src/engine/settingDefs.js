@@ -87,6 +87,16 @@ export const SETTING_DEFS = {
     step: 0.01,
     default: 1,
   },
+  'skip-mode': {
+    type: 'select',
+    settingKey: 'skipMode',
+    label: '快进模式',
+    options: [
+      { value: 'all', label: '全部跳过' },
+      { value: 'readOnly', label: '只跳已读' },
+    ],
+    default: 'readOnly',
+  },
 };
 
 /**

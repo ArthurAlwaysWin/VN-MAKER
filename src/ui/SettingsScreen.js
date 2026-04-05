@@ -345,6 +345,13 @@ export class SettingsScreen {
             <button class="sc-segment-btn ${cfg.get('windowMode') === 'borderless' ? 'active' : ''}" data-value="borderless">无边框窗口</button>
           </div>
         </div>
+        <div class="settings-item">
+          <span class="settings-label">快进模式</span>
+          <div class="sc-segment-group" id="s-skip-mode">
+            <button class="sc-segment-btn ${cfg.get('skipMode') === 'all' ? 'active' : ''}" data-value="all">全部跳过</button>
+            <button class="sc-segment-btn ${cfg.get('skipMode') === 'readOnly' || !cfg.get('skipMode') ? 'active' : ''}" data-value="readOnly">只跳已读</button>
+          </div>
+        </div>
       </div>
     `;
 
@@ -398,6 +405,16 @@ export class SettingsScreen {
         wmGroup.querySelectorAll('.sc-segment-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         cfg.set('windowMode', btn.dataset.value);
+        this._notifyChange();
+      });
+    });
+
+    const smGroup = this.el.querySelector('#s-skip-mode');
+    smGroup.querySelectorAll('.sc-segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        smGroup.querySelectorAll('.sc-segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        cfg.set('skipMode', btn.dataset.value);
         this._notifyChange();
       });
     });

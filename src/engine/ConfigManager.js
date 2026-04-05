@@ -16,6 +16,7 @@ export class ConfigManager {
       windowMode: 'windowed',   // 'windowed' | 'fullscreen' | 'borderless'
       dialogueOpacity: 0.8, // 0.1–1, dialogue box background alpha
       masterVolume: 1,      // 0–1, scales bgmVolume & seVolume proportionally
+      skipMode: 'readOnly',     // 'all' | 'readOnly' — skip mode preference
     };
 
     this.config = { ...this.defaults };

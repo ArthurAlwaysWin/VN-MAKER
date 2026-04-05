@@ -1,603 +1,627 @@
-# Pitfall Research — v0.5: 游戏 UI 补全
+# Pitfall Research — v0.6: 主题包系统 (Theme Pack System)
 
-**Domain:** Visual novel engine — adding save/load UI, quick action bar, fast-forward, file system saves
-**Researched:** 2025-07-17
-**Overall confidence:** HIGH (based on direct codebase analysis + domain expertise)
-
----
-
-## Critical Pitfalls (must address — cause rewrites or broken features)
-
-### P1: html2canvas Cannot Resolve `asset://` Protocol Images
-
-**What goes wrong:** html2canvas re-fetches all images by their `src` URL to render them onto an offscreen canvas. The `asset://` custom protocol is registered via Electron's `protocol.handle()` — it works in the Electron renderer's `<img>` tags, but html2canvas creates its own internal fetch/XMLHttpRequest calls that **cannot resolve custom Electron protocols**. All background images and character sprites loaded via `asset://backgrounds/...` will render as **blank/broken** in screenshots.
-
-**Why it happens:** html2canvas operates in a sandboxed rendering context. It parses the DOM, extracts image URLs, and re-downloads them. Electron custom protocols are registered at the main process level and are accessible from the renderer's native fetch API, but html2canvas's internal image loading may use different mechanisms (e.g., `Image()` constructor with `.crossOrigin` attribute) that don't properly route through Electron's protocol handler. Even if they do route correctly, cross-origin tainting will mark the canvas as tainted, preventing `.toDataURL()` from working.
-
-**Consequences:** Screenshots show dialogue text over a black/empty background with no characters. If `allowTaint` is false (default), html2canvas throws a SecurityError.
-
-**Prevention:**
-1. Before calling html2canvas, temporarily swap all `asset://` URLs to `data:` base64 URLs by reading the actual image data, OR
-2. Use `html2canvas(element, { useCORS: true, allowTaint: true })` combined with ensuring the asset protocol responds with proper CORS headers, OR
-3. **Best approach:** Skip html2canvas entirely for the game screenshot. Instead, manually composite a thumbnail: take the current background image + character positions and draw them onto an offscreen `<canvas>` element using `drawImage()`. This is faster, more reliable, and gives you precise control over thumbnail size.
-4. If sticking with html2canvas: use the `proxy` option or pre-convert images. Set `{ scale: 0.25, width: 320, height: 180 }` to reduce output size.
-
-**Detection:** Screenshots are entirely black or show only text elements. Console shows CORS/taint errors.
-
-**Phase:** Must be designed in the save/load UI phase. Architecture choice affects the entire screenshot pipeline.
+**Domain:** Visual novel engine — retrofitting a theme/skinning system to existing DOM-based game UI
+**Researched:** 2025-07-22
+**Overall confidence:** HIGH (based on direct codebase analysis + CSS specification knowledge + game engine theming patterns)
 
 ---
 
-### P2: Quick Action Bar Duplicates Existing `#quick-controls`
+## Critical Pitfalls (cause rewrites or broken features)
 
-**What goes wrong:** The codebase **already has** a `#quick-controls` element (main.js lines 54-62) with 4 buttons (AUTO, SKIP, LOG, MENU) appended to `#dialogue-layer`. The v0.5 spec calls for a new "快捷按钮栏" with 6 buttons (save/load/backlog/settings/auto/skip). Building the new bar without removing the old one creates **duplicate buttons**, double event handlers, and visual overlap.
+### P1: 120 Hardcoded `rgba()` Values + 48 Inline Style Assignments = Token Migration Minefield
 
-**Why it happens:** The existing quick controls were a minimal implementation. The new design expands the concept but the developer may forget the old code exists, or attempt to patch it rather than replace it cleanly.
+**Severity:** 🔴 CRITICAL
+**Phase:** Design Tokens + CSS Custom Properties migration (Phase 1)
 
-**Consequences:** Two sets of AUTO/SKIP buttons. Clicking one doesn't update the other's active state. Visual mess at the dialogue box bottom.
+**What goes wrong:** The current `style.css` contains **120 `rgba()` color literals** with 13 instances of the accent color `rgba(180, 160, 255, *)` alone, plus secondary colors like `rgba(255, 107, 157, *)` and `rgba(255, 100, 100, *)`. Additionally, UI component JS files contain **48 inline style assignments** for visual properties (`background`, `color`, `border`, `font`). If you attempt to tokenize colors by doing find-and-replace on the CSS without accounting for the inline style overrides in JavaScript, the JS-set values will **override CSS custom properties** because `element.style.*` has higher specificity than any stylesheet rule.
+
+**Evidence from codebase:**
+- `DialogueBox.js` lines 89-129: `_applyStyle()` resets ALL inline styles with `this.el.style.cssText = ''` then re-applies background, color, border, padding directly via `this.el.style.*`
+- `TitleScreen.js` lines 66-90: `_renderCustom()` sets background, colors directly on elements
+- `SettingsScreen.js` lines 57-89: custom layout mode sets background on element
+- `ChoiceMenu.js` lines 31-39: custom layout applies background color directly
+- `SaveLoadScreen.js` line 86: title color set via inline `style="color: ${titleColor}"`
+
+**Consequences:**
+1. CSS tokens like `var(--theme-dialogue-bg)` are defined in stylesheet but never visible because JS overwrites with hardcoded values
+2. Theme switching appears to "do nothing" for half the UI elements
+3. Developer chases phantom bugs — the CSS looks correct but inline styles win
 
 **Prevention:**
-1. **Remove** the existing `#quick-controls` block entirely from main.js (lines 53-62) and its CSS (#quick-controls rules at ~line 1043 in style.css).
-2. Build the new QuickActionBar as a proper class (like GameMenu, DialogueBox) rather than inline DOM creation.
-3. Wire the new bar's callbacks through the same `toggleAuto()`, `toggleSkip()`, `gameMenu.onBacklog()`, `gameMenu.onSettings()` functions plus new save/load triggers.
-4. Ensure the active state syncing (`updateQuickBtnStates`) is updated to reference the new bar's buttons.
+1. **Audit all `style.*` assignments first.** Create a map of every JS file → property → current value before touching CSS.
+2. **Strategy: Token values flow through JS, not just CSS.** For elements where JS currently sets inline styles (DialogueBox, TitleScreen custom layout, SettingsScreen custom layout, ChoiceMenu), the JS code must read token values and apply them. Do NOT assume moving colors to `var()` in CSS is sufficient.
+3. **For elements with `style.cssText = ''` resets** (DialogueBox, ChoiceMenu, TitleScreen): these wipe ALL inline styles including any CSS custom property overrides. After reset, the element falls back to stylesheet rules — this is actually a good thing, but only if the stylesheet uses tokens.
+4. **Priority order for migration:**
+   - First: Convert `style.css` hardcoded values → `var(--token)` with fallback values
+   - Second: Modify JS `_applyStyle()` methods to use token values instead of hardcoded defaults
+   - Third: Verify per-page overrides (fontOverride) still work on top of tokens
+5. **Use CSS fallbacks during migration:** `background: var(--theme-dialogue-bg, rgba(8, 8, 20, 0.92))` so nothing breaks before JS is updated.
 
-**Detection:** Two rows of buttons visible during gameplay. Active state indicators (AUTO highlighted) on one bar but not the other.
-
-**Phase:** First phase — must be addressed immediately when building the quick action bar.
+**Detection:** After tokenizing CSS, test with a bright test theme (e.g., all reds). Any element still showing the original dark purple → it's being overridden by JS inline styles.
 
 ---
 
-### P3: ESC Priority Chain Incomplete for New Fullscreen Overlays
+### P2: `style.cssText = ''` Nukes Theme Token Overrides Between Dialogue Lines
 
-**What goes wrong:** The current ESC priority chain (main.js lines 258-291) handles: `settingsScreen > gameMenu > game`. The new fullscreen save/load screen is NOT in this chain. Pressing ESC while the save/load screen is open does nothing, or worse, toggles the game menu behind it.
+**Severity:** 🔴 CRITICAL
+**Phase:** Design Tokens migration (Phase 1)
 
-**Why it happens:** The ESC handler was written for the original 3 layers. Each new fullscreen overlay must be explicitly added to the priority chain in the correct order.
+**What goes wrong:** `DialogueBox._applyStyle()` (line 91) starts with `this.el.style.cssText = ''` — this resets **every** inline style to empty on each new dialogue line. If the theme system applies tokens via inline `style.setProperty('--token', value)`, these are wiped on every dialogue advance. The dialogue box flickers or reverts to stylesheet defaults between every line of text.
 
-**Consequences:** Users press ESC to close the save/load screen — nothing happens, or the game menu toggles behind the save/load overlay. Breaks the "ESC always goes back" expectation that VN players have.
-
-**Prevention:**
-The ESC handler must check layers in this order:
-```
-1. Save/Load screen (highest, it's fullscreen replacement)
-2. Settings overlay
-3. Backlog screen (also fullscreen — currently NOT in ESC chain!)
-4. Game menu
-5. Game (dialogue advance or ignore)
-```
-Implement a proper layer stack manager rather than hardcoded if/else:
+**Evidence:** `DialogueBox.js` lines 91-93:
 ```javascript
-const overlayStack = [saveLoadScreen, settingsScreen, backlogScreen, gameMenu];
-// ESC closes the topmost visible overlay
-for (const overlay of overlayStack) {
-  if (overlay.isVisible) { overlay.hide(); return; }
-}
+this.el.style.cssText = '';
+this.textEl.style.cssText = '';
+this.nameEl.style.cssText = '';
 ```
-Note: BacklogScreen also currently has NO ESC dismiss — add an `isVisible` getter and include it.
+This fires on every `show()` call, which is every dialogue line.
 
-**Detection:** Manual ESC testing with each overlay open. Open save screen → press ESC → verify save screen closes.
+**Consequences:** Theme custom properties set via `element.style.setProperty()` are destroyed 100+ times per playthrough. The dialogue box flickers or shows wrong theme between each line.
 
-**Phase:** Must be designed when building the save/load screen. Refactor the ESC handler into a stack-based system.
+**Prevention:**
+1. **Never apply theme tokens as inline custom properties on individual elements.** Instead, set them on `#game-container` or `:root`, then reference with `var()` in the stylesheet. This way, `style.cssText = ''` on child elements doesn't touch the tokens.
+2. **Refactor `_applyStyle()`** to not use `cssText = ''` as a reset. Instead, use `removeProperty()` on specific properties that were set, or use CSS classes to toggle theme states.
+3. **If per-page style overrides must remain:** keep the `cssText` reset but ensure it re-applies theme-relevant properties immediately after. The flow should be: reset → apply theme baseline → apply per-page overrides.
+
+**Detection:** Play through 3+ dialogue lines with a non-default theme active. Watch for flash of default styling between lines.
 
 ---
 
-### P4: Save/Load Screen Opened from Multiple Contexts with Different Return Behavior
+### P3: `border-image` and `border-radius` Are Mutually Exclusive in All Browsers
 
-**What goes wrong:** The save/load screen can be opened from:
-1. **Game menu** → "存档" / "读档" buttons (gameMenu.onSave/onLoad, main.js lines 215-216)
-2. **Title screen** → "继续游戏" button (titleScreen.onContinue, main.js line 416)
-3. **New: Quick action bar** → save/load buttons
+**Severity:** 🔴 CRITICAL  
+**Phase:** 9-slice image system (Phase 2/3)
 
-The "return/close" behavior must differ: from game menu → close save/load screen and show game menu again. From title screen → close save/load screen and show title screen. From quick bar → just close save/load screen.
+**What goes wrong:** When `border-image` is set on an element, **`border-radius` is completely ignored** per the CSS specification. This is not a bug — it's spec behavior (CSS Backgrounds and Borders Level 3, §6.2). The current dialogue box, save slots, buttons, and menu panels all use `border-radius` (4px-12px). Applying 9-slice `border-image` to these elements will turn them from rounded rectangles into sharp rectangles, breaking the visual design.
 
-Currently, the save/load screen simply calls `this.hide()` on close (SaveLoadScreen.js line 53), with no concept of "who opened me."
+**Evidence from codebase — elements using `border-radius` that would get 9-slice:**
+- `#dialogue-box`: no explicit border-radius but per-page style can set it (DialogueBox.js line 124)
+- `.save-slot`: `border-radius: 6px` (style.css line 516)
+- `.game-menu-button`: `border-radius: 4px` (style.css line 1214)
+- `.choice-button`: `border-radius: 6px` (style.css line 321)
+- `.title-button`: `border-radius: 4px` (style.css line 404)
+- `.qab-btn`: `border-radius: 4px` (style.css line 1246)
+- `.page-tab`: `border-radius: 4px` (style.css line 643)
+- `.save-confirm-btn`: `border-radius: 4px` (style.css line 694)
 
-**Consequences:** User opens save/load from title screen, presses "返回" → screen closes but they see the game field instead of the title screen. Or: they opened from game menu, close save/load, and the game menu is gone.
-
-**Prevention:**
-1. Add an `onClose` callback to SaveLoadScreen that the caller sets before calling `show()`.
-2. Or better: pass a `context` parameter to `show()`: `show('save', { returnTo: 'gameMenu' })` and handle return in the close handler.
-3. Note: the game menu currently hides itself before showing save/load (GameMenu.js line 62: `this.hide()` for non-settings actions). Consider NOT hiding the game menu when opening save/load, or tracking that it should be re-shown.
-
-**Detection:** Test flow: Title → Continue → Close save/load → where am I? Game Menu → Save → Close → is game menu back?
-
-**Phase:** Save/Load UI phase. The callback/context pattern must be designed upfront.
-
----
-
-### P5: Read-Page Tracking for "Skip Read Only" Has No Persistence Layer
-
-**What goes wrong:** "只跳已读" (skip-read-only) mode requires the engine to know which pages the player has previously seen. This requires a persistent Set of `sceneId:pageIndex` pairs that survives across game sessions. This data is NOT part of save state (it's global progress, not per-save). Currently, no infrastructure exists for this.
-
-**Why it happens:** Save state (ScriptEngine.getState()) captures `currentScene`, `pageIndex`, `dialogueIndex`, `variables`, `history` — but NOT "all pages ever visited." This is a fundamentally different data category: it's per-game-per-player global data, not per-save-slot data.
-
-**Consequences:** If stored nowhere, "skip read only" never skips anything. If stored only in memory, progress resets on game restart. If stored in save state, loading an old save would "forget" pages read after that save was made.
+**Consequences:** Every 9-slice-themed element loses its rounded corners. If the 9-slice image itself has rounded corners baked in, the underlying element's square border clips content at the corners. Mixed themes (some elements with 9-slice, some without) look inconsistent.
 
 **Prevention:**
-1. Create a `ReadTracker` class that maintains a `Set<string>` of `"${sceneId}:${pageIndex}"` keys.
-2. Persist to its own file: `saves/read-progress.json` (after the file system migration) or a dedicated localStorage key.
-3. Hook into `engine.on('page_enter')` to record every page entered.
-4. On the `ScriptEngine`, expose a method `isPageRead(sceneId, pageIndex)` that checks the tracker.
-5. The read tracker should NEVER be cleared by "New Game" — it's cumulative across all playthroughs.
-6. In skip mode, check: `if (skipMode === 'all' || readTracker.has(key))` before auto-advancing.
-
-**Detection:** Start new game → play through some pages → save → restart game → load → try "skip read only" → does it skip?
-
-**Phase:** Fast-forward phase. Must be designed and implemented as a prerequisite for the "skip read only" toggle.
-
----
-
-## Integration Pitfalls (interactions between existing and new systems)
-
-### P6: Auto/Skip Mode Not Paused When Overlays Open
-
-**What goes wrong:** Currently, auto mode and skip mode are stopped when returning to title (`gameMenu.onTitle` calls `stopAuto()` and `stopSkip()`). But opening save/load, settings, or backlog directly from the quick bar does NOT go through the game menu — so auto/skip keeps running behind the overlay. The dialogue keeps advancing while the player is browsing save slots.
-
-**Why it happens:** The auto/skip stop logic is wired into specific callbacks. Direct access to save/load/settings/backlog from the new quick bar bypasses these.
-
-**Consequences:** Player opens save screen → dialogue advances behind it → they save at a different point than they expected. Audio keeps playing/changing.
-
-**Prevention:**
-1. Create a centralized `pauseGameplay()` / `resumeGameplay()` function that stops auto, stops skip, and pauses the engine's waiting state.
-2. Call `pauseGameplay()` whenever any overlay opens (save/load/settings/backlog).
-3. Call `resumeGameplay()` when all overlays close.
-4. Or simpler: in every overlay's `show()` method, emit an event or call a global `stopAuto(); stopSkip();`.
-
-**Detection:** Activate auto mode → open save screen → wait 10 seconds → close save screen → is the dialogue at a different point?
-
-**Phase:** Quick action bar phase (when wiring button callbacks) and save/load UI phase.
-
----
-
-### P7: Save While Typewriter Animation is Mid-Line Captures Incomplete State
-
-**What goes wrong:** If the player opens save (via quick bar) while the typewriter effect is still rendering text, `engine.getState()` returns the current `dialogueIndex`. But when loaded, the dialogue replays from the start of that line — this is fine. However, the save's preview text and screenshot may show incomplete/partial text, which looks buggy.
-
-**Prevention:**
-1. Before taking a screenshot for save, call `dialogueBox._finishLine()` to instantly complete the typewriter effect. This ensures the screenshot shows the full dialogue text.
-2. For previewText, use `engine.history[engine.history.length - 1].text` (already done in current code, line 183) which is the full text — but verify that history is updated at the START of `_playCurrentDialogue()`, not at the end (it IS: line 397-403 in ScriptEngine.js pushes to history before emitting).
-3. Take the screenshot AFTER finishing the typewriter, not concurrently.
-
-**Detection:** Start typing a long dialogue → immediately press save → check screenshot and preview text.
-
-**Phase:** Save/Load UI phase (screenshot capture logic).
-
----
-
-### P8: Click-Through on Quick Action Bar Triggers Dialogue Advance
-
-**What goes wrong:** The game container has a click handler (main.js lines 295-313) that advances dialogue when clicking anywhere. The existing `#quick-controls` is already guarded (`if (target.closest('#quick-controls')) return;`). But the new QuickActionBar will have a different element ID/structure. If the guard isn't updated, clicking the new bar's buttons will BOTH trigger the button action AND advance dialogue.
-
-**Consequences:** Click "存档" → dialogue advances AND save screen opens. The save captures the NEXT dialogue instead of the current one.
-
-**Prevention:**
-1. Update the click-through guard in the `gameContainer.addEventListener('click')` handler to include the new QuickActionBar's selector.
-2. Better: use `e.stopPropagation()` in the QuickActionBar's click handler (like DialogueBox does on line 53), so the event never reaches the game container.
-3. Best: refactor the click-through guard to use a generic class like `.ui-interactive` on all overlay/button containers, and check `if (target.closest('.ui-interactive')) return;`.
-
-**Detection:** Click any quick bar button → does the dialogue also advance?
-
-**Phase:** Quick action bar phase.
-
----
-
-### P9: Voice Audio Keeps Playing When Save/Load Screen Opens
-
-**What goes wrong:** When the player opens save/load from the quick bar, the current voice clip keeps playing. If they then load a different save, the old voice overlaps with the new state's rendering.
-
-**Why it happens:** `audio.stopVoice()` is only called in `gameMenu.onTitle` and `engine.on('end')`. Opening save/load doesn't stop voice.
-
-**Consequences:** Audio from the old scene bleeds into the loaded state. Particularly jarring if loading a save from a different scene.
-
-**Prevention:**
-1. On successful `onLoad` callback, call `audio.stopVoice()` before `replayCurrentPage()`.
-2. Optionally pause voice when any overlay opens (see P6).
-3. The `replayCurrentPage()` function (main.js line 202-207) should include `audio.stopVoice()` as part of its cleanup — currently it does `characters.clear()`, `background.clear()`, `engine.resetRenderState()` but NOT audio cleanup.
-
-**Detection:** Play a voiced dialogue → open save screen → load a different save → is the old voice still playing?
-
-**Phase:** Save/Load UI phase (onLoad callback wiring).
-
----
-
-## Electron-Specific Pitfalls
-
-### P10: Game Engine Window Lacks `ipcRenderer` for File System Saves
-
-**What goes wrong:** The file system save upgrade requires IPC calls from the renderer (game engine) to the main process to read/write files in `saves/`. However, the game engine runs in `index.html` with `src/main.js`. The preview window created in electron/main.js (lines 546-561) creates a `BrowserWindow` **without** a `webPreferences.preload` configuration — it has no `window.ipcRenderer`.
-
-**Additionally:** The iframe-based preview inside the editor shares the editor's renderer process but NOT its preload globals. The iframe's `window.ipcRenderer` is undefined.
-
-**Consequences:** `window.ipcRenderer` is undefined in the game context → all file system save operations fail silently or throw.
-
-**Prevention:**
-1. Verify that every `BrowserWindow` that loads the game engine has `webPreferences.preload` pointing to `preload.mjs` (or a game-specific preload).
-2. For the **standalone preview window** (electron/main.js line 546): add `webPreferences: { preload: path.join(__dirname, 'preload.mjs') }`.
-3. For the **editor iframe preview**: save/load operations should be disabled in preview mode (`engine._previewMode === true`). Hide save/load buttons in the quick bar when previewing.
-4. Add a runtime check: `if (!window.ipcRenderer) { /* fall back to localStorage or disable save */ }`.
-
-**Detection:** Open game in standalone mode → try to save → check console for "ipcRenderer is not defined" errors.
-
-**Phase:** Save system upgrade phase. Must be resolved before any file I/O from the game engine.
-
----
-
-### P11: Reactive Proxy Serialization in New IPC Handlers
-
-**What goes wrong:** The project has a known past bug (PROJECT.md line 105): "创建项目 reactive Proxy 序列化失败 — 已修复（解构为纯对象）". If the new save data passes through any Vue reactive state (e.g., if a Pinia store wraps save slot info), the Proxy objects will fail to serialize across IPC `invoke()` calls.
-
-**Consequences:** `ipcRenderer.invoke('save-game', data)` throws "An object could not be cloned" error. Saves silently fail.
-
-**Prevention:**
-1. Always use `JSON.parse(JSON.stringify(data))` or spread/destructure before passing data to IPC.
-2. The SaveManager should handle this internally — its `save()` method should deep-clone the state before IPC:
-   ```javascript
-   save(slot, state, previewText) {
-     const plainState = JSON.parse(JSON.stringify(state));
-     return ipcRenderer.invoke('save-game', { slot, state: plainState, previewText });
+1. **Do NOT use CSS `border-image` for 9-slice rendering.** Instead, use `background-image` + `border-image-slice` via a wrapper approach, OR:
+2. **Preferred approach: Use a `::before` pseudo-element** for the 9-slice background, keeping `border-radius` on the main element for content clipping:
+   ```css
+   .themed-panel {
+     position: relative;
+     border-radius: 8px;
+     overflow: hidden; /* clips content to radius */
+   }
+   .themed-panel::before {
+     content: '';
+     position: absolute;
+     inset: 0;
+     border-image: url('asset://ui/panel.png') 30 fill / 30px / 0 stretch;
+     z-index: -1;
    }
    ```
-3. Note: engine state (ScriptEngine.getState()) currently returns plain objects with `Object.fromEntries()` for variables — this is correct. But if the engine is ever wrapped in a reactive proxy (e.g., Pinia store for engine state), the problem recurs.
+   **But note:** The `::before` pseudo-element itself won't respect the parent's `border-radius` for its `border-image`. The 9-slice image must have its corners pre-rounded in the source artwork.
+3. **Simplest correct approach:** Abandon CSS `border-image` entirely. Use **`background-image` with `background-size` and `background-repeat`** to simulate 9-slice manually using 9 elements or multiple backgrounds. Or use a canvas-based 9-slice renderer that draws to a canvas behind each element.
+4. **Alternative: `mask-image` + `border-image` combo** — use `mask-image` with a radial gradient to round the corners of the border-image. Browser support in Electron's Chromium is fine.
 
-**Detection:** Save fails with console error about cloning. Test with Vue devtools reactive state.
-
-**Phase:** Save system upgrade phase.
-
----
-
-### P12: `saves/` Directory Path Resolution Across Contexts
-
-**What goes wrong:** The file system saves need a `saves/` directory, but its location depends on context:
-- **Editor project mode:** Project is at `currentProjectPath` in electron/main.js. Saves go to `${currentProjectPath}/saves/`.
-- **Standalone game (packaged):** No `currentProjectPath`. Saves go to `app.getPath('userData')/saves/` or relative to the executable.
-- **Development (Vite dev server):** index.html loads from dev server. `currentProjectPath` may be null.
-
-Using the wrong path = saves go to the wrong location or fail entirely.
-
-**Consequences:** Saves created in editor testing don't appear when running the game standalone. Or saves go to a system directory the user can't find.
-
-**Prevention:**
-1. Define a clear `getSavesPath(gameId)` function in the main process:
-   ```javascript
-   function getSavesPath(gameId) {
-     if (currentProjectPath) {
-       return path.join(currentProjectPath, 'saves');
-     }
-     return path.join(app.getPath('userData'), 'saves', gameId);
-   }
-   ```
-2. The IPC handler receives a `gameId` (from `script.meta` or `project.json`) and resolves the path.
-3. Always `mkdir(savesPath, { recursive: true })` before any read/write.
-4. Add path traversal protection (reuse `isInsideProject()` pattern from existing code).
-
-**Detection:** Save in one mode → check file system → is it in the expected folder?
-
-**Phase:** Save system upgrade phase (IPC handler design).
+**Detection:** Apply any 9-slice theme → visually check all panels for sharp corners where rounded ones are expected.
 
 ---
 
-### P13: Thumbnail Image Files in `saves/` Need Security Validation
+### P4: 9-Slice `border-image-slice` Only Accepts Unitless Numbers or Percentages — Not `px`
 
-**What goes wrong:** Save screenshots are stored as image files in the `saves/` directory. Without validation, the IPC handler could write arbitrary data to disk, or path traversal in filenames could overwrite project files.
+**Severity:** 🔴 CRITICAL
+**Phase:** 9-slice image system (Phase 2/3)
+
+**What goes wrong:** The `border-image-slice` property has a unique syntax quirk: values are **unitless numbers** (representing pixels in the source image) or **percentages**. Writing `border-image-slice: 30px` is **invalid CSS** and silently fails, rendering the entire border-image as a stretched single image or not at all. This is the #1 mistake developers make with border-image because every other CSS length property accepts `px`.
+
+**Consequences:** Theme authors specify `30px` in the theme file → engine outputs `border-image-slice: 30px` → entire 9-slice fails silently. The image either stretches incorrectly or disappears. No console error.
 
 **Prevention:**
-1. Reuse the existing PNG magic byte validation pattern from `save-processed-image` handler (electron/main.js lines 432-456).
-2. Use `path.basename()` to strip any directory components from filenames.
-3. Set a maximum file size (e.g., 2MB per thumbnail — a 320×180 JPEG is typically 10-50KB).
-4. Use the `isInsideProject()` check for the resolved write path.
-5. Consider storing thumbnails as JPEG instead of PNG for smaller file sizes.
+1. **Strip `px` units in the theme engine** before applying border-image-slice values. If the theme file has `"slice": "30px"`, convert to `30`.
+2. **Validate and sanitize in the theme loader:** `parseInt(value, 10)` the slice value.
+3. **Document clearly for theme authors:** "Slice values are pixel counts in the source image, WITHOUT the `px` unit."
+4. **Use `fill` keyword when using border-image for backgrounds:** Without `fill`, the center of the 9-slice is transparent. `border-image-slice: 30 fill` fills the center.
 
-**Phase:** Save system upgrade phase (IPC handler implementation).
+**Detection:** 9-slice images stretch as a single image or show transparent center.
 
 ---
 
-## Save System Migration Pitfalls
+### P5: Inline Style Color Overrides from Per-Page and Per-Character Data Bypass Theme
 
-### P14: Backward Compatibility — Existing localStorage Saves Become Invisible
+**Severity:** 🔴 CRITICAL
+**Phase:** Design Tokens migration (Phase 1)
 
-**What goes wrong:** Players who have saves in localStorage from the current 8-slot system will lose access after upgrading to file system saves. The new SaveManager reads from `saves/` directory, old saves are in `localStorage`.
+**What goes wrong:** The engine has a multi-layered style override system already in place:
+1. **Global font settings** (`ui.dialogueBox` from script.json → `applyGlobalStyle()`)
+2. **Per-page font overrides** (`page.fontOverride` → injected at `_applyStyle()` time)
+3. **Per-character speaker colors** (`data.speakerColor` → set on `.dialogue-speaker-name`)
+4. **Per-dialogue position/size overrides** (`data.style` → full layout override)
+5. **Settings page custom layout** (JSON-defined positions, colors, fonts)
 
-**Consequences:** Players update the game and their save progress vanishes. For a VN, this is devastating — they may be hours in.
+All of these set colors via inline `style.*` which will override any CSS custom property defined in the stylesheet.
+
+**Evidence:**
+- `DialogueBox.js` line 72: `this.nameEl.style.color = data.speakerColor || this._activeNameplateColor || '#fff'`
+- `DialogueBox.js` lines 117-124: per-dialogue style overrides for fontSize, fontFamily, textColor, backgroundColor
+- `TitleScreen.js` lines 99-124: custom button colors from JSON
+- `SaveLoadScreen.js` line 86: mode-colored title via inline style
+
+**Consequences:** Theme defines `--speaker-name-color: gold` but per-character colors override it. Theme defines `--button-bg: blue` but title screen custom layout sets its own colors. The theme system appears broken for any screen that uses custom layouts.
 
 **Prevention:**
-1. On first launch with new save system, check for existing localStorage saves and migrate them:
-   ```javascript
-   async migrateFromLocalStorage(gameId) {
-     for (let i = 0; i < 8; i++) {
-       const key = `${gameId}_save_${i}`;
-       const raw = localStorage.getItem(key);
-       if (raw) {
-         await this.saveToFile(i, JSON.parse(raw));
-         localStorage.removeItem(key);
-       }
-     }
-   }
-   ```
-2. Run migration automatically in `SaveManager.init()`.
-3. Keep a migration flag: `${gameId}_migrated_to_fs = true` to avoid re-running.
-4. **Fallback:** If file system is unavailable (no IPC), keep using localStorage as before.
+1. **Establish a clear specificity hierarchy:** Theme tokens < Per-screen custom layout < Per-character colors. Document this explicitly.
+2. **Theme tokens should only affect DEFAULT rendering.** When a custom layout exists (title screen, settings screen), the custom layout's colors take precedence. This is actually correct behavior — the game author's per-element design should override the theme.
+3. **For speaker colors specifically:** theme tokens set the DEFAULT speaker color, but per-character `speakerColor` always wins. This matches VN conventions (character identity > theme).
+4. **In the UI code:** After `_applyStyle()` resets and applies theme, re-apply any user-specified overrides. Never let theme override user intent.
 
-**Detection:** Create saves with old system → upgrade SaveManager → are old saves still accessible?
-
-**Phase:** Save system upgrade phase. Must be the FIRST thing implemented in the new SaveManager.
+**Detection:** Create a theme with non-default speaker name color. Test with a character that has a custom color defined → character color should win. Test with a character that has NO color → theme color should appear.
 
 ---
 
-### P15: Loading 100 Slot Thumbnails on Save/Load Screen Open is Slow
+### P6: `asset://` Protocol URL Parsing for Theme Image Assets
 
-**What goes wrong:** The new save/load screen has 10×10=100 slots. Loading all 100 slot metadata + thumbnail images when the screen opens could take 500ms-2s if reading from disk, causing a visible freeze or flash of empty slots.
+**Severity:** 🔴 CRITICAL
+**Phase:** 9-slice image system + Theme import/export (Phase 2/3)
 
-**Why it happens:** Each slot requires reading a JSON metadata file + an image file from disk. Even with SSD, 200 IPC round-trips have significant overhead.
+**What goes wrong:** The `asset://` protocol handler (electron/main.js lines 805-830) resolves paths relative to `{project}/assets/`. Theme pack images (9-slice textures, button graphics) need to be stored somewhere the protocol can find them. If theme images are stored in a `themes/` directory outside `assets/`, the `asset://` protocol **cannot serve them** — it only resolves paths under `assets/` (or `saves/` as a special case).
 
-**Consequences:** User clicks "存档" → sees a blank grid for 1-2 seconds → slots pop in.
-
-**Prevention:**
-1. **Batch loading:** Single IPC call `getAllSlots()` that returns all metadata in one response. Main process reads all files, returns an array.
-2. **Pagination (recommended):** Show 10 slots per page with 10 page buttons. Load one page at a time. This is the standard VN pattern — Ren'Py and most commercial VNs paginate saves.
-3. **Lazy thumbnail loading:** Return metadata (date, preview text) immediately. Load thumbnails lazily as `<img src="asset://saves/save_0.jpg">` which streams via the existing protocol handler.
-4. **Cache slot metadata in memory:** After first load, keep a `Map<number, SlotInfo>` in the renderer. Only refresh the specific slot that was just saved.
-
-**Detection:** Profile with DevTools Performance tab. Measure time from button click to fully rendered grid.
-
-**Phase:** Save/Load UI phase (architecture of the slot loading).
-
----
-
-### P16: ConfigManager Still Uses localStorage — Inconsistent Persistence Layer
-
-**What goes wrong:** SaveManager migrates to file system, but ConfigManager (settings like volume, text speed) stays in localStorage. Different projects share the same settings.
-
-**Consequences:** Low severity for v0.5. Settings being global across games is acceptable behavior (most VN engines do this).
-
-**Prevention:**
-1. For v0.5, **leave ConfigManager in localStorage** — it's fine.
-2. Document this as a known limitation for future consideration.
-3. If you do migrate later: use `saves/config.json` alongside save slot files.
-
-**Phase:** Deferred — not required for v0.5. Note in documentation.
-
----
-
-### P17: Save Data Schema Must Include Version Field
-
-**What goes wrong:** The current save data (SaveManager.save) stores `{ state, previewText, timestamp, date }` without a schema version. When v0.5 adds new fields (screenshot path, engine version, read progress), old saves won't have them. Without a version field, you can't distinguish old-format saves from new ones.
-
-**Prevention:**
+**Evidence:** electron/main.js line 823-826:
 ```javascript
-const data = {
-  version: 2, // ← ADD THIS
-  state,
-  previewText,
-  screenshotFile, // new in v2
-  timestamp: Date.now(),
-  date: new Date().toLocaleString('zh-CN'),
-};
+const base = currentProjectPath
+  ? path.join(currentProjectPath, 'assets')
+  : path.join(process.env.APP_ROOT, 'public', 'game');
+const fullPath = path.resolve(path.join(base, filePath));
 ```
-On load: `if (data.version === 1 || !data.version) { /* migrate */ }`.
 
-**Phase:** Save system upgrade phase. Add version field to the new save format from day one.
+All `asset://foo/bar.png` paths resolve to `{project}/assets/foo/bar.png`.
 
----
-
-## Screenshot (html2canvas) Pitfalls
-
-### P18: 100 Uncompressed Screenshots = 50-200MB Disk Usage
-
-**What goes wrong:** A 1280×720 PNG screenshot is 500KB-2MB. 100 of them means 50-200MB of disk space just for thumbnails.
+**Consequences:**
+1. Theme images stored at `{project}/themes/mytheme/panel.png` → `asset://themes/mytheme/panel.png` → resolves to `{project}/assets/themes/mytheme/panel.png` which doesn't exist → 404
+2. Built-in theme images shipped with the app can't be served unless they're in the `public/game/` directory
+3. Theme export/import breaks if images are stored in a non-standard location
 
 **Prevention:**
-1. **Capture at reduced resolution:** 320×180 (1/4 scale). VN save screens show tiny thumbnails — full resolution is wasted.
-2. **Use JPEG instead of PNG:** For photographic game scenes, JPEG at quality 0.7 is 10-30KB per thumbnail vs 100-500KB PNG. Use `canvas.toDataURL('image/jpeg', 0.7)` or `canvas.toBlob(cb, 'image/jpeg', 0.7)`.
-3. **Use toBlob() instead of toDataURL():** `toDataURL` creates a base64 string (33% larger than binary). Use `canvas.toBlob()` for binary data, then send via IPC as ArrayBuffer.
-4. Target: <50KB per thumbnail, <5MB total for 100 slots.
-
-**Phase:** Save/Load UI phase (screenshot capture implementation).
-
----
-
-### P19: html2canvas Freezes UI Thread During Capture
-
-**What goes wrong:** html2canvas is synchronous in its DOM parsing phase. For a complex game scene (background image + character sprites + dialogue box), capture can take 200-500ms, freezing the UI.
-
-**Prevention:**
-1. Show a brief "保存中..." indicator BEFORE starting capture.
-2. Use double `requestAnimationFrame` to ensure indicator renders:
+1. **Option A (simplest): Store theme images under `assets/ui/themes/`.** This requires no protocol changes. Theme references use `asset://ui/themes/mytheme/panel.png`.
+2. **Option B: Extend the `asset://` protocol** to handle a `themes/` prefix, similar to how `saves/` was added:
    ```javascript
-   showSaveIndicator();
-   requestAnimationFrame(() => {
-     requestAnimationFrame(async () => {
-       const canvas = await html2canvas(gameContainer, { scale: 0.25 });
-       // ... save logic
-       hideSaveIndicator();
-     });
-   });
-   ```
-3. Debounce the save button — disable it for 500ms after click.
-4. Consider the manual canvas compositing approach (from P1) — drawing 2-3 images onto a canvas is <10ms.
-
-**Phase:** Save/Load UI phase.
-
----
-
-### P20: Screenshot Captures UI Overlays Instead of Game Scene
-
-**What goes wrong:** If the save/load screen or quick action bar is visible when html2canvas captures the game container, the screenshot includes UI elements, not just the game scene.
-
-**Prevention:**
-1. **Pre-capture strategy:** Take the screenshot BEFORE opening the save/load screen. When "save" is triggered, capture first, then show the screen.
-2. Use html2canvas's `ignoreElements` option:
-   ```javascript
-   html2canvas(gameContainer, {
-     ignoreElements: (el) => {
-       return el.id === 'ui-overlay' || el.id === 'quick-action-bar' ||
-              el.id === 'save-load-screen' || el.id === 'game-menu';
-     }
-   });
-   ```
-3. Or capture only specific layers: `#background-layer` + `#character-layer` + `#dialogue-layer` (minus quick controls).
-4. Or **pre-cache approach:** Take a screenshot on every dialogue change (debounced) and cache it, so it's always ready for save.
-
-**Phase:** Save/Load UI phase (screenshot timing logic).
-
----
-
-## Fast-Forward Pitfalls
-
-### P21: Skip Mode at 50ms Intervals Causes Audio Glitches and Resource Leaks
-
-**What goes wrong:** Current skip mode uses `setTimeout(() => engine.next(), 50)` (main.js line 117). At 50ms per page, the engine fires `play_bgm`, `play_se`, `play_voice` events 20 times per second. Each `playBgm` call stops the current BGM and starts a new one (AudioManager.playBgm line 45: `this.stopBgm({ fadeOut: 0 })`). This creates rapid audio start/stop cycles → audible pops, clicks, and memory leaks from `new Audio()` objects.
-
-**Consequences:** Rapid popping/clicking audio. Memory leak from unreleased Audio objects. Browser may throttle audio.
-
-**Prevention:**
-1. **Suppress audio during skip mode.** Check skip state in event handlers:
-   ```javascript
-   engine.on('play_bgm', (data) => {
-     if (!skipMode) audio.playBgm(data);
-     else pendingBgm = data; // Track what BGM should play when skip stops
-   });
-   engine.on('play_se', (data) => { if (!skipMode) audio.playSe(data); });
-   ```
-2. When skip mode ends, apply the final audio state (play the BGM that the current page specifies).
-3. Also suppress voice during skip: don't call `audio.playVoice()` in skip mode.
-4. The engine's `_renderPage` still fires all events — suppression at the handler level keeps the engine pure.
-
-**Detection:** Enable skip mode → listen for audio pops. Check DevTools → Memory for Audio object accumulation.
-
-**Phase:** Fast-forward phase.
-
----
-
-### P22: Skip Mode Can Stack Overflow with Rapid Condition Pages
-
-**What goes wrong:** Condition pages (`type: 'condition'`) auto-advance without waiting. The call chain is: `next()` → `_advancePage()` → `_processCurrentPage()` → `_execCondition()` → `_enterScene()` → `_processCurrentPage()`. This is synchronous recursion. A chain of many condition pages or a condition loop causes infinite recursion → stack overflow.
-
-**Note:** This can happen even without skip mode, but skip mode makes it more likely to be triggered since players rapidly traverse more content.
-
-**Prevention:**
-1. Add a recursion depth counter in `_processCurrentPage()`:
-   ```javascript
-   _processCurrentPage(depth = 0) {
-     if (depth > 100) {
-       console.error('[ScriptEngine] Possible infinite loop — too many condition pages');
-       this._execEnd();
-       return;
-     }
-     // ... pass depth + 1 to recursive calls
+   if (filePath.startsWith('themes/')) {
+     // resolve from {project}/themes/ or app built-in themes
+     const fullPath = path.resolve(path.join(currentProjectPath, filePath));
+     // ... path traversal check ...
+     return net.fetch(pathToFileURL(fullPath).toString());
    }
    ```
-2. Or break recursion with `queueMicrotask()` for condition pages (lighter than setTimeout(0)).
+3. **Option C: For built-in themes,** serve from the app bundle. Add a `builtin-themes/` prefix that resolves to `process.env.APP_ROOT + '/themes/'`.
+4. **Must handle both cases:** project-local themes (user-created) AND built-in themes (shipped with app). The protocol handler needs to distinguish and route accordingly.
 
-**Phase:** Fast-forward phase (engine robustness).
+**Detection:** Import a theme with custom images → images show as broken/missing in the engine preview.
 
 ---
 
-### P23: Transition Animations Bottleneck Skip Speed
+## Moderate Pitfalls (cause significant bugs or rework)
 
-**What goes wrong:** Pages have transition effects (fade, etc.) with default 800ms duration. Skip mode advances at 50ms intervals, but the background/character transitions take 800ms. The visual state becomes a blur of overlapping transitions, and DOM mutations pile up.
+### P7: `backdrop-filter: blur()` Conflicts with 9-Slice Background Images
+
+**Severity:** 🟡 MODERATE
+**Phase:** 9-slice image system (Phase 2/3)
+
+**What goes wrong:** The current UI uses `backdrop-filter: blur()` extensively (found at 8 locations in style.css) on dialogue box, menus, settings screen, save/load screen, and backlog. When a 9-slice background image is applied to these elements, the `backdrop-filter` blur is **still visible through transparent areas of the 9-slice image** but **invisible through opaque areas**. This creates an inconsistent visual where some parts of the panel are blurred and others aren't, depending on the 9-slice image's alpha channel.
+
+**Worse:** If the 9-slice image is fully opaque (which most VN theme panels are), the `backdrop-filter` does **nothing visible** but still costs GPU performance.
 
 **Prevention:**
-1. In skip mode, override transition duration to 0:
+1. **When a 9-slice background is active, disable `backdrop-filter`** on that element. Theme tokens should include a flag: `"usesImageBackground": true` → engine sets `backdrop-filter: none`.
+2. **If semi-transparent 9-slice panels are desired** (frosted glass effect), the 9-slice image must be designed with consistent alpha across the entire panel.
+3. **Performance note:** `backdrop-filter` with large blur radius on multiple stacked elements is already expensive. Removing it when image backgrounds are used is a performance win.
+
+**Detection:** Apply a 9-slice theme to the dialogue box → observe patchy blur/no-blur regions.
+
+---
+
+### P8: Color Harmony Algorithm Produces Invisible Text on Dark Backgrounds
+
+**Severity:** 🟡 MODERATE
+**Phase:** Visual theme editor with color harmony (Phase 2)
+
+**What goes wrong:** Classic color harmony algorithms (complementary, triadic, split-complementary) operate in HSL/HSV space and generate mathematically harmonious colors. They do NOT consider **luminance contrast**. A triadic harmony from a dark base color can produce three equally dark colors — resulting in dark text on dark backgrounds with contrast ratios below WCAG's 3:1 minimum for large text.
+
+**Specific edge cases for this project:**
+1. **Dark theme pitfall:** Current UI is dark (`rgba(10, 10, 20, *)` backgrounds). A harmony algorithm starting from a dark base generates dark accent colors → buttons and text become invisible.
+2. **Saturation loss in dark themes:** Highly saturated colors at low lightness (e.g., `hsl(260, 80%, 15%)`) appear nearly black on screen. The math says they're distinct; the eye says they're identical.
+3. **Alpha channel ignored:** Current colors use alpha extensively (`rgba(255, 255, 255, 0.75)` for text). Color harmony algorithms don't account for alpha compositing — the effective contrast depends on what's behind the element.
+
+**Prevention:**
+1. **Always validate generated palettes against WCAG contrast ratios.** For each text-on-background pair, compute the contrast ratio and warn if below 4.5:1 (normal text) or 3:1 (large text/UI elements).
+2. **Clamp lightness range:** For dark themes, ensure accent colors have lightness ≥ 40%. For light themes, ensure background lightness ≤ 85% or text lightness ≤ 30%.
+3. **Use OKLCH instead of HSL** for perceptual uniformity. HSL's "lightness" doesn't match perceived brightness (pure blue `hsl(240, 100%, 50%)` appears much darker than pure yellow `hsl(60, 100%, 50%)`). OKLCH/OKLAB corrects this.
+4. **Provide a "contrast check" in the editor** that shows red warnings on any text-background pair that fails WCAG AA.
+5. **Pre-compute effective alpha-composited colors** before checking contrast. `rgba(255,255,255,0.75)` on `rgba(10,10,20,0.95)` → compute the actual rendered RGB, then check contrast.
+
+**Detection:** Apply a generated harmony → squint test or use contrast-checking tool on the preview.
+
+---
+
+### P9: Color Harmony Generates Clashing Hues for Game-Specific UI Semantics
+
+**Severity:** 🟡 MODERATE
+**Phase:** Visual theme editor (Phase 2)
+
+**What goes wrong:** The current UI uses **semantic color coding**: purple (`rgba(180, 160, 255, *)`) for accent/active states, pink (`rgba(255, 107, 157, *)`) for toggles, red (`rgba(255, 100, 100, *)`) for destructive actions (delete). A generic color harmony algorithm doesn't understand these semantics. It might assign the "danger" slot a color identical to the "primary" slot, or make the "active" state color less prominent than the "inactive" state.
+
+**Prevention:**
+1. **Define semantic color roles, not just a palette:** `primary`, `primaryHover`, `danger`, `dangerHover`, `success`, `muted`, `surface`, `surfaceHover`, `text`, `textMuted`.
+2. **Derive semantic roles from the harmony, don't randomly assign:** Primary → base harmony color. Danger → always warm/red-shifted, regardless of harmony. Success → always green-shifted. Muted → desaturated version of primary.
+3. **Lock the danger color** to the red/warm quadrant regardless of the harmony algorithm. Theme authors should be able to override it, but the algorithm should default to sensible semantics.
+4. **Visual preview must show all semantic roles simultaneously** so theme authors can see if "delete" looks dangerous enough and "active" looks prominent enough.
+
+**Detection:** Generate a harmony with a red base → notice the "delete" button doesn't look dangerous because it's the same color as everything else.
+
+---
+
+### P10: Real-Time Preview Floods iframe with postMessage Causing Jank
+
+**Severity:** 🟡 MODERATE
+**Phase:** Visual theme editor with live preview (Phase 2)
+
+**What goes wrong:** The editor uses `iframe + postMessage` for the inline preview (confirmed in PROJECT.md and main.js). When the theme editor has a color picker or slider, each pixel of mouse movement fires a change event. Sending a postMessage for every change → iframe receives 60+ messages/second → parses theme → updates 120+ CSS custom properties → triggers style recalculation → layout thrash → visible jank.
+
+**Evidence:** The editor-engine communication is postMessage-based (Phase 14: "iframe + postMessage + 只读覆盖层 + asset:// basePath"). Each theme token change would need to be communicated to the preview iframe.
+
+**Consequences:** Slider dragging feels sluggish. Color picker movement causes visible lag. Users perceive the theme editor as broken/slow.
+
+**Prevention:**
+1. **Debounce theme updates to preview.** 60fps = 16ms budget. Debounce to ~50ms (20fps) for smooth visual feedback without jank.
+2. **Batch all token changes into a single message.** Don't send one message per property — collect all changed tokens and send once:
    ```javascript
-   engine.on('set_background', (data) => {
-     if (skipMode) data.duration = 0;
-     background.setBackground(data);
-   });
+   // BAD: 10 messages per frame
+   postMessage({ type: 'set-token', key: '--bg-color', value: '#123' });
+   postMessage({ type: 'set-token', key: '--text-color', value: '#fff' });
+   
+   // GOOD: 1 message per frame
+   postMessage({ type: 'set-tokens', tokens: { '--bg-color': '#123', '--text-color': '#fff' } });
    ```
-2. Apply the same override for character show/hide transitions.
-3. This makes skip mode feel instant, which is the expected VN behavior.
+3. **In the engine iframe:** Apply all tokens in a single `requestAnimationFrame` callback, not synchronously in the message handler.
+4. **Consider direct CSS custom property injection** without postMessage if the iframe is same-origin: `iframe.contentDocument.documentElement.style.setProperty('--token', value)`. This is synchronous and faster than postMessage round-trip.
 
-**Phase:** Fast-forward phase (polish).
+**Detection:** Open theme editor → drag a color slider → observe if preview updates smoothly or stutters.
 
 ---
 
-### P24: "Skip All" vs "Skip Read Only" Toggle Needs Settings UI + Engine Wiring
+### P11: Theme File Format Without Version Field Blocks Future Migration
 
-**What goes wrong:** The skip mode toggle needs: (1) a quick bar button that starts/stops skip, and (2) a settings screen option to choose between "skip all" and "skip read only." If the settings option isn't wired to the skip logic, the button always does "skip all" which defeats the read-tracking feature.
+**Severity:** 🟡 MODERATE
+**Phase:** Theme export/import (Phase 3/4)
+
+**What goes wrong:** If the `.theme` file format doesn't include a `version` field from day one, there's no way to detect which format version a theme was created with. When the engine adds new UI elements in v0.7+ (e.g., a new CG gallery screen), old themes have no tokens for the new elements. Without a version field, the engine can't distinguish "theme was created before CG gallery existed" from "theme intentionally doesn't style the CG gallery."
+
+**Consequences:**
+1. Can't run automatic migration (don't know what version to migrate FROM)
+2. New UI elements with missing tokens either crash or show unstyled (raw white boxes on dark theme)
+3. Theme authors have to manually re-export every time the engine updates
 
 **Prevention:**
-1. Add a setting `skipMode: 'all' | 'readOnly'` to ConfigManager defaults.
-2. Add a new settings component via SETTING_DEFS: type 'select', key 'skipMode', options: [{label: '全部跳过', value: 'all'}, {label: '仅跳已读', value: 'readOnly'}].
-3. In the skip logic:
-   ```javascript
-   function shouldSkipCurrentPage() {
-     if (config.get('skipMode') === 'all') return true;
-     return readTracker.isRead(engine.currentScene, engine.pageIndex);
+1. **Include `formatVersion` in every theme file from the start:**
+   ```json
+   {
+     "formatVersion": 1,
+     "engineVersion": "0.6.0",
+     "name": "Sakura Night",
+     "tokens": { ... },
+     "images": { ... }
    }
    ```
-4. When "skip read only" encounters an unread page, auto-stop skip mode and optionally flash the skip button.
+2. **`formatVersion` is for the theme file structure** (what keys exist, what format images are referenced in). `engineVersion` is for the minimum engine version that can render this theme.
+3. **Theme loading code must check `formatVersion` first** and apply migrations:
+   ```javascript
+   function loadTheme(data) {
+     let theme = data;
+     if (theme.formatVersion < 2) theme = migrateV1toV2(theme);
+     if (theme.formatVersion < 3) theme = migrateV2toV3(theme);
+     return theme;
+   }
+   ```
+4. **Migration functions must be pure** (no side effects) and additive (never remove tokens, only add with defaults).
 
-**Phase:** Fast-forward phase + Settings page update.
+**Detection:** Ship v0.6, add new UI in v0.7, try to load a v0.6 theme → either crashes or shows broken styling on new elements.
 
 ---
 
-## Summary Table
+### P12: Theme Missing Tokens for Newly Added UI Elements Causes Unstyled Flash
 
-| ID | Pitfall | Severity | Category | Prevention Summary | Phase |
-|----|---------|----------|----------|-------------------|-------|
-| P1 | html2canvas can't resolve `asset://` URLs | **CRITICAL** | Screenshot | Manual canvas compositing OR pre-convert to data URLs | Save/Load UI |
-| P2 | Duplicate quick controls (old + new) | **CRITICAL** | Integration | Remove existing `#quick-controls`, build new class | Quick Action Bar |
-| P3 | ESC chain missing save/load + backlog | **CRITICAL** | Integration | Stack-based overlay manager with priority order | Save/Load UI |
-| P4 | Save/Load return context differs by caller | **HIGH** | Integration | onClose callback or context parameter in show() | Save/Load UI |
-| P5 | No persistence for read-page tracking | **CRITICAL** | Fast-forward | ReadTracker class with own file/localStorage persistence | Fast-forward |
-| P6 | Auto/Skip continues behind overlays | **HIGH** | Integration | Centralized `pauseGameplay()` on any overlay open | Quick Bar + Save/Load |
-| P7 | Save during typewriter = partial screenshot | **MEDIUM** | Integration | Finish typewriter before screenshot capture | Save/Load UI |
-| P8 | Quick bar clicks also advance dialogue | **HIGH** | Integration | `stopPropagation()` or update click-through guard | Quick Action Bar |
-| P9 | Voice keeps playing on load | **MEDIUM** | Integration | Stop voice in replayCurrentPage() cleanup | Save/Load UI |
-| P10 | Game window missing `ipcRenderer` | **CRITICAL** | Electron | Ensure preload on all BrowserWindows; disable in iframe | Save System |
-| P11 | Reactive Proxy in IPC (known recurring) | **HIGH** | Electron | `JSON.parse(JSON.stringify())` before IPC calls | Save System |
-| P12 | `saves/` path differs across contexts | **HIGH** | Electron | Centralized `getSavesPath(gameId)` resolver | Save System |
-| P13 | Screenshot files lack security validation | **MEDIUM** | Electron | Reuse PNG validation, `path.basename()`, size limit | Save System |
-| P14 | Old localStorage saves become invisible | **CRITICAL** | Migration | Auto-migrate localStorage → file system on first run | Save System |
-| P15 | Loading 100 slots is slow (200 IPC trips) | **HIGH** | Performance | Batch IPC + pagination (10 per page) | Save/Load UI |
-| P16 | ConfigManager still in localStorage | **LOW** | Migration | Leave as-is for v0.5, document as known | Deferred |
-| P17 | No version field in save data schema | **MEDIUM** | Migration | Add `version: 2` to save format from day one | Save System |
-| P18 | 100 uncompressed screenshots = huge disk | **HIGH** | Screenshot | 320×180 JPEG at quality 0.7, target <50KB each | Save/Load UI |
-| P19 | html2canvas freezes UI thread | **MEDIUM** | Screenshot | Show indicator, debounce, or use manual canvas | Save/Load UI |
-| P20 | Screenshot captures UI overlays | **HIGH** | Screenshot | `ignoreElements` or pre-capture before showing UI | Save/Load UI |
-| P21 | Skip mode causes audio glitches | **HIGH** | Fast-forward | Suppress audio events during skip, apply final state | Fast-forward |
-| P22 | Condition page loops → stack overflow | **MEDIUM** | Fast-forward | Recursion depth guard (>100 = force end) | Fast-forward |
-| P23 | Transitions bottleneck skip speed | **MEDIUM** | Fast-forward | Override `duration: 0` during skip mode | Fast-forward |
-| P24 | Skip all vs read-only needs settings UI | **HIGH** | Fast-forward | New SETTING_DEFS entry + wire to skip logic | Fast-forward |
+**Severity:** 🟡 MODERATE
+**Phase:** Design Tokens architecture (Phase 1)
+
+**What goes wrong:** A theme created in v0.6 defines tokens for all v0.6 UI elements. In v0.7, a new "CG gallery" screen is added with new token keys like `--theme-gallery-bg`, `--theme-gallery-card-border`. When the v0.6 theme is loaded, these tokens are `undefined` → `var(--theme-gallery-bg)` resolves to nothing → no background → white/transparent flash, completely breaking the dark UI aesthetic.
+
+**Prevention:**
+1. **Every `var()` MUST have a fallback value that matches the built-in default theme:**
+   ```css
+   /* GOOD */
+   background: var(--theme-gallery-bg, rgba(10, 10, 20, 0.95));
+   
+   /* BAD — no fallback */
+   background: var(--theme-gallery-bg);
+   ```
+2. **The default theme defines ALL tokens.** When loading any theme, merge with the default theme as a baseline:
+   ```javascript
+   const effectiveTokens = { ...DEFAULT_THEME.tokens, ...loadedTheme.tokens };
+   ```
+3. **Fallback cascade:** CSS fallback → JS-level merge with defaults → theme migration. Triple safety net.
+4. **Test with an empty theme** (only `formatVersion` and `name`, no tokens) → entire UI should look identical to the default built-in style.
+
+**Detection:** Load an older theme → new screens appear with wrong/missing colors.
+
+---
+
+### P13: Theme Export/Import Bundle Doesn't Include Referenced Images
+
+**Severity:** 🟡 MODERATE
+**Phase:** Theme export/import (Phase 3/4)
+
+**What goes wrong:** A theme references 9-slice images like `"dialoguePanel": "ui/themes/sakura/panel.png"`. When the `.theme` file is exported, only the JSON is saved — the actual image files are not bundled. Importing on another project → images not found → all 9-slice panels broken.
+
+**Prevention:**
+1. **`.theme` export must be a ZIP archive** (renamed to `.theme`) containing both the JSON manifest and all referenced image files:
+   ```
+   mytheme.theme (ZIP):
+   ├── theme.json
+   └── images/
+       ├── dialogue-panel.png
+       ├── button-normal.png
+       ├── button-hover.png
+       └── button-active.png
+   ```
+2. **On export:** Scan all token values for image paths → copy referenced files into the archive.
+3. **On import:** Extract to `{project}/assets/ui/themes/{themeName}/` → rewrite image paths in theme.json to point to extracted locations.
+4. **Validate image references** during import. If an image is referenced but missing from the archive, warn the user rather than silently breaking.
+5. **Size limit:** Theme packs with many high-res 9-slice images can get large. Consider limiting individual image dimensions (max 512px for 9-slice source? They stretch well).
+
+**Detection:** Export theme from project A, import to project B → 9-slice images show as broken.
+
+---
+
+### P14: Three-State Button Images (Normal/Hover/Active) with CSS-Only Transitions
+
+**Severity:** 🟡 MODERATE
+**Phase:** 9-slice button system (Phase 2/3)
+
+**What goes wrong:** For 9-slice-themed buttons, the theme may provide three image states: normal, hover, and active (pressed). The naive approach is to swap `border-image-source` on `:hover` and `:active`. However, `border-image` does **not support CSS transitions** — the image swap is instant with no animation, creating a jarring visual "pop." The current button hover effects use smooth `transition: all 0.2s` which would be lost.
+
+**Additionally:** `TitleScreen._createButtonElement()` (line 128-131) adds mouseenter/mouseleave event listeners for hover color. This existing JS-based hover system conflicts with CSS `:hover` pseudo-class 9-slice swapping.
+
+**Prevention:**
+1. **Use opacity cross-fade instead of image swap.** Stack all three states as absolute-positioned layers and transition their opacity:
+   ```css
+   .theme-btn { position: relative; }
+   .theme-btn .state-normal { opacity: 1; transition: opacity 0.2s; }
+   .theme-btn .state-hover  { opacity: 0; transition: opacity 0.2s; }
+   .theme-btn .state-active { opacity: 0; transition: opacity 0.2s; }
+   .theme-btn:hover .state-normal { opacity: 0; }
+   .theme-btn:hover .state-hover  { opacity: 1; }
+   .theme-btn:active .state-active { opacity: 1; }
+   ```
+2. **Or use a sprite sheet** with `background-position` animation. Single image, shift position on state change — this transitions smoothly.
+3. **For the TitleScreen JS-based hover:** When a 9-slice theme is active, disable the JS mouseenter/mouseleave handlers and use CSS-only state management. Don't let two systems fight.
+4. **Memory note:** Three images per button × multiple buttons = many DOM elements. If performance is a concern, use a single canvas-rendered button.
+
+**Detection:** Hover over a themed button → notice instant image pop instead of smooth transition.
+
+---
+
+### P15: `SaveLoadScreen` Mode-Colored Title Uses Hardcoded Color Constants
+
+**Severity:** 🟡 MODERATE
+**Phase:** Design Tokens migration (Phase 1)
+
+**What goes wrong:** `SaveLoadScreen.js` lines 13-14 define mode-specific title colors as constants:
+```javascript
+const SAVE_TITLE_COLOR = 'rgba(180, 160, 255, 0.9)';
+const LOAD_TITLE_COLOR = 'rgba(100, 170, 255, 0.9)';
+```
+These are applied via inline style (line 86: `style="color: ${titleColor}"`). Even after tokenizing the CSS, these JavaScript constants still output hardcoded colors.
+
+**This pattern repeats:** `showToast()` in main.js (line 81) has inline `style.cssText` with hardcoded colors. Any UI created via `innerHTML` template literals with inline styles bypasses CSS tokens.
+
+**Prevention:**
+1. **Search for ALL template-literal inline styles** in JS files. Grep for `style="` and `style.cssText =` in all UI code.
+2. **Replace constant colors with runtime token reads:**
+   ```javascript
+   const titleColor = this.mode === 'save'
+     ? getComputedStyle(this.el).getPropertyValue('--theme-accent-save').trim() || 'rgba(180, 160, 255, 0.9)'
+     : getComputedStyle(this.el).getPropertyValue('--theme-accent-load').trim() || 'rgba(100, 170, 255, 0.9)';
+   ```
+3. **Or better: use CSS classes** instead of inline colors: `this.el.dataset.mode = mode` → CSS handles the color via `[data-mode="save"] .save-load-title { color: var(--theme-accent-save); }`. This already partially exists (line 62: `this.el.dataset.mode = mode`).
+
+**Detection:** Switch theme → save/load screen title still shows purple/blue instead of theme colors.
+
+---
+
+### P16: Electron iframe Preview Cannot Access `asset://` for Theme Images Without basePath
+
+**Severity:** 🟡 MODERATE  
+**Phase:** Theme editor preview (Phase 2)
+
+**What goes wrong:** The inline preview iframe uses `asset:// basePath` dynamic injection (PROJECT.md: "asset:// basePath 动态注入 — 编辑器项目和独立模式共用同一引擎代码"). When the theme editor previews 9-slice images, the preview iframe needs to resolve `asset://ui/themes/sakura/panel.png` to the correct project directory. If the basePath isn't set correctly or the theme images haven't been saved to the project directory yet (e.g., user is previewing an imported theme before confirming), the images 404.
+
+**Prevention:**
+1. **Ensure theme images are written to disk BEFORE sending preview messages.** Don't preview a theme whose images only exist in memory.
+2. **Or: Add a temporary file staging mechanism** — write theme images to a temp location within `assets/` and clean up on cancel.
+3. **For built-in themes:** Images must be accessible from the preview iframe's `asset://` context. If built-in themes live in the app bundle (not the project), the `asset://` protocol must be extended to resolve them.
+
+**Detection:** Preview a just-imported theme → 9-slice images don't appear in the preview.
+
+---
+
+## Minor Pitfalls (cause annoyances or subtle bugs)
+
+### P17: CSS Custom Property Fallback Chains Can't Contain Commas Easily
+
+**Severity:** 🟢 MINOR
+**Phase:** Design Tokens CSS migration (Phase 1)
+
+**What goes wrong:** CSS `var()` fallback values treat everything after the first comma as the fallback. This causes problems with `rgba()` and multi-value properties:
+```css
+/* BROKEN — CSS parser sees fallback as "8, 20, 0.92)" */
+background: var(--theme-bg, rgba(8, 8, 20, 0.92));
+/* This actually works because the entire "rgba(8, 8, 20, 0.92)" is treated as the fallback */
+```
+Actually, `var(--x, rgba(8, 8, 20, 0.92))` **does work** — the fallback is everything between the first comma and the closing parenthesis. But `var(--x, linear-gradient(to top, rgba(8, 8, 20, 0.92) 0%, rgba(8, 8, 20, 0.75) 100%))` can confuse tooling and linters.
+
+**The real problem:** The dialogue box background is a `linear-gradient(...)` (style.css line 183-188). You can't put a multi-stop gradient as a fallback inside `var()` reliably across all tooling. The token system needs to handle gradient backgrounds as complete values.
+
+**Prevention:**
+1. **For gradient backgrounds:** Store the ENTIRE gradient as a single token value, not individual colors:
+   ```css
+   background: var(--theme-dialogue-bg, linear-gradient(to top, rgba(8, 8, 20, 0.92), rgba(8, 8, 20, 0.75)));
+   ```
+2. **Or decompose into individual color stops** that the token system composes:
+   ```css
+   background: linear-gradient(
+     to top,
+     var(--theme-dialogue-bg-bottom, rgba(8, 8, 20, 0.92)) 0%,
+     var(--theme-dialogue-bg-top, rgba(8, 8, 20, 0.75)) 100%
+   );
+   ```
+   This is more flexible (theme can adjust gradient angle in future) but more verbose.
+3. **Recommendation:** Use approach 2 (decomposed) for the dialogue box gradient specifically, and approach 1 (complete value) for simpler solid-color backgrounds.
+
+---
+
+### P18: Font Loading Race Condition Between Theme Switch and Font Display
+
+**Severity:** 🟢 MINOR
+**Phase:** Design Tokens (Phase 1), if themes include custom fonts
+
+**What goes wrong:** The project already handles font loading via `fontLoader.js` for both editor and engine windows. If a theme specifies a custom font, switching themes requires loading the new font file before applying the CSS. During the load gap (which can be 100ms-2s depending on file size), text renders in the fallback font then "pops" to the theme font — a visible FOIT (Flash of Invisible Text) or FOUT (Flash of Unstyled Text).
+
+**Prevention:**
+1. **Preload theme fonts before applying theme tokens.** Show a brief loading indicator during font load.
+2. **Use `font-display: swap`** in the @font-face declaration so text remains visible in fallback font during load.
+3. **Cache font loads** — if the user switches back to a previously loaded theme, the font is already available.
+4. **For the preview iframe:** Font must be loaded in BOTH the editor window and the engine iframe window (the project already does this for user fonts — same pattern).
+
+---
+
+### P19: Theme Token Namespace Collisions with Existing CSS Custom Properties
+
+**Severity:** 🟢 MINOR
+**Phase:** Design Tokens migration (Phase 1)
+
+**What goes wrong:** The codebase already uses three CSS custom properties: `--track-color`, `--thumb-color`, `--toggle-active` (applied via JS `setProperty` on individual elements). If the theme system introduces tokens with these same names at a higher scope (`:root` or `#game-container`), they'll cascade down and override the per-element values that the settings page slider/toggle system sets.
+
+**Evidence:** style.css lines 873, 883, 931 use `var(--track-color)`, `var(--thumb-color)`, `var(--toggle-active)`.
+SettingsScreen.js lines 131-133 set these via `control.style.setProperty('--fill-color', ...)`.
+
+**Prevention:**
+1. **Prefix ALL theme tokens with `--theme-`** to avoid collision:
+   - Theme: `--theme-slider-track`, `--theme-slider-thumb`, `--theme-toggle-active`
+   - Existing per-element: `--track-color`, `--thumb-color`, `--toggle-active` (unchanged)
+2. **Update existing `var()` fallbacks** to reference theme tokens as fallback of fallback:
+   ```css
+   background: var(--track-color, var(--theme-slider-track, rgba(255,255,255,0.1)));
+   ```
+   This way: per-element JS override → theme token → hardcoded default.
+
+---
+
+### P20: 9-Slice Image Performance with Many Simultaneous Panels
+
+**Severity:** 🟢 MINOR
+**Phase:** 9-slice system (Phase 2/3)
+
+**What goes wrong:** If the opacity-stacking approach is used for button states (P14), each button has 3 absolutely-positioned image layers. The save/load screen has 9 slot cards + 12 page tabs + 3 action buttons = 24 elements × 3 states = 72 image layers on a single screen. Combined with `backdrop-filter: blur()` (which is already expensive), this can cause frame drops during page transitions.
+
+**Prevention:**
+1. **Measure first, optimize later.** Electron's Chromium handles border-image/background-image well for moderate counts. Don't over-engineer.
+2. **Lazy-render state layers:** Only create the hover/active layers when the element is first interacted with.
+3. **Use CSS `content-visibility: auto`** on off-screen elements (save/load pages not currently visible).
+4. **Profile with DevTools Performance tab** before and after 9-slice implementation.
+5. **For truly many elements (100+):** Consider rendering 9-slice to an offscreen canvas once, then using the result as a `data:` URI background-image. One decode per unique configuration.
+
+---
+
+### P21: Theme Switching Doesn't Reset Per-Element Inline Styles from Previous Theme
+
+**Severity:** 🟢 MINOR
+**Phase:** Theme switching logic (Phase 3)
+
+**What goes wrong:** If Theme A applies 9-slice images via JS (`element.style.borderImage = ...`), then the user switches to Theme B (which uses solid colors, no 9-slice), the `borderImage` inline style from Theme A persists. Theme B's `background: var(--theme-bg)` in the stylesheet is invisible because the old `border-image` still fills the element.
+
+**Prevention:**
+1. **Theme switching must explicitly reset all theme-related inline styles** before applying new theme.
+2. **Maintain a list of "theme-managed properties"** per element. On theme switch: remove all managed properties, then apply new theme.
+3. **Simplest: Reset all theme-layer inline styles** to empty string, then reapply only what the new theme needs.
+4. **CSS class approach is inherently safer:** Remove `.theme-a` class, add `.theme-b` class. Stylesheet rules handle the rest without any inline style residue.
+
+---
+
+### P22: Color Picker Input Produces Colors Outside Theme Author's Intended Gamut
+
+**Severity:** 🟢 MINOR
+**Phase:** Theme editor (Phase 2)
+
+**What goes wrong:** HTML native `<input type="color">` returns sRGB hex values. If the color harmony algorithm works in HSL and the UI displays HSL sliders, rounding between color spaces produces slightly different colors than what the user selected. Over multiple round-trips (pick → harmony → display → re-pick), colors drift.
+
+**Prevention:**
+1. **Choose one internal color representation** (recommend OKLCH for perceptual uniformity) and convert to/from display formats at the boundaries only.
+2. **Store colors in the theme file as hex or rgb** (universally understood), but do all harmony calculations in OKLCH.
+3. **Don't round-trip through HSL repeatedly.** Convert once for calculation, once for display.
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase | Most Likely Pitfalls | First Thing to Check |
-|-------|---------------------|---------------------|
-| **Quick Action Bar** | P2 (duplicate controls), P8 (click-through), P6 (auto/skip not paused) | Does old `#quick-controls` still exist? |
-| **Save/Load UI** | P1 (asset:// screenshots), P3 (ESC chain), P4 (return context), P15 (slow loading), P20 (UI in screenshot) | How will screenshots work without asset:// access? |
-| **Fast-forward** | P5 (read tracking persistence), P21 (audio glitches), P22 (stack overflow), P24 (skip mode toggle) | Where does read-progress data live? |
-| **Save System Upgrade** | P10 (no ipcRenderer), P11 (Proxy serialization), P12 (path resolution), P14 (localStorage migration) | Does the game window have IPC access? |
+| Phase Topic | Likely Pitfall | Severity | Mitigation |
+|---|---|---|---|
+| CSS token migration | P1: JS inline styles override tokens | 🔴 CRITICAL | Audit all 48 inline style assignments; use fallbacks |
+| CSS token migration | P2: `cssText = ''` resets wipe tokens | 🔴 CRITICAL | Set tokens on ancestor, not target elements |
+| CSS token migration | P5: Per-page/per-character overrides bypass tokens | 🔴 CRITICAL | Define clear specificity hierarchy |
+| CSS token migration | P15: Template-literal inline colors | 🟡 MODERATE | Grep for `style="` in all JS files |
+| CSS token migration | P17: Gradient fallback values in `var()` | 🟢 MINOR | Decompose gradients into individual stops |
+| CSS token migration | P19: Namespace collision with existing custom props | 🟢 MINOR | Prefix all theme tokens with `--theme-` |
+| 9-slice system | P3: `border-image` + `border-radius` mutual exclusion | 🔴 CRITICAL | Use pseudo-element or background-image approach |
+| 9-slice system | P4: `border-image-slice` rejects `px` units | 🔴 CRITICAL | Strip units in theme loader, validate |
+| 9-slice system | P7: `backdrop-filter` conflicts with 9-slice | 🟡 MODERATE | Disable blur when image background active |
+| 9-slice system | P14: No CSS transition for border-image swap | 🟡 MODERATE | Use opacity cross-fade stacking |
+| 9-slice system | P20: Performance with many image layers | 🟢 MINOR | Lazy-render, profile first |
+| 9-slice + asset:// | P6: Protocol can't serve theme image paths | 🔴 CRITICAL | Extend protocol or store under assets/ |
+| 9-slice + asset:// | P13: Export bundle missing images | 🟡 MODERATE | ZIP-based .theme format |
+| Color harmony | P8: Invisible text from low-contrast harmonies | 🟡 MODERATE | WCAG contrast check, OKLCH color space |
+| Color harmony | P9: Semantic colors overridden by harmony | 🟡 MODERATE | Lock danger/success to semantic hue ranges |
+| Color harmony | P22: Color space round-trip drift | 🟢 MINOR | Single internal representation |
+| Theme editor preview | P10: postMessage flood from slider drag | 🟡 MODERATE | Debounce + batch messages |
+| Theme editor preview | P16: Preview can't resolve unsaved theme images | 🟡 MODERATE | Write to disk before preview |
+| Theme file format | P11: No version field blocks migration | 🟡 MODERATE | Include `formatVersion` from day one |
+| Theme forward compat | P12: Missing tokens for new UI elements | 🟡 MODERATE | Mandatory fallback values, merge with defaults |
+| Theme switching | P21: Old inline styles persist after switch | 🟢 MINOR | Reset managed properties on switch |
+| Font in themes | P18: Font loading race condition | 🟢 MINOR | Preload fonts before applying tokens |
 
 ---
 
-## "Looks Done But Isn't" Checklist
+## Summary of Counts
 
-- [ ] **ESC closes every overlay** — save/load, settings, backlog, game menu all dismiss with ESC in correct priority order
-- [ ] **Old quick controls removed** — no duplicate AUTO/SKIP buttons visible
-- [ ] **Save from title screen returns to title** — not to black game screen
-- [ ] **Save from game menu returns to game menu** — not to bare game
-- [ ] **Auto mode stops when save screen opens** — dialogue doesn't advance behind overlay
-- [ ] **Skip mode stops when overlays open** — no background advancement
-- [ ] **Screenshot doesn't include UI** — save thumbnails show game scene only
-- [ ] **Screenshot works with asset:// images** — not blank/black
-- [ ] **100 slots don't freeze on open** — pagination or batch load, <500ms
-- [ ] **Old localStorage saves migrate** — upgrading doesn't lose progress
-- [ ] **Skip mode doesn't pop audio** — BGM/SE/voice suppressed during skip
-- [ ] **Skip read only actually skips read pages** — persistence survives restart
-- [ ] **File save works in standalone window** — ipcRenderer available, saves write to disk
-- [ ] **Preview mode disables save/load** — no IPC errors in iframe preview
-- [ ] **Voice stops on load** — no overlap between old and new state
-- [ ] **Save version field present** — future-proofs the save format
+| Severity | Count | Key Theme |
+|---|---|---|
+| 🔴 CRITICAL | 6 | CSS specificity fights, border-image spec behavior, asset:// routing |
+| 🟡 MODERATE | 9 | Color harmony edge cases, performance, versioning, preview integration |
+| 🟢 MINOR | 7 | Namespace collisions, font loading, color space drift |
 
 ---
 
-## Sources
+## Sources & Confidence
 
-- **Direct codebase analysis**: `SaveManager.js`, `SaveLoadScreen.js`, `ScriptEngine.js`, `main.js` (engine wiring + quick controls + ESC handler + auto/skip logic), `GameMenu.js`, `DialogueBox.js`, `AudioManager.js`, `ConfigManager.js`, `SettingsScreen.js`, `BacklogScreen.js`, `TitleScreen.js`, `electron/main.js` (IPC handlers + window creation + asset protocol), `electron/preload.js`, `index.html`, `style.css` (z-index stacking)
-- **Known project issues**: PROJECT.md documents Proxy serialization, Electron IPC, protocol streaming issues
-- **html2canvas behavior**: Custom protocol URL resolution limitations, CORS tainting, `ignoreElements` API — HIGH confidence from library architecture knowledge
-- **Electron IPC patterns**: Structured clone limitations, preload isolation, BrowserWindow webPreferences — HIGH confidence from Electron platform docs
-- **VN engine conventions**: Save pagination, read tracking, skip modes, audio suppression during skip — HIGH confidence from Ren'Py/KiriKiri/Tyrano patterns
+| Topic | Confidence | Source |
+|---|---|---|
+| CSS specificity / inline styles override | HIGH | Direct codebase analysis (48 inline style assignments counted), CSS specification |
+| `border-image` + `border-radius` mutual exclusion | HIGH | CSS Backgrounds and Borders Level 3 §6.2, confirmed in Chromium behavior |
+| `border-image-slice` unit-less syntax | HIGH | CSS specification, MDN documentation |
+| `backdrop-filter` interaction with opaque backgrounds | HIGH | CSS Filter Effects Level 2 specification |
+| Color harmony WCAG contrast issues | HIGH | WCAG 2.1 AA guidelines, well-documented accessibility pattern |
+| OKLCH vs HSL perceptual uniformity | MEDIUM | Color science literature, CSS Color Level 4 spec, growing adoption |
+| `asset://` protocol routing | HIGH | Direct codebase analysis (electron/main.js lines 805-830) |
+| postMessage performance in iframe | MEDIUM | General web performance pattern, confirmed iframe-based architecture |
+| Theme versioning forward-compat | HIGH | Standard software versioning pattern, common in plugin/theme ecosystems |

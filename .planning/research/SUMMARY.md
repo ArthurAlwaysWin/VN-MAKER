@@ -1,346 +1,192 @@
-# Research Summary — v0.5 游戏 UI 补全
+# Research Summary — v0.6 主题包系统 (Theme Pack System)
 
-**Domain:** Visual novel engine — game UI features (save/load, quick bar, fast-forward, file system saves)
-**Researched:** 2025-07-18
-**Overall confidence:** HIGH
-**Supersedes:** v0.4 research summary (voice, rich text, fonts — delivered)
+**Project:** Galgame Maker
+**Domain:** Visual novel engine — theme/skin customization system
+**Researched:** 2025-07-22
+**Confidence:** HIGH
+**Supersedes:** v0.5 research summary (game UI — delivered)
 
 ---
 
 ## Executive Summary
 
-v0.5 completes the game-side player UI, transforming the engine from a bare-minimum playback tool into something that feels like a commercial galgame. The four features — Quick Action Bar, Save/Load UI with thumbnails, Fast-Forward/Skip modes, and file system save upgrade — are deeply interdependent. The **Save System Upgrade** (localStorage → file system) is the structural foundation: without it, 100-slot thumbnails blow past localStorage's 5MB limit, and read-page tracking has no persistent home. Every other feature depends on or benefits from this migration.
+The v0.6 theme system retrofits a design-token-driven skinning layer onto an existing DOM-based game engine that currently hardcodes all visual styling across ~1272 lines of CSS and 48 inline style assignments in JavaScript. The core architectural insight is that CSS custom properties are **already proven in 7 locations** in the codebase (`setProperty()` in SettingsScreen.js, `var()` in style.css), so the migration is scaling an existing pattern — not introducing a foreign concept. The recommended approach is a ~35-40 token vocabulary (`--gm-*` prefixed) covering colors, fonts, radii, and blur values, rendered via `setProperty()` on `#game-container` and consumed via `var(--gm-*, fallback)` throughout style.css. This design ensures zero visual regression: without a theme applied, every fallback matches today's exact hardcoded value.
 
-The critical technical decision is **screenshot capture**: STACK.md and PITFALLS.md converge on using Electron's native `webContents.capturePage()` instead of html2canvas. This is the correct call. html2canvas has been abandoned since January 2022, cannot resolve the project's custom `asset://` protocol (P1 — CRITICAL), freezes the UI thread during capture (P19), and violates the project's zero-new-deps policy. `capturePage()` is native, zero-dependency, pixel-perfect, and has been stable since Electron 1.x. The ARCHITECTURE.md recommendation to use html2canvas is overridden by this consensus.
+The system requires **zero new runtime dependencies** for its core features (tokens, 9-slice rendering, color harmony). The only justified addition is `fflate` (8KB gzipped, MIT) for ZIP-based theme pack import/export — a capability with no native equivalent. Color harmony is pure HSL math (~200 lines), 9-slice uses native CSS `border-image`, and token injection is `element.style.setProperty()`. This aligns with the project's zero-dependency philosophy while delivering a feature set that matches or exceeds Ren'Py's gui.rpy variable cascade and RPG Maker's windowskin system.
 
-The biggest engineering risk is the **sync-to-async migration** of SaveManager. Every caller (`saveLoadScreen.onSave`, `saveLoadScreen.onLoad`, `saveManager.hasAnySave()` in title screen init) must become `async/await`. This ripple effect is manageable but must be done carefully to avoid race conditions. The second risk area is integration glue: ESC priority chain expansion, overlay pause logic, click-through guards, and save/load return context all involve wiring multiple systems together and are easy to get subtly wrong.
-
----
-
-## Stack Additions
-
-### Add: Nothing (zero new npm dependencies)
-
-Every v0.5 feature maps to existing Electron APIs or browser built-ins:
-
-| Feature | Technology | Already Available |
-|---------|-----------|-------------------|
-| Save thumbnails | `webContents.capturePage()` + `NativeImage.resize()` → JPEG | Electron 41 native |
-| File system saves | `fs/promises` + `atomicWrite()` | Existing in `electron/main.js` |
-| Quick action bar | DOM + CSS | Same pattern as existing `#quick-controls` |
-| Save/Load grid | CSS Grid + DOM pagination | Same as existing `SaveLoadScreen.js` |
-| Read-page tracking | `Set<string>` + localStorage or JSON file | Browser/Node built-in |
-| Thumbnail display | `<img>` + extended `asset://` protocol | Existing protocol handler |
-
-### Do NOT Add
-
-| Technology | Why Tempting | Why Wrong |
-|------------|-------------|-----------|
-| **html2canvas** | Project description mentions it for screenshots | Abandoned Jan 2022. Cannot resolve `asset://` URLs (CRITICAL P1). Freezes UI (P19). `capturePage()` is superior in every way. |
-| **modern-screenshot / html-to-image** | Active DOM screenshot libs | Unnecessary — Electron native capture is simpler, more reliable, zero cross-origin issues |
-| **Any image processing lib** | Thumbnail resizing | `NativeImage.resize()` built into Electron |
-| **better-sqlite3 / lowdb** | Save data management | Overkill. JSON files are perfect for save slots — one read/write per slot, no queries |
-| **fs-extra** | Extended file operations | `fs/promises` covers all needs |
-| **Virtual scroll library** | 100-slot grid | Only 10 slots visible per page (paginated). No virtual scrolling needed |
+The critical risk is **CSS specificity warfare**: 48 inline style assignments across 5 UI component classes (DialogueBox, TitleScreen, SettingsScreen, ChoiceMenu, SaveLoadScreen) will silently override CSS custom properties. The `DialogueBox._applyStyle()` method is especially dangerous — it resets `style.cssText = ''` on every dialogue line, nuking any inline token overrides. The mitigation is architectural: tokens live on `#game-container` (ancestor), not on target elements, so child `cssText` resets don't affect them. Additionally, `border-image` and `border-radius` are mutually exclusive per CSS spec — the 9-slice implementation must use a pseudo-element approach (`::before`) to preserve rounded corners. Both risks are well-understood and have clear prevention paths, but they demand disciplined execution in Phase 1.
 
 ---
 
-## Feature Table Stakes
+## Key Findings
 
-### Quick Action Bar (快捷按钮栏)
+### Recommended Stack
 
-| Must-Have | Notes |
-|-----------|-------|
-| 6 buttons: 存档, 読档, 回想, 設置, 自動, 快進 | Universal across KiriKiri, Ren'Py, all commercial engines |
-| Position at dialogue box bottom | Industry standard since ~2004; current top-right is non-standard |
-| Active state indicator for Auto/Skip | Players must know which mode is on |
-| Show/hide synced with dialogue box | Hides when dialogue hidden (choices, menus, overlays) |
-| Click does NOT advance dialogue | `stopPropagation()` on bar clicks — P8 |
-| Semi-transparent, brighten on hover | 30-40% idle opacity → 100% hover |
+**Zero new dependencies for core features.** The existing Electron 41 (Chromium 136) runtime provides every CSS capability needed: `border-image` (Chrome 15+), `color-mix()` (Chrome 111+), `oklch()` (Chrome 111+), CSS custom properties (Chrome 49+). Color harmony is implementable in ~200 lines of HSL math — adding chroma-js (397KB) or culori (1.1MB) for 5 formulas is unjustified overkill.
 
-**Defer:** Quick Save/Quick Load buttons (F5/F9 keyboard shortcut is enough for v0.5), editor-customizable button appearance, button image replacement.
+**Core technologies:**
+- **CSS Custom Properties (`var()` + `setProperty()`)**: Token rendering — already used in 7 codebase locations, zero learning curve
+- **CSS `border-image`**: 9-slice panel/button skinning — native browser capability, no canvas rendering needed
+- **Pure JS HSL utility (~200 LOC)**: Color harmony generation — hex↔HSL conversion, 5 harmony algorithms, WCAG contrast check
+- **`fflate` 0.8.2 (8KB gzipped)**: Theme pack ZIP I/O — the ONE new dependency, main-process only, MIT license
+- **CSS `color-mix(in oklch, ...)`**: Tint/shade auto-generation — offloads perceptually uniform color math to the browser
 
-### Save/Load UI (存読档界面)
+See: [STACK.md](./STACK.md)
 
-| Must-Have | Notes |
-|-----------|-------|
-| Thumbnail screenshot per slot | THE defining visual upgrade — text-only is unacceptable |
-| 100 slots, 10 pages × 10 slots | Standard since Leaf/Key era |
-| Page navigation tabs (1-10) | Paginated, NOT scrollable (VN players memorize slot positions) |
-| Save timestamp + preview text + scene name | Context for each slot |
-| Empty slot visual distinction | Grayed out, "— 空 —" placeholder |
-| Overwrite confirmation dialog | Players WILL misclick — essential |
-| Save/Load mode tab toggle | Header tabs, switch without closing |
-| Delete save functionality | Per-slot delete with confirmation |
-| Close/return button | Return to game/menu without action |
+### Expected Features
 
-**Defer:** Auto-save slot, thumbnail hover zoom, smooth page transition animations, play time display.
+**Must have (table stakes):**
+- **Global color scheme** (accent + text + backgrounds via ~35-40 tokens) — the foundation everything else depends on
+- **Dialogue box background customization** — dominates 30%+ of screen time; options: solid, gradient, or 9-slice image
+- **Font selection for ALL UI** (not just dialogue) — two slots: display/heading + body/UI
+- **Consistent button styling via token cascade** — one set of button tokens → all button types consume them
+- **Panel/overlay background consistency** — one `--gm-panel-bg` token replaces 6 slightly different hardcoded overlays
+- **Border radius control** — sharp vs rounded is a fundamental aesthetic lever
+- **Theme reset to defaults** — essential UX safety net for experimentation
+- **Real-time preview** — zero adoption without instant visual feedback
 
-### Fast-Forward / Skip (快進模式)
+**Should have (differentiators):**
+- **9-slice image system for dialogue box & panels** — THE biggest differentiator; no browser-based VN maker has this
+- **9-slice button images (3-state: normal/hover/pressed)** — standard in professional galgames (TYPE-MOON, KEY)
+- **Color harmony algorithm** — pick ONE primary → system generates coordinated palette; "防呆" (fool-proofing) for non-designers
+- **2-4 built-in theme presets** — instant professional results (Modern, Traditional Japanese, Fantasy, Minimal)
+- **Visual theme editor** — color pickers, sliders, image uploaders with live preview; the capstone UX feature
 
-| Must-Have | Notes |
-|-----------|-------|
-| Skip All mode (全スキップ) | Already mostly works; refine animation skip + voice stop |
-| Skip Read Only mode (既読スキップ) | #1 expected VN feature — requires read-page tracking |
-| Read-page tracking (persistent) | `Set<"sceneId:pageIndex">`, survives across sessions |
-| Visual skip indicator | "▶▶ SKIP" overlay during skip |
-| Auto-stop at choices | Already implemented |
-| Auto-stop at unread (read-only mode) | Core behavior: stop + resume normal reading |
-| Skip speed ~50ms per line | Already implemented |
-| Stop skip on click/key/ESC | Already partially handled |
-| Suppress voice during skip | `audio.stopVoice()` in skip handler |
-| Settings toggle (skip all vs read-only) | New ConfigManager key + settingDefs entry |
+**Defer (v0.7+):**
+- **Theme import/export (.theme packs)** — better to stabilize the token model first, then add packaging
+- **Per-component style overrides** — layered token inheritance adds complexity without proportional v0.6 value
+- **Per-page/per-scene theme switching** — massive state complexity, extremely rare even in commercial VNs
+- **Font embedding in theme packs** — fonts are large, have licensing issues; reference by name, import separately
+- **Animation/transition theming** — 95% of visual identity is colors/images/fonts, not animation
 
-**Defer:** Ctrl-held continuous skip, "skip to next choice" mode, read progress percentage indicator.
+See: [FEATURES.md](./FEATURES.md)
 
-### Save System Upgrade (存档系統升級)
+### Architecture Approach
 
-| Must-Have | Notes |
-|-----------|-------|
-| `saves/` directory in project folder | File-per-slot: `slot_XX.json` + `slot_XX.jpg` |
-| Atomic writes for save JSON | Reuse existing `atomicWrite()` — crash-safe |
-| 4-5 IPC handlers: save/load/delete/list/screenshot | Follow existing `ipcMain.handle` pattern |
-| JPEG thumbnails (320×180, quality 80) | ~15-30KB each, 100 slots ≈ 3MB total |
-| Backward compat migration from localStorage | Auto-migrate 8 old slots on first run |
-| Save schema version field (`version: 2`) | Future-proofs save format |
-| History truncation in save data | Cap at 50 entries (full history stays in-memory) |
-| `saves/` dir creation on project open | `fs.mkdir(savesDir, { recursive: true })` |
-| Preload script on preview BrowserWindow | One-line fix — P10 |
+The architecture follows a **centralized token injection model**: `ThemeManager.js` reads `ui.theme` from `script.json`, merges user tokens with defaults, and sets CSS custom properties on `#game-container`. All of `style.css` consumes these via `var(--gm-*, fallback)`. 9-slice is applied imperatively via `ThemeManager.applyNineSliceTo(element, targetKey)` when UI components create their DOM. The editor communicates with the engine preview via the existing `postMessage` protocol (proven in Phase 14), adding one new message type: `update-theme`.
 
-**Defer:** Quick save/load dedicated slot, save data export/import UI, ConfigManager migration to files (leave on localStorage).
+**Major components:**
+1. **ThemeManager** (NEW: `src/engine/ThemeManager.js`) — reads theme data, injects CSS custom properties on `#game-container`, applies 9-slice border-images to elements
+2. **ThemeDesigner.vue** (NEW: `src/editor/views/ThemeDesigner.vue`) — visual editor with token panels + 9-slice config + live preview iframe
+3. **style.css** (MODIFY: ~50+ value replacements) — every hardcoded color/font/radius → `var(--gm-*, fallback)`
+4. **scriptStore** (MODIFY: ~20 lines) — `getTheme()`, `updateTheme()` following existing `getTitleScreen()` pattern
+5. **All UI classes** (MODIFY: minor) — accept optional ThemeManager, call 9-slice apply after DOM creation
+6. **Color harmony utility** (NEW: `src/engine/colorHarmony.js`) — HSL math, palette generation, WCAG contrast validation
 
----
+**Key data model decision:** Theme data lives at `ui.theme` inside `script.json` — NOT a separate file. This preserves auto-save, undo/redo, and the existing `ui.*` access pattern for free. Theme export extracts `ui.theme` + referenced images into a ZIP.
 
-## Architecture Integration
+See: [ARCHITECTURE.md](./ARCHITECTURE.md)
 
-### How Features Connect to Existing Systems
+### Critical Pitfalls
 
-```
-Save System Upgrade (FOUNDATION — build first)
-  │
-  ├── SaveManager.js → REWRITE (sync localStorage → async IPC)
-  │     All callers become async (main.js save/load callbacks, title screen init)
-  │
-  ├── electron/main.js → ADD 5 IPC handlers (save/load/delete/list/screenshot)
-  │     Reuse: atomicWrite(), fs/promises, isInsideProject(), path security
-  │
-  ├── asset:// protocol → EXTEND to serve saves/ directory
-  │     ~5 lines: if path starts with 'saves/', resolve from projectPath/saves/
-  │
-  └── preload.mjs → ADD to preview BrowserWindow config (P10 fix)
+The top 5 pitfalls that will cause rewrites or broken features if not addressed:
 
-Quick Action Bar
-  │
-  ├── NEW: src/ui/QuickActionBar.js (proper class, like GameMenu)
-  ├── REMOVE: inline #quick-controls in main.js lines 54-62 (P2)
-  ├── MODIFY: main.js click handler (add #quick-action-bar to exclusion — P8)
-  └── MODIFY: main.js overlay show callbacks → add pauseGameplay() (P6)
+1. **48 inline style assignments override CSS tokens (P1)** — `DialogueBox._applyStyle()`, `TitleScreen._renderCustom()`, `SettingsScreen`, `ChoiceMenu`, and `SaveLoadScreen` all set `el.style.*` directly, which beats stylesheet `var()` rules. **Prevention:** Audit all `style.*` assignments first; migrate JS defaults to read from tokens; set tokens on `#game-container` ancestor, not target elements.
 
-Save/Load UI
-  │
-  ├── REWRITE: SaveLoadScreen.js (8 slots → 100 slots, pagination, thumbnails)
-  ├── MODIFY: main.js save flow (capture screenshot BEFORE showing save UI — P20)
-  ├── MODIFY: ESC handler → stack-based overlay priority (P3)
-  └── ADD: context-aware close behavior (P4: returnTo gameMenu vs title vs game)
+2. **`style.cssText = ''` nukes token overrides between dialogue lines (P2)** — DialogueBox resets ALL inline styles on every `show()` call (every line of dialogue). **Prevention:** Never apply theme tokens as inline properties on individual elements; set on `#game-container` and let CSS `var()` cascade handle it.
 
-Fast-Forward / Skip
-  │
-  ├── NEW: src/engine/ReadHistory.js (Set<string> + persistence)
-  ├── MODIFY: main.js skip logic (check readHistory for skip-read-only)
-  ├── MODIFY: main.js event handlers (suppress audio during skip — P21)
-  ├── MODIFY: main.js event handlers (override transition duration → 0 during skip — P23)
-  ├── EXTEND: ConfigManager.js (add skipMode: 'all' | 'readOnly')
-  └── EXTEND: settingDefs.js (add skip-mode select component)
-```
+3. **`border-image` and `border-radius` are mutually exclusive (P3)** — Per CSS spec §6.2, `border-image` completely ignores `border-radius`. 8 element types in the codebase use `border-radius`. **Prevention:** Use `::before` pseudo-element for 9-slice background, keeping `border-radius` on the main element for content clipping. 9-slice source images must have corners pre-rounded in the artwork.
 
-### Key Integration Pattern: Screenshot Flow
+4. **`border-image-slice` silently rejects `px` units (P4)** — Unlike every other CSS length property, `border-image-slice` requires unitless numbers. `30px` silently fails. **Prevention:** Strip units in theme loader; validate with `parseInt()`; document for theme authors.
 
-```
-User clicks Save → finish typewriter (P7)
-  → capturePage(rect) captures 1280×720 game area
-  → NativeImage.resize(320, 180) → toJPEG(80)
-  → Cache Buffer in memory
-  → Show SaveLoadScreen overlay
-  → User picks slot → save state JSON + JPEG via IPC
-  → Main process: atomicWrite(slot_XX.json) + writeFile(slot_XX.jpg)
-```
+5. **`sanitize.js` blocks ALL `url()` patterns including `asset://` (P6)** — The CSS sanitizer's regex (`url\s*\(`) blocks 9-slice image URLs. **Prevention:** Token renderer must handle `url()` values as a special path, validating `asset://` prefix before applying, bypassing the general sanitizer for this specific case.
 
-### Key Integration Pattern: Async SaveManager Ripple
-
-| Caller | Current | After |
-|--------|---------|-------|
-| `saveLoadScreen.onSave` | sync `saveManager.save()` | `await saveManager.save()` |
-| `saveLoadScreen.onLoad` | sync `saveManager.load()` | `await saveManager.load()` |
-| `showTitle()` → `hasAnySave()` | sync boolean | `await saveManager.hasAnySave()` — affects init flow |
-| `main.js` init | sync | `showTitle()` becomes async, gates "继续游戏" button |
-
-### Key Integration Pattern: ESC Priority Stack
-
-Replace hardcoded if/else chain with stack-based overlay manager:
-```
-1. SaveLoadScreen (highest — fullscreen)
-2. SettingsScreen
-3. BacklogScreen (currently NOT in ESC chain — fix this)
-4. GameMenu
-5. Game (advance or ignore)
-```
+See: [PITFALLS.md](./PITFALLS.md)
 
 ---
 
-## Critical Pitfalls
+## Implications for Roadmap
 
-### Top 5 Must-Address Pitfalls
+Based on the dependency graph across all research, the natural build order is **5 phases** progressing from data foundation → engine integration → visual features → editor UI → packaging.
 
-| # | Pitfall | Severity | Prevention | Phase |
-|---|---------|----------|------------|-------|
-| **P10** | Preview BrowserWindow has no `ipcRenderer` — all file I/O fails | CRITICAL | Add `preload: preload.mjs` to preview window config; disable save in iframe preview | Save System |
-| **P14** | Old localStorage saves become invisible after upgrade | CRITICAL | Auto-migrate 8 slots from localStorage → files on first run, with marker flag | Save System |
-| **P2** | New quick bar + old `#quick-controls` = duplicate buttons | CRITICAL | Remove old `#quick-controls` entirely before building new QuickActionBar class | Quick Action Bar |
-| **P3** | ESC key doesn't close save/load screen (not in priority chain) | CRITICAL | Refactor ESC handler to stack-based overlay manager | Save/Load UI |
-| **P6** | Auto/skip mode keeps running behind overlays | HIGH | Centralized `pauseGameplay()` called when any overlay opens | Quick Bar + Save/Load |
+### Phase 1: Token Foundation — CSS Variable Migration
 
-### Additional High-Priority Pitfalls
+**Rationale:** Every subsequent phase depends on CSS consuming tokens. This is step zero — without it, nothing else can render themed values. It's also the highest-risk phase (touches ~600 lines of CSS + 48 JS inline style assignments), so doing it first exposes integration issues early.
 
-| # | Pitfall | Prevention |
-|---|---------|------------|
-| P4 | Save/Load return context differs (title vs game menu vs quick bar) | Pass `context` param to `show()`, handle in close callback |
-| P8 | Quick bar clicks advance dialogue | `stopPropagation()` in QuickActionBar click handler |
-| P11 | Reactive Proxy serialization fails across IPC | `JSON.parse(JSON.stringify(state))` before IPC calls |
-| P12 | `saves/` path resolution differs across contexts | Centralized `getSavesPath(gameId)` in main process |
-| P15 | Loading 100 slot metadata is slow (many IPC round-trips) | Single batch `list-saves` IPC call; lazy thumbnail loading via `asset://` |
-| P21 | Skip mode causes audio glitches (rapid BGM start/stop) | Suppress audio events during skip; apply final audio state on skip-end |
+**Delivers:** All hardcoded values in `style.css` replaced with `var(--gm-*, fallback)`. `DEFAULT_TOKENS` constant defined. Zero visual regression — game looks pixel-identical without a theme applied. JS inline style assignments in 5 UI classes audited and migrated to consume token values.
 
-### "Looks Done But Isn't" Checklist
+**Addresses (FEATURES.md):** Global color scheme, panel consistency, border radius control, font selection groundwork
 
-- [ ] ESC closes every overlay in correct priority order
-- [ ] Old `#quick-controls` fully removed — no duplicate buttons
-- [ ] Save from title screen returns to title, not black game screen
-- [ ] Save from game menu returns to game menu
-- [ ] Auto/skip stops when ANY overlay opens
-- [ ] Screenshots show game scene only, not UI overlays
-- [ ] Screenshots work with `asset://` images (not blank/black)
-- [ ] 100 slots don't freeze on open (<500ms)
-- [ ] Old localStorage saves migrate transparently
-- [ ] Skip mode doesn't produce audio pops
-- [ ] Skip-read-only actually skips read pages across sessions
-- [ ] File saves work in standalone preview window (ipcRenderer available)
-- [ ] Preview mode (iframe) disables save/load gracefully
-- [ ] Voice stops on load (no overlap)
-- [ ] Save files include `version: 2` field
+**Avoids (PITFALLS.md):**
+- P1: Inline style override audit ensures JS doesn't defeat CSS tokens
+- P2: Tokens on `#game-container`, not on target elements, so `cssText` resets are harmless
+- P5: Clear specificity hierarchy established (theme < custom layout < per-character)
+- P17: Gradient backgrounds stored as complete token values
+- P19: `--gm-` prefix avoids collision with existing `--track-color` etc.
 
----
+### Phase 2: ThemeManager Engine Integration
 
-## Recommended Build Order
+**Rationale:** Must validate the full token → CSS var → visual pipeline end-to-end before building 9-slice or editor UI. This phase proves the architecture works with a simple API.
 
-### Phase 1: Save System Upgrade (Foundation) ← BUILD FIRST
+**Delivers:** `ThemeManager.js` class that reads `ui.theme` from script.json, merges with defaults, injects CSS custom properties. `main.js` initializes ThemeManager. `update-theme` postMessage handler for live preview. `scriptStore.getTheme()` / `updateTheme()` methods.
 
-**Rationale:** Every other feature depends on file-based saves. Thumbnails need file storage, read tracking needs persistent storage, Save/Load UI needs async SaveManager, quick bar save/load buttons need a working save backend.
+**Addresses (FEATURES.md):** Theme reset to defaults (via DEFAULT_TOKENS merge), real-time preview foundation
 
-**Delivers:**
-- 4-5 new IPC handlers in `electron/main.js` (save/load/delete/list/screenshot)
-- SaveManager.js rewrite (async IPC, 100 slots, dual-mode with localStorage fallback)
-- `asset://` protocol extension for `saves/` directory
-- Screenshot capture pipeline (`capturePage()` → resize → JPEG)
-- localStorage → file system migration for existing 8-slot saves
-- Preview BrowserWindow preload fix (P10)
-- Save schema with `version: 2` field (P17)
+**Avoids (PITFALLS.md):**
+- P12: Every `var()` has fallback + JS merge with defaults = triple safety net for missing tokens
+- P21: Theme switch explicitly resets managed inline properties before applying new theme
 
-**Pitfalls to watch:** P10 (no ipcRenderer), P11 (Proxy serialization), P12 (path resolution), P14 (migration), P17 (version field)
+### Phase 3: 9-Slice Border Image System + Color Harmony
 
-**Research flag:** Standard patterns — no further research needed. All building blocks exist in codebase.
+**Rationale:** 9-slice is the highest-impact visual differentiator and depends on Phase 2's ThemeManager. Color harmony is a pure-function module with zero dependencies on other phases — it can be built in parallel with 9-slice. Grouping them into one phase delivers the two most compelling demo features together.
 
-### Phase 2: Quick Action Bar (Independent — can parallel with Phase 1)
+**Delivers:** `ThemeManager.applyNineSliceTo()` and `applyButtonNineSlice()` methods. All 7 UI classes accept optional ThemeManager and call 9-slice apply. `colorHarmony.js` utility with `generateHarmony()`, `contrastRatio()`, `isReadable()`. WCAG contrast validation for generated palettes.
 
-**Rationale:** Lightest feature, self-contained, no dependency on other v0.5 features. Pure UI wiring to existing callbacks. Good early win that makes the engine immediately feel more polished.
+**Addresses (FEATURES.md):** 9-slice dialogue box images, 9-slice button images (3-state), color harmony algorithm
 
-**Delivers:**
-- New `QuickActionBar.js` class (replaces inline `#quick-controls`)
-- 6 buttons at dialogue box bottom (存档/读档/回想/設置/自動/快進)
-- Active state indicators for Auto/Skip
-- Visibility synced with dialogue box
-- Centralized `pauseGameplay()`/`resumeGameplay()` for overlay interactions
+**Avoids (PITFALLS.md):**
+- P3: Pseudo-element (`::before`) approach for 9-slice preserves `border-radius`
+- P4: Theme loader strips `px` units from slice values
+- P6: Theme images stored under `assets/ui/themes/` — no protocol changes needed
+- P7: `backdrop-filter: none` when 9-slice background is active
+- P8: WCAG contrast check on every generated palette; lightness clamping for dark themes
+- P9: Danger color locked to red quadrant regardless of harmony algorithm
+- P14: Opacity cross-fade stacking for smooth button state transitions
 
-**Pitfalls to watch:** P2 (remove old controls), P8 (click-through), P6 (pause on overlay open)
+### Phase 4: Visual Theme Editor
 
-**Research flag:** Standard patterns — no research needed.
+**Rationale:** The editor UI is the capstone feature that ties everything together. It needs complete token + 9-slice engine foundation to preview against. Building it after Phase 3 means every editor control maps to a working engine feature.
 
-### Phase 3: Save/Load UI Rewrite (Depends on Phase 1)
+**Delivers:** `ThemeDesigner.vue` with color pickers, typography selectors, 9-slice image upload/preview, color harmony palette generator, live engine preview iframe. New "🎨 主题" tab in editor. Preset selector UI.
 
-**Rationale:** Depends on async SaveManager and screenshot pipeline from Phase 1. The visual payoff of the entire milestone — this is what players see.
+**Addresses (FEATURES.md):** Visual theme editor, real-time preview (complete)
 
-**Delivers:**
-- SaveLoadScreen.js complete rewrite (100 slots, 10 pages × 10 per page)
-- Thumbnail card grid (JPEG via `asset://saves/slot_XX.jpg`)
-- Page navigation tabs
-- Overwrite confirmation dialog
-- Delete slot functionality
-- ESC priority chain refactor (stack-based overlay manager)
-- Context-aware close behavior (return to game menu / title / game)
+**Avoids (PITFALLS.md):**
+- P10: Debounced + batched postMessage updates (50ms throttle, single message per frame)
+- P16: Theme images written to disk before preview messages sent
+- P22: Single internal color representation (OKLCH for calculations, hex for storage)
 
-**Pitfalls to watch:** P3 (ESC chain), P4 (return context), P7 (typewriter finish before screenshot), P9 (voice stop on load), P15 (batch load), P20 (pre-capture timing)
+### Phase 5: Theme Presets + Export/Import
 
-**Research flag:** Standard patterns — no research needed.
+**Rationale:** Pure UX/packaging layer with no technical dependencies beyond Phases 1-4. Presets serve as end-to-end validation that the entire system works. Export/import adds community sharing value. This is the only phase requiring the `fflate` dependency.
 
-### Phase 4: Fast-Forward / Skip Mode Upgrade (Can parallel with Phase 3)
+**Delivers:** 3-4 built-in theme presets (Modern/default, Traditional Japanese, Fantasy, Minimal). `.theme` ZIP export/import via IPC handlers. `formatVersion` field in all theme files from day one.
 
-**Rationale:** Read history benefits from file persistence (Phase 1), but can use localStorage fallback. Logically independent from Save/Load UI. The quick bar's "快進" button (Phase 2) activates this, but the skip logic itself is self-contained.
+**Addresses (FEATURES.md):** Built-in presets, theme import/export
 
-**Delivers:**
-- `ReadHistory.js` module (tracks `sceneId:pageIndex` pairs, persisted)
-- Skip-all vs skip-read-only logic in main.js dialogue handler
-- Audio suppression during skip (BGM/SE/voice)
-- Transition duration override (→ 0) during skip
-- ConfigManager `skipMode` setting + settingDefs entry
-- Settings screen skip-mode toggle (auto-rendered from SETTING_DEFS)
+**Avoids (PITFALLS.md):**
+- P11: `formatVersion: 1` included in every theme file from the start
+- P13: ZIP archive bundles JSON + all referenced image files
+- P6 (import path): Imported images extracted to `assets/ui/themes/{name}/`
 
-**Pitfalls to watch:** P5 (read tracking persistence), P21 (audio glitches), P22 (recursion depth), P23 (transition speed), P24 (settings wiring)
+### Phase Ordering Rationale
 
-**Research flag:** Standard patterns — no research needed.
+- **Phases 1→2 are strictly sequential**: CSS must consume tokens before ThemeManager can inject them. No parallelism possible.
+- **Phase 3 groups 9-slice + color harmony** because they're independent of each other but both depend on Phase 2. Within Phase 3, color harmony can be developed and tested in isolation (pure functions, unit-testable) while 9-slice integration touches multiple UI classes.
+- **Phase 4 (editor) after Phase 3 (engine)** because the editor previews engine output. Building the editor first would mean building against an incomplete engine.
+- **Phase 5 (presets/export) last** because presets are concrete proof the system works end-to-end, and the token model must be stable before serializing it into shareable packages.
+- **This order front-loads risk**: Phase 1 (CSS migration) is the riskiest and most tedious task. Failing here is better than failing after building an editor that depends on it.
 
-### Phase 5: Integration & Polish
+### Research Flags
 
-**Rationale:** Cross-cutting concerns that span all features. Testing the interactions.
+**Phases likely needing deeper research during planning:**
+- **Phase 1 (CSS Migration):** The 48 inline style assignments need per-file audit. The exact list of ~35-40 tokens should be finalized by tracing every unique color/font/radius in style.css. Consider `/gsd-research-phase` to produce the complete token inventory and JS migration map.
+- **Phase 3 (9-Slice):** The `::before` pseudo-element approach for preserving `border-radius` needs a prototype to validate. The opacity cross-fade stacking for 3-state buttons also needs performance profiling. Consider a focused spike early in the phase.
 
-**Delivers:**
-- Full ESC chain testing across all overlays
-- Preview mode guards (`_previewMode` checks on all new features)
-- Edge case fixes: save during typewriter, load state cleanup, page boundary skip
-- Keyboard shortcut expansion (F5/Ctrl+S save, F9/Ctrl+L load)
-
----
-
-## Open Questions for Requirements
-
-1. **Quick bar button order** — Japanese convention: 自動 → 快進 → 回想 → 存档 → 読档 → 設置 (left to right). Or should it match the spec order: 存档 → 読档 → 回想 → 設置 → 自動 → 快進? Need user confirmation.
-
-2. **Save slot numbering** — Start from 0 or 1? Display as "Save 001" or "Save 1"? Affects both UI labels and filename convention.
-
-3. **Thumbnail aspect ratio** — Game area is 1280×720 (16:9). Thumbnail at 320×180 fits 5 per row in a 1280px-wide save screen. Is 5 columns × 2 rows = 10 per page the desired layout? Or 4 columns × 3 rows = 12?
-
-4. **Read history storage location** — localStorage (player-specific, survives project copy) vs `saves/read-history.json` (portable with project)? STACK.md recommends localStorage. ARCHITECTURE.md recommends file. Both work — need decision. Recommend: localStorage (it's player data, not project data).
-
-5. **Skip mode default** — Should new games default to "skip all" or "skip read only"? ARCHITECTURE.md defaults to `'read'` (safer). Confirm.
-
-6. **Overwrite confirmation UX** — Inline "确定覆盖?" with confirm/cancel buttons in the slot card? Or a modal dialog/overlay? Inline is simpler and less intrusive.
-
-7. **Quick save/load** — Defer entirely to v0.5.1, or implement as keyboard-only (F5/F9) with a dedicated slot 0 in v0.5?
-
----
-
-## Key Decision Points
-
-| Decision | Options | Recommendation | Rationale |
-|----------|---------|----------------|-----------|
-| Screenshot technology | A) `webContents.capturePage()` B) html2canvas C) modern-screenshot | **A) `capturePage()`** | html2canvas abandoned Jan 2022, can't resolve `asset://` (P1 CRITICAL), freezes UI (P19). capturePage is native, zero-dep, pixel-perfect. |
-| Thumbnail format | A) JPEG 80% B) PNG C) WebP | **A) JPEG 80%** | 15-30KB per thumb vs 100-500KB PNG. 100 slots × 30KB = 3MB total. WebP not needed for this size. |
-| Thumbnail size | A) 320×180 B) 256×144 C) 400×225 | **A) 320×180** | 1/4 scale of 1280×720. Recognizable at save-card size. Fits 5 per row cleanly. |
-| Save file structure | A) Individual files per slot B) Single monolithic file C) SQLite | **A) Individual files** | Atomic writes per slot, no corruption cascade, fast single-slot read. Standard in all desktop VN engines. |
-| Thumbnail serving | A) Extend `asset://` for `saves/` B) Base64 in IPC C) New `save://` protocol | **A) Extend `asset://`** | ~5 lines of code change, zero base64 bloat, uses existing infrastructure. |
-| Read history storage | A) localStorage (per-player) B) `saves/read-history.json` (per-project) | **A) localStorage** | Read history is player data, not project data. Survives save deletion. Matches ConfigManager pattern. |
-| SaveManager migration | A) Lazy migrate on first access B) Eager migrate on init C) Keep dual storage | **A) Lazy migrate** | Check for old saves on `list-saves` call, migrate + delete old entries, write `.migrated` marker. |
-| ESC handler pattern | A) Stack-based overlay manager B) Extend if/else chain | **A) Stack-based** | Future-proof, clean, avoids N+1 problem as more overlays are added. |
-| Skip animation behavior | A) Override duration → 0 B) CSS class that disables transitions C) Skip rendering entirely | **A) Override duration → 0** | Simple, predictable, visual state stays consistent. |
-| Audio during skip | A) Suppress all audio events B) Let BGM play, suppress voice/SE C) Suppress nothing | **A) Suppress all, apply final state on skip-end** | Prevents audio glitches (P21). Track pending BGM, apply when skip stops. |
+**Phases with standard patterns (skip research-phase):**
+- **Phase 2 (ThemeManager):** Well-documented pattern — `setProperty()` on container, `var()` in CSS. Already proven in 7 codebase locations. Straightforward implementation.
+- **Phase 4 (Editor UI):** Follows established editor patterns (TitleDesigner.vue, SettingsDesigner.vue). Vue color pickers, postMessage preview — all proven patterns.
+- **Phase 5 (Presets/Export):** fflate API is simple (zipSync/unzipSync). IPC handler pattern exists (import-assets, export-project). Standard packaging work.
 
 ---
 
@@ -348,23 +194,45 @@ Replace hardcoded if/else chain with stack-based overlay manager:
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | Zero new deps — every API is stable Electron/browser built-in. Verified against codebase. |
-| Features | **HIGH** | Based on 20+ years of VN engine conventions (KiriKiri, Ren'Py, NScripter, commercial titles). Well-established table stakes. |
-| Architecture | **HIGH** | Every integration point verified against actual source code. Data flow changes are mechanical (sync → async). |
-| Pitfalls | **HIGH** | 24 pitfalls identified from direct codebase analysis. Phase-specific warnings map cleanly to build order. |
+| Stack | **HIGH** | Zero new deps for core; fflate verified on npm. All CSS features confirmed in Chromium 136. |
+| Features | **HIGH** | Well-established domain — Ren'Py/RPG Maker/TyranoScript provide clear reference. 80/20 rule validated across engines. |
+| Architecture | **HIGH** | Based on direct codebase analysis of all engine/editor files. Token pattern already proven in 7 locations. |
+| Pitfalls | **HIGH** | 6 critical pitfalls identified from CSS spec behavior + direct codebase line-number references. All have concrete prevention strategies. |
 
-### Gaps
+**Overall confidence:** HIGH
 
-1. **ARCHITECTURE.md recommends html2canvas** — this is WRONG and overridden by STACK.md + PITFALLS.md consensus. The synthesis resolves in favor of `capturePage()`.
-2. **Exact save slot filename convention** — STACK uses `slot_XX` (zero-padded 2 digits), ARCHITECTURE uses `slot-NNN` (zero-padded 3 digits). Needs standardization during requirements. Recommend: `slot_001.json` / `slot_001.jpg` (3-digit, underscore, matches up to slot 100).
-3. **Ctrl-held skip** — All research mentions this as a standard VN convention but none commit to v0.5 scope. It's low complexity and high value — consider including.
+### Gaps to Address
+
+- **Exact token inventory:** ~35-40 tokens estimated, but the precise list requires tracing every unique visual value in style.css + JS files. Finalize during Phase 1 planning.
+- **`::before` pseudo-element 9-slice + `border-radius` interaction:** The approach is sound in theory, but needs a small prototype to confirm `overflow: hidden` on the parent correctly clips the pseudo-element's border-image. Validate in a Phase 3 spike.
+- **`sanitize.js` update scope:** The exact regex modification to allow `asset://` URLs while blocking other schemes needs careful security review. The token renderer special-path approach (bypass sanitizer for `asset://` prefix only) is safer than modifying the regex.
+- **OKLCH vs HSL for color harmony:** STACK.md recommends HSL math for simplicity (~200 lines). PITFALLS.md recommends OKLCH for perceptual accuracy. **Recommendation: Start with HSL for v0.6, add OKLCH refinement in v0.7** if users report "mathematically correct but visually wrong" palettes.
+- **3-state button performance:** The opacity cross-fade stacking approach (3 image layers per button × 24 buttons on save/load screen = 72 layers) needs profiling. May be fine in Chromium, but measure during Phase 3.
+- **Built-in preset 9-slice image assets:** 2 of 4 presets (Traditional Japanese, Fantasy) require custom 9-slice artwork. These need to be created or sourced (CC0/MIT licensed) during Phase 5 planning.
 
 ---
 
 ## Sources
 
-- **Codebase analysis** (HIGH): SaveManager.js, SaveLoadScreen.js, ScriptEngine.js, main.js, GameMenu.js, DialogueBox.js, AudioManager.js, ConfigManager.js, SettingsScreen.js, BacklogScreen.js, TitleScreen.js, electron/main.js, electron/preload.js, style.css, index.html
-- **Electron API docs** (HIGH): webContents.capturePage(), NativeImage.resize(), NativeImage.toJPEG()
-- **npm registry** (HIGH): html2canvas 1.4.1 (Jan 2022 — abandoned), modern-screenshot 4.6.8 (active), html-to-image 1.11.13 (active)
-- **VN engine conventions** (HIGH): Ren'Py, KiriKiri/吉里吉里, NScripter, TyranoScript, commercial titles (Key, TYPE-MOON, Frontwing)
-- **Project constraints** (HIGH): Zero new npm deps policy (PROJECT.md, established v0.2)
+### Primary (HIGH confidence)
+- **Direct codebase analysis** — style.css (1272 lines), all `src/ui/*.js` classes, `src/main.js`, `src/engine/*.js`, `electron/main.js`, `sanitize.js`, `validateAsset.js`, `settingDefs.js`
+- **CSS Backgrounds and Borders Level 3** — `border-image-slice` syntax, `fill` keyword, `border-radius` mutual exclusion (§6.2)
+- **CSS Custom Properties specification** — `var()` fallback behavior, `setProperty()` API
+- **fflate 0.8.2** — npm registry (verified 2025-07-14), MIT license, 8KB gzipped
+- **WCAG 2.1 AA** — contrast ratio requirements (4.5:1 normal text, 3:1 large text)
+
+### Secondary (MEDIUM confidence)
+- **Ren'Py gui.rpy documentation** — variable cascade pattern (~70 vars), GUI wizard, Frame() displayable
+- **RPG Maker MV/MZ documentation** — windowskin 192×192 grid, community theme ecosystem
+- **CSS Color Level 4** — `color-mix()`, `oklch()` color space, growing browser adoption
+- **Color theory fundamentals** — HSL color wheel harmonies (complementary, analogous, triadic, split-complementary)
+
+### Tertiary (LOW confidence)
+- **TyranoScript theming** — config.tjs patterns, less extensively documented than Ren'Py/RPG Maker
+- **Commercial galgame UI analysis** (KEY, TYPE-MOON, Nitro+) — based on game observation, not engine documentation
+- **80/20 rule of VN visual identity** — opinionated synthesis; directionally correct but exact percentages are approximate
+
+---
+
+*Research completed: 2025-07-22*
+*Ready for roadmap: yes*

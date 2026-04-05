@@ -1,349 +1,305 @@
-# Feature Research — v0.5: 游戏 UI 补全
+# Feature Research — v0.6: 主题包系统 (Theme Pack System)
 
-**Domain:** Visual novel / Galgame engine — game UI features
-**Researched:** 2025-07-15
-**Overall confidence:** HIGH (based on well-established VN/galgame conventions from Ren'Py, KiriKiri/吉里吉里, NScripter, TyranoScript, and commercial titles by Key, TYPE-MOON, Frontwing, etc.)
-**Supersedes:** v0.4 feature research (voice, rich text, fonts — all delivered)
+**Domain:** Visual novel / Galgame engine — theme & skin customization
+**Researched:** 2026-04-05
+**Overall confidence:** HIGH (well-established domain — theming in VN engines is a solved problem with clear patterns across Ren'Py, RPG Maker, TyranoScript, Unity UI, and commercial galgames)
+**Supersedes:** v0.5 feature research (game UI — all delivered)
 
 ---
 
-## Quick Action Bar (快捷按钮栏)
+## Domain Analysis: How VN/Game Engine Theme Systems Work
 
-### Current State in Codebase
+### The 80/20 Rule of Visual Novel Theming
 
-A primitive 4-button quick control strip already exists (`#quick-controls` in `main.js` lines 54-62):
-- Buttons: AUTO, SKIP, LOG, MENU
-- Position: top-right of `#dialogue-layer` (absolute, top: 12px, right: 16px)
-- Visibility: opacity 0 → 1 on `#game-container:hover`
-- Created as raw DOM in `main.js`, not a dedicated UI class
+Studying how commercial galgames (KEY, TYPE-MOON, Nitro+, Frontwing, SAGA PLANETS) differentiate their UI reveals a consistent pattern:
 
-**v0.5 target:** 6 buttons (存档/读档/回想/设定/自动/快进) at dialogue box bottom, dedicated class, editor-customizable properties.
+- **80% of visual identity** comes from: dialogue box frame image + accent color + font choice
+- **15% more** comes from: panel/window backgrounds + button images
+- **5% remaining** is: animations, particle effects, layout changes
 
-### Table Stakes
+This means the theme system's priority must be: **tokens first, images second, presets third**.
+
+### "All Games Look The Same" vs "Unique Identity"
+
+**Why games look identical (the problem this milestone solves):**
+1. Default dialogue box = semi-transparent dark gradient (currently hardcoded in style.css at line 183-188)
+2. All buttons share identical border + text pattern with same purple accent `rgba(180, 160, 255, *)`
+3. Same Noto Sans SC / Noto Serif SC fonts everywhere
+4. Every panel uses the same `rgba(10, 10, 20, 0.95)` dark overlay
+
+**What creates unique identity (the 4 levers):**
+1. **Custom dialogue box frame** — an image-based frame that matches the game's art style (brush stroke for wuxia, ornate gold for fantasy, clean glass for sci-fi)
+2. **Color palette coordination** — warm/cool, bright/muted, matching the game's tone
+3. **Font pairing** — display font for titles/names + body font for dialogue reinforces setting
+4. **Panel decoration** — borders, corner ornaments, consistent visual language across all screens
+
+### How Existing Engines Implement Theming
+
+#### Ren'Py GUI System (gui.rpy)
+- **Variable-cascade**: ~70 variables in `gui.rpy` (gui.accent_color, gui.text_color, gui.idle_color, gui.hover_color, gui.insensitive_color, gui.text_font, gui.interface_text_size, etc.)
+- **Two-tier**: Basic tier = change variables for instant retheming. Advanced tier = rewrite screens.
+- **Image replacement**: `gui/` directory with subdirectories (gui/button/, gui/frame/, gui/slider/)
+- **Frame() displayable**: Ren'Py's 9-slice — `Frame("gui/frame.png", 15, 15)` defines border insets for stretchable images
+- **GUI Wizard**: Built-in launcher tool to pick accent color + font + resolution → generates gui.rpy
+- **Key insight**: The variable cascade means changing ONE accent color updates buttons, sliders, selections, highlights across ALL screens. This is the exact pattern CSS custom properties provide.
+
+#### RPG Maker MV/MZ Window System
+- **Single windowskin image**: `img/system/Window.png` (192×192 pixels)
+- **9-slice grid structure**: The image is subdivided:
+  - Top-left 128×128: background pattern (tiled, with color tint + opacity)
+  - Top 128px, right 64px: frame corners and edges (9-slice stretching)
+  - Bottom 64px: cursor highlight, directional arrows, pause indicator
+- **Color tinting**: `Window_Base` has ~20 predefined text colors in a palette strip embedded in the windowskin image
+- **Community ecosystem**: Thousands of free/paid windowskin packs on itch.io, DeviantArt — drop-in replacement of one PNG completely retemes the entire game
+- **Key insight**: The single-image approach makes it trivially easy for artists to create a complete theme. One file = entire UI look.
+
+#### TyranoScript/TyranoBuilder
+- **Web-based** (HTML/CSS) — architecturally similar to this project
+- **Config-driven**: `config.tjs` for basic parameters (font, initial colors)
+- **Message box**: `[position]` tag controls layer/position/opacity + `frame` parameter for background image
+- **Button images**: Custom PNG files for save/load/config/backlog buttons (normal + hover states)
+- **CSS override**: Advanced users override CSS directly for full control
+- **Key insight**: No design token abstraction — each element styled individually. Results in inconsistency and high effort for theme changes. **This is what we should avoid.**
+
+#### Unity UI Toolkit (for reference)
+- **USS (Unity Style Sheets)**: CSS-like syntax with type/class/name selectors
+- **ThemeStyleSheet**: Cascading themes with dark/light mode switching
+- **Custom properties**: `--unity-colors-*`, `--unity-metrics-*` variable prefixes
+- **Key insight**: Design tokens as custom properties is the industry-standard pattern for systematic theming.
+
+### Current Codebase State
+
+The existing engine has **no design token layer**. All styles are hardcoded:
+
+| UI Component | Current Styling | Hardcoded Values |
+|---|---|---|
+| Dialogue box | style.css line 178-198 | `rgba(8, 8, 20, 0.92)` gradient, blur 8px, 1px border |
+| Quick action bar | style.css line 1229-1271 | `rgba(255, 255, 255, 0.06)` border, `rgba(60, 50, 100, 0.4)` hover |
+| Game menu | style.css line 1176-1224 | `rgba(0, 0, 0, 0.7)` overlay, `rgba(30, 30, 50, 0.5)` buttons |
+| Save/Load screen | style.css line 446-722 | `rgba(10, 10, 20, 0.95)` bg, `rgba(30, 30, 50, 0.6)` cards |
+| Settings screen | style.css line 727-1031 | `rgba(10, 10, 20, 0.8)` bg, `rgba(180, 160, 255, *)` accent |
+| Backlog screen | style.css line 1034-1171 | `rgba(10, 10, 20, 0.95)` bg, same accent colors |
+| Title screen (default) | style.css line 342-441 | Gradient bg, `rgba(180, 140, 255, *)` glow |
+| Choice buttons | style.css line 262-337 | `rgba(60, 60, 100, 0.6)` gradient, purple hover |
+
+**Existing infrastructure that helps:**
+- CSS custom properties already used for slider/toggle styling (settingDefs.js `--fill-color`, `--track-color`, `--thumb-color`)
+- DialogueBox._applyStyle() already consumes per-page style overrides
+- Font override system (global + per-page) already exists in DialogueBox
+- Dialogue opacity is already player-adjustable via ConfigManager
+- Asset library supports custom fonts (import, FontFace loading)
+
+---
+
+## Table Stakes
+
+Features users fundamentally expect from any theme/skin system. Missing = the feature feels broken or pointless.
 
 | Feature | Why Expected | Complexity | Dependencies | Notes |
 |---------|-------------|------------|-------------|-------|
-| 6 core buttons: Save, Load, Backlog, Settings, Auto, Skip | Every commercial galgame since ~2005 has these | Low | GameMenu wiring already exists | Standard set across KiriKiri, Ren'Py, and all commercial engines |
-| Position at dialogue box bottom | Industry standard: bar sits flush with or just above dialogue box bottom edge | Low | DialogueBox layout, CSS z-index | Current top-right position is non-standard; bottom is where every VN player expects it |
-| Active state indicator for Auto/Skip toggles | Players must know which mode is on — standard glow/highlight | Low | `autoMode`/`skipMode` flags already exist | Already partially implemented via `.active` class |
-| Show/hide synced with dialogue box | Bar appears when dialogue box is visible, hides when it's hidden (choices, menus) | Low | DialogueBox.show()/hide() events | Current implementation shows on container hover — not sufficient |
-| Click does NOT advance dialogue | Clicking action bar buttons must `stopPropagation` to avoid triggering `engine.next()` | Low | Event delegation in `main.js` | Already handled for `#quick-controls` in click handler |
-| Keyboard shortcuts | A=Auto, S=Skip, L=Log, Esc=Menu — standard VN shortcuts | Low | Already implemented in keydown handler | Extend for Save (F5/Ctrl+S) and Load (F9/Ctrl+L) |
-| Semi-transparent, unobtrusive design | Must not block dialogue text readability | Low | CSS only | Standard: ~30-40% opacity, brighten on hover |
-
-### Differentiators
-
-| Feature | Value Proposition | Complexity | Dependencies | Notes |
-|---------|-------------------|------------|-------------|-------|
-| Quick Save / Quick Load buttons | One-click save/load without opening fullscreen UI; pro players use constantly | Medium | SaveManager, dedicated "quick" slot (slot 0 or separate) | Ren'Py has Q.Save/Q.Load; some galgames use F5/F9 shortcuts only |
-| Hide dialogue box button (目隠し) | Toggle to hide dialogue box and see full background CG — players screenshot CGs | Low | DialogueBox.hide()/show() toggle | Very common in Japanese VNs, often bound to middle mouse or H key |
-| Editor-customizable button appearance | Maker can set button text/icon, colors, font via editor inspector | Medium | New settingDefs-style registry, editor palette integration | Matches project pattern (TitleDesigner, SettingsDesigner) |
-| Button image replacement (future) | Replace text buttons with custom image assets | High | Asset picker integration, image sizing | Deferred to v0.5.1 "UI 美化系统" per PROJECT.md roadmap |
-
-### Anti-Features (Avoid)
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|-------------|-----------|-------------------|
-| Too many buttons (>8) | Clutters the narrow bar, overwhelming for players | Stick to 6 core. Quick Save/Load can be shortcuts-only initially |
-| Fullscreen/window mode button in action bar | Breaks flow, belongs in Settings screen | Keep in Settings only |
-| Non-standard button ordering | VN players have muscle memory; Auto → Skip → Backlog → Save → Load → Settings is conventional | Follow Japanese VN convention for left-to-right order |
-| Making the bar always visible at 100% opacity | Blocks CG viewing and feels heavy | Use hover-reveal or low-opacity idle state, standard 30% idle → 100% hover |
-| Return-to-title button in action bar | Too destructive for one-click access; belongs in ESC game menu with confirmation | Keep in GameMenu only |
+| **Global color scheme (accent + text + background tones)** | Every VN engine has this. Ren'Py has gui.accent_color that cascades everywhere. Without it, changing appearance requires editing dozens of individual values. | Medium | New theme data model in script.json, CSS variable migration in style.css | This IS the core of the system. All ~20 hardcoded color values in style.css must move to `var(--gm-*)` properties. |
+| **Dialogue box background customization** | Currently a hardcoded dark gradient. The dialogue box dominates 30%+ of screen time — it's the #1 thing players see. Every commercial galgame lets the maker customize this. | Low | Theme data model, DialogueBox._applyStyle() refactor | Options: solid color, gradient, or image (via 9-slice). Ren'Py/KiriKiri: image-based. RPG Maker: 9-slice tile. |
+| **Font selection for all UI** (not just dialogue) | v0.4 added dialogue font settings. But game menu buttons, save/load headers, backlog text, settings labels all still use hardcoded Noto Sans SC. Theme must control ALL text. | Medium | Extend existing font system (DialogueBoxSettings.vue pattern) to all UI classes | Two font slots: display/heading font + body/UI font. Follows standard typographic pairing. |
+| **Consistent button styling via tokens** | Currently every button type has its own hardcoded colors — game-menu-button, title-button, qab-btn, choice-button, save-load-close, etc. all styled independently. | Medium | CSS variable cascade for button states | One set of button tokens (normal/hover/pressed bg, text color, border) → all buttons consume them. RPG Maker does this via windowskin; Ren'Py via gui.idle_color/gui.hover_color. |
+| **Panel/overlay background consistency** | 6 different overlay screens (save, load, settings, backlog, game menu, choice) each have slightly different `rgba(10, 10, 20, *)` backgrounds. Should be one token. | Low | Single `--gm-panel-bg` variable consumed by all panels | Ren'Py: `gui.frame_color`. RPG Maker: windowskin background tile. |
+| **Border radius control** | Sharp corners vs rounded corners is a fundamental aesthetic choice (sharp = serious/historical, rounded = cute/modern). Currently hardcoded `4px`/`6px` everywhere. | Low | `--gm-border-radius` token, applied globally | Trivial to implement, massive aesthetic impact. |
+| **Theme reset to defaults** | Users MUST be able to undo all customizations and return to the built-in look. Without this, experimentation is scary. | Low | `defaultTheme` const, "reset" button in editor | Essential UX safety net. Every GUI customization tool has this. |
+| **Real-time preview** | Changes must be visible immediately. If the user has to save → close editor → open game to see the result, adoption will be zero. | Medium | iframe preview (already exists for playtesting) or live CSS variable injection | v0.3 Phase 14 already built an iframe preview system with postMessage. Reuse that infrastructure. |
 
 ---
 
-## Save/Load UI (存读档界面)
+## Differentiators
 
-### Current State in Codebase
-
-`SaveLoadScreen.js` exists as a basic implementation:
-- 8 slots, text-only (no thumbnails)
-- Simple grid: `grid-template-columns: repeat(4, 1fr)`
-- Shows: slot label, preview text (truncated), date
-- Fullscreen overlay at z-index 200
-- Shared UI for save/load (mode toggle via `show('save'|'load')`)
-- `SaveManager.js`: localStorage-based, `gameId_save_N` keys
-
-**v0.5 target:** 100 slots, thumbnail screenshots, fullscreen replacement UI, file-system storage.
-
-### Table Stakes
-
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|-------------|------------|-------------|-------|
-| Thumbnail screenshot of game state | Every modern VN (since ~2008) shows a screenshot of the scene at save time | High | html2canvas or Electron capturePage, screenshot-to-file pipeline | THE defining feature players expect — text-only is unacceptable for commercial-grade engine |
-| 100 save slots with pagination | Standard: 10 slots per page × 10 pages. KiriKiri/Ren'Py default to 100+ | Medium | Page navigation UI, slot indexing math | 100 slots = `pages[0..9]`, each showing 10 slots. Some engines do 8 per page × 12 pages |
-| Page navigation (页面切换) | Tab bar or numbered page buttons at top of save screen | Low | UI component, `currentPage` state | Standard: Page 1-10 tabs, or arrows with page number |
-| Save timestamp + preview text | Date/time + first ~30-50 chars of current dialogue line | Low | Already exists in SaveManager.save() | Add scene name for extra context |
-| Empty slot visual distinction | Empty slots clearly look different from occupied slots | Low | CSS class `.empty` already exists | Standard: grayed out, "— 空 —" text, no thumbnail placeholder |
-| Overwrite confirmation dialog | "此存档位已有数据，确认覆盖？" when saving to occupied slot | Low | Modal dialog component or `confirm()` | Players WILL accidentally click wrong slots — essential |
-| Save mode / Load mode tab toggle | Header shows 存档/读档 tabs, player can switch without closing | Low | Already uses `this.mode` toggle | Standard pattern: two tabs at top, active tab highlighted |
-| Close/return button | Return to game without saving/loading | Low | Already exists as `.save-load-close` | Standard |
-| Delete save option | Right-click or explicit delete button per slot | Medium | SaveManager.delete() already exists, context menu or icon | Players need to clean up old saves |
-| Scroll or fixed-page grid (no infinite scroll) | VN save screens are always paginated, not scrollable lists | Low | CSS grid + page state | Infinite scroll feels wrong for VN saves — players memorize slot positions |
-
-### Differentiators
+Features that set this engine apart from competitors. Not expected, but highly valued when present.
 
 | Feature | Value Proposition | Complexity | Dependencies | Notes |
 |---------|-------------------|------------|-------------|-------|
-| Auto-save slot (自动存档) | Separate slot that auto-saves at scene transitions — safety net for crashes | Medium | Engine `scene_enter` event hook, dedicated slot index | Ren'Py does this by default; many commercial VNs have 1-3 auto-save slots |
-| Quick save slot (快速存档) | Dedicated slot for F5/F9 quick save/load, separate from manual 100 | Low | SaveManager with special slot key | Very standard in Japanese VNs |
-| Scene/chapter name display | Show current scene name in save slot metadata | Low | `engine.currentScene` + scene name lookup | Helpful for long games with many branches |
-| Play time display | Show total play time on save slot | Medium | Timer tracking system (new) | Nice-to-have, not expected in all engines |
-| Thumbnail hover zoom | Hovering a slot slightly enlarges the thumbnail for better preview | Low | CSS transform on hover | Polished feel |
-| Smooth page transition animation | Page switch with fade or slide animation | Low | CSS transitions between page states | Standard polish for commercial titles |
-
-### Anti-Features (Avoid)
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|-------------|-----------|-------------------|
-| Infinite scroll save list | VN players expect page-based grids; scroll loses spatial memory of "my save is in page 3, slot 5" | Use paginated grid: 10 per page × 10 pages |
-| Tiny thumbnails (<150px wide) | Defeats purpose — players need to recognize the scene at a glance | Use 220-260px wide thumbnails (fit 5 per row in 1280px) |
-| Saving during choices | Ambiguous restore state — what if options change? | Disable save button during choice display |
-| No overwrite confirmation | Players lose hours of progress with a misclick | Always confirm when overwriting existing save |
-| localStorage for 100 slots with thumbnails | localStorage has ~5MB limit; 100 PNG thumbnails will exceed this instantly | Use file system (saves/ directory) — the core Save System Upgrade |
-| Full-resolution screenshots | 1280×720 PNGs are 1-3MB each; 100 saves = 100-300MB | Resize to ~320×180, JPEG at 70-80% quality. Target: 20-50KB per thumbnail |
+| **9-slice image system for dialogue box & panels** | THE biggest differentiator. Allows artists to create frame images that stretch to any size without distortion. RPG Maker's entire theming ecosystem is built on this. No other browser-based VN maker has this. | High | CSS `border-image` + `border-image-slice`, custom renderer for canvas preview, asset library integration | CSS `border-image` natively supports 9-slice — no canvas rendering needed at runtime. Editor preview needs custom rendering. See ARCHITECTURE.md for implementation. |
+| **9-slice button images (3-state: normal/hover/pressed)** | Buttons with custom artwork for each state. Standard in professional galgames (TYPE-MOON's Fate, KEY's Clannad). Creates dramatic visual uplift from plain CSS buttons. | High | Extends 9-slice system, 3 image slots per button component, CSS state selectors | Can use `:hover`/`:active` pseudo-selectors with `border-image` or background-image swapping. |
+| **Color harmony algorithm** | User picks ONE primary color → system generates full coordinated palette (accent, hover, pressed, text, panel background, border). Prevents "ugly color clash" for non-designers. | Medium | Color math library (HSL manipulation), harmony rules (complementary, analogous, triadic) | Huge "防呆" (fool-proofing) value. No VN maker has this. HSL-based: adjust hue ±30° for analogous, lightness ±20% for variants. |
+| **Built-in theme presets (3-4)** | Instant "this looks professional" with one click. Like Ren'Py's GUI wizard but better. Presets: Modern (glass/blur), Traditional Japanese (brush/washi), Fantasy (ornate/gold), Minimal (clean/flat). | Medium | Requires complete theme data model + 9-slice assets for image-based presets | Each preset = JSON token file + optional 9-slice image assets. 2 can be CSS-only (Modern, Minimal), 2 need images (Traditional, Fantasy). |
+| **Theme import/export (.theme pack files)** | Community sharing. Maker A creates a gorgeous theme → exports as .theme file → Maker B imports it. Creates ecosystem value beyond what we build. | Medium | ZIP packaging (tokens JSON + image assets), IPC handlers for import/export, asset deduplication | .theme file = ZIP containing `theme.json` (tokens) + `assets/` directory (9-slice PNGs, fonts). Standard pattern: RPG Maker community shares windowskin PNGs; Ren'Py shares gui/ directories. |
+| **Visual theme editor in editor app** | Dedicated tab/panel where the maker edits tokens with color pickers, sliders, image uploaders, and sees live preview. Not a JSON editor — a visual tool. | High | New Vue component (ThemeEditor.vue), color picker widget, 9-slice image upload/preview, live CSS injection to preview iframe | The capstone feature. Everything else is data model — this is the UX. Must feel like Figma's design token panel, not like editing CSS. |
+| **Per-component style overrides** | Base theme defines defaults, but maker can override specific components (e.g., dialogue box uses ornate frame while game menu uses clean style). Layered override system. | Medium | Token inheritance model: base → component-specific overrides | Ren'Py pattern: gui.button_text_idle_color overrides gui.idle_color for buttons only. Implement as optional per-component token overrides in theme data. |
 
 ---
 
-## Fast-Forward / Skip Mode (快进模式)
+## Anti-Features
 
-### Current State in Codebase
-
-A primitive skip mode exists in `main.js`:
-- `skipMode` flag toggled via `toggleSkip()`
-- Implementation: `setTimeout(() => engine.next(), 50)` — fires next() after 50ms
-- No read/unread tracking
-- No distinction between "skip all" vs "skip read only"
-- Auto-stops at choices (line 131-133: `stopSkip()` on `choice` event)
-- Keyboard shortcut: S key toggles skip
-
-**v0.5 target:** Two modes (skip all / skip read only), read page tracking, settings page toggle.
-
-### Table Stakes
-
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|-------------|------------|-------------|-------|
-| "Skip All" mode (全スキップ) | Skips all dialogue regardless of read status — for replays, testing, impatient players | Low | Already mostly works (current skipMode) | Needs refinement: animation skip, voice stop |
-| "Skip Read Only" mode (既読スキップ) | Only skips text player has seen; stops at new content — THE core VN feature | High | **Requires read-page tracking system (new)** | #1 expected skip feature in galgames. KiriKiri, Ren'Py, every commercial engine has this |
-| Read-page tracking | Engine records which `{sceneId, pageIndex}` combinations player has seen | Medium | Persistent storage (new), engine hook on `page_enter` | Must persist across sessions — stored in `saves/readdata.json` |
-| Visual skip indicator | Clear on-screen indicator: "▶▶ スキップ中" or "SKIP" overlay | Low | DOM element, CSS animation | Players need to know skip is active |
-| Auto-stop at choices | Skip mode must pause at choice pages, requiring player decision | Low | Already implemented in `engine.on('choice')` | Already works |
-| Auto-stop at unread text (read-only mode) | Skip stops when hitting first unread page; player resumes normal reading | Medium | Read-tracking lookup per page | Core behavior of read-only skip |
-| Skip speed: fast but not instant | ~50-100ms per dialogue line is standard; players see text flash by | Low | Already 50ms, configurable | Too fast = player can't emergency-stop; too slow = defeats purpose |
-| Stop skip on click/key | Any player input during skip should stop skip mode | Low | Already handled — clicking calls `stopSkip` indirectly via `onAdvance` | Should also stop on ESC, right-click |
-| Skip stops voice playback | During skip, voice lines should be cut/not played | Low | `audio.stopVoice()` in skip handler | Don't let voice play out — skip means skip everything |
-
-### Differentiators
-
-| Feature | Value Proposition | Complexity | Dependencies | Notes |
-|---------|-------------------|------------|-------------|-------|
-| Settings toggle for skip mode default | Setting: "跳过设置" — toggle between "all" and "read only" in settings screen | Medium | ConfigManager key, settingDefs entry, SettingsScreen component | Standard in commercial VNs |
-| Ctrl-held continuous skip | Hold Ctrl = skip while held, release = stop. Alternative to toggle | Low | Keydown/keyup listeners | Very common PC VN convention (Ren'Py default) |
-| Skip animation acceleration | During skip, transitions/fades are instant (duration: 0) instead of 800ms | Medium | Engine event data modification during skip | Dramatically speeds up skip — without this, 800ms fade per page makes skip crawl |
-| "Skip to next choice" option | Skip mode that specifically runs until next choice/branch point | Medium | Engine lookahead or flag-based approach | Ren'Py has this as built-in |
-| Read progress indicator | Show % of game content player has read (for completionists) | High | Full read-tracking aggregation + total page count | Nice completion metric but complex |
-
-### Anti-Features (Avoid)
+Features to explicitly NOT build. Each would add complexity without proportional value.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
-|-------------|-----------|-------------------|
-| Skip that jumps past choices | Players must always make choices themselves — auto-selecting breaks branching | Always stop skip at choice pages |
-| Instant skip (no delay at all) | Player sees nothing, can't react, and loses context entirely | Use 50-100ms delay, showing text briefly |
-| Skip without visual indicator | Player doesn't know skip is active, confusion when it stops at unread | Show clear indicator overlay |
-| Skipping during transitions without speed-up | Each page has 800ms fade — 100 pages × 800ms = 80 seconds of "skipping" | Override transition duration to 0 during skip |
-| Read tracking per dialogue line (too granular) | Tracking 1000s of individual lines is complex and fragile | Track per **page** — `{sceneId}:{pageIndex}` as unit. Page is "read" when seen at least once |
-| Read data stored only in localStorage | Read data is game-global (not per-save-slot) and can grow large | Store as separate file: `saves/readdata.json` |
+|---|---|---|
+| **Direct CSS editing** | Target audience is "no-code" makers (core value: "开发者不碰逻辑"). Exposing raw CSS contradicts the product philosophy and creates support burden. | Visual controls only. Token pickers, sliders, image uploaders. CSS is the implementation detail, never exposed. |
+| **Animation/transition theming** | Animation timing, easing curves, and effect types are enormously complex to surface in a GUI. Diminishing returns — 95% of visual identity is colors/images/fonts, not animation. | Keep current hardcoded animations. If needed later, offer 2-3 animation "mood" presets (gentle/energetic/instant) rather than per-property controls. |
+| **Layout restructuring via theme** | Layout is already handled by TitleDesigner and SettingsDesigner (drag-drop canvas). Theme = appearance (colors/images/fonts). Mixing layout into themes creates conflicts with designer positions. | Theme controls look-and-feel only. Position/size remains in designers. A theme changes HOW elements look, not WHERE they are. |
+| **Per-page/per-scene theme switching** | Massive complexity (theme state in save data, cross-fade between themes, editor UI for per-page theme assignment). Extremely rare in VNs — even commercial titles use one theme throughout. | One theme per project. If mood shifts needed, use background changes and dialogue box image overrides (already supported per-page in DialogueBox._applyStyle). |
+| **Custom shader/particle effects** | WebKit/Chromium CSS filters are limited and GPU-heavy. Particle effects need canvas/WebGL. Neither fits the pure-CSS engine architecture. | Stick to `backdrop-filter: blur()` and `box-shadow` for depth effects. These are hardware-accelerated and sufficient. |
+| **Font embedding in theme packs** | Font files are large (1-5MB each), have complex licensing, and the asset library already handles font import. Including fonts in .theme packs doubles the font management surface. | Theme packs reference font names; if the font isn't installed, engine falls back to default. Maker imports fonts separately via resource library. |
+| **Dark/light mode toggle** | VN games are almost universally dark-themed (game content is fullscreen art — UI must be unobtrusive). A light mode would clash with game artwork and look amateurish. | Default dark. Theme tokens can make panels lighter if desired, but no explicit mode toggle. |
 
 ---
 
-## Save System Upgrade (存档系统升级)
+## Feature Dependencies
 
-### Current State in Codebase
+### On Existing Systems
 
-`SaveManager.js` uses localStorage:
-- Key pattern: `${gameId}_save_${slot}`
-- Data: `{ state, previewText, timestamp, date }`
-- State: `{ currentScene, pageIndex, dialogueIndex, variables, history }`
-- 8 slots hardcoded
-- No thumbnails (text-only)
-- `ConfigManager.js` also uses localStorage for settings
+| Existing System | How Theme System Depends On It | Risk |
+|---|---|---|
+| `style.css` (all 1272 lines) | Every hardcoded color/font/radius must migrate to CSS custom properties. This is the largest refactoring task. | **HIGH** — migration must not break any existing UI. Needs careful testing per component. |
+| `DialogueBox._applyStyle()` | Must consume theme tokens instead of inline style objects. 9-slice images render via CSS `border-image`. | MEDIUM — method signature change, but isolated to one class. |
+| `settingDefs.js` DEFAULT styles | `DEFAULT_SETTING_STYLE`, `DEFAULT_LABEL_STYLE`, `DEFAULT_BUTTON_STYLE` hardcode colors. Must read from theme tokens. | LOW — small constants file. |
+| Asset library (Pinia store + IPC) | 9-slice images need to be stored as project assets. The existing asset pipeline (import → validate → copy to assets/) handles this. | LOW — just a new asset category or use "generic" type. |
+| iframe preview (Phase 14) | Theme editor needs live preview. The existing postMessage infrastructure can inject theme tokens into the preview iframe. | LOW — existing pattern, just new message type. |
+| `script.json` data model | New `ui.theme` section needed. Must follow existing schema conventions (`ui.settingsScreen`, `ui.titleScreen`, `ui.dialogueBox`). | LOW — additive change, no breaking. |
 
-**v0.5 target:** File system `saves/` directory, 100+ slots, screenshot thumbnails, IPC handlers.
-
-### Table Stakes
-
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|-------------|------------|-------------|-------|
-| File system storage (`saves/` directory) | localStorage has ~5MB limit, unusable for thumbnails; desktop apps use files | Medium | Electron IPC handlers (new), `atomicWrite` (existing pattern) | Electron main process already has `atomicWrite`, `fs`, path security |
-| Save file format: JSON metadata + separate thumbnail | Each save = `save_001.json` + `save_001.jpg` | Medium | File naming convention, dual-file write | JSON keeps state small; separate image for easy thumbnail loading |
-| Atomic writes for save files | Crash during save must not corrupt existing data | Low | `atomicWrite()` already exists in `electron/main.js` | Reuse existing pattern: write .tmp → rename |
-| IPC handlers: save-game, load-game, delete-game, list-saves | Renderer calls main process for all file operations | Medium | New IPC handlers in `electron/main.js`, preload exposure | Follow existing pattern: `ipcMain.handle('save-game', ...)` |
-| Backward compat with localStorage saves | If player has existing saves from v0.4, don't lose them | Medium | Migration logic: check localStorage, import to files, clear old | One-time migration on first run after upgrade |
-| Screenshot capture at save time | Use html2canvas or Electron `capturePage()` to capture game container | High | New dependency or Electron API | html2canvas: works in renderer. Electron native: cleaner, captures full window |
-| Thumbnail compression | Resize + JPEG compress to keep saves lightweight | Medium | Canvas resize API, `toBlob('image/jpeg', 0.7)` | Target: 320×180 JPEG @ 70% = ~15-30KB per save |
-| Save directory creation on project open | `saves/` created automatically when game starts | Low | `fs.mkdir(savesDir, { recursive: true })` | Standard defensive initialization |
-
-### Differentiators
-
-| Feature | Value Proposition | Complexity | Dependencies | Notes |
-|---------|-------------------|------------|-------------|-------|
-| Save file versioning | Version field in save JSON; reject/migrate incompatible saves | Low | `version` field in save schema | Critical for long-term engine updates |
-| Auto-save on scene transitions | Automatic save in slot 0 on every scene_enter | Medium | Engine event hook, dedicated slot | Safety net serious VN players expect |
-| Quick save/load (F5/F9) | Dedicated slot, instant save/load without UI | Low | Dedicated slot key, keyboard handler | Universal VN convention on PC |
-| Save data portability | Copy saves directory for backup or machine transfer | Low | It's just a folder — naturally portable | File system saves are inherently exportable |
-| Electron `capturePage()` over html2canvas | Native screenshot — faster, more reliable, no extra dependency | Medium | `webContents.capturePage()` IPC round-trip | Avoids html2canvas quirks with CSS/fonts |
-
-### Anti-Features (Avoid)
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|-------------|-----------|-------------------|
-| Single monolithic save file | One giant JSON with all 100 saves = slow read/write, corruption risk | Individual files per slot: `save_001.json`, `save_002.json` |
-| Embedding thumbnail as base64 in JSON | Bloats JSON, slow to parse, difficult to preview | Separate image file alongside JSON |
-| Saving full 1280×720 screenshots | ~1-3MB per PNG × 100 = 100-300MB save folder | Resize to 320×180, JPEG at 70-80% quality |
-| Keeping localStorage as primary with file backup | Split-brain bugs; one source of truth is simpler | Full migration to file system; localStorage only for ConfigManager |
-| Writing save files in renderer process | Renderer has no `fs` access with contextIsolation | All file I/O through IPC to main process (existing architecture) |
-| Storing read-page data inside each save file | Read tracking is global (cross-save), not per-save | Separate `readdata.json` in `saves/` |
-
----
-
-## Cross-Feature Dependencies
-
-### Dependency Graph
+### Internal Feature Dependencies
 
 ```
-Save System Upgrade (filesystem)
-  ├── Save/Load UI depends on this (thumbnails need file storage)
-  ├── Fast-Forward depends on this (read tracking needs persistent storage)
-  └── Quick Action Bar depends on this (save/load buttons need working save system)
+Design Tokens Data Model (theme.json schema)
+  └── Required by ALL other features — this is step zero.
 
-Save/Load UI
-  ├── Needs: Save System Upgrade (100 slots + thumbnails)
-  ├── Needs: Screenshot capture pipeline (html2canvas or capturePage)
-  └── Needs: Quick Action Bar (save/load buttons open this UI)
+CSS Variable Migration (style.css refactor)
+  ├── Requires: Design Tokens (to know what variables to create)
+  └── Required by: Theme Presets, Visual Editor, Import/Export
+  └── NOTE: This is the riskiest task — touches every UI component
 
-Fast-Forward / Skip Mode
-  ├── Needs: Read-page tracking system (new module)
-  ├── Needs: Save System Upgrade (persist read data to filesystem)
-  ├── Needs: Settings toggle (ConfigManager + settingDefs entry)
-  └── Quick Action Bar's "快进" button activates this
+9-Slice Image Renderer
+  ├── Requires: Asset library integration (to store/serve images)
+  └── Required by: Theme Presets (Traditional Japanese, Fantasy use 9-slice)
+  └── Required by: Button image replacement
 
-Quick Action Bar
-  ├── Needs: New UI class (replace current raw DOM #quick-controls)
-  ├── Needs: All other features wired up (save/load/skip)
-  └── Lightest dependency — mostly UI wiring
+Color Harmony Algorithm
+  ├── Requires: Design Tokens (to know which tokens to generate)
+  └── Required by: Visual Theme Editor (auto-palette feature)
+  └── Can be built standalone as pure function
+
+Theme Presets
+  ├── Requires: Design Tokens + CSS Migration + 9-Slice (for image presets)
+  └── Required by: Visual Theme Editor (preset selector)
+
+Theme Import/Export
+  ├── Requires: Design Tokens + all asset references resolved
+  └── Requires: ZIP packaging capability (JSZip or similar)
+
+Visual Theme Editor
+  ├── Requires: ALL of the above
+  └── This is the capstone — build last
 ```
 
-### Recommended Build Order
+### Dependency-Driven Build Order
 
-1. **Save System Upgrade** — Foundation. Everything else needs filesystem saves.
-   - IPC handlers for save/load/delete/list
-   - SaveManager rewrite (localStorage → file system)
-   - Screenshot capture pipeline
-   - Migration from old localStorage saves
-   - Read-page tracking storage (`readdata.json`)
-
-2. **Fast-Forward / Skip Mode** — Needs read tracking from save system.
-   - ReadTracker module (records seen pages)
-   - Skip mode upgrade (skip-all vs skip-read-only)
-   - Settings toggle for skip mode default
-   - Transition speed override during skip
-   - Voice stop during skip
-
-3. **Save/Load UI** — Needs filesystem saves + thumbnails to be meaningful.
-   - 100-slot paginated grid
-   - Thumbnail display
-   - Page navigation (10 pages × 10 slots)
-   - Overwrite confirmation
-   - Delete functionality
-
-4. **Quick Action Bar** — Pure UI wiring; connects to everything else.
-   - New QuickBar UI class
-   - 6 buttons at dialogue box bottom
-   - Active state indicators
-   - Editor-customizable properties (future-ready hooks)
-   - Keyboard shortcut expansion
-
-### Shared Systems Needed
-
-| System | Used By | Notes |
-|--------|---------|-------|
-| Screenshot capture (html2canvas or capturePage) | Save/Load UI, Save System | Single pipeline: capture → resize → compress → IPC send |
-| IPC save handlers | Save System, Save/Load UI, Quick Bar (save/load buttons) | `save-game`, `load-game`, `list-saves`, `delete-save` |
-| ReadTracker module | Skip Mode, Save System | `saves/readdata.json`, checked on every page_enter |
-| ConfigManager expansion | Skip Mode settings | New keys: `skipMode: 'all'\|'readOnly'` |
-| settingDefs expansion | Skip Mode settings in Settings screen | New entry: `skip-mode` select component |
-| ESC priority chain expansion | Save/Load UI | Save/Load screen needs ESC handling (close → return to game) |
-
-### Interaction with Existing Systems
-
-| Existing System | Impact | Notes |
-|----------------|--------|-------|
-| `GameMenu.js` | Minimal change — save/load callbacks already wired | Already calls `saveLoadScreen.show('save'\|'load')` |
-| `DialogueBox.js` | Quick bar positioning changes | Bar moves from dialogue-layer top-right to dialogue-box bottom area |
-| `ScriptEngine.js` | Add `page_enter` hook for read tracking | Emit already exists; just need listener in ReadTracker |
-| `ConfigManager.js` | Stays on localStorage | Config is small, per-user — localStorage is fine. Only game saves move to files |
-| `main.js` | Major refactor of save/load wiring, skip logic, quick controls | The orchestration hub needs significant updates |
-| `style.css` | Save/Load screen complete restyle, quick bar relocation | Existing save-load styles are for 8-slot simple grid — needs full replacement |
+1. **Design Tokens data model** — defines the schema, pure data, no rendering
+2. **CSS variable migration** — refactor style.css to consume tokens (risky, test heavily)
+3. **9-slice image system** — CSS `border-image` for runtime, custom preview for editor
+4. **Color harmony algorithm** — pure function, can be built in parallel with 3
+5. **Theme presets** — concrete validation that tokens + 9-slice work end-to-end
+6. **Theme import/export** — packaging/serialization layer
+7. **Visual theme editor** — the editor UI that ties everything together
 
 ---
 
 ## MVP Recommendation
 
-### Must-Have for v0.5 (ship-blocking)
+### Must Have (v0.6 release gate)
 
-1. **File system save/load** — Without this, 100 slots and thumbnails are impossible
-2. **Screenshot thumbnails** — Text-only save slots feel like a 2005 engine
-3. **100-slot paginated save/load UI** — The visual upgrade players see
-4. **Skip All mode refinement** — Fix transition speed during skip, voice stop
-5. **Quick action bar at dialogue bottom** — 6 buttons, proper positioning
-6. **Read-page tracking** — Enables skip-read-only (the most-requested VN feature)
-7. **Skip Read Only mode** — The feature that makes the engine feel professional
+1. **Design Tokens + CSS migration** — Without this, nothing else works. The entire style.css must move to CSS custom properties. ~40 tokens covering colors, fonts, radii, spacing, opacity.
+2. **Color harmony algorithm** — Essential "防呆" feature. Non-designers will produce ugly results without guidance. Pick primary → get palette.
+3. **Dialogue box 9-slice images** — The single highest-impact visual feature. One image transforms the entire game feel. Buttons can come later.
+4. **2-3 built-in presets** — Concrete proof the system works. Makers can start from a preset and customize.
+5. **Basic visual editor** — Color pickers + font selectors + preset chooser + live preview. Doesn't need to be pixel-perfect Figma-level, but must be visual (not JSON editing).
 
-### Defer to v0.5.1 or later
+### Should Have (v0.6 if time permits)
 
-- **Auto-save on scene transitions** — Nice but not blocking
-- **Quick Save/Quick Load (F5/F9)** — Can be keyboard-only initially, UI slot later
-- **Editor-customizable button appearance** — Functional first, pretty later (aligns with planned "UI 美化系统")
-- **Button image replacement** — Explicitly deferred per PROJECT.md
-- **Play time tracking** — Low priority, purely cosmetic
-- **"Skip to next choice" mode** — Power user feature, add after basics work
-- **Save data export/import** — File system saves are naturally portable; explicit UI later
+6. **Button 9-slice images (3-state)** — Significant visual uplift, but additive on top of dialogue box 9-slice.
+7. **Panel 9-slice images** — Save/load, settings, backlog, game menu panels can use custom frame images.
+
+### Defer to v0.7
+
+8. **Theme import/export (.theme packs)** — Requires mature token model. Better to stabilize the model first, then add packaging.
+9. **Per-component overrides** — Nice-to-have layer on top of base tokens. Can ship without it.
 
 ---
 
-## Complexity Assessment
+## Detailed Feature Specifications
 
-| Feature | Effort | Risk | Notes |
-|---------|--------|------|-------|
-| Save IPC handlers | Medium | Low | Follow existing `ipcMain.handle` pattern |
-| SaveManager rewrite | Medium | Medium | API contract changes, migration logic |
-| Screenshot capture pipeline | High | Medium | html2canvas quirks vs Electron API trade-offs |
-| Thumbnail compression | Low | Low | Standard Canvas API |
-| localStorage migration | Medium | Medium | One-time migration, edge cases with partial data |
-| ReadTracker module | Medium | Low | Simple Set/JSON persistence, engine hook |
-| Skip mode upgrade | Medium | Low | State machine refinement, existing foundation |
-| Skip animation acceleration | Medium | Medium | Need to thread skip state through engine events |
-| Save/Load UI rewrite | High | Low | Large DOM/CSS effort, straightforward logic |
-| Pagination UI | Low | Low | Simple page math + tab rendering |
-| Quick action bar | Low | Low | DOM + CSS + event wiring, mostly existing patterns |
-| Settings skip toggle | Low | Low | Clone existing settingDefs pattern |
+### Design Tokens — Token Categories
 
-**Highest risk:** Screenshot capture pipeline. html2canvas can produce visual differences from actual rendering (CSS features, fonts, transforms). Electron's `capturePage()` is more reliable but requires IPC round-trip and captures the entire window (needs cropping to game container). Recommend starting with `capturePage()` since this is an Electron app and avoids adding a dependency.
+Based on analysis of all 8 themed UI components in style.css:
+
+| Token Category | Tokens | Current Hardcoded Values | Impact |
+|---|---|---|---|
+| **Accent colors** | `--gm-accent`, `--gm-accent-hover`, `--gm-accent-active` | `rgba(180, 160, 255, *)` throughout | Every interactive element |
+| **Text colors** | `--gm-text-primary`, `--gm-text-secondary`, `--gm-text-muted` | Various `rgba(255, 255, 255, 0.4-0.95)` | All text in all screens |
+| **Panel backgrounds** | `--gm-panel-bg`, `--gm-panel-bg-light`, `--gm-overlay-bg` | `rgba(10, 10, 20, 0.8-0.95)`, `rgba(30, 30, 50, 0.5-0.6)` | All overlay screens |
+| **Border** | `--gm-border-color`, `--gm-border-radius` | `rgba(255, 255, 255, 0.06-0.15)`, `4-6px` | All containers/buttons |
+| **Dialogue box** | `--gm-dialogue-bg`, `--gm-dialogue-border`, `--gm-dialogue-name-shadow` | Complex gradient, `1px rgba(255,255,255,0.08)` | Dialogue box (#1 visible element) |
+| **Fonts** | `--gm-font-display`, `--gm-font-body`, `--gm-font-ui` | `'Noto Serif SC'`, `'Noto Sans SC'` | Every text element |
+| **Font sizes** | `--gm-size-title`, `--gm-size-body`, `--gm-size-small`, `--gm-size-nameplate` | `22px`, `18px`, `14px`, `20px` | Text hierarchy |
+| **Button states** | `--gm-btn-bg`, `--gm-btn-hover`, `--gm-btn-active`, `--gm-btn-text` | Various per-button-type | All clickable elements |
+| **Slider/toggle** | `--gm-slider-track`, `--gm-slider-fill`, `--gm-slider-thumb`, `--gm-toggle-active` | From DEFAULT_SETTING_STYLE | Settings screen controls |
+| **Special** | `--gm-danger`, `--gm-selection-bg`, `--gm-scrollbar` | `#ff6b6b`, `rgba(180, 160, 255, 0.9)` | Delete buttons, active pagination |
+
+**Estimated total: ~35-40 tokens.** Enough for complete theming, not so many that the editor is overwhelming.
+
+### 9-Slice System — Implementation Notes
+
+CSS `border-image` provides native 9-slice rendering. No canvas needed at runtime:
+
+```css
+#dialogue-box {
+  border-image: url('asset://theme/dialogue-frame.png') 30 30 30 30 fill stretch;
+  border-width: 30px;
+  background: none; /* 9-slice replaces gradient */
+}
+```
+
+The `border-image-slice` values define the 4 inset regions. `fill` draws the center. `stretch`/`repeat`/`round` controls edge scaling.
+
+**For editor preview:** The 1280×720 canvas uses the same CSS on the preview elements — no custom rendering needed if the preview uses actual DOM (which it already does for title/settings designers).
+
+**Image format:** PNG with transparency. Recommended size: 128×128 to 256×256 minimum. Artists create the frame once, CSS scales it to any size.
+
+### Color Harmony — Algorithm Spec
+
+Input: one HSL primary color
+Output: full palette (~10 derived colors)
+
+| Derived Color | Algorithm | Purpose |
+|---|---|---|
+| Accent | Input color | Primary interactive color |
+| Accent hover | H same, S same, L +15% | Hover states |
+| Accent active | H same, S same, L -10% | Pressed states |
+| Accent muted | H same, S -40%, L same | Insensitive/disabled |
+| Panel bg | H same, S -60%, L 8-12% | Dark panel backgrounds |
+| Panel bg light | H same, S -50%, L 15-20% | Lighter panel (cards, slots) |
+| Border | H same, S -50%, L +5% from panel | Subtle borders |
+| Text primary | H same, S -70%, L 92% | Main text |
+| Text secondary | H same, S -70%, L 65% | Labels, secondary |
+| Text muted | H same, S -80%, L 40% | Hints, timestamps |
+| Danger | H 0° (red), S 70%, L 60% | Delete/destructive (fixed) |
+
+This maps closely to how Ren'Py's gui.accent_color propagates: one hue, varied saturation and lightness.
+
+### Theme Presets — Planned
+
+| Preset | Style | Tokens | 9-Slice Images | Font Pair |
+|---|---|---|---|---|
+| **Modern** (default) | Glass/blur, current aesthetic refined | Cool purple accent, frosted glass panels | None (CSS gradients + backdrop-filter) | Noto Sans SC + Noto Serif SC |
+| **Traditional Japanese** (和風) | Paper/brush aesthetic | Warm earth tones (#8B6914 gold accent) | dialogue-frame: brush-stroke border. panels: washi paper texture | Serif display + clean body |
+| **Fantasy** (幻想) | Ornate medieval/RPG | Deep blue (#2a3a8a) accent with gold (#d4a843) borders | dialogue-frame: stone/wood ornate frame. panels: dark parchment | Decorative display + readable body |
+| **Minimal** (简约) | Ultra-clean, flat | Monochrome with single accent | None (flat colors, sharp borders, 0px radius) | System sans-serif |
 
 ---
 
-## Sources & Confidence
+## Sources and Confidence
 
-| Finding | Confidence | Basis |
-|---------|-----------|-------|
-| Quick bar 6-button convention | HIGH | Universal across KiriKiri, Ren'Py, NScripter, TyranoScript, commercial titles |
-| Bottom-of-dialogue-box positioning | HIGH | Industry standard since KiriKiri2/吉里吉里2 era (~2004+) |
-| 100-slot paginated save grid | HIGH | Standard since Leaf/Key era; Ren'Py defaults to unlimited |
-| Skip-read-only as #1 expected feature | HIGH | Present in every commercial galgame; Ren'Py, KiriKiri built-in |
-| Read tracking per page (not per line) | HIGH | KiriKiri tracks per label/page; Ren'Py tracks per statement |
-| html2canvas for thumbnail capture | MEDIUM | Common web approach; Electron `capturePage()` is valid alternative |
-| JPEG 320×180 thumbnail sizing | MEDIUM | Reasonable balance; actual sizes vary by engine (240-400px wide) |
-| File-per-slot save structure | HIGH | Standard in all desktop VN engines |
-| Atomic write for save protection | HIGH | Already implemented in project; industry standard |
-| Ctrl-held skip convention | HIGH | Ren'Py default; common in Western VN ports |
-| Existing codebase analysis | HIGH | Direct code inspection of all relevant source files |
+| Claim | Source | Confidence |
+|---|---|---|
+| Ren'Py gui.rpy variable cascade (~70 vars) | Training data (Ren'Py documentation, extensive community guides) | HIGH — extremely well-documented, stable API since Ren'Py 7.x |
+| RPG Maker windowskin 192×192 grid layout | Training data (RPG Maker MV/MZ documentation, community tutorials) | HIGH — unchanged since RPG Maker VX Ace, extensively documented |
+| CSS border-image supports 9-slice natively | CSS specification, widely supported | HIGH — CSS3 standard, supported in all Chromium versions |
+| TyranoScript web-based theming approach | Training data (TyranoScript documentation) | MEDIUM — less widely documented than Ren'Py/RPG Maker |
+| Commercial galgame UI patterns (KEY, TYPE-MOON) | Training data (game analysis, community discussions) | MEDIUM — based on game observation, not engine documentation |
+| Color harmony HSL algorithm | Color theory fundamentals, design system best practices | HIGH — mathematical/deterministic, well-established |
+| 80/20 rule of VN visual identity | Synthesis from domain analysis | MEDIUM — opinionated conclusion from cross-engine comparison |

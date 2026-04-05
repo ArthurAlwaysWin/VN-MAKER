@@ -1,355 +1,396 @@
-# Stack Research — v0.5: Game UI Completion
+# Technology Stack — v0.6 Theme Pack System
 
-**Project:** Galgame Maker v0.5 — 游戏 UI 补全
-**Researched:** 2025-07-18
+**Project:** Galgame Maker
+**Researched:** 2025-07-14
+**Scope:** NEW stack additions for Design Tokens + 9-Slice + Color Harmony + Theme Packs
 **Overall confidence:** HIGH
 
-## Verdict: ZERO New npm Dependencies
+## Executive Summary
 
-All v0.5 features (quick action bar, save/load UI with thumbnails, fast-forward mode, file system save upgrade) are achievable using **Electron native APIs + built-in browser APIs only**. This continues the project's ZERO new npm deps policy from v0.2 onward.
+The v0.6 theme system requires almost no new dependencies. The existing Electron 41 (Chromium 136) runtime provides native CSS capabilities (`border-image`, `color-mix()`, `oklch()`, CSS custom properties) that cover 95% of the needs. Color harmony is pure HSL math (~200 lines). The only justified new dependency is `fflate` (8KB gzipped) for ZIP-based theme pack import/export.
 
-The project description mentions "html2canvas 截图" — research shows `webContents.capturePage()` is the superior approach for Electron, eliminating the need for any screenshot library.
+**Guiding principle:** This project has zero runtime dependencies beyond Vue/Pinia. Adding one tiny, focused library (fflate) for a specific capability (ZIP I/O) that has no native equivalent is justified. Adding a color library for math you can write in 200 lines is not.
 
-## Existing Stack (Unchanged)
+## Existing Stack (DO NOT change)
 
-| Technology | Version | Purpose | Status |
-|------------|---------|---------|--------|
-| Electron | 41 (Chromium 134+) | Desktop shell | Existing |
-| Vue 3 | 3.5.x | Editor UI framework | Existing |
-| Pinia | 3.0.x | Editor state management | Existing |
-| Vite | 6.3.x | Build tooling | Existing |
-| Pure JavaScript (ES Modules) | ES2022+ | No TypeScript | Existing constraint |
-| Node.js `fs/promises` | Built-in | File system operations | Existing in `electron/main.js` |
-| `atomicWrite()` | In-house | Safe file writes (temp→rename) | Existing utility |
-| `ipcMain.handle` / `ipcRenderer.invoke` | Electron | Renderer↔Main communication | Existing pattern |
-| `asset://` protocol | Custom | Serve project assets securely | Existing |
-| CSS Grid/Flexbox | Built-in | Layout | Existing |
+| Technology | Version | Role |
+|------------|---------|------|
+| Electron | 41.0.4 | Desktop runtime (Chromium 136 + Node.js 22) |
+| Vue 3 | 3.5.31 | Editor UI framework |
+| Pinia | 3.0.4 | Editor state management |
+| Vite | 6.3.0 | Build tool |
+| Pure JavaScript | ES Modules | No TypeScript — JSDoc only |
 
-## New Dependencies
+## NEW Stack Additions
 
-**None.** Every v0.5 feature maps to existing capabilities:
+### 1. Design Token System — ZERO dependencies
 
-| Feature | Technology | Already Available |
-|---------|-----------|-------------------|
-| Save thumbnails | `webContents.capturePage()` | Electron 41 native API |
-| File system saves | `fs/promises` + `atomicWrite()` | Existing in `electron/main.js` |
-| Quick action bar | DOM elements + CSS | Same pattern as existing `#quick-controls` |
-| Save/Load grid UI | CSS Grid + DOM | Same pattern as existing `SaveLoadScreen.js` |
-| Page pagination (10 pages × 10 slots) | Pure DOM | Trivial tab/button switching |
-| Read-page tracking | `Set<string>` + `localStorage` | Browser built-in |
-| Thumbnail display | `<img>` + `asset://` or data URL | Existing protocol |
+**What:** A JSON-serializable token object rendered as CSS custom properties on `#game-container`.
 
-## Key Technical Decisions
+**Technology:** Native CSS custom properties + `element.style.setProperty()`.
 
-### 1. Screenshots — `webContents.capturePage()` (NOT html2canvas)
-
-**Recommendation:** Use Electron's native `webContents.capturePage(rect)` instead of any DOM screenshot library.
-
-**Why this is better than html2canvas for this project:**
-
-| Criterion | `webContents.capturePage()` | html2canvas | modern-screenshot |
-|-----------|---------------------------|-------------|-------------------|
-| Dependencies | Zero | npm package (abandoned Jan 2022) | npm package |
-| CSS accuracy | Perfect (captures rendered pixels) | Re-renders CSS manually (known bugs) | SVG foreignObject (generally good) |
-| Custom fonts | ✅ Captures what Chromium renders | ⚠️ May fail with @font-face | ⚠️ Needs font inlining |
-| `asset://` protocol | ✅ No cross-origin issues | ⚠️ CORS/tainted canvas risk | ⚠️ Needs fetch + inline to data URL |
-| CSS animations/transitions | ✅ Captures current frame | ❌ Static snapshot of computed styles | ❌ Static snapshot |
-| Performance | Fast (native screengrab) | Slow (re-parse entire DOM + CSS) | Moderate (SVG serialization) |
-| Reliability | Guaranteed (Chromium internal) | Library bugs, edge cases | Library bugs possible |
-
-**Library status check (npm registry, verified 2025-07-18):**
-
-| Library | Latest Version | Last Published | Status |
-|---------|---------------|----------------|--------|
-| html2canvas | 1.4.1 | **Jan 2022** | ⚠️ Abandoned (3.5+ years stale) |
-| modern-screenshot | 4.6.8 | Jan 2026 | Active |
-| html-to-image | 1.11.13 | Feb 2025 | Active |
-
-Even if a library were needed, **html2canvas would be the worst choice** — it's been abandoned since 2022. But no library is needed at all.
+**Why zero-dependency:** The project already uses `setProperty()` in 4 places (SettingsScreen.js lines 131-133, 161) and CSS `var()` in 3 places (style.css lines 873, 883, 931). This is just scaling an existing pattern — no new API needed.
 
 **Implementation approach:**
-
 ```javascript
-// electron/main.js — new IPC handler
-ipcMain.handle('capture-game-screenshot', async (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  // Capture the 1280×720 game area
-  const image = await win.webContents.capturePage({ x: 0, y: 0, width: 1280, height: 720 });
-  // Resize to thumbnail (e.g., 320×180 for save slot cards)
-  const thumb = image.resize({ width: 320, height: 180 });
-  return thumb.toJPEG(80); // Returns Buffer — compact for 100 slots
-});
-```
-
-**Capture flow:**
-1. User triggers save → renderer calls `ipcRenderer.invoke('capture-game-screenshot')` **before** showing Save UI
-2. Main process captures + resizes → returns JPEG Buffer to renderer
-3. Renderer caches the Buffer, opens Save/Load UI showing preview
-4. User picks a slot → renderer sends `ipcRenderer.invoke('save-game', { slot, state, screenshot, previewText })`
-5. Main process writes `saves/slot_XX.json` (state) + `saves/slot_XX.jpg` (thumbnail)
-
-**Confidence: HIGH** — `webContents.capturePage()` has been stable since Electron 1.x. The `rect` parameter and `NativeImage.resize()` are well-documented, stable APIs.
-
-### 2. File System Saves — Extend Existing IPC Patterns
-
-**Current state:** `SaveManager.js` uses `localStorage` with 8 slots. Simple key-value JSON storage.
-
-**Target state:** `saves/` directory inside project folder, 100 slots, JSON state + JPEG thumbnails.
-
-**No new technology needed.** The project already has every building block:
-
-| Building Block | Where | Reuse For |
-|---------------|-------|-----------|
-| `atomicWrite(filePath, content)` | `electron/main.js:67` | Writing save state JSON safely |
-| `fs.writeFile(path, buffer)` | `electron/main.js:263` | Writing JPEG thumbnails |
-| `fs.readdir(dir)` | `electron/main.js:249` | Listing save slots |
-| `fs.unlink(path)` | `electron/main.js:398` | Deleting save slots |
-| `isInsideProject(path)` | `electron/main.js:55` | Path security for saves/ |
-| `fs.mkdir(dir, { recursive: true })` | `electron/main.js:105` | Creating saves/ directory |
-
-**New IPC handlers needed (4 total):**
-
-```javascript
-// 1. save-game — write state + thumbnail
-ipcMain.handle('save-game', async (event, { slot, state, screenshot, previewText }) => {
-  const savesDir = path.join(currentProjectPath, 'saves');
-  await fs.mkdir(savesDir, { recursive: true });
-  // Atomic write for state JSON (prevents corruption)
-  await atomicWrite(path.join(savesDir, `slot_${slot}.json`), JSON.stringify({
-    state, previewText, timestamp: Date.now(), date: new Date().toLocaleString('zh-CN')
-  }, null, 2));
-  // Write thumbnail (non-atomic OK — worst case: missing thumbnail)
-  if (screenshot) {
-    await fs.writeFile(path.join(savesDir, `slot_${slot}.jpg`), Buffer.from(screenshot));
-  }
-});
-
-// 2. load-game — read state
-ipcMain.handle('load-game', async (event, { slot }) => { ... });
-
-// 3. delete-save — remove slot files
-ipcMain.handle('delete-save', async (event, { slot }) => { ... });
-
-// 4. list-saves — metadata for all slots (for grid display)
-ipcMain.handle('list-saves', async () => { ... });
-```
-
-**Save file structure:**
-```
-project-folder/
-├── saves/
-│   ├── slot_0.json      # Game state + metadata
-│   ├── slot_0.jpg       # Thumbnail (320×180 JPEG)
-│   ├── slot_1.json
-│   ├── slot_1.jpg
-│   └── ...              # Up to slot_99
-├── assets/
-├── project.json
-└── script.json
-```
-
-**Thumbnail display in Save/Load UI:**
-- Option A: Extend `asset://` protocol to also serve from `saves/` → `<img src="asset://saves/slot_0.jpg">`
-- Option B: `list-saves` IPC returns thumbnail as base64 data URL
-- **Recommend Option A** — cleaner, uses existing protocol infrastructure, no base64 bloat in IPC messages. The `asset://` handler in `main.js:615` already resolves against `currentProjectPath`; extending it to serve from `saves/` alongside `assets/` is a small change to the path resolution.
-
-### 3. Read-Page Tracking (for Skip-Read-Only Mode)
-
-**No new technology.** This is an engine-internal feature using `Set<string>`.
-
-**Design:**
-```javascript
-// In ScriptEngine or a new ReadTracker
-// Key format: "sceneId:pageIndex" — uniquely identifies every page
-const readPages = new Set();
-
-// Mark page as read when dialogue completes
-function markRead(sceneId, pageIndex) {
-  readPages.add(`${sceneId}:${pageIndex}`);
-}
-
-// Check if page has been read (for skip-read-only mode)
-function isRead(sceneId, pageIndex) {
-  return readPages.has(`${sceneId}:${pageIndex}`);
-}
-```
-
-**Persistence:** Read-page data should persist across game sessions. Two options:
-- **localStorage** (keyed by gameId) — simplest, doesn't pollute save files, survives save deletion
-- **Separate file** `saves/read-history.json` — portable with project
-
-**Recommend localStorage** — read history is player-specific data (like config), not project data. Different players of the same game have different read histories. This follows the same pattern as `ConfigManager.js` which already uses localStorage.
-
-### 4. Quick Action Bar — DOM Extension
-
-**No new technology.** The existing `#quick-controls` in `main.js:54-62` already implements 4 buttons (AUTO, SKIP, LOG, MENU). v0.5 changes this to 6 buttons (存档, 读档, 回想, 设置, 自动, 快进).
-
-This is a pure DOM restructure — same `document.createElement('div')` + event delegation pattern.
-
-### 5. Save/Load UI — CSS Grid + Pagination
-
-**No new technology.** The existing `SaveLoadScreen.js` already renders a slot grid. v0.5 upgrades from 8 text-only slots to 100 thumbnail card slots with 10 pages.
-
-| UI Element | Technology | Notes |
-|-----------|-----------|-------|
-| 10×10 grid layout | `display: grid; grid-template-columns: repeat(5, 1fr)` | 5 columns × 2 rows per page = 10 slots visible |
-| Page tabs | DOM buttons with click handlers | 10 page tabs at bottom |
-| Thumbnail cards | `<img>` + `<div>` text overlay | JPEG via `asset://` + previewText |
-| Active slot highlight | CSS `:hover` + `.selected` class | Standard |
-| Delete confirmation | Inline "确定删除?" with confirm/cancel | No modal library needed |
-
-## Existing Stack Reuse
-
-| Existing Component | Reused For | How |
-|-------------------|-----------|-----|
-| `SaveManager.js` | **Replace entirely** — new `SaveManager` uses IPC instead of localStorage | Rewrite class, same public API (`save`, `load`, `delete`, `getAllSlots`, `hasAnySave`) |
-| `SaveLoadScreen.js` | **Rewrite** — new UI with grid, thumbnails, pagination | Same class structure, new `_render()` implementation |
-| `ConfigManager.js` | **Extend** — add `skipMode: 'all'` setting (`'all'` \| `'readOnly'`) | One new default field |
-| `settingDefs.js` | **Extend** — add skip mode toggle to settings page presets | One new SETTING_DEF entry |
-| `GameMenu.js` | **Minor update** — menu still opens save/load, wire to new SaveManager | Minimal change |
-| `main.js` (engine runtime) | **Extend** — new quick bar buttons, skip-read-only logic, screenshot capture trigger | Moderate updates to event wiring |
-| `ScriptEngine.js` | **Extend** — add read-page tracking Set, emit `page_read` event | Small addition |
-| `electron/main.js` | **Extend** — add 5 new IPC handlers (save/load/delete/list/screenshot) | Follows existing patterns exactly |
-| `asset://` protocol handler | **Extend** — serve from `saves/` directory for thumbnails | Small path resolution change |
-
-## Integration Notes
-
-### IPC Architecture (Critical)
-
-The save system upgrade is the biggest architectural change: **SaveManager moves from synchronous localStorage to async IPC**.
-
-**Current (synchronous):**
-```javascript
-// SaveManager.js — current
-save(slot, state, previewText) {
-  localStorage.setItem(this._key(slot), JSON.stringify(data));
-}
-load(slot) {
-  return JSON.parse(localStorage.getItem(this._key(slot)));
-}
-```
-
-**New (async IPC):**
-```javascript
-// SaveManager.js — new
-async save(slot, state, previewText, screenshot) {
-  return await window.ipcRenderer.invoke('save-game', { slot, state, previewText, screenshot });
-}
-async load(slot) {
-  return await window.ipcRenderer.invoke('load-game', { slot });
-}
-```
-
-**Impact:** All call sites that use `saveManager.save()` and `saveManager.load()` must become `async/await`. This affects:
-- `main.js:180-200` — `saveLoadScreen.onSave` / `saveLoadScreen.onLoad`
-- `main.js:405` — `saveManager.hasAnySave()` (title screen continue button)
-- `SaveLoadScreen.js` — slot click handlers
-
-This is manageable but must be done carefully to avoid race conditions.
-
-### Screenshot Timing (Critical)
-
-The screenshot must be captured **before** the Save/Load UI appears (otherwise the screenshot shows the UI overlay, not the game scene). The flow:
-
-1. User clicks Save button → `ipcRenderer.invoke('capture-game-screenshot')`
-2. Await screenshot Buffer return
-3. Cache the Buffer in SaveLoadScreen instance
-4. Show the Save UI overlay
-5. When user clicks a slot, use the cached screenshot
-
-### asset:// Protocol Extension for Saves
-
-Current `asset://` resolves against `{projectPath}/assets/`. For thumbnails, extend to also serve from `{projectPath}/saves/`:
-
-```javascript
-// In protocol.handle('asset', ...) — add saves path resolution
-const basePaths = {
-  assets: path.join(currentProjectPath, 'assets'),
-  saves: path.join(currentProjectPath, 'saves'),
+// Token object (JSON-serializable, stored in script.json ui.theme)
+const tokens = {
+  '--gm-dialogue-bg': 'rgba(8, 8, 20, 0.92)',
+  '--gm-dialogue-text': 'rgba(255, 255, 255, 0.92)',
+  '--gm-button-bg': 'rgba(60, 60, 100, 0.6)',
+  '--gm-accent': 'rgba(180, 160, 255, 0.9)',
+  // ... ~30-50 tokens total
 };
-// Route based on first path segment: asset://saves/slot_0.jpg vs asset://backgrounds/bg1.png
+
+// Render: one function, applies all tokens
+function applyTokens(container, tokens) {
+  for (const [key, value] of Object.entries(tokens)) {
+    container.style.setProperty(key, value);
+  }
+}
 ```
 
-Alternative: Add a dedicated `save://` protocol. But extending `asset://` is simpler and consistent.
+**CSS consumption pattern (already proven in codebase):**
+```css
+#dialogue-box {
+  background: var(--gm-dialogue-bg, rgba(8, 8, 20, 0.92));
+  /* fallback = current hardcoded value, so zero-theme = identical to today */
+}
+```
 
-### ConfigManager — Skip Mode Setting
+**Confidence:** HIGH — uses only APIs already proven in the codebase.
 
-Add to `ConfigManager.js` defaults:
+### 2. 9-Slice / Border-Image System — ZERO dependencies
+
+**What:** CSS `border-image` for skinning dialogue boxes, panels, and buttons with user-provided images.
+
+**Technology:** Native CSS `border-image-source`, `border-image-slice`, `border-image-width`, `border-image-repeat`.
+
+**Why zero-dependency:** `border-image` has been supported since Chrome 15. In Chromium 136, it's rock-solid with full support for all sub-properties.
+
+**Integration with asset:// protocol:** The existing `asset://` protocol resolves `asset://ui/panel-border.png` to `{project}/assets/ui/panel-border.png`. The `ui` asset category already exists in `validateAsset.js` (line 56-59) with PNG/JPG/WebP validation. 9-slice images are just regular images stored in `assets/ui/`.
+
+**Implementation approach:**
+```css
+/* Applied via setProperty from token values */
+#dialogue-box {
+  border-image-source: var(--gm-dialogue-border-image, none);
+  border-image-slice: var(--gm-dialogue-border-slice, 30 fill);
+  border-image-width: var(--gm-dialogue-border-width, 30px);
+  border-image-repeat: var(--gm-dialogue-border-repeat, stretch);
+}
+```
+
+**When border-image is active:** Overrides `background` and `border` — the image becomes the entire box chrome. This means the token system needs a mode flag: `useImage: true/false` to switch between color-based and image-based styling.
+
+**Three-state buttons (normal/hover/active):**
+```css
+.title-custom-button {
+  border-image-source: var(--gm-button-image-normal, none);
+}
+.title-custom-button:hover {
+  border-image-source: var(--gm-button-image-hover, none);
+}
+.title-custom-button:active {
+  border-image-source: var(--gm-button-image-active, none);
+}
+```
+
+**Key technical notes:**
+- `border-image-slice` uses unitless numbers (pixels from the image edges) or percentages
+- The `fill` keyword in `border-image-slice` is essential — without it, the center is empty
+- `border-image` overrides `border-radius` — rounded corners don't work with border-image (users must bake rounded corners into the source image)
+- `border-image-source: url('asset://ui/panel.png')` works because `asset://` is registered as a privileged scheme with `bypassCSP: true`
+
+**Confidence:** HIGH — CSS standard feature, asset:// protocol already handles UI images.
+
+### 3. Color Harmony / Palette Generation — ZERO dependencies
+
+**What:** Algorithms to generate harmonious color palettes from a base color (complementary, analogous, triadic, split-complementary, tetradic).
+
+**Technology:** Pure JavaScript HSL math utility module (~200-300 lines).
+
+**Why zero-dependency:**
+
+| Library | Size (unpacked) | What it does | Overkill? |
+|---------|-----------------|--------------|-----------|
+| chroma-js 3.2.0 | 397KB | Color spaces, interpolation, scales | YES — we need 5 formulas |
+| tinycolor2 1.6.0 | 285KB | Color manipulation, readability | YES — unmaintained (last release 2020) |
+| culori 4.0.2 | 1.1MB | Perceptual color science | ABSOLUTELY — academic-grade overkill |
+
+The actual math for color harmony:
 ```javascript
-skipMode: 'all',  // 'all' = skip everything, 'readOnly' = skip only read pages
+// This is literally all the "hard" math:
+function complementary(h) { return (h + 180) % 360; }
+function analogous(h) { return [(h + 30) % 360, (h - 30 + 360) % 360]; }
+function triadic(h) { return [(h + 120) % 360, (h + 240) % 360]; }
+function splitComplementary(h) { return [(h + 150) % 360, (h + 210) % 360]; }
+
+// Plus hex↔HSL conversion (~40 lines) and contrast ratio (~20 lines)
 ```
 
-This is a **player preference** (not authored content), so ConfigManager is the correct location. The settings page gets a new toggle component.
+**What the utility module provides:**
+1. `hexToHsl()` / `hslToHex()` — color format conversion
+2. `hexToRgb()` / `rgbToHex()` — for contrast calculations
+3. `generateHarmony(baseHex, type)` — returns palette array
+4. `contrastRatio(hex1, hex2)` — WCAG luminance contrast check
+5. `adjustLightness(hex, amount)` — generate tints/shades
+6. `isReadable(fg, bg, level)` — WCAG AA/AAA check (4.5:1 or 7:1)
+
+**Bonus — Modern CSS color functions (Chromium 136):**
+```css
+/* CSS can auto-generate tints/shades without any JS: */
+--gm-accent-light: color-mix(in oklch, var(--gm-accent), white 30%);
+--gm-accent-dark: color-mix(in oklch, var(--gm-accent), black 20%);
+```
+`color-mix()` in `oklch` is available in Chromium 111+ — we can offload tint/shade generation to CSS itself, keeping JS focused only on harmony algorithm computation.
+
+**Confidence:** HIGH — standard math, well-documented formulas, proven color theory.
+
+### 4. Theme Pack Import/Export — ONE new dependency: `fflate`
+
+**What:** Package theme data (JSON tokens + image files) into a single `.theme` file for sharing.
+
+**Technology:** `fflate` 0.8.2 — pure JavaScript ZIP library.
+
+| Property | Value |
+|----------|-------|
+| Package | `fflate` |
+| Version | 0.8.2 |
+| License | MIT |
+| Size (gzipped) | ~8KB |
+| Size (unpacked) | 773KB (includes TypeScript types + multiple builds) |
+| ESM support | ✅ Full (separate node/browser entry points via exports map) |
+| Native deps | None (pure JS) |
+| Maintenance | Active (GitHub: 101arrowz/fflate) |
+
+**Why fflate (not alternatives):**
+
+| Option | Verdict | Reason |
+|--------|---------|--------|
+| `fflate` | ✅ **USE THIS** | 8KB runtime, pure JS, ESM, sync+async API |
+| `jszip` 3.10.1 | ❌ | 762KB unpacked, heavier API surface, async-only |
+| `archiver` | ❌ | Stream-based, designed for Node.js servers, heavy |
+| Node.js `zlib` | ❌ | Only handles deflate/gzip streams, NOT the ZIP container format |
+| Manual ZIP format | ❌ | ~300+ lines to handle ZIP headers/central directory correctly |
+| No ZIP (JSON + base64 images) | ❌ | 33% size overhead, unreadable files, poor UX |
+| Folder-based themes | ❌ | Can't share as single file, poor UX |
+
+**Why ZIP at all:** A theme pack contains JSON metadata (~2KB) + 3-8 image files (9-slice borders, button states) at ~10-50KB each. A single `.theme` file that users can share, import, and preview is standard UX for creative tools.
+
+**Where it runs:** Electron main process only (via IPC). The renderer never touches ZIP operations.
+
+```javascript
+// Main process — export
+import { zipSync, strToU8 } from 'fflate';
+
+function exportTheme(themeData, imageFiles) {
+  const files = { 'theme.json': strToU8(JSON.stringify(themeData, null, 2)) };
+  for (const [name, buffer] of Object.entries(imageFiles)) {
+    files[`images/${name}`] = new Uint8Array(buffer);
+  }
+  return zipSync(files);
+}
+
+// Main process — import
+import { unzipSync, strFromU8 } from 'fflate';
+
+function importTheme(zipBuffer) {
+  const files = unzipSync(new Uint8Array(zipBuffer));
+  const themeJson = JSON.parse(strFromU8(files['theme.json']));
+  const images = {};
+  for (const [name, data] of Object.entries(files)) {
+    if (name.startsWith('images/')) images[name.slice(7)] = Buffer.from(data);
+  }
+  return { theme: themeJson, images };
+}
+```
+
+**Confidence:** HIGH — fflate is the standard lightweight ZIP choice, well-maintained, MIT.
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Token rendering | CSS custom properties | CSS-in-JS (e.g. styled-components) | Project uses vanilla CSS; engine is pure JS, not React/Vue |
+| 9-slice images | CSS `border-image` | Canvas-based 9-slice rendering | Unnecessary complexity; CSS handles this natively |
+| Color harmony | Custom HSL utility (~200 LOC) | chroma-js (397KB) | 200 lines vs 397KB dependency for 5 formulas |
+| Color harmony | Custom HSL utility | culori (1.1MB) | Academic overkill for a theme picker |
+| Tint/shade generation | CSS `color-mix(in oklch, ...)` | JS-based lightness adjustment | Modern CSS does this better and more perceptually uniform |
+| Theme file format | ZIP via fflate (8KB) | JSON + base64 images | 33% larger files, poor UX, unreadable |
+| Theme file format | ZIP via fflate | jszip (762KB) | 95x larger for same capability |
+| Theme file format | ZIP via fflate | Folder-based | Not shareable as single file |
 
 ## What NOT to Add
 
-| Technology | Why It Might Seem Relevant | Why NOT to Add |
-|------------|---------------------------|----------------|
-| **html2canvas** | Project description mentions it | Abandoned since Jan 2022. `webContents.capturePage()` is superior in every way for Electron. |
-| **modern-screenshot** | Active, zero-dep screenshot lib | Unnecessary — Electron native capture is simpler, more reliable, and has zero cross-origin issues with `asset://` protocol. |
-| **html-to-image** | SVG foreignObject screenshot lib | Same as above — Electron native is better. |
-| **Any thumbnail/image processing library** | For resizing screenshots | `NativeImage.resize()` is built into Electron. Handles JPEG/PNG encoding natively. |
-| **better-sqlite3 / nedb / lowdb** | For save data management | Overkill. JSON files are perfect for save slots. Each slot is one read/write. No queries needed. |
-| **fs-extra** | Extended file operations | Node.js `fs/promises` covers all needs (mkdir, readFile, writeFile, unlink, readdir). |
-| **uuid** | For save slot IDs | Numbered slots (0–99) are the design. No UUIDs needed. |
-| **Virtual scroll library** | For 100-slot grid | Only 10 slots visible per page (paginated). No virtual scrolling needed. |
-| **date-fns / dayjs** | For date formatting | `new Date().toLocaleString('zh-CN')` already used in current `SaveManager.js`. |
-| **Vue component library (Element Plus, etc.)** | For Save/Load UI | Engine UI is pure DOM (not Vue). Save/Load screen is a runtime component. |
+| Don't Add | Why |
+|-----------|-----|
+| TypeScript | Project constraint — pure JS + JSDoc only |
+| chroma-js / tinycolor2 / culori | Color harmony is 200 lines of HSL math |
+| CSS-in-JS library | Engine is vanilla JS with DOM manipulation |
+| Any UI component library | Editor uses Vue 3 components; engine uses pure DOM |
+| PostCSS / Sass / CSS preprocessor | CSS custom properties eliminate the need |
+| `@ctrl/tinycolor` | Fork of abandoned tinycolor2, still overkill |
+| `color` npm package | Another color lib, same overkill argument |
 
-## Browser API Compatibility (Electron 41 / Chromium 134+)
+## Integration Points with Existing Code
 
-| API | Status | Used For |
-|-----|--------|----------|
-| `webContents.capturePage(rect)` | ✅ Stable (since Electron 1.x) | Save slot thumbnails |
-| `NativeImage.resize()` | ✅ Stable | Thumbnail resizing |
-| `NativeImage.toJPEG(quality)` | ✅ Stable | Compact thumbnail encoding |
-| `fs.promises` | ✅ Stable (Node 18+) | File system save operations |
-| `Set` | ✅ Stable (ES2015) | Read-page tracking |
-| `localStorage` | ✅ Stable | Read history + config persistence |
-| `CSS Grid` | ✅ Stable | Save/load slot grid layout |
-| `crypto.randomUUID()` | ✅ Stable (not needed but available) | — |
+### 1. Token → CSS Custom Property Bridge
 
-**All APIs are stable. No compatibility risk.**
-
-## Save Data Schema
-
-### Slot State File (`saves/slot_XX.json`)
-
-```json
-{
-  "state": {
-    "currentScene": "scene_1",
-    "pageIndex": 3,
-    "dialogueIndex": 1,
-    "variables": { "met_sakura": true, "affection": 5 },
-    "history": [
-      { "speaker": "sakura", "speakerName": "さくら", "text": "おはよう！" }
-    ]
-  },
-  "previewText": "おはよう！今日はいい天気ですね。",
-  "timestamp": 1721318400000,
-  "date": "2025/7/18 12:00:00"
+**Injection point:** `ScriptEngine.js` — after loading `script.json`, apply tokens to `#game-container`:
+```javascript
+// In ScriptEngine init, after loading script:
+if (this.script.ui?.theme?.tokens) {
+  const container = document.getElementById('game-container');
+  applyTokens(container, this.script.ui.theme.tokens);
 }
 ```
 
-### Slot Thumbnail (`saves/slot_XX.jpg`)
+### 2. 9-Slice Images → asset:// Protocol
 
-- Format: JPEG (quality 80)
-- Size: 320×180 pixels (16:9 aspect, matching 1280×720 game area)
-- Typical file size: ~15-30 KB per thumbnail
-- 100 slots max = ~3 MB total thumbnail storage (negligible)
-
-### Read History (`localStorage` key: `{gameId}_read_pages`)
-
+**No protocol changes needed.** Images stored in `assets/ui/` are already served by `asset://ui/filename.png`. The token value is a full CSS property value:
 ```json
-["start:0", "start:1", "start:2", "scene_1:0", "scene_1:1"]
+{
+  "--gm-dialogue-border-image": "url('asset://ui/dialogue-frame.png')"
+}
 ```
 
-Compact string array, serialized to localStorage. Typical game: 200-500 unique pages ≈ 5-15 KB.
+**Security:** The existing `sanitizeCssValue()` in `sanitize.js` blocks `url()` patterns (line 7: `url\s*\(`). This regex MUST be updated to allow `asset://` URLs specifically while still blocking other URL schemes:
+```javascript
+// Current (blocks ALL url()):
+const CSS_INJECTION_RE = /[;{}]|url\s*\(|expression\s*\(|@import|javascript:|data:/i;
+
+// Needed: Allow asset:// URLs only, block everything else
+// Solution: Don't pass URL values through sanitizeCssValue.
+// Instead, token renderer handles url() tokens as a special path,
+// validating against asset:// prefix before applying.
+```
+
+### 3. Theme Data → script.json
+
+**New section in script.json** under `ui.theme`:
+```json
+{
+  "ui": {
+    "titleScreen": { "..." },
+    "settingsScreen": { "..." },
+    "dialogueBox": { "..." },
+    "theme": {
+      "name": "Default Dark",
+      "tokens": {
+        "--gm-dialogue-bg": "rgba(8, 8, 20, 0.92)",
+        "--gm-dialogue-text": "rgba(255, 255, 255, 0.92)"
+      },
+      "images": {
+        "dialogueBorder": "ui/dialogue-frame.png",
+        "buttonNormal": "ui/btn-normal.png",
+        "buttonHover": "ui/btn-hover.png",
+        "buttonActive": "ui/btn-active.png"
+      }
+    }
+  }
+}
+```
+
+### 4. Editor Theme Store → Pinia
+
+**Follows existing pattern:** `useScriptStore` already has `getSettingsScreen()`, `getTitleScreen()`, `getDialogueBox()` — add `getTheme()` and `updateTheme()` following the same pattern.
+
+### 5. Theme Pack I/O → IPC Handlers
+
+**Follows existing pattern:** `import-assets` / `export-project` IPC handlers in `electron/main.js`. New handlers:
+- `ipcMain.handle('export-theme', ...)` — reads tokens + images, creates ZIP, prompts save dialog
+- `ipcMain.handle('import-theme', ...)` — prompts open dialog, unzips, validates, copies images to `assets/ui/`
+
+### 6. CSS Migration — Hardcoded Values → var() with Fallbacks
+
+**The critical refactor:** All hardcoded colors in `style.css` (~600 lines of engine styles) must be replaced with `var(--gm-xxx, <current-value>)`. This is the largest task but is mechanical:
+
+```css
+/* BEFORE (current): */
+#dialogue-box {
+  background: linear-gradient(to top, rgba(8, 8, 20, 0.92) 0%, ...);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* AFTER (themed): */
+#dialogue-box {
+  background: var(--gm-dialogue-bg, linear-gradient(to top, rgba(8, 8, 20, 0.92) 0%, ...));
+  border-top: 1px solid var(--gm-border-color, rgba(255, 255, 255, 0.08));
+}
+```
+
+**Fallback values = exact current values**, so the refactor is non-breaking. Without a theme applied, everything looks identical to today.
+
+## Installation
+
+```bash
+# ONE new dependency (production):
+npm install fflate
+
+# No new dev dependencies needed
+```
+
+## Token Naming Convention
+
+Prefix all tokens with `--gm-` (galgame maker) to avoid conflicts:
+
+| Token | Controls | Default |
+|-------|----------|---------|
+| `--gm-dialogue-bg` | Dialogue box background | `linear-gradient(...)` |
+| `--gm-dialogue-text` | Dialogue text color | `rgba(255,255,255,0.92)` |
+| `--gm-dialogue-name-color` | Speaker name color | `#fff` |
+| `--gm-dialogue-border-image` | 9-slice border image | `none` |
+| `--gm-dialogue-border-slice` | Border-image slice values | `30 fill` |
+| `--gm-button-bg` | Menu/choice button background | `rgba(60,60,100,0.6)` |
+| `--gm-button-text` | Button text color | `rgba(255,255,255,0.9)` |
+| `--gm-button-hover-bg` | Button hover state | `rgba(100,80,160,0.7)` |
+| `--gm-button-image-normal` | Button 9-slice normal | `none` |
+| `--gm-button-image-hover` | Button 9-slice hover | `none` |
+| `--gm-button-image-active` | Button 9-slice active | `none` |
+| `--gm-accent` | Accent color (active states, highlights) | `rgba(180,160,255,0.9)` |
+| `--gm-overlay-bg` | Full-screen overlay backgrounds | `rgba(10,10,20,0.95)` |
+| `--gm-border-color` | UI border lines | `rgba(255,255,255,0.08)` |
+| `--gm-panel-bg` | Panel/card backgrounds | `rgba(30,30,50,0.6)` |
+| `--gm-font-body` | Body font family | `'Noto Sans SC', sans-serif` |
+| `--gm-font-heading` | Heading/title font family | `'Noto Serif SC', serif` |
+
+Full token list TBD during implementation (~30-50 tokens covering all UI surfaces).
+
+## Chromium 136 CSS Features Available
+
+Features confirmed available in Electron 41's Chromium 136 that are relevant to the theme system:
+
+| Feature | Chrome Version | Use Case |
+|---------|---------------|----------|
+| CSS Custom Properties (`var()`) | 49+ | Token rendering |
+| `border-image` (full) | 15+ | 9-slice panel/button skins |
+| `color-mix()` | 111+ | Auto tint/shade generation |
+| `oklch()` | 111+ | Perceptually uniform color adjustments |
+| `@property` | 85+ | Typed custom properties, animatable tokens |
+| `@layer` | 99+ | Theme layer isolation (optional) |
+| `:has()` | 105+ | Conditional theming rules (optional) |
+| `container queries` | 105+ | Responsive token values (optional) |
+
+**Recommendation:** Use `color-mix(in oklch, ...)` in CSS for tint/shade variants. This is more perceptually correct than HSL lightness adjustment and requires zero JavaScript.
 
 ## Sources
 
-- **Codebase analysis** (HIGH): `SaveManager.js`, `SaveLoadScreen.js`, `main.js` (engine runtime), `electron/main.js` (IPC handlers), `ConfigManager.js`, `preload.js`, `ScriptEngine.js`, `GameMenu.js`, `index.html`, `editor.html`
-- **npm registry** (HIGH): Verified versions and publish dates for html2canvas (1.4.1, Jan 2022), modern-screenshot (4.6.8, Jan 2026), html-to-image (1.11.13, Feb 2025)
-- **Electron API** (HIGH): `webContents.capturePage()`, `NativeImage` — stable since Electron 1.x, well-documented
-- **Project constraint** (HIGH): ZERO new npm deps policy established in v0.2, per PROJECT.md
+- Electron 41 release: Chromium 136 (Electron release cycle pattern — HIGH confidence)
+- CSS `border-image`: MDN Web Docs — Chrome 15+ full support
+- CSS `color-mix()`: MDN Web Docs — Chrome 111+
+- fflate 0.8.2: npm registry — verified via `npm view` (2025-07-14)
+- Existing codebase: `style.css` (3 existing `var()` usages), `SettingsScreen.js` (4 `setProperty()` calls), `sanitize.js` (CSS injection prevention), `validateAsset.js` (ui category support), `electron/main.js` (asset:// protocol handler)
+- Color harmony theory: HSL color wheel — complementary (180°), analogous (±30°), triadic (±120°), split-complementary (150°/210°) — standard color theory, HIGH confidence
+
+## Confidence Assessment
+
+| Area | Confidence | Reason |
+|------|------------|--------|
+| Design Tokens (CSS custom properties) | HIGH | Already used in 4 JS + 3 CSS locations in codebase |
+| 9-Slice (border-image) | HIGH | CSS standard since Chrome 15, well-documented |
+| Color Harmony (HSL math) | HIGH | Standard color theory, trivial implementation |
+| Theme Pack (fflate ZIP) | HIGH | Package verified on npm, MIT, ESM, actively maintained |
+| asset:// integration | HIGH | Protocol already serves `ui/` category images |
+| sanitize.js update needed | HIGH | Confirmed: current regex blocks ALL `url()` — must be updated |
+| CSS migration scope | MEDIUM | ~600 lines of hardcoded styles need `var()` wrapping — mechanical but large |

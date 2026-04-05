@@ -139,10 +139,10 @@ Plans:
   2. Clicking Auto or Skip toggles the mode and shows a visible active-state indicator (highlight or icon change)
   3. Button bar hides automatically when choice pages appear, menus open, or any overlay displays
   4. Clicking any bar button does NOT advance dialogue to the next line
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 20-01-PLAN.md — QuickActionBar UI class + quicksave IPC handlers + SaveManager extensions
+- [x] 20-01-PLAN.md — QuickActionBar UI class + quicksave IPC handlers + SaveManager extensions
 - [ ] 20-02-PLAN.md — main.js integration, CSS replacement, F5/F9 shortcuts, legacy cleanup
 **UI hint**: yes
 
@@ -177,6 +177,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
-| 20. Quick Action Bar | 0/? | Not started | - |
+| 20. Quick Action Bar | 1/2 | In Progress|  |
 | 21. Save/Load UI | 0/? | Not started | - |
 | 22. Skip Mode | 0/? | Not started | - |

@@ -108,7 +108,7 @@ See .planning/milestones/v0.4-ROADMAP.md for full phase details.
 ### Phases
 
 - [x] **Phase 19: Save System Upgrade** — File system saves with 100-slot capacity, IPC handlers, screenshots, migration (completed 2026-04-04)
-- [ ] **Phase 20: Quick Action Bar** — 6-button dialogue bar with auto/skip state indicators and overlay sync
+- [x] **Phase 20: Quick Action Bar** — 6-button dialogue bar with auto/skip state indicators and overlay sync (completed 2026-04-05)
 - [ ] **Phase 21: Save/Load UI** — Full-screen 100-slot grid with thumbnails, pagination, ESC stack, context-aware return
 - [ ] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only modes, audio suppression, settings toggle
 
@@ -139,11 +139,11 @@ Plans:
   2. Clicking Auto or Skip toggles the mode and shows a visible active-state indicator (highlight or icon change)
   3. Button bar hides automatically when choice pages appear, menus open, or any overlay displays
   4. Clicking any bar button does NOT advance dialogue to the next line
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 20-01-PLAN.md — QuickActionBar UI class + quicksave IPC handlers + SaveManager extensions
-- [ ] 20-02-PLAN.md — main.js integration, CSS replacement, F5/F9 shortcuts, legacy cleanup
+- [x] 20-02-PLAN.md — main.js integration, CSS replacement, F5/F9 shortcuts, legacy cleanup
 **UI hint**: yes
 
 #### Phase 21: Save/Load UI
@@ -177,6 +177,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 19. Save System Upgrade | 2/2 | Complete    | 2026-04-04 |
-| 20. Quick Action Bar | 1/2 | In Progress|  |
+| 20. Quick Action Bar | 2/2 | Complete   | 2026-04-05 |
 | 21. Save/Load UI | 0/? | Not started | - |
 | 22. Skip Mode | 0/? | Not started | - |

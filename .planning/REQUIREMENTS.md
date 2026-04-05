@@ -23,7 +23,7 @@
 - [x] **BAR-01**: 对话框底部显示 6 个快捷按钮（自動 / 快進 / 回想 / 存档 / 読档 / 設置），替换现有 `#quick-controls`
 - [x] **BAR-02**: 提取为独立 `QuickActionBar.js` UI 类，遵循现有 GameMenu/BacklogScreen 模式
 - [x] **BAR-03**: 自動/快進按钮显示激活状态指示器（高亮或图标变化）
-- [ ] **BAR-04**: 按钮栏随对话框显示/隐藏同步（选择页面、菜单、覆盖层打开时隐藏）
+- [x] **BAR-04**: 按钮栏随对话框显示/隐藏同步（选择页面、菜单、覆盖层打开时隐藏）
 - [x] **BAR-05**: 按钮点击不触发对话推进（`stopPropagation`），打开任何覆盖层时暂停自动/快进模式
 
 ## SLUI — 存读档界面
@@ -88,7 +88,7 @@
 | BAR-01 | Phase 20 | Complete |
 | BAR-02 | Phase 20 | Complete |
 | BAR-03 | Phase 20 | Complete |
-| BAR-04 | Phase 20 | Pending |
+| BAR-04 | Phase 20 | Complete |
 | BAR-05 | Phase 20 | Complete |
 | SLUI-01 | Phase 21 | Pending |
 | SLUI-02 | Phase 21 | Pending |

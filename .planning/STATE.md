@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Completed 22-01-PLAN.md
-last_updated: "2026-04-05T11:27:24.654Z"
+status: verifying
+stopped_at: Completed 22-02-PLAN.md
+last_updated: "2026-04-05T11:35:13.735Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 Phase: 22 (skip-mode) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-05
 
 ```
@@ -58,6 +58,7 @@ v0.5 Progress: [███████████████░░░░░] 3/
 | Phase 21 P01 | 3.5min | 2 tasks | 3 files |
 | Phase 21 P02 | 1min | 1 tasks | 1 files |
 | Phase 22 P01 | 170s | 2 tasks | 4 files |
+| Phase 22 P02 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,8 @@ v0.5 Progress: [███████████████░░░░░] 3/
 - [Phase 21]: onClose routes only menu source to gameMenu.show(); bar/title are no-ops
 - [Phase 22]: ReadHistory uses localStorage with readHistory:{projectId} key (D-03)
 - [Phase 22]: Skip mode defaults to readOnly, stored as config.skipMode (D-05)
+- [Phase 22]: 30ms setInterval skip loop with BGM 3-state shadow tracking (D-01, D-07)
+- [Phase 22]: isRead before markRead ordering for correct skip-read-only stop (SKIP-03)
 
 ### Key Context for v0.5
 
@@ -116,7 +119,7 @@ v0.5 Progress: [███████████████░░░░░] 3/
 
 ## Session Continuity
 
-Last session: 2026-04-05T11:27:24.641Z
-Stopped at: Completed 22-01-PLAN.md
+Last session: 2026-04-05T11:35:13.722Z
+Stopped at: Completed 22-02-PLAN.md
 Resume hint: Execute with `/gsd-execute-phase 22`
 Next action: `/gsd-execute-phase 22`

@@ -38,12 +38,12 @@
 
 ## SKIP — 快进模式
 
-- [ ] **SKIP-01**: 支持两种快进模式：全部跳过（skip all）和只跳已读（skip read only），默认为只跳已读
+- [x] **SKIP-01**: 支持两种快进模式：全部跳过（skip all）和只跳已读（skip read only），默认为只跳已读
 - [x] **SKIP-02**: 新增 ReadHistory 模块，追踪已读页面（`Set<"sceneId:pageIndex">`），持久化到 localStorage
-- [ ] **SKIP-03**: 只跳已读模式下，遇到未读页面自动停止快进并恢复正常阅读速度
-- [ ] **SKIP-04**: 快进时显示视觉指示器（"▶▶ SKIP" 覆盖层），到达选择页面或未读页面时自动停止
-- [ ] **SKIP-05**: 快进时抑制所有音频事件（BGM/SE/Voice），快进结束时应用最终音频状态
-- [ ] **SKIP-06**: 快进时覆盖转场动画时长为 0（跳过转场等待）
+- [x] **SKIP-03**: 只跳已读模式下，遇到未读页面自动停止快进并恢复正常阅读速度
+- [x] **SKIP-04**: 快进时显示视觉指示器（"▶▶ SKIP" 覆盖层），到达选择页面或未读页面时自动停止
+- [x] **SKIP-05**: 快进时抑制所有音频事件（BGM/SE/Voice），快进结束时应用最终音频状态
+- [x] **SKIP-06**: 快进时覆盖转场动画时长为 0（跳过转场等待）
 - [x] **SKIP-07**: 在设置页新增快进模式切换组件（全部跳过 / 只跳已读），扩展 ConfigManager 和 settingDefs 注册表
 
 ---
@@ -97,12 +97,12 @@
 | SLUI-05 | Phase 21 | Complete |
 | SLUI-06 | Phase 21 | Complete |
 | SLUI-07 | Phase 21 | Complete |
-| SKIP-01 | Phase 22 | Pending |
+| SKIP-01 | Phase 22 | Complete |
 | SKIP-02 | Phase 22 | Complete |
-| SKIP-03 | Phase 22 | Pending |
-| SKIP-04 | Phase 22 | Pending |
-| SKIP-05 | Phase 22 | Pending |
-| SKIP-06 | Phase 22 | Pending |
+| SKIP-03 | Phase 22 | Complete |
+| SKIP-04 | Phase 22 | Complete |
+| SKIP-05 | Phase 22 | Complete |
+| SKIP-06 | Phase 22 | Complete |
 | SKIP-07 | Phase 22 | Complete |
 
 ---

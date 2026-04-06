@@ -63,6 +63,7 @@ import TitleDesigner from './views/TitleDesigner.vue';
 import SettingsDesigner from './views/SettingsDesigner.vue';
 import ResourceLibrary from './views/ResourceLibrary.vue';
 import ProjectSettings from './views/ProjectSettings.vue';
+import ThemeDesigner from './views/ThemeDesigner.vue';
 
 const script = useScriptStore();
 const project = useProjectStore();
@@ -80,6 +81,7 @@ const tabs = [
   { id: 'settings-design', icon: '⚙️', label: '设置页' },
   { id: 'resource-library', icon: '📦', label: '资源库' },
   { id: 'project-settings', icon: '⚡', label: '项目设置' },
+  { id: 'theme', icon: '🎨', label: '主题' },
 ];
 
 const tabComponents = {
@@ -88,6 +90,7 @@ const tabComponents = {
   'settings-design': markRaw(SettingsDesigner),
   'resource-library': markRaw(ResourceLibrary),
   'project-settings': markRaw(ProjectSettings),
+  'theme': markRaw(ThemeDesigner),
 };
 
 // --- Undo/Redo ---

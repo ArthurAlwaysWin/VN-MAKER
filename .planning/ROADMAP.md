@@ -129,7 +129,7 @@ See .planning/milestones/v0.5-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 23: Token Foundation** — CSS variable migration: replace all hardcoded styles with `--gm-*` custom properties
+- [x] **Phase 23: Token Foundation** — CSS variable migration: replace all hardcoded styles with `--gm-*` custom properties (completed 2026-04-06)
 - [ ] **Phase 24: ThemeManager Engine** — ThemeManager.js reads ui.theme, injects CSS vars, postMessage preview
 - [ ] **Phase 25: 9-Slice + Color Harmony** — 9-slice border-image via ::before, 3-state buttons, HSL harmony, WCAG contrast
 - [ ] **Phase 26: Visual Theme Editor** — ThemeDesigner.vue with color pickers, 9-slice config, live preview iframe, palette generator
@@ -150,7 +150,7 @@ See .planning/milestones/v0.5-ROADMAP.md for full phase details.
 **Plans**: 2 plans
 Plans:
 - [x] 23-01-PLAN.md — Token vocabulary (DEFAULT_TOKENS) + CSS migration (style.css var() wrapping)
-- [ ] 23-02-PLAN.md — JS inline style cleanup + integration verification
+- [x] 23-02-PLAN.md — JS inline style cleanup + integration verification
 
 #### Phase 24: ThemeManager Engine
 **Goal**: Engine automatically applies theme data from script.json and supports live preview from editor
@@ -238,7 +238,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 23. Token Foundation | 1/2 | In Progress|  |
+| 23. Token Foundation | 2/2 | Complete   | 2026-04-06 |
 | 24. ThemeManager Engine | 0/? | Not started | - |
 | 25. 9-Slice + Color Harmony | 0/? | Not started | - |
 | 26. Visual Theme Editor | 0/? | Not started | - |

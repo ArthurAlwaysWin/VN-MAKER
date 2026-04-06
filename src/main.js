@@ -10,6 +10,7 @@ import { AudioManager } from './engine/AudioManager.js';
 import { SaveManager } from './engine/SaveManager.js';
 import { ConfigManager } from './engine/ConfigManager.js';
 import { ReadHistory } from './engine/ReadHistory.js';
+import { applyTheme } from './engine/ThemeManager.js';
 
 // UI
 import { DialogueBox } from './ui/DialogueBox.js';
@@ -745,6 +746,9 @@ async function init() {
       settingsScreen.setLayout(engine.script.ui.settingsScreen);
     }
 
+    // Apply theme token overrides (D-08: theme first, font settings can override)
+    applyTheme(gameContainer, engine.script.ui?.theme);
+
     // Apply global dialogue box font settings if defined in script
     if (engine.script.ui?.dialogueBox) {
       dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
@@ -795,6 +799,9 @@ function initPreview() {
           loadAllFonts(engine.script.assets.fonts, 'asset://').catch(() => {});
         }
 
+        // Apply theme token overrides for preview (D-09)
+        applyTheme(gameContainer, engine.script.ui?.theme);
+
         // Apply global dialogue box font settings for preview
         if (engine.script.ui?.dialogueBox) {
           dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
@@ -844,6 +851,10 @@ function initPreview() {
           audio.setSeVolume(config.get('seVolume') * master);
           audio.setVoiceVolume(config.get('voiceVolume') * master);
         }
+        break;
+      }
+      case 'update-theme': {
+        applyTheme(gameContainer, msg.theme);
         break;
       }
     }

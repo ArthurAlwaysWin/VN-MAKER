@@ -176,7 +176,10 @@ Plans:
   3. Buttons display three distinct 9-slice images for normal/hover/pressed states with smooth visual transitions
   4. 9-slice images and CSS border-radius coexist on the same element (::before pseudo-element approach — no mutual exclusion)
   5. User selects one primary color → system generates a complete coordinated palette (accent/bg/text/border) that passes WCAG contrast checks (≥4.5:1 normal text, ≥3:1 large text)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 25-01-PLAN.md — 9-slice CSS system (ThemeManager extension + main.js wiring)
+- [ ] 25-02-PLAN.md — Color harmony algorithms + WCAG contrast validation
 
 #### Phase 26: Visual Theme Editor
 **Goal**: Users can visually customize all theme aspects through a dedicated editor tab with instant preview

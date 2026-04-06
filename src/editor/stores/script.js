@@ -110,6 +110,22 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  /** Get or initialize the ui.theme section (D-13) */
+  function getTheme() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.theme ??= { tokens: {} };
+    return data.value.ui.theme;
+  }
+
+  /** Replace the entire theme and push undo state (D-05) */
+  function updateTheme(theme) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.theme = theme;
+    pushState();
+  }
+
   // --- Page CRUD helpers ---
 
   function createDefaultPage() {
@@ -221,6 +237,7 @@ export const useScriptStore = defineStore('script', () => {
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,
+    getTheme, updateTheme,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
     convertPageType, setSceneNext,

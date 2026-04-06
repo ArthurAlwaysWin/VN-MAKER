@@ -34,3 +34,118 @@ export function resetTheme(container) {
     container.style.setProperty(`--gm-${key}`, value);
   }
 }
+
+// ─── Nine-Slice System ──────────────────────────────────
+
+/** CSS selectors for each nineSlice config key (D-05) */
+const NINE_SLICE_SELECTORS = {
+  dialogueBox:   '#dialogue-box',
+  menuPanel:     '.game-menu-panel',
+  saveSlot:      '.save-slot',
+  choiceButton:  '.choice-button',
+  titleButton:   '.title-button',
+  settingsPanel: '#settings-screen',
+};
+
+/** Button keys that support 3-state (normal/hover/active) per D-06, D-07 */
+const BUTTON_KEYS = new Set(['choiceButton', 'titleButton']);
+
+/** Elements that currently lack position (static) — need position:relative for ::before (D-01) */
+const NEEDS_POSITION = new Set(['menuPanel', 'choiceButton', 'titleButton']);
+
+/** Elements that have backdrop-filter — disable when 9-slice active (performance P7) */
+const HAS_BACKDROP = new Set(['dialogueBox', 'choiceButton', 'settingsPanel']);
+
+/**
+ * Build CSS text for all configured nineSlice entries.
+ * Generates ::before pseudo-element rules with border-image for each
+ * non-null config entry. Button keys additionally get :hover::before
+ * and :active::before rules for 3-state images (D-06).
+ *
+ * @param {object|null|undefined} nineSlice — the ui.theme.nineSlice object
+ * @returns {string} Complete CSS text for injection
+ */
+function buildNineSliceCSS(nineSlice) {
+  if (!nineSlice) return '';
+  const rules = [];
+
+  for (const [key, selector] of Object.entries(NINE_SLICE_SELECTORS)) {
+    const config = nineSlice[key];
+    if (!config?.src) continue;
+
+    // Parent setup: overflow:hidden clips ::before to border-radius (D-01),
+    // isolation:isolate creates stacking context for z-index:-1 (Pitfall 1)
+    const parentProps = ['overflow: hidden', 'isolation: isolate'];
+    if (NEEDS_POSITION.has(key)) parentProps.push('position: relative');
+    if (HAS_BACKDROP.has(key)) {
+      parentProps.push('backdrop-filter: none');
+      parentProps.push('-webkit-backdrop-filter: none');
+    }
+    rules.push(`${selector} { ${parentProps.join('; ')}; }`);
+
+    // ::before — normal state (D-01, D-03, D-04)
+    const slice = (config.slice || [0, 0, 0, 0]).join(' ') + ' fill';
+    const width = (config.width || config.slice || [0, 0, 0, 0])
+      .map(v => v + 'px').join(' ');
+    const outset = (config.outset || [0, 0, 0, 0])
+      .map(v => v + 'px').join(' ');
+    const repeat = config.repeat || 'stretch';
+
+    rules.push(
+      `${selector}::before {\n` +
+      `  content: '';\n` +
+      `  position: absolute;\n` +
+      `  inset: 0;\n` +
+      `  z-index: -1;\n` +
+      `  border-image: url("${config.src}") ${slice} / ${width} / ${outset} ${repeat};\n` +
+      `  pointer-events: none;\n` +
+      `}`
+    );
+
+    // Button 3-state rules (D-06) — CSS pseudo-classes only, no JS listeners
+    if (BUTTON_KEYS.has(key) && config.states) {
+      if (config.states.hover?.src) {
+        rules.push(
+          `${selector}:hover::before {\n` +
+          `  border-image-source: url("${config.states.hover.src}");\n` +
+          `}`
+        );
+      }
+      if (config.states.active?.src) {
+        rules.push(
+          `${selector}:active::before {\n` +
+          `  border-image-source: url("${config.states.active.src}");\n` +
+          `}`
+        );
+      }
+    }
+  }
+
+  return rules.join('\n');
+}
+
+/**
+ * Apply 9-slice background images by injecting CSS into a dedicated style tag.
+ * Creates `<style id="galgame-nine-slice">` on first call, overwrites textContent
+ * on subsequent calls (D-02). Called from main.js after applyTheme.
+ *
+ * @param {object|null|undefined} themeData — the ui.theme object from script.json
+ */
+export function applyNineSlice(themeData) {
+  let styleEl = document.getElementById('galgame-nine-slice');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'galgame-nine-slice';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = buildNineSliceCSS(themeData?.nineSlice);
+}
+
+/**
+ * Remove all 9-slice CSS rules by clearing the style tag content.
+ * Does not remove the tag itself (reusable on next applyNineSlice call).
+ */
+export function resetNineSlice() {
+  const styleEl = document.getElementById('galgame-nine-slice');
+  if (styleEl) styleEl.textContent = '';
+}

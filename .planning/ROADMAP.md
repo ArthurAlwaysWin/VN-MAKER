@@ -207,7 +207,10 @@ Plans:
   3. User can export current theme as a .theme file (ZIP containing token JSON + all referenced 9-slice image assets)
   4. User can import a .theme file — images are extracted to project assets directory, tokens are applied automatically
   5. Every .theme file contains a `formatVersion` field ensuring future versions can migrate older theme packs
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 27-01-PLAN.md — Theme presets: 4 built-in presets (data + modal + toolbar + preview-then-apply)
+- [ ] 27-02-PLAN.md — Theme export/import: fflate ZIP packaging + IPC handlers + PresetModal wiring
 **UI hint**: yes
 
 ### Coverage

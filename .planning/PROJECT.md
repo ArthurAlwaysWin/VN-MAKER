@@ -162,11 +162,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.6 里程碑已启动 — 主题包系统。
+v0.6 里程碑进行中 — 主题包系统。Phase 23 (Token Foundation) + Phase 24 (ThemeManager Engine) 已完成。
 
 **已发布：** v0.1 ~ v0.5（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全）
 
-**当前：** v0.6 — 定义需求中。
+**当前：** v0.6 — Phase 24 complete, ThemeManager 引擎模块就绪。
 
 ---
-*Last updated: 2026-04-06 after Phase 23 (Token Foundation) complete — 41 design tokens, 142 CSS var() migrations, JS inline fallback cleanup*
+*Last updated: 2026-04-06 after Phase 24 (ThemeManager Engine) complete — applyTheme/resetTheme module, main.js integration, editor store getTheme/updateTheme*

@@ -169,4 +169,4 @@ v0.6 里程碑已启动 — 主题包系统。
 **当前：** v0.6 — 定义需求中。
 
 ---
-*Last updated: 2026-04-05 after v0.6 milestone started*
+*Last updated: 2026-04-06 after Phase 23 (Token Foundation) complete — 41 design tokens, 142 CSS var() migrations, JS inline fallback cleanup*

@@ -32,6 +32,16 @@
           </div>
         </div>
 
+        <!-- Export/Import section (D-03) -->
+        <div class="export-import-section">
+          <div class="section-divider"></div>
+          <div class="export-import-row">
+            <button class="action-btn" @click="onExport" title="将当前主题导出为 .theme 文件">📤 导出主题</button>
+            <button class="action-btn" @click="onImport" title="从 .theme 文件导入主题">📥 导入主题</button>
+            <span v-if="exportStatus" class="status-text">{{ exportStatus }}</span>
+          </div>
+        </div>
+
         <!-- Footer -->
         <div class="modal-footer">
           <button class="cancel-btn" @click="onClose">取消</button>
@@ -45,11 +55,15 @@
 <script setup>
 import { ref } from 'vue';
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
+import { useScriptStore } from '../../stores/script.js';
 import { THEME_PRESETS } from '../../../engine/presets.js';
+import { buildThemeZip, parseThemeZip } from '../../../utils/themePackager.js';
 
 const emit = defineEmits(['close']);
 const editor = useThemeEditor();
+const script = useScriptStore();
 const selectedId = ref(null);
+const exportStatus = ref('');
 
 function onSelectPreset(preset) {
   selectedId.value = preset.id;
@@ -66,6 +80,70 @@ function onApply() {
 function onClose() {
   editor.cancelPreview();
   emit('close');
+}
+
+async function onExport() {
+  try {
+    exportStatus.value = '导出中...';
+    const theme = script.getTheme();
+    if (!theme) { exportStatus.value = '无主题数据'; return; }
+
+    const plain = JSON.parse(JSON.stringify(theme));
+    const zipBuffer = buildThemeZip(plain, {
+      name: '自定义主题',
+      description: '',
+      author: '',
+      createdAt: new Date().toISOString(),
+    });
+
+    const result = await window.ipcRenderer.invoke('export-theme', { buffer: zipBuffer });
+    if (result.canceled) {
+      exportStatus.value = '';
+      return;
+    }
+    if (!result.success) {
+      exportStatus.value = '导出失败: ' + result.error;
+      return;
+    }
+    exportStatus.value = '导出成功';
+    setTimeout(() => { exportStatus.value = ''; }, 3000);
+  } catch (e) {
+    console.error('[PresetModal] Export failed:', e);
+    exportStatus.value = '导出失败: ' + e.message;
+  }
+}
+
+async function onImport() {
+  try {
+    exportStatus.value = '导入中...';
+    const fileResult = await window.ipcRenderer.invoke('import-theme');
+    if (fileResult.canceled) {
+      exportStatus.value = '';
+      return;
+    }
+    if (!fileResult.success) {
+      exportStatus.value = '读取失败: ' + fileResult.error;
+      return;
+    }
+
+    const parsed = parseThemeZip(fileResult.buffer);
+    if (!parsed.success) {
+      exportStatus.value = '解析失败: ' + parsed.error;
+      return;
+    }
+
+    // Apply imported theme — full overwrite per D-12, pushes undo stack
+    script.updateTheme(parsed.theme);
+    editor.flushPreview();
+    exportStatus.value = '导入成功';
+    setTimeout(() => {
+      exportStatus.value = '';
+      emit('close');
+    }, 500);
+  } catch (e) {
+    console.error('[PresetModal] Import failed:', e);
+    exportStatus.value = '导入失败: ' + e.message;
+  }
 }
 </script>
 
@@ -177,5 +255,36 @@ function onClose() {
 .apply-btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+.export-import-section {
+  padding: 0 16px 8px;
+}
+.section-divider {
+  height: 1px;
+  background: #333;
+  margin-bottom: 12px;
+}
+.export-import-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.action-btn {
+  background: #2d2d2d;
+  color: #ccc;
+  border: 1px solid #444;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.action-btn:hover {
+  background: #3a3a3a;
+  color: #e0e0e0;
+}
+.status-text {
+  font-size: 12px;
+  color: #888;
+  margin-left: 4px;
 }
 </style>

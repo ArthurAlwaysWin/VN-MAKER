@@ -161,7 +161,10 @@ Plans:
   2. Theme data at `ui.theme` participates in auto-save and undo/redo (same behavior as `ui.titleScreen` / `ui.settingsScreen`)
   3. User can reset theme to defaults via one action, and the game instantly reverts to its original v0.5 appearance
   4. Editor preview iframe receives `update-theme` postMessage and reflects token changes in real time
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 24-01-PLAN.md — ThemeManager module + main.js engine integration
+- [ ] 24-02-PLAN.md — Editor store getTheme/updateTheme for auto-save and undo/redo
 
 #### Phase 25: 9-Slice + Color Harmony
 **Goal**: Users can apply image-based UI skins and generate coordinated color palettes with accessibility guarantees

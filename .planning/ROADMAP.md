@@ -147,7 +147,10 @@ See .planning/milestones/v0.5-ROADMAP.md for full phase details.
   3. Without any theme applied, the game looks pixel-identical to v0.5 (zero visual regression across all screens)
   4. Panel backgrounds (game menu, save/load, settings overlay, choice menu) all consume unified `--gm-panel-bg` token instead of 6 different hardcoded values
   5. All button types (quick bar, menu, save/load grid, settings page) consume the same button token group (bg/text/hover/pressed)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — Token vocabulary (DEFAULT_TOKENS) + CSS migration (style.css var() wrapping)
+- [ ] 23-02-PLAN.md — JS inline style cleanup + integration verification
 
 #### Phase 24: ThemeManager Engine
 **Goal**: Engine automatically applies theme data from script.json and supports live preview from editor

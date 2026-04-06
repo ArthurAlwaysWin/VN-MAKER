@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-04-06T14:27:47.374Z"
+status: verifying
+stopped_at: Completed 27-02-PLAN.md
+last_updated: "2026-04-06T14:34:19.425Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 
 Phase: 27 (theme-presets-export-import) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-06
 
 ## Performance Metrics
@@ -51,6 +51,7 @@ Last activity: 2026-04-06
 | Phase 23 P01 | 7min | 2 tasks | 2 files |
 | Phase 23 P02 | 3min | 2 tasks | 3 files |
 | Phase 27 P01 | 7min | 2 tasks | 6 files |
+| Phase 27 P02 | 4min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Last activity: 2026-04-06
 - [Phase 23]: SaveLoadScreen title color fully CSS-driven via data-mode attribute selector
 - [Phase 27]: Preset preview bypasses debounce - immediate postMessage for instant iframe response
 - [Phase 27]: applyPreset replaces full tokens object (not merge) for clean preset application
+- [Phase 27]: JSON.parse unwrap before IPC to avoid Vue Proxy structured clone failure
+- [Phase 27]: formatVersion:1 in theme.json for forward-compatible .theme file format
+- [Phase 27]: Import full overwrite via updateTheme() — undo stack for Ctrl+Z revert
 
 ### Key Context for v0.5
 
@@ -116,7 +120,7 @@ Last activity: 2026-04-06
 
 ## Session Continuity
 
-Last session: 2026-04-06T14:27:47.371Z
-Stopped at: Completed 27-01-PLAN.md
+Last session: 2026-04-06T14:34:19.422Z
+Stopped at: Completed 27-02-PLAN.md
 Resume hint: Phase 26 (Visual Theme Editor) verified and complete (5/5). v0.6 milestone 4/5 phases done. Phase 27 (Theme Presets + Export/Import) is the last phase.
 Next action: /gsd-discuss-phase 27

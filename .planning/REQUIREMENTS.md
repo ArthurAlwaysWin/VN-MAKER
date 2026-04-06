@@ -37,9 +37,9 @@
 
 ## Theme Pack (主题包)
 
-- [ ] **PKG-01**: 用户可将当前主题导出为 .theme 文件（ZIP 包，含 token JSON + 引用的九宫格图片资源）
-- [ ] **PKG-02**: 用户可导入 .theme 文件，自动提取图片到项目资源目录并应用 token
-- [ ] **PKG-03**: 主题文件包含 formatVersion 字段，确保未来版本前向兼容
+- [x] **PKG-01**: 用户可将当前主题导出为 .theme 文件（ZIP 包，含 token JSON + 引用的九宫格图片资源）
+- [x] **PKG-02**: 用户可导入 .theme 文件，自动提取图片到项目资源目录并应用 token
+- [x] **PKG-03**: 主题文件包含 formatVersion 字段，确保未来版本前向兼容
 
 ## Engine Integration (引擎集成)
 

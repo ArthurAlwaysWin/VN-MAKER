@@ -59,15 +59,14 @@
 - ✓ 快进模式：30ms 循环 + 已读追踪 + BGM 影子状态 + 6 种停止触发器 — v0.5 Phase 22
 - ✓ 快速存读档：F5/F9 快捷键 + quicksave.json 隐藏槽位 — v0.5 Phase 20
 - ✓ 快进设置：设置页切换全部跳过/只跳已读 + ConfigManager 持久化 — v0.5 Phase 22
+- ✓ Design Tokens 数据模型 + 引擎全 UI 改用 CSS 自定义属性渲染 — v0.6 Phase 23
+- ✓ 可视化主题编辑器（Token 编辑 + 配色和谐算法 + 实时预览） — v0.6 Phase 24-26
+- ✓ 九宫格图片系统（对话框/面板/按钮背景图替换，三态按钮） — v0.6 Phase 26
+- ✓ 内置主题预设（4 套：Modern/和風/Fantasy/Minimal）+ 主题导入/导出（.theme ZIP 包） — v0.6 Phase 27
 
 ### Active
 
-<!-- v0.6 目标功能 -->
-
-- [ ] Design Tokens 数据模型 + 引擎全 UI 改用 CSS 自定义属性渲染
-- [ ] 可视化主题编辑器（Token 编辑 + 配色和谐算法 + 实时预览）
-- [ ] 九宫格图片系统（对话框/面板/按钮背景图替换，三态按钮）
-- [ ] 内置主题预设（3-4 套精品）+ 主题导入/导出（.theme 包）
+<!-- 无当前活跃需求 — v0.6 里程碑已完成 -->
 
 ### Future — 后续候选
 
@@ -150,7 +149,11 @@
 
 This document evolves at phase transitions and milestone boundaries.
 
-## Current Milestone: v0.6 主题包系统
+| fflate ZIP 主题包格式 | 轻量 8kB、sync API、ESM 原生 | ✓ Good |
+| 色块预览替代 iframe 截图 | DOM 引擎无法可靠截图，6 色块更可靠 | ✓ Good |
+| Import = full overwrite + undo | 简单可预测，Ctrl+Z 可恢复 | ✓ Good |
+
+## Current Milestone: v0.6 主题包系统 ✅ COMPLETE
 
 **Goal:** 建立分层主题系统（Design Tokens + 九宫格图片 + 配色防呆），让游戏 UI 实现"拉高下限、保证上限"的差异化美术风格。
 
@@ -162,11 +165,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.6 里程碑进行中 — 主题包系统。Phase 23 (Token Foundation) + Phase 24 (ThemeManager Engine) 已完成。
+v0.6 里程碑已完成 — 主题包系统全部就绪。Phase 23-27 全部交付验证通过。
 
-**已发布：** v0.1 ~ v0.5（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全）
+**已发布：** v0.1 ~ v0.6（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统）
 
-**当前：** v0.6 — Phase 24 complete, ThemeManager 引擎模块就绪。
+**当前：** v0.6 Complete — 41 Design Tokens + ThemeManager + 配色和谐 + 九宫格 + 主题编辑器 + 4 内置预设 + .theme ZIP 导出/导入
 
 ---
-*Last updated: 2026-04-06 after Phase 24 (ThemeManager Engine) complete — applyTheme/resetTheme module, main.js integration, editor store getTheme/updateTheme*
+*Last updated: 2026-04-07 after Phase 27 (Theme Presets + Export/Import) complete — v0.6 milestone fully delivered*

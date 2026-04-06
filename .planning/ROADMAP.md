@@ -209,7 +209,7 @@ Plans:
   5. Every .theme file contains a `formatVersion` field ensuring future versions can migrate older theme packs
 **Plans**: 2 plans
 Plans:
-- [ ] 27-01-PLAN.md — Theme presets: 4 built-in presets (data + modal + toolbar + preview-then-apply)
+- [x] 27-01-PLAN.md — Theme presets: 4 built-in presets (data + modal + toolbar + preview-then-apply)
 - [ ] 27-02-PLAN.md — Theme export/import: fflate ZIP packaging + IPC handlers + PresetModal wiring
 **UI hint**: yes
 
@@ -254,4 +254,4 @@ Plans:
 | 24. ThemeManager Engine | 0/2 | Complete    | 2026-04-06 |
 | 25. 9-Slice + Color Harmony | 0/? | Complete    | 2026-04-06 |
 | 26. Visual Theme Editor | 1/2 | Complete    | 2026-04-06 |
-| 27. Theme Presets + Export/Import | 0/? | Not started | - |
+| 27. Theme Presets + Export/Import | 1/2 | In Progress|  |

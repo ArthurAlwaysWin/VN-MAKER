@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
 status: executing
-stopped_at: Phase 27 context gathered
-last_updated: "2026-04-06T13:11:55.782Z"
+stopped_at: Completed 27-01-PLAN.md
+last_updated: "2026-04-06T14:27:47.374Z"
 last_activity: 2026-04-06
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 16
+  completed_plans: 14
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 26 — visual-theme-editor
+**Current focus:** Phase 27 — theme-presets-export-import
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Executing Phase 26
+Phase: 27 (theme-presets-export-import) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-06
 
 ## Performance Metrics
@@ -50,6 +50,7 @@ Last activity: 2026-04-06
 | Phase 22 P02 | 4min | 2 tasks | 2 files |
 | Phase 23 P01 | 7min | 2 tasks | 2 files |
 | Phase 23 P02 | 3min | 2 tasks | 3 files |
+| Phase 27 P01 | 7min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Last activity: 2026-04-06
 - [Phase 23]: 41-token --gm- prefix vocabulary, zero visual regression fallbacks, nested var() cascade for P19
 - [Phase 23]: Speaker name if-guard pattern: CSS var(--gm-text) cascades when no user color set
 - [Phase 23]: SaveLoadScreen title color fully CSS-driven via data-mode attribute selector
+- [Phase 27]: Preset preview bypasses debounce - immediate postMessage for instant iframe response
+- [Phase 27]: applyPreset replaces full tokens object (not merge) for clean preset application
 
 ### Key Context for v0.5
 
@@ -113,7 +116,7 @@ Last activity: 2026-04-06
 
 ## Session Continuity
 
-Last session: 2026-04-06T13:11:55.764Z
-Stopped at: Phase 27 context gathered
+Last session: 2026-04-06T14:27:47.371Z
+Stopped at: Completed 27-01-PLAN.md
 Resume hint: Phase 26 (Visual Theme Editor) verified and complete (5/5). v0.6 milestone 4/5 phases done. Phase 27 (Theme Presets + Export/Import) is the last phase.
 Next action: /gsd-discuss-phase 27

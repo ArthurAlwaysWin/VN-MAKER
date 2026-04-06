@@ -149,7 +149,7 @@ See .planning/milestones/v0.5-ROADMAP.md for full phase details.
   5. All button types (quick bar, menu, save/load grid, settings page) consume the same button token group (bg/text/hover/pressed)
 **Plans**: 2 plans
 Plans:
-- [ ] 23-01-PLAN.md — Token vocabulary (DEFAULT_TOKENS) + CSS migration (style.css var() wrapping)
+- [x] 23-01-PLAN.md — Token vocabulary (DEFAULT_TOKENS) + CSS migration (style.css var() wrapping)
 - [ ] 23-02-PLAN.md — JS inline style cleanup + integration verification
 
 #### Phase 24: ThemeManager Engine
@@ -238,7 +238,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 23. Token Foundation | 0/? | Not started | - |
+| 23. Token Foundation | 1/2 | In Progress|  |
 | 24. ThemeManager Engine | 0/? | Not started | - |
 | 25. 9-Slice + Color Harmony | 0/? | Not started | - |
 | 26. Visual Theme Editor | 0/? | Not started | - |

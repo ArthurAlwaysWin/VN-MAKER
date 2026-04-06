@@ -18,6 +18,9 @@
         src="/index.html"
       ></iframe>
     </div>
+    <!-- Modals -->
+    <PaletteModal v-if="editor.showPalette.value" @close="editor.showPalette.value = false" />
+    <NineSliceModal v-if="editor.showNineSlice.value" @close="editor.showNineSlice.value = false" />
   </div>
 </template>
 
@@ -27,6 +30,8 @@ import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
 import ThemeToolbar from '../components/theme/ThemeToolbar.vue';
 import TokenAccordion from '../components/theme/TokenAccordion.vue';
+import PaletteModal from '../components/theme/PaletteModal.vue';
+import NineSliceModal from '../components/theme/NineSliceModal.vue';
 
 const script = useScriptStore();
 const editor = createThemeEditor();

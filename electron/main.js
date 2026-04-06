@@ -750,6 +750,40 @@ ipcMain.handle('open-preview', (event, projectPath) => {
   previewWin.on('closed', () => { previewWin = null; });
 });
 
+// ─── Theme Export/Import IPC ─────────────────────────────
+
+ipcMain.handle('export-theme', async (event, { buffer }) => {
+  try {
+    const result = await dialog.showSaveDialog(getMainWindow(), {
+      title: '导出主题',
+      defaultPath: 'my-theme.theme',
+      filters: [{ name: '主题文件', extensions: ['theme'] }],
+    });
+    if (result.canceled) return { success: false, canceled: true };
+    await fs.writeFile(result.filePath, Buffer.from(buffer));
+    return { success: true, path: result.filePath };
+  } catch (e) {
+    console.error('[export-theme] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('import-theme', async () => {
+  try {
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      title: '导入主题',
+      filters: [{ name: '主题文件', extensions: ['theme'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled) return { success: false, canceled: true };
+    const data = await fs.readFile(result.filePaths[0]);
+    return { success: true, buffer: data };
+  } catch (e) {
+    console.error('[import-theme] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 // --- App Setup ---
 
 process.env.APP_ROOT = path.join(__dirname, '..');

@@ -10,8 +10,7 @@
 
 const SLOTS_PER_PAGE = 9;
 const TOTAL_PAGES = 12;
-const SAVE_TITLE_COLOR = 'rgba(180, 160, 255, 0.9)';
-const LOAD_TITLE_COLOR = 'rgba(100, 170, 255, 0.9)';
+
 
 export class SaveLoadScreen {
   /**
@@ -83,11 +82,9 @@ export class SaveLoadScreen {
   /** @private Full rebuild of el.innerHTML */
   _render() {
     const title = this.mode === 'save' ? '存 档' : '読 档';
-    const titleColor = this.mode === 'save' ? SAVE_TITLE_COLOR : LOAD_TITLE_COLOR;
-
     this.el.innerHTML = `
       <div class="save-load-header">
-        <div class="save-load-title" style="color: ${titleColor}">${title}</div>
+        <div class="save-load-title">${title}</div>
         <button class="save-load-close">返回</button>
       </div>
       <div class="save-load-grid"></div>

@@ -36,12 +36,13 @@ export class BacklogScreen {
       const div = document.createElement('div');
       div.className = 'backlog-entry';
 
-      const speakerColor = entry.speaker && characters[entry.speaker]
+      const charColor = entry.speaker && characters[entry.speaker]
         ? characters[entry.speaker].color
-        : 'rgba(255,255,255,0.5)';
+        : null;
+      const speakerStyle = charColor ? ` style="color:${charColor}"` : '';
 
       div.innerHTML = entry.speakerName
-        ? `<div class="backlog-speaker" style="color:${speakerColor}">${entry.speakerName}</div>
+        ? `<div class="backlog-speaker"${speakerStyle}>${entry.speakerName}</div>
            <div class="backlog-text">${entry.text}</div>`
         : `<div class="backlog-text" style="font-style:italic">${entry.text}</div>`;
 

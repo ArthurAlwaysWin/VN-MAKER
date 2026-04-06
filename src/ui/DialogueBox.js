@@ -68,8 +68,12 @@ export class DialogueBox {
     // Speaker name
     if (data.speakerName) {
       this.nameEl.textContent = data.speakerName;
-      // Priority: per-character color > active nameplate color (global/override) > white
-      this.nameEl.style.color = data.speakerColor || this._activeNameplateColor || '#fff';
+      // Priority: per-character color > active nameplate color > CSS var(--gm-text) default
+      const nameColor = data.speakerColor || this._activeNameplateColor;
+      if (nameColor) {
+        this.nameEl.style.color = nameColor;
+      }
+      // else: CSS var(--gm-text, #fff) handles the default
       this.nameEl.parentElement.classList.add('visible');
     } else {
       this.nameEl.textContent = '';

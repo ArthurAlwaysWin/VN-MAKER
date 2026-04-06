@@ -254,4 +254,4 @@ Plans:
 | 24. ThemeManager Engine | 0/2 | Complete    | 2026-04-06 |
 | 25. 9-Slice + Color Harmony | 0/? | Complete    | 2026-04-06 |
 | 26. Visual Theme Editor | 1/2 | Complete    | 2026-04-06 |
-| 27. Theme Presets + Export/Import | 2/2 | Complete   | 2026-04-06 |
+| 27. Theme Presets + Export/Import | 2/2 | Complete    | 2026-04-06 |

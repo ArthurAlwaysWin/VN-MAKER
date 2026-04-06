@@ -66,16 +66,20 @@
 
 ### Active
 
-<!-- 无当前活跃需求 — v0.6 里程碑已完成 -->
+<!-- 待 /gsd-new-milestone 规划 v0.7 需求 -->
 
 ### Future — 后续候选
 
 <!-- 已讨论但推迟到后续里程碑 -->
 
-- [ ] **v0.5 UI 美化系统**：图片替换按钮、可视化样式编辑器（基础层+进阶层）、预设模板库（内置+自定义+导出导入）
+- [ ] **每组件独立样式覆盖**：对话框/菜单独立主色配置 — v0.7
+- [ ] **每场景/每页面主题切换** — v0.7+
+- [ ] **布局变体**：每个界面 2-3 种预设布局选择 — v0.7
 - [ ] **角色表情场景切换**：场景中切换角色差分表情（依赖资源库表情数据管理）
-- [ ] **游戏按钮系统**：存档/读档/自动/快进/设置/返回标题，支持文字/图标/混合显示模式
-- [ ] **存读档界面**：保存和加载共用同一 UI，点击存档槽时执行不同操作（需进一步讨论设计方案）
+- [ ] **主题包字体内嵌** — v0.7+（字体体积大 + 许可证问题）
+- [ ] **动画/转场主题化** — v0.7+
+- [ ] **社区主题市场** — v0.8+
+- [ ] **更多内置预设（8-10 套覆盖不同题材）** — 持续补充
 
 ### Out of Scope
 
@@ -144,32 +148,30 @@
 | asset:// basePath 动态注入 | 编辑器项目和独立模式共用同一引擎代码 | ✓ Good |
 | playVoice() 返回 Promise + D-01 内部停止 | 简化调用方、自动模式可 await | ✓ Good |
 | 文件系统 saves/ 替代 localStorage | 容量无限、可移植、支持截图文件 | Pending |
+| fflate ZIP 主题包格式 | 轻量 8kB、sync API、ESM 原生 | ✓ Good |
+| 色块预览替代 iframe 截图 | DOM 引擎无法可靠截图，6 色块更可靠 | ✓ Good |
+| Import = full overwrite + undo | 简单可预测，Ctrl+Z 可恢复 | ✓ Good |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-| fflate ZIP 主题包格式 | 轻量 8kB、sync API、ESM 原生 | ✓ Good |
-| 色块预览替代 iframe 截图 | DOM 引擎无法可靠截图，6 色块更可靠 | ✓ Good |
-| Import = full overwrite + undo | 简单可预测，Ctrl+Z 可恢复 | ✓ Good |
+## Milestone History
 
-## Current Milestone: v0.6 主题包系统 ✅ COMPLETE
-
-**Goal:** 建立分层主题系统（Design Tokens + 九宫格图片 + 配色防呆），让游戏 UI 实现"拉高下限、保证上限"的差异化美术风格。
-
-**Target features:**
-- Design Tokens 数据模型 + 引擎全 UI 改用 CSS 自定义属性渲染
-- 可视化主题编辑器（Token 编辑 + 配色和谐算法 + 实时预览）
-- 九宫格图片系统（对话框/面板/按钮背景图替换，三态按钮）
-- 内置主题预设（3-4 套精品）+ 主题导入/导出（.theme 包）
+- ✅ **v0.1** — 设置页设计器 (Phases 1-5)
+- ✅ **v0.2** — 资源库 & 标题页 & 设置叠加层 (Phases 6-9)
+- ✅ **v0.3** — PPT 式游戏内容编辑器 (Phases 10-14)
+- ✅ **v0.4** — 语音 & 全局字体设置 (Phases 15-18)
+- ✅ **v0.5** — 游戏 UI 补全 (Phases 19-22)
+- ✅ **v0.6** — 主题包系统 (Phases 23-27)
 
 ## Current State
 
-v0.6 里程碑已完成 — 主题包系统全部就绪。Phase 23-27 全部交付验证通过。
+v0.6 里程碑已发布 — 主题包系统全部就绪。6 个里程碑 27 个 Phase 全部交付。
 
 **已发布：** v0.1 ~ v0.6（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统）
 
-**当前：** v0.6 Complete — 41 Design Tokens + ThemeManager + 配色和谐 + 九宫格 + 主题编辑器 + 4 内置预设 + .theme ZIP 导出/导入
+**当前：** 待规划 v0.7
 
 ---
-*Last updated: 2026-04-07 after Phase 27 (Theme Presets + Export/Import) complete — v0.6 milestone fully delivered*
+*Last updated: 2026-04-07 after v0.6 milestone complete — 主题包系统全部发布*

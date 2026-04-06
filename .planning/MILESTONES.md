@@ -1,5 +1,15 @@
 # Milestones
 
+## v0.6 主题包系统 (Shipped: 2026-04-06)
+
+**Phases completed:** 9 phases, 16 plans, 25 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v0.5 游戏 UI 补全 (Shipped: 2026-04-05)
 
 **Phases completed:** 4 phases (19-22), 8 plans, 27 requirements

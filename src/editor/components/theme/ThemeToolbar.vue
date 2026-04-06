@@ -3,13 +3,14 @@
     <button class="toolbar-btn" @click="onReset" title="重置主题">🔄 重置</button>
     <button class="toolbar-btn" @click="$emit('open-palette')" title="调色盘生成器">🎨 调色盘</button>
     <button class="toolbar-btn" @click="$emit('open-nine-slice')" title="九宫格配置">🖼️ 九宫格</button>
+    <button class="toolbar-btn" @click="$emit('open-preset')" title="主题预设">📦 预设</button>
   </div>
 </template>
 
 <script setup>
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
 
-defineEmits(['open-palette', 'open-nine-slice']);
+defineEmits(['open-palette', 'open-nine-slice', 'open-preset']);
 
 const editor = useThemeEditor();
 

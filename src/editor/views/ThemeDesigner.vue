@@ -5,6 +5,7 @@
       <ThemeToolbar
         @open-palette="editor.showPalette.value = true"
         @open-nine-slice="editor.showNineSlice.value = true"
+        @open-preset="editor.showPreset.value = true"
       />
       <div class="token-scroll">
         <TokenAccordion />
@@ -21,6 +22,7 @@
     <!-- Modals -->
     <PaletteModal v-if="editor.showPalette.value" @close="editor.showPalette.value = false" />
     <NineSliceModal v-if="editor.showNineSlice.value" @close="editor.showNineSlice.value = false" />
+    <PresetModal v-if="editor.showPreset.value" @close="editor.showPreset.value = false" />
   </div>
 </template>
 
@@ -32,6 +34,7 @@ import ThemeToolbar from '../components/theme/ThemeToolbar.vue';
 import TokenAccordion from '../components/theme/TokenAccordion.vue';
 import PaletteModal from '../components/theme/PaletteModal.vue';
 import NineSliceModal from '../components/theme/NineSliceModal.vue';
+import PresetModal from '../components/theme/PresetModal.vue';
 
 const script = useScriptStore();
 const editor = createThemeEditor();

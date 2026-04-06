@@ -23,6 +23,7 @@ export function createThemeEditor() {
   const isEngineReady = ref(false);
   const showPalette = ref(false);
   const showNineSlice = ref(false);
+  const showPreset = ref(false);
 
   let debounceTimer = null;
 
@@ -59,6 +60,37 @@ export function createThemeEditor() {
   function resetTheme() {
     script.updateTheme({ tokens: {} });
     sendThemeToPreview();
+  }
+
+  // ─── Preset Support (D-02) ─────────────────────────
+
+  function previewPreset(presetTokens) {
+    // Immediately send preview to iframe — no debounce, no store write
+    if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
+    const theme = script.getTheme();
+    iframeRef.value.contentWindow.postMessage({
+      type: 'update-theme',
+      theme: {
+        tokens: { ...presetTokens },
+        nineSlice: theme?.nineSlice ?? {},
+      },
+    }, '*');
+  }
+
+  function applyPreset(presetTokens) {
+    // Write to store + push undo (D-02, D-07, PRE-02)
+    const theme = script.getTheme();
+    const clone = JSON.parse(JSON.stringify({
+      tokens: { ...presetTokens },
+      nineSlice: theme?.nineSlice ?? {},
+    }));
+    script.updateTheme(clone);
+    flushPreview();
+  }
+
+  function cancelPreview() {
+    // Restore iframe to actual store state (Pitfall 5)
+    flushPreview();
   }
 
   // ─── Preview Communication ─────────────────────────
@@ -129,11 +161,15 @@ export function createThemeEditor() {
     isEngineReady,
     showPalette,
     showNineSlice,
+    showPreset,
     getMergedTokens,
     setToken,
     setTokenBatch,
     commitTheme,
     resetTheme,
+    previewPreset,
+    applyPreset,
+    cancelPreview,
     sendThemeToPreview,
     flushPreview,
     startEngine,

@@ -132,7 +132,7 @@ See .planning/milestones/v0.5-ROADMAP.md for full phase details.
 - [x] **Phase 23: Token Foundation** — CSS variable migration: replace all hardcoded styles with `--gm-*` custom properties (completed 2026-04-06)
 - [x] **Phase 24: ThemeManager Engine** — ThemeManager.js reads ui.theme, injects CSS vars, postMessage preview (completed 2026-04-06)
 - [x] **Phase 25: 9-Slice + Color Harmony** — 9-slice border-image via ::before, 3-state buttons, HSL harmony, WCAG contrast (completed 2026-04-06)
-- [ ] **Phase 26: Visual Theme Editor** — ThemeDesigner.vue with color pickers, 9-slice config, live preview iframe, palette generator
+- [x] **Phase 26: Visual Theme Editor** — ThemeDesigner.vue with color pickers, 9-slice config, live preview iframe, palette generator (completed 2026-04-06) (completed 2026-04-06)
 - [ ] **Phase 27: Theme Presets + Export/Import** — 3-4 built-in presets, .theme ZIP via fflate, formatVersion
 
 ### Phase Details
@@ -193,8 +193,8 @@ Plans:
   5. User can pick a primary color → preview a generated palette → apply the entire palette to tokens with one click
 **Plans**: 2 plans
 Plans:
-- [ ] 26-01-PLAN.md — Theme editor core: tab registration, composable, iframe preview, all 41 token controls with WCAG badges
-- [ ] 26-02-PLAN.md — Palette generator modal + 9-slice configuration modal
+- [x] 26-01-PLAN.md — Theme editor core: tab registration, composable, iframe preview, all 41 token controls with WCAG badges
+- [x] 26-02-PLAN.md — Palette generator modal + 9-slice configuration modal
 **UI hint**: yes
 
 #### Phase 27: Theme Presets + Export/Import
@@ -250,5 +250,5 @@ Plans:
 | 23. Token Foundation | 2/2 | Complete    | 2026-04-06 |
 | 24. ThemeManager Engine | 0/2 | Complete    | 2026-04-06 |
 | 25. 9-Slice + Color Harmony | 0/? | Complete    | 2026-04-06 |
-| 26. Visual Theme Editor | 0/? | Not started | - |
+| 26. Visual Theme Editor | 1/2 | Complete    | 2026-04-06 |
 | 27. Theme Presets + Export/Import | 0/? | Not started | - |

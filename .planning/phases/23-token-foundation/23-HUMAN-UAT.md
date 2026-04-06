@@ -8,7 +8,11 @@ updated: 2025-07-14
 
 ## Current Test
 
-[awaiting human testing]
+number: 1
+name: DevTools Token Override
+expected: |
+  在 #game-container 上设置 --gm-primary: red，所有强调色元素（按钮、链接、激活状态）同时变红
+awaiting: user response
 
 ## Tests
 

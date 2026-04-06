@@ -191,7 +191,10 @@ Plans:
   3. User can upload 9-slice images and configure slice parameters (top/right/bottom/left insets) through a visual interface
   4. Every token change in the editor is instantly visible in the embedded engine preview iframe (no save/reload required)
   5. User can pick a primary color → preview a generated palette → apply the entire palette to tokens with one click
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — Theme editor core: tab registration, composable, iframe preview, all 41 token controls with WCAG badges
+- [ ] 26-02-PLAN.md — Palette generator modal + 9-slice configuration modal
 **UI hint**: yes
 
 #### Phase 27: Theme Presets + Export/Import

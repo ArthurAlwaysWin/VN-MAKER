@@ -66,7 +66,7 @@
 
 ### Active
 
-<!-- 待 /gsd-new-milestone 规划 v0.7 需求 -->
+<!-- v0.7 需求待 REQUIREMENTS.md 定义 -->
 
 ### Future — 后续候选
 
@@ -85,7 +85,10 @@
 
 <!-- 明确排除 -->
 
-- 桌面应用导出/打包 — 推迟到后续 Milestone
+- Electron 桌面打包（.exe/.app/.deb） — 推迟到 v0.8+
+- 资源压缩/优化（图片压缩、音频转码） — v0.7 只做引用清理
+- 导出后预览（自动打开浏览器） — 编辑器内置预览已足够
+- 加载动画/启动屏定制 — 保持简单
 - 移动端支持 — 桌面优先
 - OAuth / 在线服务 — 纯本地应用
 - TypeScript 迁移 — 保持纯 JavaScript + JSDoc
@@ -165,13 +168,25 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v0.5** — 游戏 UI 补全 (Phases 19-22)
 - ✅ **v0.6** — 主题包系统 (Phases 23-27)
 
+## Current Milestone: v0.7 游戏导出（Web 静态包）
+
+**Goal:** 让用户能将编辑完成的游戏导出为自包含的 Web 静态包，可直接部署到任意 Web 服务器或上传到 itch.io。
+
+**Target features:**
+- 编辑器内导出按钮，选择输出目录一键导出
+- 生成完整的 Web 静态包（HTML + JS + CSS + assets）
+- 智能资源清理：只复制 script.json 实际引用的资源文件
+- 可选生成 ZIP 包（方便上传 itch.io 等平台）
+- 导出时可自定义游戏标题和 favicon
+- 引擎运行时适配独立部署（无 Electron 依赖，asset:// → 相对路径）
+
 ## Current State
 
-v0.6 里程碑已发布 — 主题包系统全部就绪。6 个里程碑 27 个 Phase 全部交付。
+v0.7 里程碑已启动 — 游戏导出（Web 静态包）。
 
 **已发布：** v0.1 ~ v0.6（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统）
 
-**当前：** 待规划 v0.7
+**当前：** v0.7 定义需求中
 
 ---
-*Last updated: 2026-04-07 after v0.6 milestone complete — 主题包系统全部发布*
+*Last updated: 2025-07-22 after v0.7 milestone start — 游戏导出（Web 静态包）*

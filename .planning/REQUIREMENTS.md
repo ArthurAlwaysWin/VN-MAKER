@@ -17,9 +17,9 @@ Requirements for Web static bundle export. Each maps to roadmap phases.
 
 ### 资源扫描 (Asset Scanning)
 
-- [ ] **SCAN-01**: 导出时自动扫描 script.json 中所有资源引用，收集实际使用的文件列表
-- [ ] **SCAN-02**: 扫描覆盖所有资源类型（背景、角色、音频、字体、九宫格图片、favicon）
-- [ ] **SCAN-03**: 引用的资源文件不存在时输出警告信息
+- [x] **SCAN-01**: 导出时自动扫描 script.json 中所有资源引用，收集实际使用的文件列表
+- [x] **SCAN-02**: 扫描覆盖所有资源类型（背景、角色、音频、字体、九宫格图片、favicon）
+- [x] **SCAN-03**: 引用的资源文件不存在时输出警告信息
 
 ### 导出流水线 (Export Pipeline)
 
@@ -82,9 +82,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WEBRT-03 | Phase 28 | Complete |
 | WEBRT-04 | Phase 28 | Complete |
 | WEBRT-05 | Phase 28 | Complete |
-| SCAN-01 | Phase 29 | Pending |
-| SCAN-02 | Phase 29 | Pending |
-| SCAN-03 | Phase 29 | Pending |
+| SCAN-01 | Phase 29 | Complete |
+| SCAN-02 | Phase 29 | Complete |
+| SCAN-03 | Phase 29 | Complete |
 | PIPE-01 | Phase 30 | Pending |
 | PIPE-02 | Phase 30 | Pending |
 | PIPE-03 | Phase 30 | Pending |

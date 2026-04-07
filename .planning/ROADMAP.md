@@ -155,7 +155,7 @@ See .planning/milestones/v0.6-ROADMAP.md for full phase details.
 ### Phases
 
 - [x] **Phase 28: Engine Web Adaptation** — Make the game engine run in a standalone browser without Electron (completed 2026-04-07)
-- [ ] **Phase 29: Asset Scanner + Build Config** — Identify referenced assets and produce standalone engine bundle
+- [x] **Phase 29: Asset Scanner + Build Config** — Identify referenced assets and produce standalone engine bundle (completed 2026-04-07)
 - [ ] **Phase 30: Export Pipeline** — Generate deployable Web static bundle from project data
 - [ ] **Phase 31: Export UI** — Editor dialog for configuring and monitoring game export
 
@@ -187,7 +187,7 @@ Plans:
   4. Vite build config produces an engine bundle (JS + CSS) with deterministic filenames suitable for export
 **Plans**: 2 plans
 Plans:
-- [ ] 29-01-PLAN.md — TDD asset scanner: pure function extracting all referenced paths from script.json
+- [x] 29-01-PLAN.md — TDD asset scanner: pure function extracting all referenced paths from script.json
 - [x] 29-02-PLAN.md — Vite web build config with deterministic engine.js + engine.css output
 
 #### Phase 30: Export Pipeline
@@ -219,6 +219,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. Engine Web Adaptation | 2/2 | Complete    | 2026-04-07 |
-| 29. Asset Scanner + Build Config | 1/2 | In Progress|  |
+| 29. Asset Scanner + Build Config | 2/2 | Complete   | 2026-04-07 |
 | 30. Export Pipeline | 0/? | Not started | - |
 | 31. Export UI | 0/? | Not started | - |

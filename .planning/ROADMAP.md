@@ -185,7 +185,10 @@ Plans:
   2. Scanner detects references across all asset types: backgrounds, characters, audio, fonts, nine-slice images, and favicon
   3. Scanner outputs clear warnings for any referenced asset file that does not exist on disk
   4. Vite build config produces an engine bundle (JS + CSS) with deterministic filenames suitable for export
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 29-01-PLAN.md — TDD asset scanner: pure function extracting all referenced paths from script.json
+- [ ] 29-02-PLAN.md — Vite web build config with deterministic engine.js + engine.css output
 
 #### Phase 30: Export Pipeline
 **Goal**: The backend produces a complete, playable Web static bundle from any project

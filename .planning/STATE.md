@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — 游戏导出（Web 静态包）
-status: planning
-stopped_at: Defining requirements
+status: in_progress
+stopped_at: Phase 28 ready for planning
 last_updated: "2025-07-22"
 last_activity: 2025-07-22
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,10 +24,14 @@ See: .planning/PROJECT.md (updated 2025-07-22)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 28 — Engine Web Adaptation
 Plan: —
-Status: Defining requirements
-Last activity: 2025-07-22 — Milestone v0.7 started
+Status: Ready for planning
+Last activity: 2025-07-22 — Roadmap created
+
+```
+v0.7 ████░░░░░░░░░░░░░░░░ 0/4 phases
+```
 
 ## Performance Metrics
 
@@ -42,16 +46,22 @@ Last activity: 2025-07-22 — Milestone v0.7 started
 | v0.5 | 4 | 8 | 27 |
 | v0.6 | 5 | 4 | 26 |
 
+**Current milestone: v0.7**
+- Phases: 4 (28-31)
+- Requirements: 21
+
 ## Accumulated Context
 
 ### Key Context for v0.7
 
-- 引擎运行时（src/main.js + src/ui/*）当前依赖 asset:// 协议加载资源
-- 导出需将 asset:// 路径替换为相对路径（./assets/）
-- 引擎纯 JS + DOM 渲染，无 Node.js/Electron 运行时依赖（理论上可直接跑在浏览器）
-- fflate 已作为 ZIP 依赖存在（v0.6 主题包使用），可复用于 ZIP 打包
+- 引擎运行时（src/main.js + src/engine/*）当前依赖 asset:// 协议加载资源
+- script.json 中资源路径已经是相对路径（e.g., backgrounds/city.png），引擎运行时 prepend basePath
+- Web 导出只需 basePath 改为 assets/，无需改写 script.json
+- 九宫格图片存储为 data: base64 URL，无需导出处理
+- SaveManager 是唯一完整的 Electron 依赖（8 个 async 方法全用 ipcRenderer.invoke）
+- fflate 已作为 ZIP 依赖存在（v0.6 主题包），可复用于导出 ZIP 打包
+- 零新 npm 依赖：Vite 构建引擎 + fflate 打包 ZIP + Node.js fs 复制文件
 - IPC 白名单（electron/preload.js）需添加导出相关通道
-- 编辑器 5 标签页结构，导出按钮可加在现有 UI 或新标签页
 
 ### Decisions (carried forward from v0.6)
 
@@ -64,6 +74,6 @@ Last activity: 2025-07-22 — Milestone v0.7 started
 ## Session Continuity
 
 Last session: 2025-07-22
-Stopped at: Defining v0.7 requirements
-Resume hint: v0.7 milestone started, needs requirements definition and roadmap creation
-Next action: Define REQUIREMENTS.md → create ROADMAP.md
+Stopped at: Roadmap created, Phase 28 ready for planning
+Resume hint: Run `/gsd-plan-phase 28` to begin Engine Web Adaptation
+Next action: Plan Phase 28

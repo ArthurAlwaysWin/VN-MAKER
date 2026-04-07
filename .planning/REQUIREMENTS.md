@@ -77,12 +77,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| *(populated by roadmapper)* | | |
+| WEBRT-01 | Phase 28 | Pending |
+| WEBRT-02 | Phase 28 | Pending |
+| WEBRT-03 | Phase 28 | Pending |
+| WEBRT-04 | Phase 28 | Pending |
+| WEBRT-05 | Phase 28 | Pending |
+| SCAN-01 | Phase 29 | Pending |
+| SCAN-02 | Phase 29 | Pending |
+| SCAN-03 | Phase 29 | Pending |
+| PIPE-01 | Phase 30 | Pending |
+| PIPE-02 | Phase 30 | Pending |
+| PIPE-03 | Phase 30 | Pending |
+| PIPE-04 | Phase 30 | Pending |
+| PIPE-05 | Phase 30 | Pending |
+| PIPE-06 | Phase 29 | Pending |
+| PIPE-07 | Phase 30 | Pending |
+| EXUI-01 | Phase 31 | Pending |
+| EXUI-02 | Phase 31 | Pending |
+| EXUI-03 | Phase 31 | Pending |
+| EXUI-04 | Phase 31 | Pending |
+| EXUI-05 | Phase 31 | Pending |
+| EXUI-06 | Phase 31 | Pending |
 
 **Coverage:**
-- v0.7 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️
+- v0.7 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2025-07-22*

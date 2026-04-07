@@ -147,3 +147,72 @@ See .planning/milestones/v0.5-ROADMAP.md for full phase details.
 See .planning/milestones/v0.6-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v0.7 — 游戏导出（Web 静态包）
+
+### Phases
+
+- [ ] **Phase 28: Engine Web Adaptation** — Make the game engine run in a standalone browser without Electron
+- [ ] **Phase 29: Asset Scanner + Build Config** — Identify referenced assets and produce standalone engine bundle
+- [ ] **Phase 30: Export Pipeline** — Generate deployable Web static bundle from project data
+- [ ] **Phase 31: Export UI** — Editor dialog for configuring and monitoring game export
+
+### Phase Details
+
+#### Phase 28: Engine Web Adaptation
+**Goal**: The game engine runs correctly in a standalone browser without any Electron dependencies
+**Depends on**: Nothing (first phase of v0.7)
+**Requirements**: WEBRT-01, WEBRT-02, WEBRT-03, WEBRT-04, WEBRT-05
+**Success Criteria** (what must be TRUE):
+  1. Opening the engine's index.html in a plain browser renders the title screen with background, BGM, and interactive buttons
+  2. Player can progress through dialogue, make choices, and navigate between scenes entirely in the browser
+  3. Player can save to a slot and load it back in the browser, with data persisting across page reloads (localStorage backend)
+  4. Settings page and title page custom backgrounds/images display correctly via parameterized basePath (no asset:// protocol)
+  5. Engine auto-detects its runtime environment (Electron / editor preview / standalone web) and selects the correct SaveManager and basePath without manual configuration
+**Plans**: TBD
+
+#### Phase 29: Asset Scanner + Build Config
+**Goal**: The system can identify all referenced project assets and produce a deterministic standalone engine bundle
+**Depends on**: Phase 28
+**Requirements**: SCAN-01, SCAN-02, SCAN-03, PIPE-06
+**Success Criteria** (what must be TRUE):
+  1. Running the scanner on a project's script.json returns the complete list of asset files actually referenced
+  2. Scanner detects references across all asset types: backgrounds, characters, audio, fonts, nine-slice images, and favicon
+  3. Scanner outputs clear warnings for any referenced asset file that does not exist on disk
+  4. Vite build config produces an engine bundle (JS + CSS) with deterministic filenames suitable for export
+**Plans**: TBD
+
+#### Phase 30: Export Pipeline
+**Goal**: The backend produces a complete, playable Web static bundle from any project
+**Depends on**: Phase 29
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-07
+**Success Criteria** (what must be TRUE):
+  1. Calling the export handler with an output directory produces index.html + engine JS/CSS + script.json + only the referenced asset files
+  2. The generated index.html displays the user-specified game title in the browser tab and includes the specified favicon
+  3. The exported folder is fully playable when served from any static HTTP server
+  4. When ZIP option is enabled, a .zip file containing the complete bundle is generated
+  5. The export process reports progress (current step and percentage) via IPC events as it runs
+**Plans**: TBD
+
+#### Phase 31: Export UI
+**Goal**: Users can trigger, configure, and monitor game export from within the editor
+**Depends on**: Phase 30
+**Requirements**: EXUI-01, EXUI-02, EXUI-03, EXUI-04, EXUI-05, EXUI-06
+**Success Criteria** (what must be TRUE):
+  1. User can find and click an export entry point in the editor that opens the export dialog
+  2. Export dialog provides fields for game title, output directory selector, favicon file picker, and ZIP toggle
+  3. During export, the dialog displays live progress showing current step and percentage
+  4. On completion, the dialog shows a success message with the full path to the exported output
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 28. Engine Web Adaptation | 0/? | Not started | - |
+| 29. Asset Scanner + Build Config | 0/? | Not started | - |
+| 30. Export Pipeline | 0/? | Not started | - |
+| 31. Export UI | 0/? | Not started | - |

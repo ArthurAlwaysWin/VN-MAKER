@@ -44,6 +44,8 @@ export class SaveLoadScreen {
     this._keyHandler = null;
     /** @type {HTMLElement|null} Current confirmation overlay */
     this._activeConfirmation = null;
+    /** @type {Array|null} Cached slot data to avoid re-fetching on pagination */
+    this._cachedSlots = null;
   }
 
   // ─── Public API ──────────────────────────────────────────
@@ -57,6 +59,7 @@ export class SaveLoadScreen {
     this.mode = mode;
     this._source = source;
     this._currentPage = 1;
+    this._cachedSlots = null; // Invalidate cache on fresh open
     this.el.dataset.mode = mode;
     this._render();
     this.el.classList.remove('hidden');
@@ -102,15 +105,18 @@ export class SaveLoadScreen {
     if (!grid) return;
     grid.innerHTML = '';
 
-    const allSlots = await this.saveManager.getAllSlots();
-    const slotMap = new Map();
-    for (const s of allSlots) slotMap.set(s.slot, s);
+    // Use cached data for pagination; fetch only on first load or after invalidation
+    if (!this._cachedSlots) {
+      const allSlots = await this.saveManager.getAllSlots();
+      this._cachedSlots = new Map();
+      for (const s of allSlots) this._cachedSlots.set(s.slot, s);
+    }
 
     const startSlot = (this._currentPage - 1) * SLOTS_PER_PAGE + 1;
     const endSlot = this._currentPage * SLOTS_PER_PAGE;
 
     for (let i = startSlot; i <= endSlot; i++) {
-      grid.appendChild(this._createSlotCard(i, slotMap.get(i) || null));
+      grid.appendChild(this._createSlotCard(i, this._cachedSlots.get(i) || null));
     }
   }
 
@@ -153,15 +159,20 @@ export class SaveLoadScreen {
         ? `<img class="save-slot-thumb" src="asset://saves/slot_${padded}.jpg" alt="" />`
         : `<div class="save-slot-no-thumb"></div>`;
 
+      const previewSafe = slotData.previewText || '(无预览)';
+
       slotEl.innerHTML = `
         ${thumbHtml}
         <div class="save-slot-info">
           <div class="save-slot-label">存档 ${slotNum}</div>
-          <div class="save-slot-text">${slotData.previewText || '(无预览)'}</div>
+          <div class="save-slot-text"></div>
           <div class="save-slot-time">${slotData.date}</div>
         </div>
         <button class="save-slot-delete" title="删除">✕</button>
       `;
+
+      // Set preview text via textContent to prevent XSS
+      slotEl.querySelector('.save-slot-text').textContent = previewSafe;
 
       // Delete button — inline confirmation
       slotEl.querySelector('.save-slot-delete').addEventListener('click', (e) => {
@@ -186,6 +197,7 @@ export class SaveLoadScreen {
       if (this.mode === 'save') {
         slotEl.addEventListener('click', async () => {
           if (this.onSave) await this.onSave(slotNum);
+          this._cachedSlots = null; // Invalidate after save
           this._renderGrid();
         });
       }
@@ -226,6 +238,7 @@ export class SaveLoadScreen {
       } else {
         if (this.onSave) await this.onSave(slotNum);
       }
+      this._cachedSlots = null; // Invalidate after save/delete
       this._renderGrid();
     });
 

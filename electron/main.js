@@ -559,24 +559,26 @@ ipcMain.handle('list-saves', async () => {
     const savesDir = path.join(currentProjectPath, 'saves');
     await fs.mkdir(savesDir, { recursive: true });
     const files = await fs.readdir(savesDir);
-    const slots = [];
-    for (const file of files) {
-      const match = file.match(/^slot_(\d{3})\.json$/);
-      if (!match) continue;
-      try {
-        const raw = await fs.readFile(path.join(savesDir, file), 'utf-8');
-        const data = JSON.parse(raw);
-        slots.push({
-          slot: parseInt(match[1], 10),
-          previewText: data.previewText || '',
-          sceneName: data.sceneName || data.state?.currentScene || '',
-          timestamp: data.timestamp,
-          date: data.date,
-          hasThumbnail: files.includes(`slot_${match[1]}.jpg`),
-        });
-      } catch { /* skip corrupt saves */ }
-    }
-    return { success: true, data: slots };
+    const fileSet = new Set(files);
+    const readPromises = files
+      .filter(f => /^slot_\d{3}\.json$/.test(f))
+      .map(async (file) => {
+        try {
+          const match = file.match(/^slot_(\d{3})\.json$/);
+          const raw = await fs.readFile(path.join(savesDir, file), 'utf-8');
+          const data = JSON.parse(raw);
+          return {
+            slot: parseInt(match[1], 10),
+            previewText: data.previewText || '',
+            sceneName: data.sceneName || data.state?.currentScene || '',
+            timestamp: data.timestamp,
+            date: data.date,
+            hasThumbnail: fileSet.has(`slot_${match[1]}.jpg`),
+          };
+        } catch { return null; /* skip corrupt saves */ }
+      });
+    const results = await Promise.all(readPromises);
+    return { success: true, data: results.filter(Boolean) };
   } catch (e) {
     console.error('[list-saves] Failed:', e);
     return { success: false, error: e.message };

@@ -91,10 +91,20 @@ export class DialogueBox {
   }
 
   _applyStyle(style, fontOverride) {
-    // 1. Reset all inline styles
+    // 1. Preserve CSS custom properties (e.g. --dialogue-opacity) before reset
+    const preserved = {};
+    for (let i = 0; i < this.el.style.length; i++) {
+      const prop = this.el.style[i];
+      if (prop.startsWith('--')) preserved[prop] = this.el.style.getPropertyValue(prop);
+    }
+    // Reset all inline styles
     this.el.style.cssText = '';
     this.textEl.style.cssText = '';
     this.nameEl.style.cssText = '';
+    // Restore preserved CSS custom properties
+    for (const [prop, val] of Object.entries(preserved)) {
+      this.el.style.setProperty(prop, val);
+    }
 
     // 2. Re-apply global font settings as baseline
     this._applyFontSettings(this._globalSettings);

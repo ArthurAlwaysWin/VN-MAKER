@@ -141,9 +141,13 @@ export class AudioManager {
     if (this._voice) {
       const voice = this._voice;
       this._voice = null;
+      // Capture and clear callbacks before pause to prevent double-resolve
+      const onended = voice.onended;
+      voice.onended = null;
+      voice.onerror = null;
       voice.pause();
       voice.currentTime = 0;
-      if (voice.onended) voice.onended();
+      if (onended) onended();
     }
   }
 

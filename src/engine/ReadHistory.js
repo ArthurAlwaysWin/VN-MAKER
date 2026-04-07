@@ -12,11 +12,12 @@ export class ReadHistory {
   constructor(projectId) {
     this._storageKey = `readHistory:${projectId}`;
     this._read = new Set();
+    this._saveTimer = null;
     this._load();
   }
 
   /**
-   * Mark a page as read. Persists immediately.
+   * Mark a page as read. Persists with debounce to avoid excessive writes during skip mode.
    * @param {string} sceneId
    * @param {number} pageIndex
    */
@@ -24,7 +25,7 @@ export class ReadHistory {
     const key = `${sceneId}:${pageIndex}`;
     if (this._read.has(key)) return;
     this._read.add(key);
-    this._save();
+    this._debouncedSave();
   }
 
   /**
@@ -40,6 +41,7 @@ export class ReadHistory {
   /** Clear all read history and persist. */
   clear() {
     this._read.clear();
+    if (this._saveTimer) clearTimeout(this._saveTimer);
     this._save();
   }
 
@@ -49,6 +51,15 @@ export class ReadHistory {
   }
 
   // ── Private persistence ───────────────────────────────
+
+  /** @private Debounced save — batches rapid markRead calls (e.g. skip mode at 30ms) */
+  _debouncedSave() {
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      this._saveTimer = null;
+      this._save();
+    }, 500);
+  }
 
   /** @private Load read history from localStorage */
   _load() {

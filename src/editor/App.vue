@@ -162,7 +162,11 @@ async function openProject(projectPath) {
     script.loadFromData(result.script);
 
     // Load asset file lists for all categories
-    await assets.loadAll();
+    try {
+      await assets.loadAll();
+    } catch (e) {
+      console.error('[Editor] Failed to load assets:', e);
+    }
 
     // Load custom fonts into editor window (D-04: all fonts on project open)
     const fontResult = await assets.loadProjectFonts(script.data);

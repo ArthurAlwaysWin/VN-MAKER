@@ -1,14 +1,30 @@
 import { ipcRenderer, contextBridge, webUtils } from 'electron';
 
+// Whitelist of allowed IPC channels
+const ALLOWED_CHANNELS = [
+  'create-project', 'open-project', 'load-project', 'save-project', 'close-project',
+  'read-dir', 'upload-asset', 'select-asset', 'import-assets', 'delete-asset',
+  'rename-asset', 'save-processed-image', 'list-assets',
+  'get-recent-projects', 'update-recent-projects',
+  'save-slot', 'load-slot', 'delete-slot', 'list-saves',
+  'save-quickslot', 'load-quickslot',
+  'capture-screenshot', 'migrate-legacy-saves',
+  'set-window-mode', 'show-save-dialog', 'dialog-open-directory',
+  'open-preview', 'export-theme', 'import-theme',
+];
+
 // Expose safe ipcRenderer to the Vue app
 contextBridge.exposeInMainWorld('ipcRenderer', {
   send: (channel, ...data) => {
+    if (!ALLOWED_CHANNELS.includes(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
     ipcRenderer.send(channel, ...data);
   },
   invoke: (channel, ...data) => {
+    if (!ALLOWED_CHANNELS.includes(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
     return ipcRenderer.invoke(channel, ...data);
   },
   on: (channel, func) => {
+    if (!ALLOWED_CHANNELS.includes(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
     const subscription = (event, ...args) => func(event, ...args);
     ipcRenderer.on(channel, subscription);
     return () => ipcRenderer.removeListener(channel, subscription);

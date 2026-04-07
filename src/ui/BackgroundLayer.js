@@ -41,6 +41,8 @@ export class BackgroundLayer {
     if (data.transition === 'fade') {
       incoming.classList.add('active');
       outgoing.classList.remove('active');
+      // Clean up outgoing image after transition to free memory
+      setTimeout(() => { outgoing.style.backgroundImage = ''; }, duration);
     } else {
       // Instant switch
       incoming.style.transitionDuration = '0ms';

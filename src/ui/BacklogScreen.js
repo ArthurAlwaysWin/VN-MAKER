@@ -39,12 +39,25 @@ export class BacklogScreen {
       const charColor = entry.speaker && characters[entry.speaker]
         ? characters[entry.speaker].color
         : null;
-      const speakerStyle = charColor ? ` style="color:${charColor}"` : '';
 
-      div.innerHTML = entry.speakerName
-        ? `<div class="backlog-speaker"${speakerStyle}>${entry.speakerName}</div>
-           <div class="backlog-text">${entry.text}</div>`
-        : `<div class="backlog-text" style="font-style:italic">${entry.text}</div>`;
+      if (entry.speakerName) {
+        const speakerDiv = document.createElement('div');
+        speakerDiv.className = 'backlog-speaker';
+        speakerDiv.textContent = entry.speakerName;
+        if (charColor) speakerDiv.style.color = charColor;
+        div.appendChild(speakerDiv);
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'backlog-text';
+        textDiv.textContent = entry.text;
+        div.appendChild(textDiv);
+      } else {
+        const textDiv = document.createElement('div');
+        textDiv.className = 'backlog-text';
+        textDiv.style.fontStyle = 'italic';
+        textDiv.textContent = entry.text;
+        div.appendChild(textDiv);
+      }
 
       // Voice replay button (D-01, D-02)
       if (entry.voice && this.audio) {

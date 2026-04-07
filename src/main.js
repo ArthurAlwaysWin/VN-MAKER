@@ -66,7 +66,8 @@ const titleScreen = new TitleScreen(gameContainer, '');
 // ─── State ──────────────────────────────────────────────
 let autoMode = false;
 let skipMode = false;
-let autoTimer = null;
+let autoTimerInterval = null;
+let autoTimerTimeout = null;
 let skipTimer = null;
 let pendingBgm = undefined; // undefined=no change, null=stopped, {file,volume,...}=new BGM
 let readHistory = null;
@@ -108,24 +109,29 @@ let cachedScreenshot = null;
 async function captureGameScreenshot() {
   if (!window.ipcRenderer) return null; // iframe preview guard (D-13)
 
-  // Hide dialogue box for cleaner screenshot (bar follows as DOM child)
-  const dlgWasVisible = !dialogueBox.el?.classList.contains('hidden');
-  dialogueBox.hide();
+  try {
+    // Hide dialogue box for cleaner screenshot (bar follows as DOM child)
+    const dlgWasVisible = !dialogueBox.el?.classList.contains('hidden');
+    dialogueBox.hide();
 
-  // Wait one frame for DOM update
-  await new Promise(r => requestAnimationFrame(r));
+    // Wait one frame for DOM update
+    await new Promise(r => requestAnimationFrame(r));
 
-  const result = await window.ipcRenderer.invoke('capture-screenshot');
+    const result = await window.ipcRenderer.invoke('capture-screenshot');
 
-  // Restore UI immediately after capture
-  if (dlgWasVisible) dialogueBox.el.classList.add('visible');
+    // Restore UI immediately after capture
+    if (dlgWasVisible) dialogueBox.el.classList.add('visible');
 
-  if (!result.success) {
-    console.error('[GalgameMaker] Screenshot failed:', result.error);
+    if (!result.success) {
+      console.error('[GalgameMaker] Screenshot failed:', result.error);
+      return null;
+    }
+
+    return result.data;
+  } catch (e) {
+    console.error('[GalgameMaker] Screenshot error:', e);
     return null;
   }
-
-  return result.data;
 }
 
 // ─── Apply config ───────────────────────────────────────
@@ -586,11 +592,12 @@ function startAutoTimer() {
     const check = setInterval(() => {
       if (dialogueBox.isComplete()) {
         clearInterval(check);
+        autoTimerInterval = null;
         const t = setTimeout(resolve, config.get('autoSpeed'));
-        autoTimer = t;
+        autoTimerTimeout = t;
       }
     }, 100);
-    autoTimer = check;
+    autoTimerInterval = check;
   });
 
   // Voice wait: if voice is playing, wait for it + micro-delay (D-04, D-05)
@@ -608,10 +615,13 @@ function startAutoTimer() {
 }
 
 function clearAutoTimer() {
-  if (autoTimer) {
-    clearInterval(autoTimer);
-    clearTimeout(autoTimer);
-    autoTimer = null;
+  if (autoTimerInterval) {
+    clearInterval(autoTimerInterval);
+    autoTimerInterval = null;
+  }
+  if (autoTimerTimeout) {
+    clearTimeout(autoTimerTimeout);
+    autoTimerTimeout = null;
   }
 }
 
@@ -696,8 +706,13 @@ async function showTitle() {
   if (titleLayout?.bgm) {
     audio.playBgm({ file: titleLayout.bgm, volume: 1, loop: true });
   }
-  const hasSaves = await saveManager.hasAnySave();
-  titleScreen.show(hasSaves);
+  try {
+    const hasSaves = await saveManager.hasAnySave();
+    titleScreen.show(hasSaves);
+  } catch (e) {
+    console.error('[GalgameMaker] Failed to check saves:', e);
+    titleScreen.show(false); // Graceful fallback: show without "continue" option
+  }
 }
 
 titleScreen.onStart = () => {
@@ -787,6 +802,8 @@ function initPreview() {
   audio.basePath = 'asset://';
 
   window.addEventListener('message', (e) => {
+    // Only accept messages from same origin (preview iframe)
+    if (e.origin !== 'null' && e.origin !== window.location.origin) return;
     const msg = e.data;
     if (!msg || !msg.type) return;
 

@@ -11,6 +11,8 @@ import { SaveManager } from './engine/SaveManager.js';
 import { ConfigManager } from './engine/ConfigManager.js';
 import { ReadHistory } from './engine/ReadHistory.js';
 import { applyTheme, applyNineSlice } from './engine/ThemeManager.js';
+import { detectEnvironment, ENV, BASE_PATH, SCRIPT_PATH, _capturedStartMsg } from './engine/assetPath.js';
+import { WebSaveManager } from './engine/WebSaveManager.js';
 
 // UI
 import { DialogueBox } from './ui/DialogueBox.js';
@@ -34,18 +36,18 @@ const uiOverlay = document.getElementById('ui-overlay');
 
 // ─── Engine instances ───────────────────────────────────
 const engine = new ScriptEngine();
-const audio = new AudioManager('/game/');
-const saveManager = new SaveManager();
+const audio = new AudioManager('');
+let saveManager = null;
 const config = new ConfigManager();
 
 // ─── UI instances ───────────────────────────────────────
-const background = new BackgroundLayer(bgLayer, '/game/');
-const characters = new CharacterLayer(charLayer, '/game/');
+const background = new BackgroundLayer(bgLayer, '');
+const characters = new CharacterLayer(charLayer, '');
 const dialogueBox = new DialogueBox(dialogueLayer);
 const choiceMenu = new ChoiceMenu(uiOverlay);
 // Settings, save/load, and backlog use gameContainer directly (not uiOverlay)
 // so their z-index 200 is in the same stacking context as TitleScreen (z-index 100)
-const saveLoadScreen = new SaveLoadScreen(gameContainer, saveManager);
+const saveLoadScreen = new SaveLoadScreen(gameContainer, null);
 const backlogScreen = new BacklogScreen(gameContainer, audio);
 const settingsScreen = new SettingsScreen(gameContainer, config);
 const gameMenu = new GameMenu(uiOverlay);
@@ -730,19 +732,47 @@ titleScreen.onSettings = () => {
   settingsScreen.show();
 };
 
+// ─── Bootstrap — environment detection and conditional init ──
+async function bootstrap() {
+  const env = await detectEnvironment();
+  console.log(`[GalgameMaker] Environment: ${env}`);
+
+  // Set basePath on all components from assetPath module (per D-06)
+  background.basePath = BASE_PATH;
+  characters.basePath = BASE_PATH;
+  audio.basePath = BASE_PATH;
+
+  // Conditional SaveManager (per WEBRT-05)
+  if (env === 'electron') {
+    saveManager = new SaveManager();
+  } else if (env === 'web') {
+    saveManager = new WebSaveManager();
+  }
+  // preview mode: saveManager stays null (saves not used in editor preview)
+
+  // Wire saveManager into SaveLoadScreen
+  saveLoadScreen.saveManager = saveManager;
+
+  if (env === 'preview') {
+    initPreview();
+  } else {
+    init();
+  }
+}
+
 // ─── Initialize ─────────────────────────────────────────
 async function init() {
   console.log('[GalgameMaker] Initializing...');
 
   try {
-    await engine.load('/game/script.json');
+    await engine.load(SCRIPT_PATH);
 
     // ReadHistory — cross-save shared read tracking (D-03, D-12)
     readHistory = new ReadHistory(engine.script.meta.title || 'untitled');
 
     // Load custom fonts before any rendering (INFRA-02)
     if (engine.script.assets?.fonts?.length) {
-      const fontResult = await loadAllFonts(engine.script.assets.fonts, 'asset://');
+      const fontResult = await loadAllFonts(engine.script.assets.fonts, BASE_PATH);
       if (fontResult.failed.length) {
         console.warn('[GalgameMaker] Some fonts failed to load:', fontResult.failed);
       }
@@ -796,12 +826,7 @@ async function init() {
 function initPreview() {
   console.log('[GalgameMaker] Preview mode — waiting for start command');
 
-  // Editor projects use asset:// protocol for resource files
-  background.basePath = 'asset://';
-  characters.basePath = 'asset://';
-  audio.basePath = 'asset://';
-
-  window.addEventListener('message', (e) => {
+  function handlePreviewMessage(e) {
     // Only accept messages from same origin (preview iframe)
     if (e.origin !== 'null' && e.origin !== window.location.origin) return;
     const msg = e.data;
@@ -814,7 +839,7 @@ function initPreview() {
 
         // Apply custom fonts if present
         if (engine.script.assets?.fonts?.length) {
-          loadAllFonts(engine.script.assets.fonts, 'asset://').catch(() => {});
+          loadAllFonts(engine.script.assets.fonts, BASE_PATH).catch(() => {});
         }
 
         // Apply theme token overrides for preview (D-09)
@@ -878,15 +903,16 @@ function initPreview() {
         break;
       }
     }
-  });
+  }
 
-  // READY handshake (per D-03) — tell editor we're ready to receive commands
-  window.parent.postMessage({ type: 'ready' }, '*');
+  window.addEventListener('message', handlePreviewMessage);
+
+  // Ready handshake already sent by assetPath.js detectEnvironment().
+  // If editor already responded with 'start' during detection, process immediately.
+  if (_capturedStartMsg) {
+    handlePreviewMessage({ data: _capturedStartMsg, origin: window.location.origin });
+  }
 }
 
-// Detect iframe context and choose init path
-if (window.parent !== window) {
-  initPreview();
-} else {
-  init();
-}
+// Bootstrap — detect environment and initialize
+bootstrap();

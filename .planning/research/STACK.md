@@ -1,396 +1,348 @@
-# Technology Stack — v0.6 Theme Pack System
+# Technology Stack — Web Export Additions
 
-**Project:** Galgame Maker
-**Researched:** 2025-07-14
-**Scope:** NEW stack additions for Design Tokens + 9-Slice + Color Harmony + Theme Packs
-**Overall confidence:** HIGH
+**Project:** Galgame Maker v0.7 — Web Static Bundle Export
+**Researched:** 2025-07-22
+**Scope:** Only NEW capabilities needed for web export. Existing stack (Electron 41, Vue 3, Pinia, Vite 6.3, fflate 0.8.2) is validated and not re-evaluated.
 
 ## Executive Summary
 
-The v0.6 theme system requires almost no new dependencies. The existing Electron 41 (Chromium 136) runtime provides native CSS capabilities (`border-image`, `color-mix()`, `oklch()`, CSS custom properties) that cover 95% of the needs. Color harmony is pure HSL math (~200 lines). The only justified new dependency is `fflate` (8KB gzipped) for ZIP-based theme pack import/export.
+**Zero new npm dependencies are required.** The existing stack — Vite for bundling, fflate for ZIP, Node.js `fs`/`path` for file operations — covers every capability needed for web export. The work is 95% architecture/code adaptation, 5% build configuration.
 
-**Guiding principle:** This project has zero runtime dependencies beyond Vue/Pinia. Adding one tiny, focused library (fflate) for a specific capability (ZIP I/O) that has no native equivalent is justified. Adding a color library for math you can write in 200 lines is not.
+The key finding: **Vite already builds a standalone web engine bundle** as part of `npm run build`. The output (`dist/index.html` + `dist/assets/game-*.js` + `dist/assets/game-*.css`) is a valid browser bundle — `vite-plugin-electron` only adds `dist-electron/` artifacts and does not modify how the renderer is built. The engine runtime's Electron dependencies are all runtime-checked (not import-time), so the bundle runs in a browser with graceful fallbacks.
 
-## Existing Stack (DO NOT change)
+## Recommended Stack Changes
 
-| Technology | Version | Role |
-|------------|---------|------|
-| Electron | 41.0.4 | Desktop runtime (Chromium 136 + Node.js 22) |
-| Vue 3 | 3.5.31 | Editor UI framework |
-| Pinia | 3.0.4 | Editor state management |
-| Vite | 6.3.0 | Build tool |
-| Pure JavaScript | ES Modules | No TypeScript — JSDoc only |
+### 1. Vite — Separate Web Engine Build Config
 
-## NEW Stack Additions
+| Item | Value |
+|------|-------|
+| **Technology** | Vite (existing v6.3.0) |
+| **What's new** | Second build config `vite.config.web.js` + npm script |
+| **Why** | Produce a clean engine-only bundle with deterministic filenames |
+| **Confidence** | HIGH — verified from existing `dist/` output structure |
 
-### 1. Design Token System — ZERO dependencies
+**Rationale:** The existing `npm run build` outputs both editor and engine to `dist/`. While the engine files (`game-*.js`, `game-*.css`, `fontLoader-*.js`) are technically usable, they have:
+- Content-hashed filenames (unpredictable for the export code to reference)
+- Editor assets co-located (unnecessary baggage)
+- `crossorigin` attributes (irrelevant for same-origin static files)
 
-**What:** A JSON-serializable token object rendered as CSS custom properties on `#game-container`.
+A dedicated web config solves all three:
 
-**Technology:** Native CSS custom properties + `element.style.setProperty()`.
+```js
+// vite.config.web.js
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
-**Why zero-dependency:** The project already uses `setProperty()` in 4 places (SettingsScreen.js lines 131-133, 161) and CSS `var()` in 3 places (style.css lines 873, 883, 931). This is just scaling an existing pattern — no new API needed.
+export default defineConfig({
+  // NO vue() plugin — engine is pure JS, no SFCs
+  // NO electron() plugin — standalone web target
+  build: {
+    outDir: 'dist-web-engine',
+    rollupOptions: {
+      input: resolve(__dirname, 'index.html'),
+      output: {
+        entryFileNames: 'engine.js',
+        chunkFileNames: '[name].js',
+        assetFileNames: '[name][extname]',
+      },
+    },
+    // Deterministic output — no content hashes
+  },
+});
+```
 
-**Implementation approach:**
-```javascript
-// Token object (JSON-serializable, stored in script.json ui.theme)
-const tokens = {
-  '--gm-dialogue-bg': 'rgba(8, 8, 20, 0.92)',
-  '--gm-dialogue-text': 'rgba(255, 255, 255, 0.92)',
-  '--gm-button-bg': 'rgba(60, 60, 100, 0.6)',
-  '--gm-accent': 'rgba(180, 160, 255, 0.9)',
-  // ... ~30-50 tokens total
-};
-
-// Render: one function, applies all tokens
-function applyTokens(container, tokens) {
-  for (const [key, value] of Object.entries(tokens)) {
-    container.style.setProperty(key, value);
+**npm script addition:**
+```json
+{
+  "scripts": {
+    "build:web-engine": "vite build --config vite.config.web.js"
   }
 }
 ```
 
-**CSS consumption pattern (already proven in codebase):**
-```css
-#dialogue-box {
-  background: var(--gm-dialogue-bg, rgba(8, 8, 20, 0.92));
-  /* fallback = current hardcoded value, so zero-theme = identical to today */
-}
+**Output:** `dist-web-engine/index.html`, `dist-web-engine/engine.js`, `dist-web-engine/engine.css` — predictable filenames the export code can copy.
+
+**Alternative considered:** Re-using `dist/` output and scanning for `game-*.js` via glob. Rejected because hashed filenames add fragile directory-scanning logic, and the editor's fontLoader chunk is shared code that shouldn't be in the export.
+
+### 2. fflate — ZIP Packaging (Already Installed)
+
+| Item | Value |
+|------|-------|
+| **Technology** | fflate (existing v0.8.2) |
+| **What's new** | Use `zip()` async API (currently only `zipSync` is used) |
+| **Why** | Non-blocking ZIP creation for large game projects (100+ MB assets) |
+| **Confidence** | HIGH — verified exports from `node_modules/fflate/esm/browser.js` |
+
+**Rationale:** The existing `themePackager.js` uses `zipSync()` for small theme ZIPs (~50 KB). Game exports can be 100+ MB (images, audio, fonts). Using the async callback API prevents UI freezing:
+
+```js
+import { zip } from 'fflate';
+
+// Async API — uses Web Workers in renderer, worker_threads in Node
+zip(files, { level: 0 }, (err, data) => {
+  // data is Uint8Array of the ZIP
+});
 ```
 
-**Confidence:** HIGH — uses only APIs already proven in the codebase.
+**Key detail:** Since game assets are mostly already-compressed formats (PNG, JPEG, MP3, OGG), use `level: 0` (store-only, no compression) — this is significantly faster and avoids re-compressing already-compressed data with negligible size savings.
 
-### 2. 9-Slice / Border-Image System — ZERO dependencies
+**For very large projects** (500+ MB), consider streaming with `Zip` + `AsyncZipDeflate` classes to avoid holding the entire ZIP in memory. But this is an optimization — `zip()` with `level: 0` is sufficient for v0.7.
 
-**What:** CSS `border-image` for skinning dialogue boxes, panels, and buttons with user-provided images.
+**Why NOT JSZip:** fflate is already installed, 8 KB vs JSZip's 100+ KB, faster compression, and the sync/async/streaming APIs cover all needs. No reason to add another dependency.
 
-**Technology:** Native CSS `border-image-source`, `border-image-slice`, `border-image-width`, `border-image-repeat`.
+### 3. Node.js Built-ins — Export File Operations
 
-**Why zero-dependency:** `border-image` has been supported since Chrome 15. In Chromium 136, it's rock-solid with full support for all sub-properties.
+| Item | Value |
+|------|-------|
+| **Technology** | Node.js `fs/promises`, `path` (built-in) |
+| **What's new** | New IPC handler `export-web` in `electron/main.js` |
+| **Why** | File copying, directory creation, HTML generation |
+| **Confidence** | HIGH — same pattern as existing 29 IPC handlers |
 
-**Integration with asset:// protocol:** The existing `asset://` protocol resolves `asset://ui/panel-border.png` to `{project}/assets/ui/panel-border.png`. The `ui` asset category already exists in `validateAsset.js` (line 56-59) with PNG/JPG/WebP validation. 9-slice images are just regular images stored in `assets/ui/`.
+**Rationale:** The export runs in Electron's main process (needs filesystem access). It follows the exact same IPC pattern already used for project save/load/asset management. New handler:
 
-**Implementation approach:**
-```css
-/* Applied via setProperty from token values */
-#dialogue-box {
-  border-image-source: var(--gm-dialogue-border-image, none);
-  border-image-slice: var(--gm-dialogue-border-slice, 30 fill);
-  border-image-width: var(--gm-dialogue-border-width, 30px);
-  border-image-repeat: var(--gm-dialogue-border-repeat, stretch);
-}
+```js
+ipcMain.handle('export-web', async (event, options) => {
+  // options: { outputDir, title, favicon, includeZip }
+  // 1. Create output directory structure
+  // 2. Generate index.html from template
+  // 3. Copy pre-built engine bundle (dist-web-engine/)
+  // 4. Scan script.json for referenced assets
+  // 5. Copy only referenced assets to output/assets/
+  // 6. Write path-adapted script.json
+  // 7. Optional: ZIP the output directory
+});
 ```
 
-**When border-image is active:** Overrides `background` and `border` — the image becomes the entire box chrome. This means the token system needs a mode flag: `useImage: true/false` to switch between color-based and image-based styling.
+No new Node.js modules needed. Uses `fs.promises.cp()` (Node 16.7+, Electron 41 ships Node 22+) for recursive directory copying.
 
-**Three-state buttons (normal/hover/active):**
-```css
-.title-custom-button {
-  border-image-source: var(--gm-button-image-normal, none);
-}
-.title-custom-button:hover {
-  border-image-source: var(--gm-button-image-hover, none);
-}
-.title-custom-button:active {
-  border-image-source: var(--gm-button-image-active, none);
-}
+### 4. HTML Template — String Interpolation (No Template Engine)
+
+| Item | Value |
+|------|-------|
+| **Technology** | JavaScript template literals |
+| **What's new** | ~30-line HTML template string in export handler |
+| **Why** | The template is trivially simple — no conditionals, no loops |
+| **Confidence** | HIGH |
+
+**Rationale:** The exported HTML template is:
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280">
+  <title>${title}</title>
+  ${favicon ? '<link rel="icon" href="favicon.ico">' : ''}
+  <script type="module" src="engine.js"></script>
+  <link rel="stylesheet" href="engine.css">
+</head>
+<body>
+  <div id="game-container">
+    <div id="background-layer"></div>
+    <div id="character-layer"></div>
+    <div id="dialogue-layer"></div>
+    <div id="ui-overlay"></div>
+  </div>
+</body>
+</html>
 ```
 
-**Key technical notes:**
-- `border-image-slice` uses unitless numbers (pixels from the image edges) or percentages
-- The `fill` keyword in `border-image-slice` is essential — without it, the center is empty
-- `border-image` overrides `border-radius` — rounded corners don't work with border-image (users must bake rounded corners into the source image)
-- `border-image-source: url('asset://ui/panel.png')` works because `asset://` is registered as a privileged scheme with `bypassCSP: true`
+This is 20 lines with 2 interpolation points. EJS, Handlebars, or any template engine would be absurd overkill.
 
-**Confidence:** HIGH — CSS standard feature, asset:// protocol already handles UI images.
-
-### 3. Color Harmony / Palette Generation — ZERO dependencies
-
-**What:** Algorithms to generate harmonious color palettes from a base color (complementary, analogous, triadic, split-complementary, tetradic).
-
-**Technology:** Pure JavaScript HSL math utility module (~200-300 lines).
-
-**Why zero-dependency:**
-
-| Library | Size (unpacked) | What it does | Overkill? |
-|---------|-----------------|--------------|-----------|
-| chroma-js 3.2.0 | 397KB | Color spaces, interpolation, scales | YES — we need 5 formulas |
-| tinycolor2 1.6.0 | 285KB | Color manipulation, readability | YES — unmaintained (last release 2020) |
-| culori 4.0.2 | 1.1MB | Perceptual color science | ABSOLUTELY — academic-grade overkill |
-
-The actual math for color harmony:
-```javascript
-// This is literally all the "hard" math:
-function complementary(h) { return (h + 180) % 360; }
-function analogous(h) { return [(h + 30) % 360, (h - 30 + 360) % 360]; }
-function triadic(h) { return [(h + 120) % 360, (h + 240) % 360]; }
-function splitComplementary(h) { return [(h + 150) % 360, (h + 210) % 360]; }
-
-// Plus hex↔HSL conversion (~40 lines) and contrast ratio (~20 lines)
-```
-
-**What the utility module provides:**
-1. `hexToHsl()` / `hslToHex()` — color format conversion
-2. `hexToRgb()` / `rgbToHex()` — for contrast calculations
-3. `generateHarmony(baseHex, type)` — returns palette array
-4. `contrastRatio(hex1, hex2)` — WCAG luminance contrast check
-5. `adjustLightness(hex, amount)` — generate tints/shades
-6. `isReadable(fg, bg, level)` — WCAG AA/AAA check (4.5:1 or 7:1)
-
-**Bonus — Modern CSS color functions (Chromium 136):**
-```css
-/* CSS can auto-generate tints/shades without any JS: */
---gm-accent-light: color-mix(in oklch, var(--gm-accent), white 30%);
---gm-accent-dark: color-mix(in oklch, var(--gm-accent), black 20%);
-```
-`color-mix()` in `oklch` is available in Chromium 111+ — we can offload tint/shade generation to CSS itself, keeping JS focused only on harmony algorithm computation.
-
-**Confidence:** HIGH — standard math, well-documented formulas, proven color theory.
-
-### 4. Theme Pack Import/Export — ONE new dependency: `fflate`
-
-**What:** Package theme data (JSON tokens + image files) into a single `.theme` file for sharing.
-
-**Technology:** `fflate` 0.8.2 — pure JavaScript ZIP library.
-
-| Property | Value |
-|----------|-------|
-| Package | `fflate` |
-| Version | 0.8.2 |
-| License | MIT |
-| Size (gzipped) | ~8KB |
-| Size (unpacked) | 773KB (includes TypeScript types + multiple builds) |
-| ESM support | ✅ Full (separate node/browser entry points via exports map) |
-| Native deps | None (pure JS) |
-| Maintenance | Active (GitHub: 101arrowz/fflate) |
-
-**Why fflate (not alternatives):**
-
-| Option | Verdict | Reason |
-|--------|---------|--------|
-| `fflate` | ✅ **USE THIS** | 8KB runtime, pure JS, ESM, sync+async API |
-| `jszip` 3.10.1 | ❌ | 762KB unpacked, heavier API surface, async-only |
-| `archiver` | ❌ | Stream-based, designed for Node.js servers, heavy |
-| Node.js `zlib` | ❌ | Only handles deflate/gzip streams, NOT the ZIP container format |
-| Manual ZIP format | ❌ | ~300+ lines to handle ZIP headers/central directory correctly |
-| No ZIP (JSON + base64 images) | ❌ | 33% size overhead, unreadable files, poor UX |
-| Folder-based themes | ❌ | Can't share as single file, poor UX |
-
-**Why ZIP at all:** A theme pack contains JSON metadata (~2KB) + 3-8 image files (9-slice borders, button states) at ~10-50KB each. A single `.theme` file that users can share, import, and preview is standard UX for creative tools.
-
-**Where it runs:** Electron main process only (via IPC). The renderer never touches ZIP operations.
-
-```javascript
-// Main process — export
-import { zipSync, strToU8 } from 'fflate';
-
-function exportTheme(themeData, imageFiles) {
-  const files = { 'theme.json': strToU8(JSON.stringify(themeData, null, 2)) };
-  for (const [name, buffer] of Object.entries(imageFiles)) {
-    files[`images/${name}`] = new Uint8Array(buffer);
-  }
-  return zipSync(files);
-}
-
-// Main process — import
-import { unzipSync, strFromU8 } from 'fflate';
-
-function importTheme(zipBuffer) {
-  const files = unzipSync(new Uint8Array(zipBuffer));
-  const themeJson = JSON.parse(strFromU8(files['theme.json']));
-  const images = {};
-  for (const [name, data] of Object.entries(files)) {
-    if (name.startsWith('images/')) images[name.slice(7)] = Buffer.from(data);
-  }
-  return { theme: themeJson, images };
-}
-```
-
-**Confidence:** HIGH — fflate is the standard lightweight ZIP choice, well-maintained, MIT.
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Token rendering | CSS custom properties | CSS-in-JS (e.g. styled-components) | Project uses vanilla CSS; engine is pure JS, not React/Vue |
-| 9-slice images | CSS `border-image` | Canvas-based 9-slice rendering | Unnecessary complexity; CSS handles this natively |
-| Color harmony | Custom HSL utility (~200 LOC) | chroma-js (397KB) | 200 lines vs 397KB dependency for 5 formulas |
-| Color harmony | Custom HSL utility | culori (1.1MB) | Academic overkill for a theme picker |
-| Tint/shade generation | CSS `color-mix(in oklch, ...)` | JS-based lightness adjustment | Modern CSS does this better and more perceptually uniform |
-| Theme file format | ZIP via fflate (8KB) | JSON + base64 images | 33% larger files, poor UX, unreadable |
-| Theme file format | ZIP via fflate | jszip (762KB) | 95x larger for same capability |
-| Theme file format | ZIP via fflate | Folder-based | Not shareable as single file |
+**Why NOT EJS/Handlebars:** Adds a dependency for a problem that doesn't exist. Template literals handle this perfectly. The template has no iteration, no conditionals beyond a trivial ternary, no partials.
 
 ## What NOT to Add
 
-| Don't Add | Why |
-|-----------|-----|
-| TypeScript | Project constraint — pure JS + JSDoc only |
-| chroma-js / tinycolor2 / culori | Color harmony is 200 lines of HSL math |
-| CSS-in-JS library | Engine is vanilla JS with DOM manipulation |
-| Any UI component library | Editor uses Vue 3 components; engine uses pure DOM |
-| PostCSS / Sass / CSS preprocessor | CSS custom properties eliminate the need |
-| `@ctrl/tinycolor` | Fork of abandoned tinycolor2, still overkill |
-| `color` npm package | Another color lib, same overkill argument |
+| Don't Add | Why Not |
+|-----------|---------|
+| **JSZip** | fflate already installed, lighter, faster, covers all ZIP use cases |
+| **EJS / Handlebars / Mustache** | Template is ~20 lines, no complex logic |
+| **archiver (npm)** | Node.js ZIP library — fflate handles this, no need for a second ZIP lib |
+| **html-minifier** | The exported HTML is already tiny; engine JS/CSS are Vite-minified |
+| **Babel / core-js polyfills** | Engine uses standard APIs (fetch, FontFace, CSS custom props, Audio) available in all browsers since 2020 |
+| **webpack / esbuild (standalone)** | Vite already bundles everything; no reason for a second bundler |
+| **sharp / canvas-based favicon** | Users provide their own favicon file; just copy it as-is |
+| **http-server / live-server** | Out of scope per PROJECT.md — no post-export preview |
+| **Separate template engine for script.json** | Asset paths are already relative in script.json; basePath is a runtime prefix |
 
-## Integration Points with Existing Code
+## Engine Runtime Adaptations (Code, Not Dependencies)
 
-### 1. Token → CSS Custom Property Bridge
+These are code changes, not new dependencies. Documented here because they directly affect how the stack is used.
 
-**Injection point:** `ScriptEngine.js` — after loading `script.json`, apply tokens to `#game-container`:
-```javascript
-// In ScriptEngine init, after loading script:
-if (this.script.ui?.theme?.tokens) {
-  const container = document.getElementById('game-container');
-  applyTokens(container, this.script.ui.theme.tokens);
-}
+### 5. Environment Detection Pattern
+
+The engine (`src/main.js`) already has two modes: normal + preview. Web export adds a third. Detection:
+
+```js
+const isElectron = typeof window.ipcRenderer !== 'undefined';
+const isPreview = window.parent !== window;
+const isWeb = !isElectron && !isPreview;
 ```
 
-### 2. 9-Slice Images → asset:// Protocol
+**Impact on basePath:**
 
-**No protocol changes needed.** Images stored in `assets/ui/` are already served by `asset://ui/filename.png`. The token value is a full CSS property value:
-```json
-{
-  "--gm-dialogue-border-image": "url('asset://ui/dialogue-frame.png')"
-}
-```
+| Mode | basePath | Script URL | Font baseUrl |
+|------|----------|------------|--------------|
+| Electron normal | `/game/` | `/game/script.json` | `asset://` |
+| Electron preview | `asset://` | (via postMessage) | `asset://` |
+| **Web export** | `assets/` | `script.json` | `assets/` |
 
-**Security:** The existing `sanitizeCssValue()` in `sanitize.js` blocks `url()` patterns (line 7: `url\s*\(`). This regex MUST be updated to allow `asset://` URLs specifically while still blocking other URL schemes:
-```javascript
-// Current (blocks ALL url()):
-const CSS_INJECTION_RE = /[;{}]|url\s*\(|expression\s*\(|@import|javascript:|data:/i;
+**Current code point:** Line 37-43 of `main.js` — hardcoded `/game/`. Change to use `BASE_PATH` constant.
 
-// Needed: Allow asset:// URLs only, block everything else
-// Solution: Don't pass URL values through sanitizeCssValue.
-// Instead, token renderer handles url() tokens as a special path,
-// validating against asset:// prefix before applying.
-```
+### 6. WebSaveManager — localStorage Fallback
 
-### 3. Theme Data → script.json
+**What:** A ~80-line class that implements the SaveManager interface using `localStorage` + `JSON.stringify`.
 
-**New section in script.json** under `ui.theme`:
-```json
-{
-  "ui": {
-    "titleScreen": { "..." },
-    "settingsScreen": { "..." },
-    "dialogueBox": { "..." },
-    "theme": {
-      "name": "Default Dark",
-      "tokens": {
-        "--gm-dialogue-bg": "rgba(8, 8, 20, 0.92)",
-        "--gm-dialogue-text": "rgba(255, 255, 255, 0.92)"
-      },
-      "images": {
-        "dialogueBorder": "ui/dialogue-frame.png",
-        "buttonNormal": "ui/btn-normal.png",
-        "buttonHover": "ui/btn-hover.png",
-        "buttonActive": "ui/btn-active.png"
-      }
-    }
-  }
-}
-```
+**Why needed:** `SaveManager` uses `window.ipcRenderer.invoke()` for ALL 7 of its async methods. In web mode, there is no IPC. The web fallback:
+- Uses `localStorage` for save data (keyed by slot number)
+- Stores metadata (timestamp, preview text) alongside state
+- No thumbnail support (no screenshot capture in browser)
+- Limited by localStorage's ~5-10 MB quota (sufficient for save state JSON, not large games)
 
-### 4. Editor Theme Store → Pinia
+**Alternative considered:** IndexedDB for unlimited storage. Rejected for v0.7 — localStorage is simpler, and save state JSON is typically < 100 KB per slot. IndexedDB can be added later if save data grows.
 
-**Follows existing pattern:** `useScriptStore` already has `getSettingsScreen()`, `getTitleScreen()`, `getDialogueBox()` — add `getTheme()` and `updateTheme()` following the same pattern.
+**Electron IPC guard inventory** (all in `src/main.js` and `src/engine/SaveManager.js`):
 
-### 5. Theme Pack I/O → IPC Handlers
+| Location | Usage | Web Fallback |
+|----------|-------|--------------|
+| `SaveManager.save()` | `ipcRenderer.invoke('save-slot')` | localStorage write |
+| `SaveManager.load()` | `ipcRenderer.invoke('load-slot')` | localStorage read |
+| `SaveManager.delete()` | `ipcRenderer.invoke('delete-slot')` | localStorage remove |
+| `SaveManager.getAllSlots()` | `ipcRenderer.invoke('list-saves')` | localStorage scan |
+| `SaveManager.quickSave()` | `ipcRenderer.invoke('save-quickslot')` | localStorage write |
+| `SaveManager.quickLoad()` | `ipcRenderer.invoke('load-quickslot')` | localStorage read |
+| `SaveManager.hasQuickSave()` | `ipcRenderer.invoke('load-quickslot')` | localStorage check |
+| `SaveManager._checkMigration()` | `ipcRenderer.invoke('migrate-legacy-saves')` | No-op (no legacy) |
+| `main.js:110` | `ipcRenderer.invoke('capture-screenshot')` | Return null (already guarded) |
+| `main.js:152-154` | `ipcRenderer.invoke('set-window-mode')` | No-op (already guarded) |
 
-**Follows existing pattern:** `import-assets` / `export-project` IPC handlers in `electron/main.js`. New handlers:
-- `ipcMain.handle('export-theme', ...)` — reads tokens + images, creates ZIP, prompts save dialog
-- `ipcMain.handle('import-theme', ...)` — prompts open dialog, unzips, validates, copies images to `assets/ui/`
+**Key insight:** `captureGameScreenshot()` and `applyConfig()` are ALREADY guarded with `if (!window.ipcRenderer)` / `if (window.ipcRenderer)`. Only SaveManager needs a full web fallback.
 
-### 6. CSS Migration — Hardcoded Values → var() with Fallbacks
+### 7. Asset Path Handling in UI Components
 
-**The critical refactor:** All hardcoded colors in `style.css` (~600 lines of engine styles) must be replaced with `var(--gm-xxx, <current-value>)`. This is the largest task but is mechanical:
+Two UI components have hardcoded `asset://` paths that need adaptation:
 
+| Component | Line | Current Code | Issue |
+|-----------|------|-------------|-------|
+| `SettingsScreen.js` | 72 | `` `url("asset://${safeBg}")` `` | Hardcoded `asset://` prefix |
+| `TitleScreen.js` | 73 | `bgPath.startsWith('asset://')` check | Falls back to `/game/` not `assets/` |
+| `TitleScreen.js` | 158 | Same pattern for images | Same issue |
+
+**Fix:** These components need a `basePath` parameter (same pattern as `AudioManager`, `BackgroundLayer`, `CharacterLayer` which already accept `basePath` in their constructors). The `SettingsScreen` and `TitleScreen` constructors should accept basePath and use it for asset URL construction.
+
+### 8. Asset Reference Scanning
+
+The export must identify which assets are actually used in `script.json` to copy only referenced files. Asset paths appear in these locations:
+
+| Data Location | Fields Containing Asset Paths |
+|---------------|-------------------------------|
+| `characters[id].expressions[name]` | Image paths (e.g., `characters/sakura_normal.png`) |
+| `scenes[id].pages[].background` | Background image path |
+| `scenes[id].pages[].bgm` | Audio file path |
+| `scenes[id].pages[].dialogues[].voice` | Voice audio path |
+| `scenes[id].pages[].dialogues[].se` | Sound effect path |
+| `ui.titleScreen.background` | Title screen background image |
+| `ui.titleScreen.bgm` | Title screen BGM |
+| `ui.titleScreen.elements[].src` | Title screen image elements |
+| `ui.settingsScreen.background` | Settings screen background |
+| `ui.settingsScreen.elements[].src` | Settings screen image elements |
+| `ui.theme.nineSlice[key].src` | Nine-slice images (**data: URLs — no file copy needed**) |
+| `ui.theme.nineSlice[key].states[state].src` | Nine-slice button states (**data: URLs**) |
+| `assets.fonts[].file` | Custom font files |
+
+**Key finding:** Nine-slice images are stored as `data:image/png;base64,...` in script.json (verified in `themePackager.js` import flow). They are self-contained and need NO file copying or path rewriting.
+
+### 9. Google Fonts — External CSS Dependency
+
+`src/style.css` line 6 imports Google Fonts:
 ```css
-/* BEFORE (current): */
-#dialogue-box {
-  background: linear-gradient(to top, rgba(8, 8, 20, 0.92) 0%, ...);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* AFTER (themed): */
-#dialogue-box {
-  background: var(--gm-dialogue-bg, linear-gradient(to top, rgba(8, 8, 20, 0.92) 0%, ...));
-  border-top: 1px solid var(--gm-border-color, rgba(255, 255, 255, 0.08));
-}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
 ```
 
-**Fallback values = exact current values**, so the refactor is non-breaking. Without a theme applied, everything looks identical to today.
+**For web export:** This import works as-is (requires internet). For offline play, the fonts could be downloaded and bundled. **Recommendation for v0.7:** Keep the external import (simpler). Add offline font bundling as a future enhancement — it requires downloading font files + rewriting CSS `@font-face` declarations, which is non-trivial.
 
-## Installation
+## Integration Points
 
-```bash
-# ONE new dependency (production):
-npm install fflate
+### Build Pipeline Integration
 
-# No new dev dependencies needed
+```
+npm run build          → existing Electron build (dist/ + dist-electron/)
+npm run build:web      → NEW: web engine bundle (dist-web-engine/)
+npm run build:all      → runs both sequentially
 ```
 
-## Token Naming Convention
+The web engine build should run during development packaging so the pre-built artifacts are available when the export feature is invoked.
 
-Prefix all tokens with `--gm-` (galgame maker) to avoid conflicts:
+### Export Flow Integration (IPC)
 
-| Token | Controls | Default |
-|-------|----------|---------|
-| `--gm-dialogue-bg` | Dialogue box background | `linear-gradient(...)` |
-| `--gm-dialogue-text` | Dialogue text color | `rgba(255,255,255,0.92)` |
-| `--gm-dialogue-name-color` | Speaker name color | `#fff` |
-| `--gm-dialogue-border-image` | 9-slice border image | `none` |
-| `--gm-dialogue-border-slice` | Border-image slice values | `30 fill` |
-| `--gm-button-bg` | Menu/choice button background | `rgba(60,60,100,0.6)` |
-| `--gm-button-text` | Button text color | `rgba(255,255,255,0.9)` |
-| `--gm-button-hover-bg` | Button hover state | `rgba(100,80,160,0.7)` |
-| `--gm-button-image-normal` | Button 9-slice normal | `none` |
-| `--gm-button-image-hover` | Button 9-slice hover | `none` |
-| `--gm-button-image-active` | Button 9-slice active | `none` |
-| `--gm-accent` | Accent color (active states, highlights) | `rgba(180,160,255,0.9)` |
-| `--gm-overlay-bg` | Full-screen overlay backgrounds | `rgba(10,10,20,0.95)` |
-| `--gm-border-color` | UI border lines | `rgba(255,255,255,0.08)` |
-| `--gm-panel-bg` | Panel/card backgrounds | `rgba(30,30,50,0.6)` |
-| `--gm-font-body` | Body font family | `'Noto Sans SC', sans-serif` |
-| `--gm-font-heading` | Heading/title font family | `'Noto Serif SC', serif` |
+```
+Editor UI (renderer)
+  → ipcRenderer.invoke('export-web', { outputDir, title, favicon, zip })
+    → electron/main.js handler
+      → reads dist-web-engine/ (pre-built engine)
+      → reads currentProjectPath (script.json + assets/)
+      → generates HTML from template
+      → copies engine bundle + referenced assets
+      → writes script.json (paths preserved, no rewriting needed)
+      → optional: ZIP with fflate
+    ← { success, outputPath, fileCount, totalSize }
+```
 
-Full token list TBD during implementation (~30-50 tokens covering all UI surfaces).
+### What the Export Produces
 
-## Chromium 136 CSS Features Available
+```
+output/
+  index.html          ← generated (custom title + favicon)
+  engine.js           ← copied from dist-web-engine/
+  engine.css          ← copied from dist-web-engine/
+  script.json         ← copied from project (paths already relative)
+  favicon.ico         ← user-provided or default
+  assets/
+    backgrounds/      ← only referenced files
+    characters/       ← only referenced files
+    audio/            ← only referenced files
+    fonts/            ← only referenced files
+```
 
-Features confirmed available in Electron 41's Chromium 136 that are relevant to the theme system:
+**Critical insight on path rewriting:** Asset paths in `script.json` are ALREADY relative (e.g., `backgrounds/city.png`). The engine prepends `basePath` at runtime. For web export, `basePath = 'assets/'`, so the path becomes `assets/backgrounds/city.png`. The export copies project asset files into `output/assets/` maintaining their directory structure. **No script.json path rewriting is needed** — only the engine's runtime basePath changes.
 
-| Feature | Chrome Version | Use Case |
-|---------|---------------|----------|
-| CSS Custom Properties (`var()`) | 49+ | Token rendering |
-| `border-image` (full) | 15+ | 9-slice panel/button skins |
-| `color-mix()` | 111+ | Auto tint/shade generation |
-| `oklch()` | 111+ | Perceptually uniform color adjustments |
-| `@property` | 85+ | Typed custom properties, animatable tokens |
-| `@layer` | 99+ | Theme layer isolation (optional) |
-| `:has()` | 105+ | Conditional theming rules (optional) |
-| `container queries` | 105+ | Responsive token values (optional) |
+## Browser Compatibility
 
-**Recommendation:** Use `color-mix(in oklch, ...)` in CSS for tint/shade variants. This is more perceptually correct than HSL lightness adjustment and requires zero JavaScript.
+The engine uses only standard web APIs. No polyfills needed.
+
+| API | Used For | Browser Support |
+|-----|----------|----------------|
+| `fetch()` | Script loading | All modern (Chrome 42+) |
+| `FontFace` | Custom font loading | All modern (Chrome 35+) |
+| CSS custom properties | Theme tokens | All modern (Chrome 49+) |
+| `HTMLAudioElement` | BGM/SE/voice playback | Universal |
+| `localStorage` | Config, save games, read history | Universal |
+| `<script type="module">` | Engine loading | All modern (Chrome 61+) |
+| `border-image` | Nine-slice backgrounds | All modern (Chrome 15+) |
+
+**Minimum browser:** Chrome/Edge 61+, Firefox 60+, Safari 11+. No polyfills.
+
+## Version Summary
+
+| Technology | Version | Status | Role in Export |
+|------------|---------|--------|----------------|
+| Vite | 6.3.0 | Existing | Build standalone web engine bundle |
+| fflate | 0.8.2 | Existing | Optional ZIP packaging |
+| Node.js fs/path | Built-in | Existing | Export file operations (IPC handler) |
+| Template literals | ES6 | Built-in | HTML generation |
+
+**Total new npm dependencies: 0**
 
 ## Sources
 
-- Electron 41 release: Chromium 136 (Electron release cycle pattern — HIGH confidence)
-- CSS `border-image`: MDN Web Docs — Chrome 15+ full support
-- CSS `color-mix()`: MDN Web Docs — Chrome 111+
-- fflate 0.8.2: npm registry — verified via `npm view` (2025-07-14)
-- Existing codebase: `style.css` (3 existing `var()` usages), `SettingsScreen.js` (4 `setProperty()` calls), `sanitize.js` (CSS injection prevention), `validateAsset.js` (ui category support), `electron/main.js` (asset:// protocol handler)
-- Color harmony theory: HSL color wheel — complementary (180°), analogous (±30°), triadic (±120°), split-complementary (150°/210°) — standard color theory, HIGH confidence
-
-## Confidence Assessment
-
-| Area | Confidence | Reason |
-|------|------------|--------|
-| Design Tokens (CSS custom properties) | HIGH | Already used in 4 JS + 3 CSS locations in codebase |
-| 9-Slice (border-image) | HIGH | CSS standard since Chrome 15, well-documented |
-| Color Harmony (HSL math) | HIGH | Standard color theory, trivial implementation |
-| Theme Pack (fflate ZIP) | HIGH | Package verified on npm, MIT, ESM, actively maintained |
-| asset:// integration | HIGH | Protocol already serves `ui/` category images |
-| sanitize.js update needed | HIGH | Confirmed: current regex blocks ALL `url()` — must be updated |
-| CSS migration scope | MEDIUM | ~600 lines of hardcoded styles need `var()` wrapping — mechanical but large |
+- Verified: `package.json` — fflate v0.8.2, Vite v6.3.0 (direct inspection)
+- Verified: `node_modules/fflate/esm/browser.js` — exports `zip`, `zipSync`, `Zip`, `AsyncZipDeflate` (direct inspection)
+- Verified: `dist/index.html` + `dist/assets/` — Vite build output structure (direct inspection)
+- Verified: `src/main.js` lines 37-43, 738-802, 888-892 — basePath pattern and mode detection (direct inspection)
+- Verified: `src/engine/SaveManager.js` — all 8 methods use `window.ipcRenderer.invoke()` (grep results)
+- Verified: `src/utils/themePackager.js` — fflate `zipSync`/`unzipSync` usage pattern (direct inspection)
+- Verified: `src/ui/SettingsScreen.js:72`, `src/ui/TitleScreen.js:73,158` — hardcoded asset:// paths (grep results)
+- Verified: `src/engine/ThemeManager.js:100` — nineSlice uses `config.src` directly (data: URLs from themePackager)
+- Verified: `vite.config.js` — multi-page build, `vite-plugin-electron/simple` (direct inspection)

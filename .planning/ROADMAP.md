@@ -154,7 +154,7 @@ See .planning/milestones/v0.6-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 28: Engine Web Adaptation** — Make the game engine run in a standalone browser without Electron
+- [x] **Phase 28: Engine Web Adaptation** — Make the game engine run in a standalone browser without Electron (completed 2026-04-07)
 - [ ] **Phase 29: Asset Scanner + Build Config** — Identify referenced assets and produce standalone engine bundle
 - [ ] **Phase 30: Export Pipeline** — Generate deployable Web static bundle from project data
 - [ ] **Phase 31: Export UI** — Editor dialog for configuring and monitoring game export
@@ -174,7 +174,7 @@ See .planning/milestones/v0.6-ROADMAP.md for full phase details.
 **Plans**: 2 plans
 Plans:
 - [x] 28-01-PLAN.md — Foundation modules: assetPath.js (env detection + path resolution) + WebSaveManager.js (IndexedDB backend)
-- [ ] 28-02-PLAN.md — Integration: main.js 3-way bootstrap + UI hardcoded asset:// replacement
+- [x] 28-02-PLAN.md — Integration: main.js 3-way bootstrap + UI hardcoded asset:// replacement
 
 #### Phase 29: Asset Scanner + Build Config
 **Goal**: The system can identify all referenced project assets and produce a deterministic standalone engine bundle
@@ -215,7 +215,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 28. Engine Web Adaptation | 1/2 | In Progress|  |
+| 28. Engine Web Adaptation | 2/2 | Complete   | 2026-04-07 |
 | 29. Asset Scanner + Build Config | 0/? | Not started | - |
 | 30. Export Pipeline | 0/? | Not started | - |
 | 31. Export UI | 0/? | Not started | - |

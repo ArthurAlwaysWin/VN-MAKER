@@ -182,11 +182,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.7 里程碑已启动 — 游戏导出（Web 静态包）。
+v0.7 里程碑进行中 — 游戏导出（Web 静态包）。
 
 **已发布：** v0.1 ~ v0.6（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统）
 
-**当前：** v0.7 定义需求中
+**当前：** v0.7 Phase 28 完成 — 引擎已支持浏览器独立运行（3 路环境检测、IndexedDB 存档、basePath 参数化）
 
 ---
-*Last updated: 2025-07-22 after v0.7 milestone start — 游戏导出（Web 静态包）*
+*Last updated: 2026-04-07 after Phase 28 completion — Engine Web Adaptation*

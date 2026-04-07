@@ -11,6 +11,8 @@
 const SLOTS_PER_PAGE = 9;
 const TOTAL_PAGES = 12;
 
+import { resolvePath } from '../engine/assetPath.js';
+
 
 export class SaveLoadScreen {
   /**
@@ -156,7 +158,7 @@ export class SaveLoadScreen {
       // ── Occupied slot ──
       const padded = String(slotNum).padStart(3, '0');
       const thumbHtml = slotData.hasThumbnail
-        ? `<img class="save-slot-thumb" src="asset://saves/slot_${padded}.jpg" alt="" />`
+        ? `<img class="save-slot-thumb" src="${resolvePath(`saves/slot_${padded}.jpg`)}" alt="" />`
         : `<div class="save-slot-no-thumb"></div>`;
 
       const previewSafe = slotData.previewText || '(无预览)';

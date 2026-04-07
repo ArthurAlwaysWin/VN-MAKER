@@ -7,6 +7,7 @@
  */
 import { SETTING_DEFS, DEFAULT_SETTING_STYLE, DEFAULT_LABEL_STYLE, DEFAULT_BUTTON_STYLE } from '../engine/settingDefs.js';
 import { sanitizeCssValue, clampField } from './sanitize.js';
+import { resolvePath } from '../engine/assetPath.js';
 
 export class SettingsScreen {
   /**
@@ -69,7 +70,7 @@ export class SettingsScreen {
         // so game scene is faintly visible through it
         const bgLayer = document.createElement('div');
         bgLayer.className = 'settings-bg-layer';
-        bgLayer.style.backgroundImage = `url("asset://${safeBg}")`;
+        bgLayer.style.backgroundImage = `url("${resolvePath(safeBg)}")`;
         this.el.appendChild(bgLayer);
         // Make element bg transparent — backdrop-filter still blurs game behind
         this.el.style.backgroundColor = 'transparent';
@@ -211,7 +212,7 @@ export class SettingsScreen {
       const safeSrc = sanitizeCssValue(elem.src);
       if (safeSrc) {
         const img = document.createElement('img');
-        img.src = `asset://${safeSrc}`;
+        img.src = resolvePath(safeSrc);
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'contain';

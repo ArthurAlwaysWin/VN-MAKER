@@ -3,6 +3,7 @@
  * Supports custom layout from script.json ui.titleScreen config.
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
+import { resolvePath } from '../engine/assetPath.js';
 
 export class TitleScreen {
   /**
@@ -69,10 +70,7 @@ export class TitleScreen {
     this.el.style.inset = '0';
 
     if (this.layout.background) {
-      const bgPath = this.layout.background;
-      const bgUrl = bgPath.startsWith('asset://') || bgPath.startsWith('http') || bgPath.startsWith('/game/')
-        ? bgPath
-        : `/game/${bgPath}`;
+      const bgUrl = resolvePath(this.layout.background);
       this.el.style.backgroundImage = `url('${bgUrl}')`;
       this.el.style.backgroundSize = 'cover';
       this.el.style.backgroundPosition = 'center';
@@ -155,10 +153,7 @@ export class TitleScreen {
     const src = sanitizeCssValue(cfg.src);
     if (src) {
       const img = document.createElement('img');
-      const imgUrl = src.startsWith('asset://') || src.startsWith('http') || src.startsWith('/game/')
-        ? src
-        : `/game/${src}`;
-      img.src = imgUrl;
+      img.src = resolvePath(src);
       img.style.width = '100%';
       img.style.height = '100%';
       img.style.objectFit = 'contain';

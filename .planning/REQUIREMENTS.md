@@ -28,7 +28,7 @@ Requirements for Web static bundle export. Each maps to roadmap phases.
 - [ ] **PIPE-03**: 生成的 HTML 包含用户自定义的游戏标题
 - [ ] **PIPE-04**: 用户可指定 favicon，导出时包含在输出中
 - [ ] **PIPE-05**: 用户可选择将输出打包为 ZIP 文件（方便上传 itch.io）
-- [ ] **PIPE-06**: Vite 独立构建配置生成确定性文件名的引擎 bundle
+- [x] **PIPE-06**: Vite 独立构建配置生成确定性文件名的引擎 bundle
 - [ ] **PIPE-07**: 导出过程中显示进度反馈（当前步骤/百分比）
 
 ### 导出 UI (Export UI)
@@ -90,7 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-03 | Phase 30 | Pending |
 | PIPE-04 | Phase 30 | Pending |
 | PIPE-05 | Phase 30 | Pending |
-| PIPE-06 | Phase 29 | Pending |
+| PIPE-06 | Phase 29 | Complete |
 | PIPE-07 | Phase 30 | Pending |
 | EXUI-01 | Phase 31 | Pending |
 | EXUI-02 | Phase 31 | Pending |

@@ -188,7 +188,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [ ] 29-01-PLAN.md — TDD asset scanner: pure function extracting all referenced paths from script.json
-- [ ] 29-02-PLAN.md — Vite web build config with deterministic engine.js + engine.css output
+- [x] 29-02-PLAN.md — Vite web build config with deterministic engine.js + engine.css output
 
 #### Phase 30: Export Pipeline
 **Goal**: The backend produces a complete, playable Web static bundle from any project
@@ -219,6 +219,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. Engine Web Adaptation | 2/2 | Complete    | 2026-04-07 |
-| 29. Asset Scanner + Build Config | 0/? | Not started | - |
+| 29. Asset Scanner + Build Config | 1/2 | In Progress|  |
 | 30. Export Pipeline | 0/? | Not started | - |
 | 31. Export UI | 0/? | Not started | - |

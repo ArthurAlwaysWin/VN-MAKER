@@ -173,7 +173,7 @@ See .planning/milestones/v0.6-ROADMAP.md for full phase details.
   5. Engine auto-detects its runtime environment (Electron / editor preview / standalone web) and selects the correct SaveManager and basePath without manual configuration
 **Plans**: 2 plans
 Plans:
-- [ ] 28-01-PLAN.md — Foundation modules: assetPath.js (env detection + path resolution) + WebSaveManager.js (IndexedDB backend)
+- [x] 28-01-PLAN.md — Foundation modules: assetPath.js (env detection + path resolution) + WebSaveManager.js (IndexedDB backend)
 - [ ] 28-02-PLAN.md — Integration: main.js 3-way bootstrap + UI hardcoded asset:// replacement
 
 #### Phase 29: Asset Scanner + Build Config
@@ -215,7 +215,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 28. Engine Web Adaptation | 0/? | Not started | - |
+| 28. Engine Web Adaptation | 1/2 | In Progress|  |
 | 29. Asset Scanner + Build Config | 0/? | Not started | - |
 | 30. Export Pipeline | 0/? | Not started | - |
 | 31. Export UI | 0/? | Not started | - |

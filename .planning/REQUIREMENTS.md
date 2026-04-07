@@ -10,10 +10,10 @@ Requirements for Web static bundle export. Each maps to roadmap phases.
 ### 引擎 Web 适配 (Web Runtime)
 
 - [ ] **WEBRT-01**: 导出的游戏可在浏览器中完整运行（对话、选项、角色、背景、音频均正常）
-- [ ] **WEBRT-02**: 玩家可在浏览器中存档/读档（WebSaveManager + localStorage 后端）
+- [x] **WEBRT-02**: 玩家可在浏览器中存档/读档（WebSaveManager + localStorage 后端）
 - [ ] **WEBRT-03**: 设置页和标题页的自定义背景/图片在浏览器中正常显示（basePath 参数化）
-- [ ] **WEBRT-04**: 导出的游戏在 itch.io iframe 中可正常运行（区分编辑器预览 vs 外部嵌入）
-- [ ] **WEBRT-05**: 引擎自动检测运行环境（Electron/Preview/Web），选择对应的 SaveManager 和 basePath
+- [x] **WEBRT-04**: 导出的游戏在 itch.io iframe 中可正常运行（区分编辑器预览 vs 外部嵌入）
+- [x] **WEBRT-05**: 引擎自动检测运行环境（Electron/Preview/Web），选择对应的 SaveManager 和 basePath
 
 ### 资源扫描 (Asset Scanning)
 
@@ -78,10 +78,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | WEBRT-01 | Phase 28 | Pending |
-| WEBRT-02 | Phase 28 | Pending |
+| WEBRT-02 | Phase 28 | Complete |
 | WEBRT-03 | Phase 28 | Pending |
-| WEBRT-04 | Phase 28 | Pending |
-| WEBRT-05 | Phase 28 | Pending |
+| WEBRT-04 | Phase 28 | Complete |
+| WEBRT-05 | Phase 28 | Complete |
 | SCAN-01 | Phase 29 | Pending |
 | SCAN-02 | Phase 29 | Pending |
 | SCAN-03 | Phase 29 | Pending |

@@ -1,0 +1,89 @@
+# Requirements: Galgame Maker v0.7 — 游戏导出（Web 静态包）
+
+**Defined:** 2025-07-22
+**Core Value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
+
+## v0.7 Requirements
+
+Requirements for Web static bundle export. Each maps to roadmap phases.
+
+### 引擎 Web 适配 (Web Runtime)
+
+- [ ] **WEBRT-01**: 导出的游戏可在浏览器中完整运行（对话、选项、角色、背景、音频均正常）
+- [ ] **WEBRT-02**: 玩家可在浏览器中存档/读档（WebSaveManager + localStorage 后端）
+- [ ] **WEBRT-03**: 设置页和标题页的自定义背景/图片在浏览器中正常显示（basePath 参数化）
+- [ ] **WEBRT-04**: 导出的游戏在 itch.io iframe 中可正常运行（区分编辑器预览 vs 外部嵌入）
+- [ ] **WEBRT-05**: 引擎自动检测运行环境（Electron/Preview/Web），选择对应的 SaveManager 和 basePath
+
+### 资源扫描 (Asset Scanning)
+
+- [ ] **SCAN-01**: 导出时自动扫描 script.json 中所有资源引用，收集实际使用的文件列表
+- [ ] **SCAN-02**: 扫描覆盖所有资源类型（背景、角色、音频、字体、九宫格图片、favicon）
+- [ ] **SCAN-03**: 引用的资源文件不存在时输出警告信息
+
+### 导出流水线 (Export Pipeline)
+
+- [ ] **PIPE-01**: 用户选择输出目录后一键导出完整 Web 静态包（HTML + JS + CSS + assets）
+- [ ] **PIPE-02**: 只复制实际引用的资源文件到输出目录（不含未使用资源）
+- [ ] **PIPE-03**: 生成的 HTML 包含用户自定义的游戏标题
+- [ ] **PIPE-04**: 用户可指定 favicon，导出时包含在输出中
+- [ ] **PIPE-05**: 用户可选择将输出打包为 ZIP 文件（方便上传 itch.io）
+- [ ] **PIPE-06**: Vite 独立构建配置生成确定性文件名的引擎 bundle
+- [ ] **PIPE-07**: 导出过程中显示进度反馈（当前步骤/百分比）
+
+### 导出 UI (Export UI)
+
+- [ ] **EXUI-01**: 编辑器内提供导出入口（按钮/面板），可触发导出流程
+- [ ] **EXUI-02**: 导出对话框包含游戏标题输入框
+- [ ] **EXUI-03**: 导出对话框包含输出目录选择器
+- [ ] **EXUI-04**: 导出对话框包含 favicon 文件选择器
+- [ ] **EXUI-05**: 导出对话框包含 ZIP 打包开关
+- [ ] **EXUI-06**: 导出过程中显示进度状态，完成后显示成功信息和输出路径
+
+## Future Requirements
+
+Deferred to v0.8+. Tracked but not in current roadmap.
+
+### 桌面打包 (Desktop Packaging)
+
+- **DESK-01**: 用户可导出为 Windows .exe 安装包
+- **DESK-02**: 用户可导出为 macOS .app 包
+- **DESK-03**: 导出的桌面应用包含自定义图标和窗口标题
+
+### 高级导出选项
+
+- **ADV-01**: 资源压缩优化（图片压缩、音频转码）
+- **ADV-02**: 离线字体打包（Google Fonts 本地化）
+- **ADV-03**: 加载画面/启动屏自定义
+- **ADV-04**: 导出后自动打开浏览器预览
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Electron 桌面打包 (.exe/.app) | 复杂度高，需引入 electron-builder，推迟到 v0.8+ |
+| 资源压缩/优化 | 图片压缩（sharp/canvas）增加显著复杂度，v0.7 原样复制 |
+| 单文件 HTML 嵌入 | 所有资源 base64 编码会产生 100+ MB 文件 |
+| 移动端响应式布局 | 引擎固定 1280×720，桌面优先 |
+| 离线 Google Fonts 打包 | 需下载 + 重写 @font-face，Noto Sans SC 5+ MB |
+| 资源加密/混淆 | 增加复杂度，JS 在浏览器中本身可读 |
+| 导出后自动打开浏览器 | 编辑器内置预览已足够 |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| *(populated by roadmapper)* | | |
+
+**Coverage:**
+- v0.7 requirements: 19 total
+- Mapped to phases: 0
+- Unmapped: 19 ⚠️
+
+---
+*Requirements defined: 2025-07-22*
+*Last updated: 2025-07-22 after initial definition*

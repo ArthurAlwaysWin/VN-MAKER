@@ -168,10 +168,13 @@ See .planning/milestones/v0.6-ROADMAP.md for full phase details.
 **Success Criteria** (what must be TRUE):
   1. Opening the engine's index.html in a plain browser renders the title screen with background, BGM, and interactive buttons
   2. Player can progress through dialogue, make choices, and navigate between scenes entirely in the browser
-  3. Player can save to a slot and load it back in the browser, with data persisting across page reloads (localStorage backend)
+  3. Player can save to a slot and load it back in the browser, with data persisting across page reloads (IndexedDB backend)
   4. Settings page and title page custom backgrounds/images display correctly via parameterized basePath (no asset:// protocol)
   5. Engine auto-detects its runtime environment (Electron / editor preview / standalone web) and selects the correct SaveManager and basePath without manual configuration
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 28-01-PLAN.md — Foundation modules: assetPath.js (env detection + path resolution) + WebSaveManager.js (IndexedDB backend)
+- [ ] 28-02-PLAN.md — Integration: main.js 3-way bootstrap + UI hardcoded asset:// replacement
 
 #### Phase 29: Asset Scanner + Build Config
 **Goal**: The system can identify all referenced project assets and produce a deterministic standalone engine bundle

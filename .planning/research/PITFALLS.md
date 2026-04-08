@@ -1,150 +1,157 @@
-# Domain Pitfalls — Web Export
+# Domain Pitfalls — Electron Desktop Game Export
 
-**Domain:** Visual novel creator → game export/deployment
-**Researched:** 2025-07-22
+**Domain:** Desktop game packaging from visual novel editor
+**Researched:** 2025-07-23
 
 ## Critical Pitfalls
 
-Mistakes that cause broken exports or major rewrites.
+Mistakes that cause failed exports, broken games, or major rework.
 
-### Pitfall 1: SaveManager Crashes in Web Mode
+### Pitfall 1: Electron Binary Download Fails Silently
 
-**What goes wrong:** The exported game crashes on any save/load interaction because `SaveManager` calls `window.ipcRenderer.invoke()` which doesn't exist in browsers.
-**Why it happens:** SaveManager is the ONLY engine component where ALL methods are Electron-dependent with no fallback. Other IPC calls (screenshot, window mode) are already guarded.
-**Consequences:** Game starts fine but crashes when player tries to save, load, quick-save, quick-load, or when the title screen checks for existing saves (`hasAnySave()` is called during `showTitle()`). The title screen's "continue" button logic also breaks.
-**Prevention:** Create `WebSaveManager` class implementing the exact same async interface. Swap in `main.js` based on `isElectron` flag. Test ALL 8 methods: `save`, `load`, `delete`, `getAllSlots`, `quickSave`, `quickLoad`, `hasQuickSave`, `_checkMigration`.
-**Detection:** Title screen fails to render (crash in `showTitle()` → `saveManager.hasAnySave()`). This is the very first thing that happens after script load.
+**What goes wrong:** `@electron/packager` uses `@electron/get` to download the Electron binary on first export. This can fail due to network issues, corporate proxies, China's GFW, or GitHub rate limits. If it fails, the export produces no output or a cryptic error.
+**Why it happens:** The Electron binary (~90 MB ZIP) is downloaded from GitHub Releases. First export on a new machine always requires this download.
+**Consequences:** User sees "export failed" with an opaque network error. First-time experience is terrible.
+**Prevention:**
+- Catch download errors specifically and show a clear Chinese-language error message: "首次导出需要下载运行时（约 90 MB），请检查网络连接"
+- Consider pre-caching: on editor startup, check if `~/.electron/` has the required version cached; if not, show a one-time "download runtime" prompt in settings
+- Support `ELECTRON_MIRROR` environment variable for Chinese users (e.g., `https://npmmirror.com/mirrors/electron/`)
+- Show download progress in the ExportModal (if @electron/get supports progress callbacks)
+**Detection:** Test export on a clean machine with no cached Electron binaries.
 
-### Pitfall 2: Hardcoded `asset://` in SettingsScreen and TitleScreen
+### Pitfall 2: asset:// Protocol Path Mismatch Between ASAR and Unpacked
 
-**What goes wrong:** Settings screen and title screen backgrounds/images don't load in the exported web game.
-**Why it happens:** `SettingsScreen.js` line 72 hardcodes `asset://` in `url()` construction. `TitleScreen.js` lines 73 and 158 check for `asset://` prefix and fall back to `/game/` — neither works in web mode.
-**Consequences:** Custom title screen backgrounds, settings screen backgrounds, and title screen image elements appear as broken images. Default (non-custom) layouts work fine because they don't load asset files.
-**Prevention:** Add `basePath` parameter to `SettingsScreen` and `TitleScreen` constructors (same pattern as `AudioManager`, `BackgroundLayer`, `CharacterLayer` which already accept it). Pass `BASE_PATH` from `main.js`.
-**Detection:** Test export with a project that has custom title screen and settings screen layouts.
+**What goes wrong:** When ASAR packs some files and leaves others unpacked, the file paths the game's main.js uses to locate assets may point to the wrong location. ASAR-packed files are accessed transparently via Electron's ASAR support, but unpacked files live in `app.asar.unpacked/`. If the code expects files at `path.join(__dirname, 'assets/')` but they're actually at `resources/app.asar.unpacked/assets/`, everything breaks.
+**Why it happens:** `__dirname` inside an ASAR resolves to the virtual ASAR path. Unpacked files are in a parallel `.unpacked` directory. Electron transparently redirects fs calls for ASAR contents, but `path.join()` may construct paths that don't account for this.
+**Consequences:** All asset loading fails — blank screens, no audio, missing characters.
+**Prevention:**
+- Use `app.getAppPath()` instead of `__dirname` to get the app directory — it correctly resolves whether code is in ASAR or not
+- Electron automatically redirects `fs` calls for ASAR-packed files, BUT the `protocol.handle` with `net.fetch(pathToFileURL(...))` may NOT follow ASAR redirection for unpacked files
+- **Test extensively** with ASAR enabled — the protocol handler needs to handle both ASAR and unpacked paths
+- Alternative: use `app.getPath('exe')` to find the resources directory and construct paths from there
+- Simplest safe approach: put ALL assets outside ASAR (use `asarUnpack: '{assets/**,script.json}'`) and ensure the protocol handler resolves to the `.unpacked` directory for assets
+**Detection:** Export a game with ASAR enabled, run it, verify all asset types load (backgrounds, characters, audio, fonts, voices).
 
-### Pitfall 3: Pre-Built Engine Bundle Not Available
+### Pitfall 3: Save Directory Doesn't Exist on First Launch
 
-**What goes wrong:** Export fails because `dist-web-engine/` doesn't exist when the user tries to export.
-**Why it happens:** The web engine bundle is built by a separate Vite config. If the developer forgets to run the build, or the packaging process doesn't include it, the export handler can't find the engine files.
-**Consequences:** Export IPC handler returns an error — "engine bundle not found."
-**Prevention:** 
-1. Include `build:web` in the main `build` script: `"build": "vite build && vite build --config vite.config.web.js"`
-2. In the export handler, check for bundle existence FIRST and give a clear error.
-3. In Electron packaging config, include `dist-web-engine/` in the app resources.
-**Detection:** Export handler should validate file existence before proceeding.
+**What goes wrong:** The game's save IPC handlers try to write to `app.getPath('userData') + '/saves/'` but the directory doesn't exist on first launch. `fs.writeFile` fails because the parent directory doesn't exist.
+**Why it happens:** `app.getPath('userData')` returns a path that MAY not exist yet (depends on OS and whether any other Electron app has used it). The `saves/` subdirectory definitely doesn't exist.
+**Consequences:** First save attempt fails silently. Player thinks they saved but data is lost.
+**Prevention:**
+- Use `fs.mkdir(savesDir, { recursive: true })` before any write operation
+- OR create the saves directory on app startup (in the `app.whenReady()` handler)
+- The existing editor SaveManager doesn't have this issue because the editor creates the project's `saves/` directory during project creation
+**Detection:** Test save on a fresh Windows user account where the userData directory has never been created.
 
-### Pitfall 4: Asset Reference Scanner Misses Paths
+### Pitfall 4: Windows __dirname with ESM and ASAR
 
-**What goes wrong:** Exported game has missing assets — broken images, silent audio, missing fonts.
-**Why it happens:** The scanner doesn't traverse all locations where asset paths exist in script.json. New fields added in future versions aren't scanned.
-**Consequences:** Game plays but with visual/audio glitches. Difficult to debug because the game doesn't crash — assets just silently fail to load.
-**Prevention:** 
-1. Build scanner from the definitive list of asset path locations (see STACK.md §8).
-2. Add a verification step: for each path in the scanner's output, check the file exists in the project directory.
-3. Log warnings for referenced files that don't exist (catches typos and data corruption).
-**Detection:** After export, verify file count. Compare scanner output against actual project `assets/` directory listing.
+**What goes wrong:** `path.dirname(new URL(import.meta.url).pathname)` on Windows inside ASAR returns a path with a leading `/` (e.g., `/C:/Users/.../resources/app.asar`) which is invalid for Windows filesystem operations.
+**Why it happens:** `import.meta.url` uses file:// URL format. URL pathname on Windows includes a leading `/`. When used with `path.join()`, the leading slash can cause path resolution issues, especially with ASAR paths.
+**Consequences:** All file operations in the game's main.js fail on Windows.
+**Prevention:**
+- Use `const __dirname = path.dirname(fileURLToPath(import.meta.url));` (import `fileURLToPath` from `node:url`) — this correctly handles Windows paths
+- This is the same pattern the editor's main.js already uses (line 9)
+- Do NOT use `new URL(import.meta.url).pathname` directly on Windows
+**Detection:** Test the exported game on Windows — path bugs are platform-specific.
 
 ## Moderate Pitfalls
 
-### Pitfall 5: Google Fonts CDN Dependency
+### Pitfall 5: @electron/packager electronVersion Mismatch
 
-**What goes wrong:** Exported game shows system fonts instead of Noto Sans/Serif SC when played offline or behind a firewall.
-**Why it happens:** `style.css` imports fonts from `fonts.googleapis.com`. No internet = no fonts.
-**Consequences:** Text renders in fallback fonts (Segoe UI / Microsoft YaHei). Game is playable but looks different from the editor preview.
-**Prevention for v0.7:** Document the requirement (internet needed for default fonts). For future: bundle Noto Sans SC (~5 MB) as an optional export setting.
-**Detection:** Test export in offline browser.
+**What goes wrong:** If the `electronVersion` option doesn't match a real Electron release, @electron/get fails to download. If a major version mismatch exists between editor and game Electron versions, API differences may cause crashes.
+**Prevention:**
+- Hardcode `electronVersion` to a specific known-good version (e.g., `'41.2.0'`)
+- OR read the editor's Electron version at runtime: `process.versions.electron`
+- Don't use `electronVersion: 'latest'` — untested versions may have breaking changes
 
-### Pitfall 6: ZIP Memory Pressure on Large Projects
+### Pitfall 6: Game Title with Special Characters
 
-**What goes wrong:** Electron main process runs out of memory or hangs when creating ZIP of a large game (500+ MB).
-**Why it happens:** `zipSync()` or `zip()` loads all file contents into memory before creating the ZIP.
-**Consequences:** Export appears to hang, eventually crashes with OOM error.
-**Prevention:** 
-1. Use `level: 0` (store-only) — avoids memory-intensive compression.
-2. For v0.7, set a reasonable project size warning (e.g., > 500 MB → warn user).
-3. Future: use fflate's streaming `Zip` + `AsyncZipDeflate` for memory-efficient creation.
-**Detection:** Test with a project containing 500+ MB of audio/image assets.
+**What goes wrong:** Game titles with characters like `<>:"|?*\/` are valid in the editor's text field but invalid in Windows filenames. @electron/packager replaces some characters, but edge cases exist (e.g., trailing dots, reserved names like CON, PRN, NUL).
+**Prevention:**
+- Sanitize game title for filesystem use (same `sanitizeProjectName()` from editor's main.js)
+- Apply sanitization BEFORE passing to packager's `name` and `executableName` options
+- Show a warning in the UI if characters were replaced
 
-### Pitfall 7: Vite Chunk Splitting Creates Unexpected Files
+### Pitfall 7: Staging Directory Cleanup on Export Failure
 
-**What goes wrong:** Vite's build produces unexpected chunk files (e.g., `fontLoader.js` as a separate chunk) that the export doesn't copy.
-**Why it happens:** Vite/Rollup automatically code-splits shared modules. The existing build already produces a `fontLoader-*.js` chunk because `fontLoader.js` is imported by both game and editor entries.
-**Consequences:** Engine fails to load in browser — missing module error.
-**Prevention:** 
-1. In `vite.config.web.js`, the web config has only ONE entry point (index.html/game) — no editor entry. With a single entry, Rollup won't split the fontLoader chunk.
-2. As extra safety: set `build.rollupOptions.output.inlineDynamicImports: true` to force a single file.
-3. Test by loading the built `dist-web-engine/index.html` directly in a browser.
-**Detection:** After build, verify `dist-web-engine/` contains exactly the expected files.
+**What goes wrong:** If the export fails mid-pipeline (packager error, disk full, user cancels), the staging directory (temp dir with copied engine + assets) is left behind, consuming potentially hundreds of MB.
+**Prevention:**
+- Wrap the entire export in try/finally that always cleans up the staging dir
+- Use `os.tmpdir()` for staging (OS handles eventual cleanup even if app crashes)
+- Implement AbortController pattern (already used in v0.7 web export) for cancellation
 
-### Pitfall 8: Relative Path Resolution in Subdirectories
+### Pitfall 8: Preload Script Path in Packaged App
 
-**What goes wrong:** `fetch('script.json')` fails in some deployment scenarios.
-**Why it happens:** When hosted in a subdirectory (e.g., `example.com/my-game/`), relative paths may resolve incorrectly depending on the `<base>` tag or server configuration.
-**Consequences:** Game shows "加载游戏失败" error because script.json can't be fetched.
-**Prevention:** Use `./script.json` (explicit current-directory relative) instead of `script.json`. Same for `./assets/`. The `./` prefix ensures resolution relative to the HTML file, not the server root.
-**Detection:** Test deployment in a subdirectory, not just at domain root.
+**What goes wrong:** The game's main.js specifies `preload: path.join(__dirname, 'preload.js')` but when ASAR is active, the preload file path must resolve correctly within or alongside the ASAR archive.
+**Prevention:**
+- Preload scripts in ASAR are handled transparently by Electron — they load from the virtual ASAR path
+- Ensure preload.js is NOT in the `asarUnpack` list (it should be packed in ASAR with main.js)
+- Test with ASAR enabled specifically
+
+### Pitfall 9: Disk Space Check Before Export
+
+**What goes wrong:** Export requires significant temp space: staging dir (~size of assets) + packager output (~size of assets + 180 MB Electron) + optional ZIP. On a full disk, export fails partway through with corrupt partial output.
+**Prevention:**
+- Check available disk space before starting (need ~3x asset size + 250 MB overhead)
+- If insufficient, show a clear error before starting the pipeline
+- Calculate estimated output size and display it in ExportModal before user confirms
+
+### Pitfall 10: ESM vs CJS in Generated Game main.js
+
+**What goes wrong:** The generated game package.json needs `"type": "module"` for the ESM main.js to work (since it uses `import` statements). If missing, Node.js treats .js files as CommonJS and the `import` syntax fails.
+**Prevention:**
+- Always include `"type": "module"` in the generated package.json
+- OR use `.mjs` extension for main.mjs and preload.mjs
+- The editor project uses `"type": "module"` — follow the same pattern
 
 ## Minor Pitfalls
 
-### Pitfall 9: localStorage Key Collisions
+### Pitfall 11: Chromium License Files
 
-**What goes wrong:** Two different exported games hosted on the same domain share save data.
-**Why it happens:** `ConfigManager` uses `galgame-maker-config` as the storage key. `ReadHistory` uses `readHistory:{title}`. If two games have the same title, they collide.
-**Consequences:** Saves from one game appear in another; settings bleed across games.
-**Prevention:** Use a project-specific prefix (e.g., game title hash) for all localStorage keys. `ReadHistory` already uses the title, but `ConfigManager` doesn't.
-**Detection:** Deploy two games on the same domain and check for data cross-contamination.
+**What goes wrong:** @electron/packager includes Chromium license files (LICENSES.chromium.html) in the output. Users may be confused or try to delete them.
+**Prevention:** Document that these are required by Chromium's license terms. Don't clean them up.
 
-### Pitfall 10: SaveManager Slot Count vs localStorage Quota
+### Pitfall 12: Large Package Size Surprise
 
-**What goes wrong:** Players can't save after filling many slots because localStorage quota is exceeded.
-**Why it happens:** `SaveManager.slotCount = 108`. Each save slot stores engine state JSON (~5-50 KB). 108 slots × 50 KB = ~5.4 MB, which is close to the localStorage limit.
-**Consequences:** Save silently fails; player loses progress if they're overwriting.
-**Prevention:** 
-1. Reduce web slot count (e.g., 36 instead of 108).
-2. Wrap localStorage writes in try/catch and show a user-friendly error.
-3. Log total storage usage and warn before it's full.
-**Detection:** Fill 50+ save slots and verify behavior.
+**What goes wrong:** Users expect a small game but get a 200+ MB output because Electron + Chromium is ~180 MB baseline.
+**Prevention:**
+- Show estimated output size in ExportModal BEFORE export starts
+- Explain in UI: "桌面版包含运行时环境，基础大小约 200 MB + 游戏资源"
+- Consider recommending web export for small games
 
-### Pitfall 11: Export Overwrites Existing Directory
+### Pitfall 13: Antivirus False Positives
 
-**What goes wrong:** User exports to a directory with existing files; old files not cleaned, mixed with new export.
-**Why it happens:** Export creates files but doesn't clear the target directory first.
-**Consequences:** Stale files from previous exports persist. If asset names changed, old assets remain.
-**Prevention:** Either clear the target directory before export, or export to a new uniquely-named subdirectory. Warn the user if the directory is non-empty.
-**Detection:** Export twice to the same directory and check for stale files.
+**What goes wrong:** Some antivirus software flags unsigned Electron .exe files as suspicious, quarantining or blocking the exported game.
+**Prevention:**
+- Cannot fully prevent without code signing (out of scope for v0.8)
+- Document this in export completion: "如果杀毒软件误报，请添加信任"
+- The game uses a renamed electron.exe with custom icon — this is standard for unsigned Electron apps
 
-### Pitfall 12: Favicon Format Compatibility
+### Pitfall 14: set-window-mode IPC Handler Missing in Game
 
-**What goes wrong:** Favicon doesn't show in browser tab.
-**Why it happens:** HTML uses `<link rel="icon" href="favicon.ico">` but user provides a .png file. Some browsers handle this, others don't.
-**Consequences:** Missing icon in browser tab. Non-critical but unprofessional.
-**Prevention:** Accept .ico and .png. If .png, use `<link rel="icon" type="image/png" href="favicon.png">`. Set the link tag type based on the actual file format.
-**Detection:** Test with both .ico and .png favicons in Chrome and Firefox.
+**What goes wrong:** The engine's settings page includes window mode controls (窗口/全屏/无边框). If the game's main.js doesn't have the `set-window-mode` IPC handler, clicking these controls fails silently.
+**Prevention:**
+- Include `set-window-mode` handler in the game's main.js template
+- Handle all three modes: windowed, fullscreen, frameless
+- Port the exact logic from editor's main.js (lines ~690-703)
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| Engine web adaptation | **#1 SaveManager crash** — most critical | Test `showTitle()` flow first; it's the immediate crash point |
-| Engine web adaptation | **#2 Hardcoded asset://** — silent failures | Test with custom title/settings layouts specifically |
-| Asset reference scanning | **#4 Missing paths** — silent asset failures | Use definitive field list from STACK.md §8; add file-exists verification |
-| Export pipeline | **#3 Missing bundle** — export fails entirely | Check bundle existence at handler start; clear error message |
-| Export pipeline | **#7 Chunk splitting** — broken engine load | Single entry point in web config; verify output file list |
-| Export pipeline | **#8 Relative paths** — deployment issues | Use `./` prefix for all relative URLs |
-| Export pipeline | **#11 Directory overwrite** — stale files | Warn on non-empty target; option to clean first |
-| ZIP packaging | **#6 Memory pressure** — OOM on large projects | Use `level: 0`; warn on projects > 500 MB |
-| Web runtime | **#5 Google Fonts offline** — visual degradation | Document internet requirement; future: bundle option |
-| Web runtime | **#9 localStorage collisions** — data corruption | Use project-specific key prefix |
-| Web runtime | **#10 localStorage quota** — save failures | Reduce web slot count; try/catch on writes |
+| Game main.js generation | Path handling (P4), ESM/CJS (P10) | Use fileURLToPath, include "type": "module" |
+| ASAR configuration | asset:// path mismatch (P2), preload path (P8) | Test with ASAR enabled, use app.getAppPath() |
+| Save system | Missing directory (P3) | mkdir recursive on app startup |
+| Icon handling | PNG → .ico conversion edge cases | Test with various PNG sizes, handle non-square PNGs |
+| First-time export | Electron download (P1) | Clear error messages, mirror support |
+| ExportModal integration | Staging cleanup (P7) | try/finally, AbortController |
+| File naming | Special characters (P6) | Reuse sanitizeProjectName() |
 
 ## Sources
 
-- SaveManager IPC dependency: `src/engine/SaveManager.js` lines 45, 72, 86, 103, 145, 163, 177, 195, 221 (direct grep)
-- SettingsScreen hardcoded asset://: `src/ui/SettingsScreen.js` line 72 (direct inspection)
-- TitleScreen asset path logic: `src/ui/TitleScreen.js` lines 73, 158 (direct inspection)
-- showTitle → hasAnySave call chain: `src/main.js` lines 704-715 (direct inspection)
-- Existing build output: `dist/assets/fontLoader-*.js` shared chunk (direct inspection)
-- ConfigManager storage key: `src/engine/ConfigManager.js` line 5 — `'galgame-maker-config'` (direct inspection)
-- ReadHistory storage key: `src/engine/ReadHistory.js` line 13 — `readHistory:${projectId}` (direct inspection)
-- fflate streaming API: `node_modules/fflate/esm/browser.js` — `Zip`, `AsyncZipDeflate` exports (direct inspection)
+- Project source: `electron/main.js` — asset:// protocol patterns, save handlers, path handling (direct inspection)
+- Project source: `electron/exportGame.js` — existing pipeline error handling patterns (direct inspection)
+- @electron/packager documentation — ASAR, electronVersion, platform options (npm registry, HIGH confidence)
+- resedit README — Windows PE resource editing limitations (npm registry, MEDIUM confidence)
+- Electron ASAR documentation — transparent path redirection behavior (training data, MEDIUM confidence)
+- Windows filesystem naming rules — reserved characters and names (training data, HIGH confidence)

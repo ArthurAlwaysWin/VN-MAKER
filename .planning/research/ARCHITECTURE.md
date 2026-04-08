@@ -1,276 +1,242 @@
-# Architecture Patterns — Web Export
+# Architecture Patterns — Electron Desktop Game Export
 
-**Domain:** Visual novel creator → game export/deployment
-**Researched:** 2025-07-22
+**Domain:** Desktop game packaging from visual novel editor
+**Researched:** 2025-07-23
 
 ## Recommended Architecture
 
-### System Overview
+### Overview: Two-App Model
+
+The v0.8 export creates a **completely separate Electron app** — the "game app" — distinct from the "editor app". The editor generates the game app's source files, stages them in a temp directory, then invokes `@electron/packager` to produce the final packaged output.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    EDITOR (Renderer)                     │
-│                                                         │
-│  ExportPanel.vue                                        │
-│    ├── Title input                                      │
-│    ├── Favicon picker                                   │
-│    ├── Output directory selector                        │
-│    ├── ZIP toggle                                       │
-│    └── "Export" button                                  │
-│         │                                               │
-│         ▼ ipcRenderer.invoke('export-web', options)     │
-└────────────┬────────────────────────────────────────────┘
-             │ IPC
-┌────────────▼────────────────────────────────────────────┐
-│                 ELECTRON MAIN PROCESS                    │
-│                                                         │
-│  export-web handler                                     │
-│    ├── 1. Read script.json from project                 │
-│    ├── 2. Scan asset references (scanner utility)       │
-│    ├── 3. Generate index.html (template + title/favicon)│
-│    ├── 4. Copy engine bundle (dist-web-engine/)         │
-│    ├── 5. Copy script.json to output                    │
-│    ├── 6. Copy referenced assets to output/assets/      │
-│    ├── 7. Copy favicon if provided                      │
-│    └── 8. Optional: ZIP output with fflate              │
-│                                                         │
-│  Reads from:                                            │
-│    - dist-web-engine/  (pre-built engine bundle)        │
-│    - currentProjectPath/  (script.json + assets/)       │
-│                                                         │
-│  Writes to:                                             │
-│    - outputDir/  (user-selected export directory)       │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│              EXPORTED WEB GAME (Output)                  │
-│                                                         │
-│  output/                                                │
-│    index.html        ← custom title + favicon           │
-│    engine.js         ← standalone engine bundle         │
-│    engine.css        ← engine styles (incl. Noto Sans)  │
-│    script.json       ← game data (relative asset paths) │
-│    favicon.ico       ← optional                         │
-│    assets/                                              │
-│      backgrounds/    ← only referenced images           │
-│      characters/     ← only referenced sprites          │
-│      audio/          ← only referenced BGM/SE/voice     │
-│      fonts/          ← only referenced custom fonts     │
-└─────────────────────────────────────────────────────────┘
+EDITOR APP (existing)              GAME APP (generated at export)
+├── electron/main.js (800+ lines)  ├── main.js (~80 lines)
+├── electron/preload.js (40 lines) ├── preload.js (~20 lines)
+├── editor.html (Vue 3 editor)     ├── index.html (game shell)
+├── index.html (game engine)       ├── engine.js (Vite bundle)
+├── src/ (editor + engine code)    ├── engine.css
+├── vite.config.js                 ├── package.json (~5 fields)
+└── package.json (full project)    ├── script.json (game data)
+                                   └── assets/ (images, audio, fonts)
 ```
+
+The game app is **self-contained** — it runs without the editor, without internet, without any external dependencies.
 
 ### Component Boundaries
 
 | Component | Responsibility | Communicates With |
 |-----------|---------------|-------------------|
-| `ExportPanel.vue` | UI for export options, progress display | IPC → main process |
-| `export-web` IPC handler | Orchestrates entire export pipeline | fs, scanner, template |
-| Asset reference scanner | Traverses script.json, returns Set of used paths | Called by export handler |
-| HTML template generator | Produces index.html string with interpolated values | Called by export handler |
-| `vite.config.web.js` | Build config for standalone engine bundle | Vite CLI (build time) |
-| `WebSaveManager` | localStorage-based save/load for browser | Replaces `SaveManager` in web mode |
+| **ExportModal** (existing) | UI: format selection, progress, completion | export-game IPC handler |
+| **export-game IPC handler** (existing, extended) | Orchestrates full export pipeline | exportDesktopGame(), exportGame() |
+| **exportDesktopGame()** (new) | Desktop-specific pipeline: staging → packager | @electron/packager, png-to-ico |
+| **Game main.js template** (new) | Template/generator for game's main process | Written to staging dir |
+| **Game preload.js template** (new) | Template/generator for game's preload script | Written to staging dir |
+| **@electron/packager** (library) | Downloads Electron, assembles .exe directory | Filesystem, @electron/get |
 
 ### Data Flow
 
-**Build time:**
 ```
-src/main.js + src/engine/ + src/ui/ + src/style.css
-  → vite build --config vite.config.web.js
-  → dist-web-engine/engine.js + dist-web-engine/engine.css
-```
-
-**Export time:**
-```
-User clicks "Export"
-  → ExportPanel.vue collects options {outputDir, title, favicon, zip}
-  → ipcRenderer.invoke('export-web', options)
-  → Main process reads script.json from currentProjectPath
-  → Scanner extracts Set<assetPath> from script.json
-  → fs.mkdir(outputDir) + fs.mkdir(outputDir/assets)
-  → fs.writeFile(outputDir/index.html, generateHTML(title, favicon))
-  → fs.cp(dist-web-engine/engine.js, outputDir/engine.js)
-  → fs.cp(dist-web-engine/engine.css, outputDir/engine.css)
-  → fs.cp(projectPath/script.json, outputDir/script.json)
-  → for each assetPath in referencedAssets:
-      fs.cp(projectPath/assetPath, outputDir/assets/assetPath)
-  → if favicon: fs.cp(faviconPath, outputDir/favicon.ico)
-  → if zip: fflate.zip(outputDir contents) → outputDir.zip
-  → return {success, fileCount, totalSize}
-```
-
-**Runtime (in browser):**
-```
-Browser loads index.html
-  → engine.js detects web mode (no window.ipcRenderer, not in iframe)
-  → Sets BASE_PATH = 'assets/'
-  → Creates WebSaveManager (localStorage)
-  → fetch('script.json') → parse → engine.load()
-  → loadAllFonts(fonts, 'assets/')
-  → applyTheme(), applyNineSlice()
-  → showTitle()
-  → Game plays normally
+User clicks "导出桌面版" in ExportModal
+  │
+  ├─ Renderer: ipcRenderer.invoke('export-game', { format: 'desktop', ... })
+  │
+  ├─ Main process: export-game handler
+  │   │
+  │   ├─ Step 1: Vite web build (reuse existing) → dist-web/
+  │   │
+  │   ├─ Step 2: scanAssets(script.json) → asset path list
+  │   │
+  │   ├─ Step 3: Create staging dir (os.tmpdir() + random)
+  │   │   ├─ Generate package.json { name, main, version }
+  │   │   ├─ Generate main.js (from template string)
+  │   │   ├─ Generate preload.js (from template string)
+  │   │   ├─ Copy index.html (from dist-web/)
+  │   │   ├─ Copy engine.js + engine.css (from dist-web/)
+  │   │   ├─ Copy script.json (from project)
+  │   │   └─ Copy referenced assets → staging/assets/
+  │   │
+  │   ├─ Step 4: PNG → .ico conversion (png-to-ico)
+  │   │
+  │   ├─ Step 5: packager({ dir: staging, out: output, ... })
+  │   │   ├─ @electron/get: download Electron binary (cached)
+  │   │   ├─ ASAR: pack code files into app.asar
+  │   │   ├─ resedit: embed .ico into .exe
+  │   │   └─ Output: GameTitle-win32-x64/ directory
+  │   │
+  │   ├─ Step 6: Clean up staging directory
+  │   │
+  │   └─ Step 7: Optional ZIP (fflate)
+  │
+  └─ Renderer: receives { success, outputPath, warnings }
+      └─ ExportModal shows completion state
 ```
 
 ## Patterns to Follow
 
-### Pattern 1: Three-Mode Environment Detection
+### Pattern 1: Game Main.js Template as String Literal
 
-**What:** Single engine codebase that adapts to Electron, preview, or web context.
-**When:** Engine initialization — determines basePath, SaveManager type, and feature flags.
-**Why:** Avoids code duplication; the engine is ONE module tree built by ONE Vite config.
+**What:** Generate the game's `main.js` as a JavaScript string literal in `exportDesktopGame.js`, not as a separate file that gets copied.
 
+**When:** Always — the game main.js is simple enough (~80 lines) and needs parameterization (window title, dimensions).
+
+**Why:** The game main.js needs the game title and resolution baked in. Template literals handle this naturally. Keeping it as a string in the export module means:
+- No separate file to maintain
+- Parameters are injected at generation time
+- No risk of the template file getting out of sync with the engine
+
+**Example:**
 ```js
-// src/main.js — top of file, after imports
-const isElectron = typeof window.ipcRenderer !== 'undefined';
-const isPreview = window.parent !== window;
-const isWeb = !isElectron && !isPreview;
+function generateGameMain(gameTitle, width, height) {
+  return `
+import { app, BrowserWindow, ipcMain, protocol, net } from 'electron';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const BASE_PATH = isWeb ? 'assets/' : (isPreview ? 'asset://' : '/game/');
-const SCRIPT_URL = isWeb ? 'script.json' : '/game/script.json';
-const FONT_BASE = isWeb ? 'assets/' : 'asset://';
-```
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-### Pattern 2: Interface-Compatible SaveManager
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'asset',
+  privileges: { standard: true, supportFetchAPI: true, stream: true, bypassCSP: true },
+}]);
 
-**What:** WebSaveManager implements the exact same async API as SaveManager.
-**When:** Web mode — swap at construction time based on environment.
-**Why:** All consumers (titleScreen.onContinue, quickBar, gameMenu) call SaveManager methods without knowing the backend.
+app.whenReady().then(() => {
+  // asset:// protocol — reads from app directory assets/
+  protocol.handle('asset', (request) => {
+    const url = new URL(request.url);
+    const filePath = decodeURIComponent(url.hostname + url.pathname);
 
-```js
-// src/engine/WebSaveManager.js
-export class WebSaveManager {
-  constructor() {
-    this.slotCount = 108;
-    this._storagePrefix = 'gm-save-';
-    this._migrationChecked = true;
-    this._lastMigrationCount = 0;
-  }
-
-  async save(slot, state, previewText, thumbnail = null) {
-    const data = { state, previewText, timestamp: Date.now() };
-    localStorage.setItem(this._storagePrefix + slot, JSON.stringify(data));
-    return { success: true };
-  }
-
-  async load(slot) { /* localStorage read */ }
-  async delete(slot) { /* localStorage remove */ }
-  async getAllSlots() { /* scan localStorage keys */ }
-  async quickSave(state, previewText) { /* same pattern */ }
-  async quickLoad() { /* same pattern */ }
-  async hasQuickSave() { /* check key exists */ }
-}
-```
-
-### Pattern 3: Export as IPC Handler
-
-**What:** Export logic lives entirely in `electron/main.js` as an IPC handler.
-**When:** User triggers export from the editor UI.
-**Why:** Consistent with existing 29 IPC handlers; main process has full fs access.
-
-```js
-// electron/main.js
-ipcMain.handle('export-web', async (event, { outputDir, title, favicon, includeZip }) => {
-  try {
-    // 1-8 steps from data flow above
-    return { success: true, outputPath: outputDir, fileCount, totalSize };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-```
-
-### Pattern 4: Declarative Asset Scanner
-
-**What:** Pure function that takes script.json object, returns Set of asset paths.
-**When:** Before file copying in the export pipeline.
-**Why:** Separates "what to copy" from "how to copy" — testable, reusable.
-
-```js
-// electron/assetScanner.js
-export function scanAssetReferences(script) {
-  const assets = new Set();
-
-  // Characters — expressions map
-  for (const char of Object.values(script.characters || {})) {
-    for (const imgPath of Object.values(char.expressions || {})) {
-      assets.add(imgPath);
-    }
-  }
-
-  // Scenes → pages → backgrounds, bgm, dialogues (voice, se)
-  for (const scene of Object.values(script.scenes || {})) {
-    for (const page of scene.pages || []) {
-      if (page.background) assets.add(page.background);
-      if (page.bgm) assets.add(page.bgm);
-      for (const dlg of page.dialogues || []) {
-        if (dlg.voice) assets.add(dlg.voice);
-        if (dlg.se) assets.add(dlg.se);
+    // saves/ prefix: resolve from userData
+    if (filePath.startsWith('saves/') || filePath.startsWith('saves\\\\')) {
+      const savesDir = path.join(app.getPath('userData'), 'saves');
+      const fullPath = path.resolve(path.join(savesDir, filePath.slice(6)));
+      if (!fullPath.startsWith(path.resolve(savesDir))) {
+        return new Response('Forbidden', { status: 403 });
       }
+      return net.fetch(pathToFileURL(fullPath).toString());
     }
-  }
 
-  // UI screens
-  if (script.ui?.titleScreen?.background) assets.add(script.ui.titleScreen.background);
-  if (script.ui?.titleScreen?.bgm) assets.add(script.ui.titleScreen.bgm);
-  for (const elem of script.ui?.titleScreen?.elements || []) {
-    if (elem.src) assets.add(elem.src);
-  }
-  if (script.ui?.settingsScreen?.background) assets.add(script.ui.settingsScreen.background);
-  for (const elem of script.ui?.settingsScreen?.elements || []) {
-    if (elem.src) assets.add(elem.src);
-  }
+    // assets: resolve from app directory
+    const base = path.join(__dirname, 'assets');
+    const fullPath = path.resolve(path.join(base, filePath));
+    if (!fullPath.startsWith(path.resolve(base))) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    return net.fetch(pathToFileURL(fullPath).toString());
+  });
 
-  // Fonts
-  for (const font of script.assets?.fonts || []) {
-    if (font.file) assets.add(font.file);
-  }
+  const win = new BrowserWindow({
+    width: ${width}, height: ${height},
+    title: ${JSON.stringify(gameTitle)},
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
 
-  // nineSlice images are data: URLs — no file copy needed
-  return assets;
+  win.loadFile(path.join(__dirname, 'index.html'));
+});
+
+app.on('window-all-closed', () => app.quit());
+`;
 }
 ```
+
+### Pattern 2: Reuse Existing Pipeline Steps
+
+**What:** The desktop export should call the same underlying functions as web export for common steps (Vite build, asset scanning, file copying).
+
+**When:** Steps 1-2 of the pipeline (build engine, scan assets) are identical.
+
+**Why:**
+- DRY — don't duplicate the Vite build invocation or scanAssets logic
+- Both export paths already share the same engine bundle (dist-web/)
+- Asset copying logic is identical (scan → filter → copy)
+
+**Example:**
+```js
+// exportDesktopGame.js
+import { scanAssets } from '../src/engine/scanAssets.js';
+
+// Reuse the same Vite build step
+if (!_skipBuild) {
+  await execAsync(`npx vite build --config "${webConfigPath}"`, { cwd: appRoot });
+}
+
+// Reuse the same asset scanner
+const assetDict = scanAssets(scriptData);
+```
+
+### Pattern 3: Save Path Isolation (userData)
+
+**What:** The exported game stores saves in `app.getPath('userData')`, NOT alongside the .exe.
+
+**When:** Always — exported game must write saves to a user-writable location.
+
+**Why:**
+- The game directory may be read-only (e.g., Program Files, or on a USB stick)
+- Windows UAC blocks writes next to .exe in protected directories
+- `userData` is the standard Electron path for persistent user data
+- Each game gets its own userData directory (based on app name in package.json)
+
+**Impact on IPC:** The game's main.js save handlers use `app.getPath('userData')` as the base directory instead of `currentProjectPath + '/saves'`. The renderer-side SaveManager remains unchanged — it calls the same IPC channels (`save-slot`, `load-slot`, etc.).
+
+### Pattern 4: Environment Detection Reuse
+
+**What:** The exported game runs in Electron with `window.ipcRenderer` available. The engine's existing `detectEnvironment()` in `assetPath.js` correctly identifies this as `ENV = 'electron'` and sets `BASE_PATH = 'asset://'`.
+
+**When:** No changes needed to the engine environment detection.
+
+**Why:** The engine already supports 3 modes (electron/preview/web). The exported desktop game is simply another instance of the 'electron' mode, with a different main.js backing it. The engine code is identical — it detects ipcRenderer, uses asset:// protocol, and calls SaveManager IPC. The only difference is on the main process side (the game's main.js is simpler than the editor's).
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Forking the Engine
+### Anti-Pattern 1: Bundling the Entire Editor
 
-**What:** Creating a separate `web-main.js` that duplicates `main.js` with modifications.
-**Why bad:** Two codebases to maintain. Bug fixes in one don't propagate to the other. Feature additions require parallel changes.
-**Instead:** Single `main.js` with environment detection at the top. All mode differences are in initialization, not in event handlers or game logic.
+**What:** Including editor code (Vue components, editor IPC handlers) in the exported game.
+**Why bad:** Bloats the package, exposes editor functionality to players, security risk.
+**Instead:** Generate a minimal game app from scratch. Only include engine code (from dist-web/), game data (script.json), and assets.
 
-### Anti-Pattern 2: Script.json Path Rewriting
+### Anti-Pattern 2: Using Editor's node_modules
 
-**What:** Modifying asset paths in the exported script.json (e.g., prepending `assets/`).
-**Why bad:** Fragile — must find and transform every path field in a complex JSON structure. Easy to miss new fields added in future versions.
-**Instead:** Keep script.json paths as-is (already relative). The engine's `basePath` runtime parameter handles the prefix. Copy assets into the expected directory structure.
+**What:** Copying the editor's node_modules into the game staging directory.
+**Why bad:** Editor has Vue, Pinia, vite-plugin-electron, etc. — none needed by the game runtime. Would add hundreds of MB.
+**Instead:** The game app has ZERO node_modules. Its main.js uses only Electron built-in modules (`app`, `BrowserWindow`, `ipcMain`, `protocol`, `net`, `fs`, `path`). Set `prune: false` in packager config since there's nothing to prune.
 
-### Anti-Pattern 3: Runtime Vite Bundling
+### Anti-Pattern 3: Hardcoded Paths in Generated Code
 
-**What:** Running `vite build` at export time from within Electron.
-**Why bad:** Requires Vite and all dev dependencies at runtime. Slow (2-5s per export). Fragile across OS environments.
-**Instead:** Pre-build the web engine bundle during `npm run build`. Export just copies pre-built artifacts.
+**What:** Generating main.js with absolute paths that only work on the build machine.
+**Why bad:** The exported game runs on ANY Windows machine.
+**Instead:** All paths in the generated main.js are relative to `__dirname` (the app directory) or use `app.getPath('userData')` (OS-provided). Never reference the editor's project path.
 
-### Anti-Pattern 4: Embedding Assets in HTML/JS
+### Anti-Pattern 4: ASAR for Everything
 
-**What:** Base64-encoding all assets and embedding them in a single HTML file.
-**Why bad:** Massive file sizes (base64 adds ~33% overhead). Browser memory issues. Can't stream/lazy-load. itch.io has file size limits.
-**Instead:** Standard folder structure with relative paths. Browsers are optimized for this pattern.
+**What:** Packing all files (including large images, audio) into app.asar.
+**Why bad:** ASAR is a concatenated archive — seeking to specific files requires parsing the header. Large binary files (PNG, MP3, OGG) suffer from slower random access.
+**Instead:** Use `asarUnpack` to keep assets/ and script.json outside ASAR. Only pack code files (main.js, preload.js, engine.js, engine.css, index.html) — these are small and benefit from ASAR's path traversal protection.
+
+### Anti-Pattern 5: Blocking the Export on UI Thread
+
+**What:** Running @electron/packager synchronously or without progress updates.
+**Why bad:** Packaging takes 10-60+ seconds (Electron binary download, file copying, ASAR creation). UI would freeze.
+**Instead:** The entire export runs asynchronously in the main process, sending progress updates via `webContents.send('export-progress', { step, percent })` — same pattern as existing web export.
 
 ## Scalability Considerations
 
-| Concern | Small Game (< 50 MB) | Medium Game (50-200 MB) | Large Game (200+ MB) |
-|---------|----------------------|--------------------------|----------------------|
-| Export speed | Instant (< 2s) | 5-15s (file copying) | 15-60s (many large files) |
-| ZIP creation | `zipSync` fine | `zip()` async recommended | Streaming `Zip` class needed |
-| localStorage saves | Plenty of room | Fine (save state is small) | Fine (save state is small) |
-| Browser loading | Fast | Acceptable | May need loading indicator |
-| itch.io upload | Easy | Within limits | May exceed free tier limits |
+| Concern | Small Game (50 MB) | Medium Game (500 MB) | Large Game (2+ GB) |
+|---------|-------------------|---------------------|-------------------|
+| Export time | ~15s (first run w/ download) | ~30-60s (asset copying) | ~2-5 min (asset copying dominates) |
+| Output size | ~230 MB (Electron overhead) | ~680 MB | ~2.2+ GB |
+| Staging disk space | ~50 MB temp | ~500 MB temp | ~2+ GB temp |
+| ASAR build | Instant (few KB of code) | Instant | Instant |
+| ZIP output | ~5s | ~30-60s | Not recommended (memory) |
 
 ## Sources
 
-- Engine source: `src/main.js` (893 lines, all modes analyzed)
-- IPC patterns: `electron/main.js` (29 existing handlers)
-- Save system: `src/engine/SaveManager.js` (8 async IPC methods)
-- Theme system: `src/engine/ThemeManager.js` + `src/utils/themePackager.js`
-- Build output: `dist/index.html`, `dist/assets/` (direct inspection)
-- Asset path format: `docs/script-format.md` (relative paths confirmed)
+- Project source: `electron/main.js` — asset:// protocol, save IPC handlers, window creation (direct inspection)
+- Project source: `electron/exportGame.js` — existing 6-step pipeline architecture (direct inspection)
+- Project source: `src/engine/assetPath.js` — 3-way environment detection (direct inspection)
+- Project source: `src/engine/SaveManager.js` — IPC channel names and API surface (direct inspection)
+- @electron/packager API — programmatic usage, asar/asarUnpack options (npm registry, HIGH confidence)
+- Electron docs — app.getPath('userData'), protocol.handle (training data, MEDIUM confidence)

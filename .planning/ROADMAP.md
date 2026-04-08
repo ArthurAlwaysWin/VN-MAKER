@@ -200,7 +200,9 @@ Plans:
   3. The exported folder is fully playable when served from any static HTTP server
   4. When ZIP option is enabled, a .zip file containing the complete bundle is generated
   5. The export process reports progress (current step and percentage) via IPC events as it runs
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 30-01-PLAN.md — TDD export pipeline core module + IPC integration
 
 #### Phase 31: Export UI
 **Goal**: Users can trigger, configure, and monitor game export from within the editor
@@ -219,6 +221,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. Engine Web Adaptation | 2/2 | Complete    | 2026-04-07 |
-| 29. Asset Scanner + Build Config | 2/2 | Complete   | 2026-04-07 |
+| 29. Asset Scanner + Build Config | 2/2 | Complete    | 2026-04-07 |
 | 30. Export Pipeline | 0/? | Not started | - |
 | 31. Export UI | 0/? | Not started | - |

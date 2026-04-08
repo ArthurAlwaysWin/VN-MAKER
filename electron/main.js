@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, net, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, net, dialog, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
@@ -804,6 +804,33 @@ ipcMain.handle('export-game', async (event, options) => {
   } catch (e) {
     console.error('[ExportGame] Failed:', e);
     return { success: false, error: e.message };
+  }
+});
+
+// ─── Export UI IPC ────────────────────────────────────────
+
+ipcMain.handle('open-folder', async (event, folderPath) => {
+  try {
+    await shell.openPath(folderPath);
+    return { success: true };
+  } catch (e) {
+    console.error('[open-folder] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
+  try {
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      properties: ['openFile'],
+      title: title || '选择文件',
+      filters: filters || [],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  } catch (e) {
+    console.error('[dialog-open-file] Failed:', e);
+    return null;
   }
 });
 

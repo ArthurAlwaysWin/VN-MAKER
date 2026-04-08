@@ -66,7 +66,12 @@
 
 ### Active
 
-<!-- v0.7 需求待 REQUIREMENTS.md 定义 -->
+<!-- v0.7 完成 -->
+
+- ✓ Web 引擎适配（WebSaveManager localStorage + basePath 参数化 + 纯 CSS 主题回退） — v0.7 Phase 28
+- ✓ 资源扫描器 + Web 构建（scanAssets 5 类解析 + vite.web.config.js 确定性输出） — v0.7 Phase 29
+- ✓ 导出管线（6 步 pipeline：构建→扫描→引擎→资源→HTML→ZIP，缺失资源跳过+警告） — v0.7 Phase 30
+- ✓ 导出 UI（ExportModal 3 态弹窗：配置→进度→完成，IPC 目录/文件对话框+打开文件夹） — v0.7 Phase 31
 
 ### Future — 后续候选
 
@@ -168,7 +173,9 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v0.5** — 游戏 UI 补全 (Phases 19-22)
 - ✅ **v0.6** — 主题包系统 (Phases 23-27)
 
-## Current Milestone: v0.7 游戏导出（Web 静态包）
+- ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
+
+## Current Milestone: v0.7 游戏导出（Web 静态包） ✅ 完成
 
 **Goal:** 让用户能将编辑完成的游戏导出为自包含的 Web 静态包，可直接部署到任意 Web 服务器或上传到 itch.io。
 
@@ -182,11 +189,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.7 里程碑进行中 — 游戏导出（Web 静态包）。
+v0.7 里程碑完成 — 游戏导出（Web 静态包）。全部 4 个 Phase（28-31）已交付验证。
 
-**已发布：** v0.1 ~ v0.6（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统）
+**已发布：** v0.1 ~ v0.7（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出）
 
-**当前：** v0.7 Phase 30 完成 — 导出管线（6 步 pipeline：Vite 构建 → 扫描资源 → 复制引擎产物 → 复制资源 → 生成 HTML → ZIP 打包，60 测试全通过）
+**当前：** v0.7 全部完成 — Phase 28（引擎适配）→ Phase 29（资源扫描+构建）→ Phase 30（导出管线）→ Phase 31（导出 UI），60 测试全通过
 
 ---
-*Last updated: 2026-04-08 after Phase 30 completion — Export Pipeline*
+*Last updated: 2026-04-08 after Phase 31 completion — Export UI (v0.7 milestone complete)*

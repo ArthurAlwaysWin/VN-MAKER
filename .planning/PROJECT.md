@@ -63,15 +63,14 @@
 - ✓ 可视化主题编辑器（Token 编辑 + 配色和谐算法 + 实时预览） — v0.6 Phase 24-26
 - ✓ 九宫格图片系统（对话框/面板/按钮背景图替换，三态按钮） — v0.6 Phase 26
 - ✓ 内置主题预设（4 套：Modern/和風/Fantasy/Minimal）+ 主题导入/导出（.theme ZIP 包） — v0.6 Phase 27
-
-### Active
-
-<!-- v0.7 完成 -->
-
 - ✓ Web 引擎适配（WebSaveManager localStorage + basePath 参数化 + 纯 CSS 主题回退） — v0.7 Phase 28
 - ✓ 资源扫描器 + Web 构建（scanAssets 5 类解析 + vite.web.config.js 确定性输出） — v0.7 Phase 29
 - ✓ 导出管线（6 步 pipeline：构建→扫描→引擎→资源→HTML→ZIP，缺失资源跳过+警告） — v0.7 Phase 30
 - ✓ 导出 UI（ExportModal 3 态弹窗：配置→进度→完成，IPC 目录/文件对话框+打开文件夹） — v0.7 Phase 31
+
+### Active
+
+<!-- v0.8 requirements will be defined in REQUIREMENTS.md -->
 
 ### Future — 后续候选
 
@@ -85,13 +84,17 @@
 - [ ] **动画/转场主题化** — v0.7+
 - [ ] **社区主题市场** — v0.8+
 - [ ] **更多内置预设（8-10 套覆盖不同题材）** — 持续补充
+- [ ] **CG 鉴赏系统**（CG Gallery） — v0.9+
+- [ ] **开场/结尾动画**（OP/ED） — v0.9+
+- [ ] **启动画面**（Splash Screen） — v0.9+
+- [ ] **macOS / Linux 桌面打包** — v0.8+
 
 ### Out of Scope
 
 <!-- 明确排除 -->
 
-- Electron 桌面打包（.exe/.app/.deb） — 推迟到 v0.8+
-- 资源压缩/优化（图片压缩、音频转码） — v0.7 只做引用清理
+- 资源压缩/优化（图片压缩、音频转码） — v0.8 只做资源拷贝
+- 安装向导（NSIS/Inno Setup） — 绿色免安装
 - 导出后预览（自动打开浏览器） — 编辑器内置预览已足够
 - 加载动画/启动屏定制 — 保持简单
 - 移动端支持 — 桌面优先
@@ -180,13 +183,23 @@ This document evolves at phase transitions and milestone boundaries.
 
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
 
+## Current Milestone: v0.8 游戏导出 Electron 桌面版
+
+**Goal:** 从编辑器一键导出 Windows 绿色免安装桌面游戏包（.exe）
+
+**Target features:**
+- 复用 ExportModal，新增"桌面版"导出选项（Web/桌面 二选一）
+- Electron 精简打包（内嵌 Chromium + Node，游戏引擎 + 资源）
+- 自定义游戏窗口图标（.ico）和窗口标题
+- 桌面版 SaveManager（app.getPath('userData') 存档）
+- 绿色免安装：输出文件夹含 .exe，双击直接运行
+- 仅 Windows 平台
+
 ## Current State
 
-v0.7 里程碑完成 — 游戏导出（Web 静态包）。全部 4 个 Phase（28-31）已交付验证，21/21 需求满足，60 测试通过。
+v0.8 里程碑启动 — 游戏导出 Electron 桌面版。定义需求中。
 
 **已发布：** v0.1 ~ v0.7（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出）
 
-**下一步：** `/gsd-new-milestone` 定义 v0.8
-
 ---
-*Last updated: 2026-04-08 after v0.7 milestone completion — 游戏导出 Web 静态包*
+*Last updated: 2026-04-08 after v0.8 milestone start — 游戏导出 Electron 桌面版*

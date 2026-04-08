@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: verifying
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-04-08T11:01:10.548Z"
+milestone: v0.8
+milestone_name: 游戏导出 Electron 桌面版
+status: defining
+stopped_at: Defining requirements
+last_updated: "2026-04-08"
 last_activity: 2026-04-08
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 12
-  completed_plans: 11
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2025-07-22)
+See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 31 — export-ui
+**Current focus:** Defining v0.8 requirements
 
 ## Current Position
 
-Phase: 31
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-08
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-08 — Milestone v0.8 started
 
 ```
 v0.7 ████░░░░░░░░░░░░░░░░ 0/4 phases

@@ -1,5 +1,15 @@
 # Milestones
 
+## v0.7 游戏导出 Web 静态包 (Shipped: 2026-04-08)
+
+**Phases completed:** 8 phases, 12 plans, 17 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v0.6 主题包系统 (Shipped: 2026-04-06)
 
 **Phases completed:** 9 phases, 16 plans, 25 tasks

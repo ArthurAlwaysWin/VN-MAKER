@@ -159,6 +159,11 @@
 | fflate ZIP 主题包格式 | 轻量 8kB、sync API、ESM 原生 | ✓ Good |
 | 色块预览替代 iframe 截图 | DOM 引擎无法可靠截图，6 色块更可靠 | ✓ Good |
 | Import = full overwrite + undo | 简单可预测，Ctrl+Z 可恢复 | ✓ Good |
+| WebSaveManager IndexedDB 后端 | Web 环境无文件系统，IndexedDB 最可靠 | ✓ Good |
+| 3-way 环境检测 (Electron/Preview/Web) | 统一代码库三种运行模式 | ✓ Good |
+| scanAssets 配置表驱动遍历 | 11 已知路径位置显式遍历，比递归更可靠 | ✓ Good |
+| 6 步导出流水线 + AbortController | 清晰步骤分离，支持取消 | ✓ Good |
+| ExportModal 3 态单弹窗 | 配置→进度→完成流畅无中断 | ✓ Good |
 
 ## Evolution
 
@@ -175,25 +180,13 @@ This document evolves at phase transitions and milestone boundaries.
 
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
 
-## Current Milestone: v0.7 游戏导出（Web 静态包） ✅ 完成
-
-**Goal:** 让用户能将编辑完成的游戏导出为自包含的 Web 静态包，可直接部署到任意 Web 服务器或上传到 itch.io。
-
-**Target features:**
-- 编辑器内导出按钮，选择输出目录一键导出
-- 生成完整的 Web 静态包（HTML + JS + CSS + assets）
-- 智能资源清理：只复制 script.json 实际引用的资源文件
-- 可选生成 ZIP 包（方便上传 itch.io 等平台）
-- 导出时可自定义游戏标题和 favicon
-- 引擎运行时适配独立部署（无 Electron 依赖，asset:// → 相对路径）
-
 ## Current State
 
-v0.7 里程碑完成 — 游戏导出（Web 静态包）。全部 4 个 Phase（28-31）已交付验证。
+v0.7 里程碑完成 — 游戏导出（Web 静态包）。全部 4 个 Phase（28-31）已交付验证，21/21 需求满足，60 测试通过。
 
 **已发布：** v0.1 ~ v0.7（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出）
 
-**当前：** v0.7 全部完成 — Phase 28（引擎适配）→ Phase 29（资源扫描+构建）→ Phase 30（导出管线）→ Phase 31（导出 UI），60 测试全通过
+**下一步：** `/gsd-new-milestone` 定义 v0.8
 
 ---
-*Last updated: 2026-04-08 after Phase 31 completion — Export UI (v0.7 milestone complete)*
+*Last updated: 2026-04-08 after v0.7 milestone completion — 游戏导出 Web 静态包*

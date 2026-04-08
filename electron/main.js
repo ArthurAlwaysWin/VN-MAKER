@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
+import { exportGame } from './exportGame.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -782,6 +783,26 @@ ipcMain.handle('import-theme', async () => {
     return { success: true, buffer: data };
   } catch (e) {
     console.error('[import-theme] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+// ─── Game Export IPC ─────────────────────────────────────
+
+ipcMain.handle('export-game', async (event, options) => {
+  try {
+    const sendProgress = (payload) => {
+      const mw = getMainWindow();
+      if (mw && !mw.isDestroyed()) {
+        mw.webContents.send('export-progress', payload);
+      }
+    };
+    return await exportGame({
+      ...options,
+      projectPath: currentProjectPath,
+    }, sendProgress);
+  } catch (e) {
+    console.error('[ExportGame] Failed:', e);
     return { success: false, error: e.message };
   }
 });

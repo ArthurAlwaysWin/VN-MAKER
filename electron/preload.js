@@ -11,6 +11,7 @@ const ALLOWED_CHANNELS = [
   'capture-screenshot', 'migrate-legacy-saves',
   'set-window-mode', 'show-save-dialog', 'dialog-open-directory',
   'open-preview', 'export-theme', 'import-theme',
+  'export-game', 'export-progress',
 ];
 
 // Expose safe ipcRenderer to the Vue app

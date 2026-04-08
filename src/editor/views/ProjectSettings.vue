@@ -26,14 +26,21 @@
         <span class="info-value path">{{ project.projectPath }}</span>
       </div>
     </form>
+    <div class="export-section">
+      <button class="export-btn" @click="showExport = true">📦 导出游戏</button>
+    </div>
+    <ExportModal :visible="showExport" @close="showExport = false" />
     <DialogueBoxSettings />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useProjectStore } from '../stores/project.js';
 import DialogueBoxSettings from '../components/DialogueBoxSettings.vue';
+import ExportModal from '../components/ExportModal.vue';
 const project = useProjectStore();
+const showExport = ref(false);
 </script>
 
 <style scoped>
@@ -50,4 +57,22 @@ const project = useProjectStore();
 .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #333; color: #888; font-size: 13px; }
 .info-value { color: #ccc; }
 .info-value.path { font-size: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.export-section {
+  margin: 20px 0;
+  padding-top: 16px;
+  border-top: 1px solid #333;
+}
+.export-btn {
+  padding: 10px 24px;
+  background: #007acc;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.export-btn:hover {
+  background: #0098ff;
+}
 </style>

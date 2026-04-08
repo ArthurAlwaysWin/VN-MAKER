@@ -23,13 +23,13 @@ Requirements for Web static bundle export. Each maps to roadmap phases.
 
 ### 导出流水线 (Export Pipeline)
 
-- [ ] **PIPE-01**: 用户选择输出目录后一键导出完整 Web 静态包（HTML + JS + CSS + assets）
-- [ ] **PIPE-02**: 只复制实际引用的资源文件到输出目录（不含未使用资源）
-- [ ] **PIPE-03**: 生成的 HTML 包含用户自定义的游戏标题
-- [ ] **PIPE-04**: 用户可指定 favicon，导出时包含在输出中
-- [ ] **PIPE-05**: 用户可选择将输出打包为 ZIP 文件（方便上传 itch.io）
+- [x] **PIPE-01**: 用户选择输出目录后一键导出完整 Web 静态包（HTML + JS + CSS + assets）
+- [x] **PIPE-02**: 只复制实际引用的资源文件到输出目录（不含未使用资源）
+- [x] **PIPE-03**: 生成的 HTML 包含用户自定义的游戏标题
+- [x] **PIPE-04**: 用户可指定 favicon，导出时包含在输出中
+- [x] **PIPE-05**: 用户可选择将输出打包为 ZIP 文件（方便上传 itch.io）
 - [x] **PIPE-06**: Vite 独立构建配置生成确定性文件名的引擎 bundle
-- [ ] **PIPE-07**: 导出过程中显示进度反馈（当前步骤/百分比）
+- [x] **PIPE-07**: 导出过程中显示进度反馈（当前步骤/百分比）
 
 ### 导出 UI (Export UI)
 
@@ -85,13 +85,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCAN-01 | Phase 29 | Complete |
 | SCAN-02 | Phase 29 | Complete |
 | SCAN-03 | Phase 29 | Complete |
-| PIPE-01 | Phase 30 | Pending |
-| PIPE-02 | Phase 30 | Pending |
-| PIPE-03 | Phase 30 | Pending |
-| PIPE-04 | Phase 30 | Pending |
-| PIPE-05 | Phase 30 | Pending |
+| PIPE-01 | Phase 30 | Complete |
+| PIPE-02 | Phase 30 | Complete |
+| PIPE-03 | Phase 30 | Complete |
+| PIPE-04 | Phase 30 | Complete |
+| PIPE-05 | Phase 30 | Complete |
 | PIPE-06 | Phase 29 | Complete |
-| PIPE-07 | Phase 30 | Pending |
+| PIPE-07 | Phase 30 | Complete |
 | EXUI-01 | Phase 31 | Pending |
 | EXUI-02 | Phase 31 | Pending |
 | EXUI-03 | Phase 31 | Pending |

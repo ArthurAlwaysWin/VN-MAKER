@@ -213,7 +213,9 @@ Plans:
   2. Export dialog provides fields for game title, output directory selector, favicon file picker, and ZIP toggle
   3. During export, the dialog displays live progress showing current step and percentage
   4. On completion, the dialog shows a success message with the full path to the exported output
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 31-01-PLAN.md — ExportModal component (3-state config/progress/done) + IPC handlers + ProjectSettings integration
 **UI hint**: yes
 
 ### Progress
@@ -223,4 +225,4 @@ Plans:
 | 28. Engine Web Adaptation | 2/2 | Complete    | 2026-04-07 |
 | 29. Asset Scanner + Build Config | 2/2 | Complete    | 2026-04-07 |
 | 30. Export Pipeline | 1/1 | Complete    | 2026-04-08 |
-| 31. Export UI | 0/? | Not started | - |
+| 31. Export UI | 0/1 | Not started | - |

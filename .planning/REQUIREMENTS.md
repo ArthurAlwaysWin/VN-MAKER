@@ -33,12 +33,12 @@ Requirements for Web static bundle export. Each maps to roadmap phases.
 
 ### 导出 UI (Export UI)
 
-- [ ] **EXUI-01**: 编辑器内提供导出入口（按钮/面板），可触发导出流程
-- [ ] **EXUI-02**: 导出对话框包含游戏标题输入框
-- [ ] **EXUI-03**: 导出对话框包含输出目录选择器
-- [ ] **EXUI-04**: 导出对话框包含 favicon 文件选择器
-- [ ] **EXUI-05**: 导出对话框包含 ZIP 打包开关
-- [ ] **EXUI-06**: 导出过程中显示进度状态，完成后显示成功信息和输出路径
+- [x] **EXUI-01**: 编辑器内提供导出入口（按钮/面板），可触发导出流程
+- [x] **EXUI-02**: 导出对话框包含游戏标题输入框
+- [x] **EXUI-03**: 导出对话框包含输出目录选择器
+- [x] **EXUI-04**: 导出对话框包含 favicon 文件选择器
+- [x] **EXUI-05**: 导出对话框包含 ZIP 打包开关
+- [x] **EXUI-06**: 导出过程中显示进度状态，完成后显示成功信息和输出路径
 
 ## Future Requirements
 
@@ -92,12 +92,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-05 | Phase 30 | Complete |
 | PIPE-06 | Phase 29 | Complete |
 | PIPE-07 | Phase 30 | Complete |
-| EXUI-01 | Phase 31 | Pending |
-| EXUI-02 | Phase 31 | Pending |
-| EXUI-03 | Phase 31 | Pending |
-| EXUI-04 | Phase 31 | Pending |
-| EXUI-05 | Phase 31 | Pending |
-| EXUI-06 | Phase 31 | Pending |
+| EXUI-01 | Phase 31 | Complete |
+| EXUI-02 | Phase 31 | Complete |
+| EXUI-03 | Phase 31 | Complete |
+| EXUI-04 | Phase 31 | Complete |
+| EXUI-05 | Phase 31 | Complete |
+| EXUI-06 | Phase 31 | Complete |
 
 **Coverage:**
 - v0.7 requirements: 21 total

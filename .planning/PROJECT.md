@@ -186,7 +186,7 @@ v0.7 里程碑进行中 — 游戏导出（Web 静态包）。
 
 **已发布：** v0.1 ~ v0.6（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统）
 
-**当前：** v0.7 Phase 29 完成 — 资源扫描器（11 路径 → 5 分类字典，40 测试全通过）+ Vite Web 构建配置（确定性 engine.js/css，222ms 构建）
+**当前：** v0.7 Phase 30 完成 — 导出管线（6 步 pipeline：Vite 构建 → 扫描资源 → 复制引擎产物 → 复制资源 → 生成 HTML → ZIP 打包，60 测试全通过）
 
 ---
-*Last updated: 2026-04-07 after Phase 29 completion — Asset Scanner + Build Config*
+*Last updated: 2026-04-08 after Phase 30 completion — Export Pipeline*

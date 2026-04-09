@@ -207,7 +207,11 @@ Plans:
   3. Exported .exe displays custom game title in window titlebar and embeds custom .ico icon (converted from user-provided PNG)
   4. Second export skips Electron binary download — cached from first export, near-instant startup
   5. User can optionally ZIP the output directory into a single distributable file
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 33-01-PLAN.md — Foundation: install @electron/packager + png-to-ico, create default icon, export createZip, write test scaffold
+- [ ] 33-02-PLAN.md — Implementation: exportDesktop.js 9-step pipeline + IPC handler wiring
 
 #### Phase 34: Export UI Integration
 **Goal**: Users can configure and execute desktop export entirely through the editor's export modal

@@ -3,18 +3,19 @@
  * Single source of truth for runtime mode and resource path prefix.
  *
  * Environments:
+ *   'desktop'  — window.__DESKTOP_GAME flag set by game-preload.js
  *   'electron' — window.ipcRenderer exists (Electron main window)
  *   'preview'  — iframe receiving postMessage {type:'start'} from editor
  *   'web'      — standalone browser (itch.io, static server, etc.)
  *
  * Per D-05: This module is the single source of truth for environment and paths.
- * Per D-06: BASE_PATH is 'asset://' for electron/preview, './assets/' for web.
+ * Per D-06: BASE_PATH is 'asset://' for electron/preview, './assets/' for web/desktop.
  * Per D-07: resolvePath() handles hardcoded asset:// references.
  */
 
 // ─── Environment State ───────────────────────────────────
 
-/** @type {'electron'|'preview'|'web'} Current runtime environment */
+/** @type {'desktop'|'electron'|'preview'|'web'} Current runtime environment */
 export let ENV = 'web';
 
 /** @type {string} Base path prefix for asset URLs */
@@ -32,13 +33,24 @@ export let _capturedStartMsg = null;
  * Detect runtime environment and configure paths accordingly.
  *
  * Detection order (per D-03, D-04):
- *   1. window.ipcRenderer exists → 'electron'
- *   2. window.parent !== window + editor handshake → 'preview'
- *   3. Default fallback → 'web'
+ *   1. window.__DESKTOP_GAME exists → 'desktop'
+ *   2. window.ipcRenderer exists → 'electron'
+ *   3. window.parent !== window + editor handshake → 'preview'
+ *   4. Default fallback → 'web'
  *
- * @returns {Promise<'electron'|'preview'|'web'>}
+ * @returns {Promise<'desktop'|'electron'|'preview'|'web'>}
  */
 export async function detectEnvironment() {
+  // v0.8: Desktop game check — MUST come before ipcRenderer check.
+  // Desktop games have BOTH __DESKTOP_GAME and ipcRenderer exposed by game-preload.js.
+  // Desktop uses web-style relative paths (./assets/) but IPC-based saves.
+  if (window.__DESKTOP_GAME) {
+    ENV = 'desktop';
+    BASE_PATH = './assets/';
+    SCRIPT_PATH = './script.json';
+    return 'desktop';
+  }
+
   // Per D-03: Check ipcRenderer first (Electron main window)
   if (window.ipcRenderer) {
     ENV = 'electron';

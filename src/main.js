@@ -743,7 +743,8 @@ async function bootstrap() {
   audio.basePath = BASE_PATH;
 
   // Conditional SaveManager (per WEBRT-05)
-  if (env === 'electron') {
+  // Desktop uses IPC-based SaveManager (same contract as editor — per v0.8)
+  if (env === 'electron' || env === 'desktop') {
     saveManager = new SaveManager();
   } else if (env === 'web') {
     saveManager = new WebSaveManager();

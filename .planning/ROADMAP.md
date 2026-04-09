@@ -207,10 +207,10 @@ Plans:
   3. Exported .exe displays custom game title in window titlebar and embeds custom .ico icon (converted from user-provided PNG)
   4. Second export skips Electron binary download — cached from first export, near-instant startup
   5. User can optionally ZIP the output directory into a single distributable file
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 33-01-PLAN.md — Foundation: install @electron/packager + png-to-ico, create default icon, export createZip, write test scaffold
+- [x] 33-01-PLAN.md — Foundation: install @electron/packager + png-to-ico, create default icon, export createZip, write test scaffold
 - [ ] 33-02-PLAN.md — Implementation: exportDesktop.js 9-step pipeline + IPC handler wiring
 
 #### Phase 34: Export UI Integration
@@ -230,5 +230,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Desktop Game Runtime | 1/1 | Complete   | 2026-04-09 |
-| 33. Export Pipeline Core | 0/? | Not started | - |
+| 33. Export Pipeline Core | 1/2 | In Progress|  |
 | 34. Export UI Integration | 0/? | Not started | - |

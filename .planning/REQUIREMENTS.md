@@ -19,7 +19,7 @@
 ## 自定义 (Customization)
 
 - [ ] **CUSTOM-01**: 用户可自定义游戏标题（窗口标题 + .exe 元数据）
-- [ ] **CUSTOM-02**: 用户可提供 PNG 图标，自动转换 .ico 并嵌入 .exe
+- [x] **CUSTOM-02**: 用户可提供 PNG 图标，自动转换 .ico 并嵌入 .exe
 - [x] **CUSTOM-03**: 导出游戏窗口尺寸从项目设置读取（默认 1280×720）
 
 ## 导出 UI (Export UI)

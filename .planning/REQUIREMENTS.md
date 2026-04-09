@@ -51,18 +51,18 @@
 
 | REQ-ID | Phase | Plan | Status |
 |--------|-------|------|--------|
-| PIPE-01 | — | — | pending |
-| PIPE-02 | — | — | pending |
-| PIPE-03 | — | — | pending |
-| PIPE-04 | — | — | pending |
-| PIPE-05 | — | — | pending |
-| PIPE-06 | — | — | pending |
-| PIPE-07 | — | — | pending |
-| RUNTIME-01 | — | — | pending |
-| RUNTIME-02 | — | — | pending |
-| RUNTIME-03 | — | — | pending |
-| CUSTOM-01 | — | — | pending |
-| CUSTOM-02 | — | — | pending |
-| CUSTOM-03 | — | — | pending |
-| UI-01 | — | — | pending |
-| UI-02 | — | — | pending |
+| PIPE-01 | Phase 33 | — | pending |
+| PIPE-02 | Phase 33 | — | pending |
+| PIPE-03 | Phase 33 | — | pending |
+| PIPE-04 | Phase 34 | — | pending |
+| PIPE-05 | Phase 34 | — | pending |
+| PIPE-06 | Phase 33 | — | pending |
+| PIPE-07 | Phase 33 | — | pending |
+| RUNTIME-01 | Phase 32 | — | pending |
+| RUNTIME-02 | Phase 32 | — | pending |
+| RUNTIME-03 | Phase 32 | — | pending |
+| CUSTOM-01 | Phase 33 | — | pending |
+| CUSTOM-02 | Phase 33 | — | pending |
+| CUSTOM-03 | Phase 32 | — | pending |
+| UI-01 | Phase 34 | — | pending |
+| UI-02 | Phase 34 | — | pending |

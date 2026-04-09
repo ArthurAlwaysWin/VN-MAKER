@@ -169,3 +169,59 @@ See .planning/milestones/v0.6-ROADMAP.md for full phase details.
 See .planning/milestones/v0.7-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v0.8 — 游戏导出 Electron 桌面版
+
+### Phases
+
+- [ ] **Phase 32: Desktop Game Runtime** - Engine desktop detection + game process templates + saves + window management
+- [ ] **Phase 33: Export Pipeline Core** - exportDesktop.js + @electron/packager staging/packaging + icon/title customization + ZIP
+- [ ] **Phase 34: Export UI Integration** - ExportModal desktop mode toggle + icon picker + directory selector + progress
+
+### Phase Details
+
+#### Phase 32: Desktop Game Runtime
+**Goal**: Exported game engine runs correctly in standalone Electron context with desktop saves, window management, and correct asset loading
+**Depends on**: Phase 31 (v0.7 ExportModal + web export pipeline provides engine build + asset scanning infrastructure)
+**Requirements**: RUNTIME-01, RUNTIME-02, RUNTIME-03, CUSTOM-03
+**Success Criteria** (what must be TRUE):
+  1. Engine detects 'desktop' environment via `window.__DESKTOP_GAME` flag and loads assets via relative paths (same as web mode)
+  2. game-main.js template creates BrowserWindow, loads engine HTML, and implements all SaveManager IPC channels (`save-slot`, `load-slot`, `delete-slot`, `list-saves`, `save-quickslot`, `load-quickslot`, `capture-screenshot`, `set-window-mode`)
+  3. Player saves persist to `app.getPath('userData')/saves/` across game sessions — close and relaunch the game, saves are intact
+  4. Player can toggle fullscreen/windowed/borderless window modes from in-game settings
+  5. Game window opens at project-configured resolution (default 1280×720)
+**Plans**: TBD
+
+#### Phase 33: Export Pipeline Core
+**Goal**: A project can be exported to a complete, working Windows desktop game folder via a single programmatic call
+**Depends on**: Phase 32 (runtime templates to stage), Phase 30 (v0.7 Vite engine build + scanAssets reuse)
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-06, PIPE-07, CUSTOM-01, CUSTOM-02
+**Success Criteria** (what must be TRUE):
+  1. Calling `exportDesktop()` produces an output folder containing a renamed .exe that launches the game when double-clicked
+  2. All game assets (images, audio, fonts, voices) load correctly in the exported game — no missing or broken resources
+  3. Exported .exe displays custom game title in window titlebar and embeds custom .ico icon (converted from user-provided PNG)
+  4. Second export skips Electron binary download — cached from first export, near-instant startup
+  5. User can optionally ZIP the output directory into a single distributable file
+**Plans**: TBD
+
+#### Phase 34: Export UI Integration
+**Goal**: Users can configure and execute desktop export entirely through the editor's export modal
+**Depends on**: Phase 33 (pipeline API), Phase 31 (v0.7 ExportModal 3-state pattern)
+**Requirements**: UI-01, UI-02, PIPE-04, PIPE-05
+**Success Criteria** (what must be TRUE):
+  1. ExportModal shows Web/Desktop format toggle; selecting "桌面版" reveals desktop-specific options
+  2. Desktop mode displays icon picker that accepts PNG files and shows thumbnail preview
+  3. User can choose output directory via native folder dialog before export starts
+  4. Export progress displays real-time step updates in the 3-state modal (配置→进度→完成)
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 32. Desktop Game Runtime | 0/? | Not started | - |
+| 33. Export Pipeline Core | 0/? | Not started | - |
+| 34. Export UI Integration | 0/? | Not started | - |

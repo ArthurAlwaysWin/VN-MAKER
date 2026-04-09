@@ -230,5 +230,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Desktop Game Runtime | 1/1 | Complete   | 2026-04-09 |
-| 33. Export Pipeline Core | 2/2 | Complete   | 2026-04-09 |
+| 33. Export Pipeline Core | 2/2 | Complete    | 2026-04-09 |
 | 34. Export UI Integration | 0/? | Not started | - |

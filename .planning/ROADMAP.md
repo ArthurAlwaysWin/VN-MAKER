@@ -192,7 +192,10 @@ See .planning/milestones/v0.7-ROADMAP.md for full phase details.
   3. Player saves persist to `app.getPath('userData')/saves/` across game sessions — close and relaunch the game, saves are intact
   4. Player can toggle fullscreen/windowed/borderless window modes from in-game settings
   5. Game window opens at project-configured resolution (default 1280×720)
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 32-01-PLAN.md — Desktop game runtime: preload bridge + 4-way env detection + game main process (IPC handlers, window management, crash handling)
 
 #### Phase 33: Export Pipeline Core
 **Goal**: A project can be exported to a complete, working Windows desktop game folder via a single programmatic call

@@ -176,7 +176,7 @@ See .planning/milestones/v0.7-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 32: Desktop Game Runtime** - Engine desktop detection + game process templates + saves + window management
+- [x] **Phase 32: Desktop Game Runtime** - Engine desktop detection + game process templates + saves + window management (completed 2026-04-09)
 - [ ] **Phase 33: Export Pipeline Core** - exportDesktop.js + @electron/packager staging/packaging + icon/title customization + ZIP
 - [ ] **Phase 34: Export UI Integration** - ExportModal desktop mode toggle + icon picker + directory selector + progress
 
@@ -192,10 +192,10 @@ See .planning/milestones/v0.7-ROADMAP.md for full phase details.
   3. Player saves persist to `app.getPath('userData')/saves/` across game sessions — close and relaunch the game, saves are intact
   4. Player can toggle fullscreen/windowed/borderless window modes from in-game settings
   5. Game window opens at project-configured resolution (default 1280×720)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 32-01-PLAN.md — Desktop game runtime: preload bridge + 4-way env detection + game main process (IPC handlers, window management, crash handling)
+- [x] 32-01-PLAN.md — Desktop game runtime: preload bridge + 4-way env detection + game main process (IPC handlers, window management, crash handling)
 
 #### Phase 33: Export Pipeline Core
 **Goal**: A project can be exported to a complete, working Windows desktop game folder via a single programmatic call
@@ -225,6 +225,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 32. Desktop Game Runtime | 0/? | Not started | - |
+| 32. Desktop Game Runtime | 1/1 | Complete   | 2026-04-09 |
 | 33. Export Pipeline Core | 0/? | Not started | - |
 | 34. Export UI Integration | 0/? | Not started | - |

@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 import { exportGame } from './exportGame.js';
+import { exportDesktop } from './exportDesktop.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -803,6 +804,24 @@ ipcMain.handle('export-game', async (event, options) => {
     }, sendProgress);
   } catch (e) {
     console.error('[ExportGame] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('export-game-desktop', async (event, options) => {
+  try {
+    const sendProgress = (payload) => {
+      const mw = getMainWindow();
+      if (mw && !mw.isDestroyed()) {
+        mw.webContents.send('export-progress', payload);
+      }
+    };
+    return await exportDesktop({
+      ...options,
+      projectPath: currentProjectPath,
+    }, sendProgress);
+  } catch (e) {
+    console.error('[ExportDesktop] Failed:', e);
     return { success: false, error: e.message };
   }
 });

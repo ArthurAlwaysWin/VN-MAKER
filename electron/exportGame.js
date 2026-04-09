@@ -73,7 +73,7 @@ export function generateHtml(gameTitle, faviconFilename) {
  * @param {string} zipPath - Absolute path for output .zip file
  * @private
  */
-async function _createZip(sourceDir, zipPath) {
+export async function createZip(sourceDir, zipPath) {
   const files = {};
 
   async function walk(dir, prefix) {
@@ -181,7 +181,7 @@ export async function exportGame(options, sendProgress) {
   let zipPath = null;
   if (zip) {
     zipPath = path.join(path.dirname(outputDir), `${gameTitle}.zip`);
-    await _createZip(outputDir, zipPath);
+    await createZip(outputDir, zipPath);
   }
 
   // Completion (100%)

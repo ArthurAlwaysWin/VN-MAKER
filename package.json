@@ -13,9 +13,11 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
+    "@electron/packager": "^19.1.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "electron": "^41.0.4",
     "patch-package": "^8.0.1",
+    "png-to-ico": "^3.0.1",
     "vite": "^6.3.0",
     "vite-plugin-electron": "^0.29.1",
     "vite-plugin-electron-renderer": "^0.14.6"

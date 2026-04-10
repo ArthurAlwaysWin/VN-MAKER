@@ -178,7 +178,7 @@ See .planning/milestones/v0.7-ROADMAP.md for full phase details.
 
 - [x] **Phase 32: Desktop Game Runtime** - Engine desktop detection + game process templates + saves + window management (completed 2026-04-09)
 - [x] **Phase 33: Export Pipeline Core** - exportDesktop.js + @electron/packager staging/packaging + icon/title customization + ZIP (completed 2026-04-09)
-- [ ] **Phase 34: Export UI Integration** - ExportModal desktop mode toggle + icon picker + directory selector + progress
+- [x] **Phase 34: Export UI Integration** - ExportModal desktop mode toggle + icon picker + directory selector + progress (completed 2026-04-10)
 
 ### Phase Details
 
@@ -234,4 +234,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 32. Desktop Game Runtime | 1/1 | Complete   | 2026-04-09 |
 | 33. Export Pipeline Core | 2/2 | Complete    | 2026-04-09 |
-| 34. Export UI Integration | 0/? | Not started | - |
+| 34. Export UI Integration | 0/? | Complete    | 2026-04-10 |

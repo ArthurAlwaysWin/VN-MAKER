@@ -222,7 +222,10 @@ Plans:
   2. Desktop mode displays icon picker that accepts PNG files and shows thumbnail preview
   3. User can choose output directory via native folder dialog before export starts
   4. Export progress displays real-time step updates in the 3-state modal (配置→进度→完成)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 34-01-PLAN.md — Format toggle + desktop icon picker + format-aware export dispatch
 **UI hint**: yes
 
 ### Progress

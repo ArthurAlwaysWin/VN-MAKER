@@ -1,6 +1,6 @@
 <template>
   <div class="font-row">
-    <label class="token-label">{{ tokenKey }}</label>
+    <label class="token-label">{{ label || tokenKey }}</label>
     <select :value="currentValue" @change="onChange" class="font-select">
       <optgroup v-if="assets.fontFamilies.length" label="项目字体">
         <option v-for="f in assets.fontFamilies" :key="f.value" :value="f.value">{{ f.label }}</option>
@@ -19,6 +19,7 @@ import { useAssetStore } from '../../stores/assets.js';
 
 const props = defineProps({
   tokenKey: String,
+  label: String,
 });
 
 const editor = useThemeEditor();
@@ -27,10 +28,10 @@ const assets = useAssetStore();
 const currentValue = computed(() => editor.getMergedTokens()[props.tokenKey]);
 
 const systemFonts = [
-  { label: "'Noto Sans SC', sans-serif", value: "'Noto Sans SC', 'Segoe UI', 'Microsoft YaHei', sans-serif" },
-  { label: "'Noto Serif SC', serif", value: "'Noto Serif SC', serif" },
-  { label: 'sans-serif', value: 'sans-serif' },
-  { label: 'serif', value: 'serif' },
+  { label: 'Noto Sans SC', value: "'Noto Sans SC', 'Segoe UI', 'Microsoft YaHei', sans-serif" },
+  { label: 'Noto Serif SC', value: "'Noto Serif SC', serif" },
+  { label: '无衬线体', value: 'sans-serif' },
+  { label: '衬线体', value: 'serif' },
 ];
 
 function onChange(e) {

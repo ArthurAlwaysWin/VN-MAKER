@@ -1,6 +1,6 @@
 <template>
   <div class="gradient-row">
-    <label class="token-label">{{ tokenKey }}</label>
+    <label class="token-label">{{ label || tokenKey }}</label>
     <div class="gradient-controls">
       <div class="gradient-swatch" :style="{ background: currentValue }"></div>
       <input
@@ -21,11 +21,12 @@ import { useThemeEditor } from '../../composables/useThemeEditor.js';
 
 const props = defineProps({
   tokenKey: String,
+  label: String,
 });
 
 const editor = useThemeEditor();
 
-const currentValue = computed(() => editor.getMergedTokens()[props.tokenKey]);
+const currentValue= computed(() => editor.getMergedTokens()[props.tokenKey]);
 
 const inputValue = ref(currentValue.value || '');
 const isEditing = ref(false);

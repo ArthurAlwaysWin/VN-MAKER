@@ -1,6 +1,6 @@
 <template>
   <div class="color-row">
-    <label class="token-label">{{ tokenKey }}</label>
+    <label class="token-label">{{ label || tokenKey }}</label>
     <div class="color-controls">
       <input
         type="color"
@@ -41,6 +41,7 @@ import ContrastBadge from './ContrastBadge.vue';
 
 const props = defineProps({
   tokenKey: String,
+  label: String,
   hasAlpha: Boolean,
   showContrast: Boolean,
 });

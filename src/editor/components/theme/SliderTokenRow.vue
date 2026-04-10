@@ -1,6 +1,6 @@
 <template>
   <div class="slider-row">
-    <label class="token-label">{{ tokenKey }}</label>
+    <label class="token-label">{{ label || tokenKey }}</label>
     <div class="slider-controls">
       <input
         type="range"
@@ -32,11 +32,12 @@ import { useThemeEditor } from '../../composables/useThemeEditor.js';
 
 const props = defineProps({
   tokenKey: String,
+  label: String,
 });
 
 const editor = useThemeEditor();
 
-const SLIDER_CONFIG = {
+const SLIDER_CONFIG= {
   'radius': { min: 0, max: 24, step: 1 },
   'radius-lg': { min: 0, max: 32, step: 1 },
   'blur': { min: 0, max: 30, step: 1 },

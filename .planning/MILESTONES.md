@@ -1,5 +1,24 @@
 # Milestones
 
+## v0.8 游戏导出 Electron 桌面版 (Shipped: 2026-04-10)
+
+**Phases completed:** 3 phases (32-34), 4 plans, 15 requirements
+**Git range:** v0.7..5582379 (~35 commits)
+**Files:** 45 changed, +8585/-827 lines
+
+**Key accomplishments:**
+
+- 桌面游戏运行时：game-main.js + game-preload.js 模板，4-way 环境检测，8 通道 IPC 存档/窗口管理
+- 桌面导出管线：exportDesktop.js 9 步流水线，@electron/packager 打包，PNG→ICO 图标转换，可选 ZIP
+- ExportModal Web/桌面格式切换 + 桌面图标选择器 + 格式感知导出分发
+- 项目分辨率透传至导出管线（CUSTOM-03 修复）
+
+**Milestone audit:** 15/15 requirements passed — see v0.8-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v0.8-ROADMAP.md, milestones/v0.8-REQUIREMENTS.md
+
+---
+
 ## v0.7 游戏导出 Web 静态包 (Shipped: 2026-04-08)
 
 **Phases completed:** 8 phases, 12 plans, 17 tasks

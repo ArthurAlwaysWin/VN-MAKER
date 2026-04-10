@@ -191,21 +191,11 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
 - ✅ **v0.8** — 游戏导出 Electron 桌面版 (Phases 32-34)
 
-**Goal:** 从编辑器一键导出 Windows 绿色免安装桌面游戏包（.exe）
-
-**Target features:**
-- 复用 ExportModal，新增"桌面版"导出选项（Web/桌面 二选一）
-- Electron 精简打包（内嵌 Chromium + Node，游戏引擎 + 资源）
-- 自定义游戏窗口图标（.ico）和窗口标题
-- 桌面版 SaveManager（app.getPath('userData') 存档）
-- 绿色免安装：输出文件夹含 .exe，双击直接运行
-- 仅 Windows 平台
-
 ## Current State
 
-v0.8 里程碑完成 — 游戏导出 Electron 桌面版。15/15 需求全部交付。编辑器支持一键导出 Web 静态包和 Windows 桌面版。
+v0.8 里程碑完成 — 编辑器支持一键导出 Web 静态包和 Windows 桌面版（.exe）。全部 8 个里程碑已交付（v0.1~v0.8）。
 
-**已发布：** v0.1 ~ v0.7（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出）
+**已发布：** v0.1 ~ v0.8（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出 → 桌面导出）
 
 ---
-*Last updated: 2026-04-08 after v0.8 milestone start — 游戏导出 Electron 桌面版*
+*Last updated: 2026-04-10 after v0.8 milestone completion — 游戏导出 Electron 桌面版*

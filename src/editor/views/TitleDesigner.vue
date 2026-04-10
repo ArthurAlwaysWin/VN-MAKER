@@ -138,11 +138,11 @@
             <div class="form-row">
               <label>字体</label>
               <select :value="selectedElement.fontFamily || 'sans-serif'" @change="setSelectProp('fontFamily', $event)">
-                <option value="sans-serif">Sans Serif</option>
+                <option value="sans-serif">无衬线体</option>
                 <option value="'Noto Sans SC', sans-serif">Noto Sans SC</option>
                 <option value="'Noto Serif SC', serif">Noto Serif SC</option>
-                <option value="serif">Serif</option>
-                <option value="monospace">Monospace</option>
+                <option value="serif">衬线体</option>
+                <option value="monospace">等宽字体</option>
                 <option v-for="f in customFonts" :key="f.value" :value="f.value">{{ f.label }}</option>
               </select>
             </div>
@@ -187,11 +187,11 @@
             <div class="form-row">
               <label>字体</label>
               <select :value="selectedElement.fontFamily || &quot;'Noto Serif SC', serif&quot;" @change="setSelectProp('fontFamily', $event)">
-                <option value="sans-serif">Sans Serif</option>
+                <option value="sans-serif">无衬线体</option>
                 <option value="'Noto Sans SC', sans-serif">Noto Sans SC</option>
                 <option value="'Noto Serif SC', serif">Noto Serif SC</option>
-                <option value="serif">Serif</option>
-                <option value="monospace">Monospace</option>
+                <option value="serif">衬线体</option>
+                <option value="monospace">等宽字体</option>
                 <option v-for="f in customFonts" :key="f.value" :value="f.value">{{ f.label }}</option>
               </select>
             </div>

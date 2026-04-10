@@ -123,9 +123,9 @@ const assets = useAssetStore();
 const systemFonts = [
   { label: 'Noto Sans SC', value: "'Noto Sans SC', sans-serif" },
   { label: 'Noto Serif SC', value: "'Noto Serif SC', serif" },
-  { label: 'Sans Serif', value: 'sans-serif' },
-  { label: 'Serif', value: 'serif' },
-  { label: 'Monospace', value: 'monospace' },
+  { label: '无衬线体', value: 'sans-serif' },
+  { label: '衬线体', value: 'serif' },
+  { label: '等宽字体', value: 'monospace' },
 ];
 
 const settings = computed(() => script.getDialogueBox());

@@ -76,12 +76,12 @@ const showWizard = ref(false);
 const showQuickCreate = ref(false);
 
 const tabs = [
-  { id: 'scenes', icon: '🎬', label: '游戏内容' },
+  { id: 'scenes', icon: '🎬', label: '剧本编辑' },
   { id: 'title', icon: '🖼️', label: '标题页' },
   { id: 'settings-design', icon: '⚙️', label: '设置页' },
+  { id: 'theme', icon: '🎨', label: '主题' },
   { id: 'resource-library', icon: '📦', label: '资源库' },
   { id: 'project-settings', icon: '⚡', label: '项目设置' },
-  { id: 'theme', icon: '🎨', label: '主题' },
 ];
 
 const tabComponents = {

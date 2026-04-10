@@ -235,6 +235,8 @@ async function startExport() {
       gameTitle: gameTitle.value.trim(),
       iconPath: iconPath.value,
       zip: enableZip.value,
+      gameWidth: project.projectData?.resolution?.width || 1280,
+      gameHeight: project.projectData?.resolution?.height || 720,
     });
   } else {
     res = await window.ipcRenderer.invoke('export-game', {

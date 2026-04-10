@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Phase 34 context gathered
-last_updated: "2026-04-10T14:29:07.737Z"
+milestone: v0.9
+milestone_name: — 编辑器本地化与帮助系统
+status: planning
+stopped_at: Milestone started, awaiting requirements + roadmap
+last_updated: "2026-04-10T16:00:00.000Z"
 last_activity: 2026-04-10
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 10
-  completed_plans: 9
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-08)
+See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 34 — export-ui-integration
+**Current focus:** v0.9 里程碑规划 — 中文本地化 + Tooltip 帮助系统
 
 ## Current Position
 
-Phase: 34
+Phase: TBD (awaiting roadmap)
 Plan: Not started
-Status: Executing Phase 34
+Status: Planning v0.9 milestone
 Last activity: 2026-04-10
 
 ```
-v0.8 ░░░░░░░░░░░░░░░░░░░░ 0/3 phases (32-34)
+v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/? phases (35+)
 ```
 
 ## Performance Metrics
@@ -46,49 +46,34 @@ v0.8 ░░░░░░░░░░░░░░░░░░░░ 0/3 phases (32
 | v0.5 | 4 | 8 | 27 |
 | v0.6 | 5 | 4 | 26 |
 | v0.7 | 4 | 6 | 21 |
-
-**Current milestone: v0.8**
-
-- Phases: 3 (32-34)
-- Requirements: 15
-
-| Phase 32 P01 | 4m | 2 tasks | 4 files |
-| Phase 33 P01 | 3m | 2 tasks | 5 files |
-| Phase 33 P02 | 3m | 2 tasks | 2 files |
+| v0.8 | 3 | 4 | 15 |
 
 ## Accumulated Context
 
-### Key Context for v0.8
+### Key Context for v0.9
 
-- v0.7 established 3-way env detection (Electron/Preview/Web) — v0.8 adds 4th: `__DESKTOP_GAME`
-- Desktop game reuses web-style relative paths (`./assets/`) — no asset:// protocol needed
-- Same IPC contract as editor: game-main.js implements same channel names, different storage backend (app.getPath('userData'))
-- game-main.js and game-preload.js embedded as template strings in exportDesktop.js (avoids ASAR path issues)
-- asar: false — plain files in resources/app/ for simplicity and debuggability
-- Two new devDependencies: @electron/packager (packaging), png-to-ico (icon conversion)
-- Existing Vite build + scanAssets + fflate ZIP all reused from v0.7
-- Electron binary (~90 MB) cached after first download by @electron/get
-- Win.loadFile() + relative fetch() paths — no custom protocol in exported game
+- v0.9 scope: (1) 中文本地化 — 残留英文 UI 翻译 (2) Tooltip 帮助系统 — ? 图标 + hover 提示双模式
+- English text areas identified: token labels, font dropdowns, AudioPicker BGM/SE, ExportModal "Web", coordinate labels, placeholder text
+- Tooltip approach: ? icons for config explanations, direct hover for buttons/toolbar icons
+- Tab structure just reorganized: 剧本编辑 → 标题页 → 设置页 → 主题 → 资源库 → 项目设置
+- Theme token labels display raw CSS key names (primary, dialogue-bg, etc.) — need Chinese mapping
+- ThemeToolbar already has 重置 button — no separate reset feature needed
 
 ### Key Decisions
 
-- [v0.8]: Use @electron/packager (not electron-builder or forge) — simplest API, official, handles icon via resedit
-- [v0.8]: asar: false — plain files, defer ASAR to v0.9+
+- [v0.9]: Tab renamed 游戏内容 → 剧本编辑, reordered for design/management grouping (commit 9524ae2)
+- [v0.9]: Tooltip dual-mode: ? icons for config items, direct hover for buttons
+- [v0.9]: No full tutorial or standalone docs — tooltips cover 90% of user confusion at lowest cost
+
+### Decisions (carried forward from v0.8)
+
+- [v0.8]: Use @electron/packager — simplest API, official
+- [v0.8]: asar: false — plain files
 - [v0.8]: 4-way env detection: __DESKTOP_GAME → desktop, ipcRenderer → electron, iframe → preview, default → web
-- [v0.8]: Template embedding — game-main.js/game-preload.js as strings in exportDesktop.js
-- [v0.8]: No asset:// in game — win.loadFile() makes relative paths just work
-
-### Decisions (carried forward from v0.6/v0.7)
-
-- [Phase 27]: Preset preview bypasses debounce
-- [Phase 27]: applyPreset replaces full tokens object
-- [Phase 27]: JSON.parse unwrap before IPC
-- [Phase 27]: formatVersion:1 in theme.json
-- [Phase 27]: Import full overwrite via updateTheme()
 
 ## Session Continuity
 
-Last session: 2026-04-10T09:42:21.168Z
-Stopped at: Phase 34 context gathered
-Resume hint: Run `/gsd-discuss-phase 34` to gather context for Export UI Integration
-Next action: Discuss Phase 34
+Last session: 2026-04-10
+Stopped at: v0.9 milestone started, PROJECT.md and STATE.md updated
+Resume hint: Continue with research decision → requirements → roadmap
+Next action: Decide if research is needed, then create REQUIREMENTS.md and ROADMAP.md

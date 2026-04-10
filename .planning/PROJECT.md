@@ -73,7 +73,10 @@
 
 ### Active
 
-<!-- v0.8 requirements will be defined in REQUIREMENTS.md -->
+<!-- v0.9 requirements will be defined in REQUIREMENTS.md -->
+
+- [ ] **中文本地化**：编辑器残留英文 UI 全部翻译为中文（token 标签、字体选项、导出按钮、坐标标签等）
+- [ ] **Tooltip 帮助系统**：? 图标式补充说明 + 直接 hover 功能提示，双模式覆盖编辑器全部操作区
 
 ### Future — 后续候选
 
@@ -107,7 +110,7 @@
 ## Context
 
 - **技术栈**：Electron 41 + Vue 3 + Pinia + Vite，纯 JavaScript（ES Modules），无 TypeScript
-- **编辑器架构**：component :is + keep-alive 切换标签页（5 个 tab），无 vue-router
+- **编辑器架构**：component :is + keep-alive 切换标签页（6 个 tab），无 vue-router
 - **数据格式**：文件夹项目（project.json + script.json + assets/）
 - **引擎架构**：纯 JS，事件驱动（自定义 EventEmitter），DOM 渲染
 - **画布基础设施**：标题页 TitleDesigner.vue + 设置页 SettingsDesigner.vue 均可作为参考
@@ -190,12 +193,13 @@ This document evolves at phase transitions and milestone boundaries.
 
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
 - ✅ **v0.8** — 游戏导出 Electron 桌面版 (Phases 32-34)
+- 🚧 **v0.9** — 编辑器本地化与帮助系统 (Phases 35+)
 
 ## Current State
 
-v0.8 里程碑完成 — 编辑器支持一键导出 Web 静态包和 Windows 桌面版（.exe）。全部 8 个里程碑已交付（v0.1~v0.8）。
+v0.9 里程碑进行中 — 编辑器中文本地化（残留英文 UI 翻译）+ Tooltip 帮助系统（? 图标 + hover 提示双模式）。全部 8 个里程碑已交付（v0.1~v0.8）。
 
 **已发布：** v0.1 ~ v0.8（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出 → 桌面导出）
 
 ---
-*Last updated: 2026-04-10 after v0.8 milestone completion — 游戏导出 Electron 桌面版*
+*Last updated: 2026-04-10 after v0.9 milestone start — 编辑器本地化与帮助系统*

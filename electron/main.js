@@ -853,6 +853,16 @@ ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
   }
 });
 
+ipcMain.handle('read-file-base64', async (event, filePath) => {
+  try {
+    const data = await fs.readFile(filePath);
+    return data.toString('base64');
+  } catch (e) {
+    console.error('[read-file-base64] Failed:', e);
+    return null;
+  }
+});
+
 // --- App Setup ---
 
 process.env.APP_ROOT = path.join(__dirname, '..');

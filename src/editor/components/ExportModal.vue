@@ -4,7 +4,19 @@
       <div class="export-modal">
         <!-- Header -->
         <div class="export-header">
-          <span>📦 导出游戏</span>
+          <div class="header-left">
+            <span>📦 导出游戏</span>
+            <div v-if="state === 'config'" class="format-toggle">
+              <button
+                :class="['format-btn', { active: format === 'web' }]"
+                @click="format = 'web'"
+              >Web</button>
+              <button
+                :class="['format-btn', { active: format === 'desktop' }]"
+                @click="format = 'desktop'"
+              >桌面版</button>
+            </div>
+          </div>
           <button v-if="state !== 'exporting'" class="export-close" @click="onClose">×</button>
         </div>
 
@@ -23,12 +35,30 @@
             </div>
           </div>
 
-          <div class="export-field">
+          <div v-if="format === 'web'" class="export-field">
             <span class="field-label">Favicon (可选)</span>
             <div class="picker-row">
               <span class="picker-value" :title="faviconPath">{{ faviconPath ? faviconPath.split(/[\\/]/).pop() : '无' }}</span>
               <button class="picker-btn" @click="pickFavicon">选择文件</button>
               <button v-if="faviconPath" class="clear-btn" @click="clearFavicon" title="清除">×</button>
+            </div>
+          </div>
+
+          <div v-if="format === 'desktop'" class="export-field">
+            <span class="field-label">游戏图标 (可选)</span>
+            <div class="icon-preview-row">
+              <img
+                :src="iconPreviewUrl || '/default-game-icon.png'"
+                class="icon-thumbnail"
+                alt="游戏图标"
+              />
+              <div class="icon-info">
+                <span class="icon-name">{{ iconPath ? iconPath.split(/[\\/]/).pop() : '使用默认图标' }}</span>
+                <div class="icon-actions">
+                  <button class="picker-btn" @click="pickIcon">选择 PNG</button>
+                  <button v-if="iconPath" class="clear-btn" @click="clearIcon" title="清除">×</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -116,6 +146,9 @@ const outputDir = ref('');
 const faviconPath = ref(null);
 const enableZip = ref(false);
 const warningsExpanded = ref(false);
+const format = ref('desktop');       // D-03: default to 桌面版
+const iconPath = ref(null);          // Desktop icon file path
+const iconPreviewUrl = ref(null);    // Base64 data URL for thumbnail
 
 // ─── Progress listener cleanup ───────────────────────────
 let progressUnsub = null;
@@ -137,6 +170,9 @@ watch(() => props.visible, (val) => {
     enableZip.value = false;
     result.value = null;
     warningsExpanded.value = false;
+    format.value = 'desktop';       // D-03: default to desktop
+    iconPath.value = null;
+    iconPreviewUrl.value = null;
   } else {
     cleanupProgressListener();
   }
@@ -165,6 +201,22 @@ function clearFavicon() {
   faviconPath.value = null;
 }
 
+async function pickIcon() {
+  const file = await window.ipcRenderer.invoke('dialog-open-file', {
+    title: '选择游戏图标',
+    filters: [{ name: 'PNG 图片', extensions: ['png'] }],
+  });
+  if (!file) return;
+  iconPath.value = file;
+  const base64 = await window.ipcRenderer.invoke('read-file-base64', file);
+  if (base64) iconPreviewUrl.value = `data:image/png;base64,${base64}`;
+}
+
+function clearIcon() {
+  iconPath.value = null;
+  iconPreviewUrl.value = null;
+}
+
 async function startExport() {
   if (!gameTitle.value.trim() || !outputDir.value) return;
 
@@ -176,12 +228,22 @@ async function startExport() {
     progress.value = payload;
   });
 
-  const res = await window.ipcRenderer.invoke('export-game', {
-    outputDir: outputDir.value,
-    gameTitle: gameTitle.value.trim(),
-    faviconPath: faviconPath.value,
-    zip: enableZip.value,
-  });
+  let res;
+  if (format.value === 'desktop') {
+    res = await window.ipcRenderer.invoke('export-game-desktop', {
+      outputDir: outputDir.value,
+      gameTitle: gameTitle.value.trim(),
+      iconPath: iconPath.value,
+      zip: enableZip.value,
+    });
+  } else {
+    res = await window.ipcRenderer.invoke('export-game', {
+      outputDir: outputDir.value,
+      gameTitle: gameTitle.value.trim(),
+      faviconPath: faviconPath.value,
+      zip: enableZip.value,
+    });
+  }
 
   cleanupProgressListener();
 
@@ -250,6 +312,69 @@ function onClose() {
 }
 .export-close:hover {
   color: #fff;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.format-toggle {
+  display: flex;
+  border: 1px solid #444;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.format-btn {
+  padding: 4px 14px;
+  background: #2a2a2a;
+  color: #888;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.format-btn:hover:not(.active) {
+  background: #333;
+  color: #bbb;
+}
+.format-btn.active {
+  background: #007acc;
+  color: #fff;
+}
+.format-btn + .format-btn {
+  border-left: 1px solid #444;
+}
+.icon-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.icon-thumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #2a2a2a;
+  object-fit: contain;
+}
+.icon-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.icon-name {
+  font-size: 13px;
+  color: #ccc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.icon-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 .export-body {
   padding: 16px;

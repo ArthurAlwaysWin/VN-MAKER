@@ -9,26 +9,31 @@
         <ColorTokenRow
           v-if="getTokenType(key) === 'color-alpha'"
           :token-key="key"
+          :label="TOKEN_LABELS[key] || key"
           :has-alpha="true"
           :show-contrast="needsContrast(key)"
         />
         <ColorTokenRow
           v-else-if="getTokenType(key) === 'color'"
           :token-key="key"
+          :label="TOKEN_LABELS[key] || key"
           :has-alpha="false"
           :show-contrast="needsContrast(key)"
         />
         <FontTokenRow
           v-else-if="getTokenType(key) === 'font'"
           :token-key="key"
+          :label="TOKEN_LABELS[key] || key"
         />
         <SliderTokenRow
           v-else-if="getTokenType(key) === 'slider'"
           :token-key="key"
+          :label="TOKEN_LABELS[key] || key"
         />
         <GradientTokenRow
           v-else-if="getTokenType(key) === 'gradient'"
           :token-key="key"
+          :label="TOKEN_LABELS[key] || key"
         />
       </template>
     </TokenGroup>
@@ -56,6 +61,61 @@ const TOKEN_GROUPS = [
   { id: 'controls', label: '🎛️ 控件', keys: ['slider-track', 'slider-thumb', 'scrollbar'] },
   { id: 'speaker', label: '💬 说话人', keys: ['speaker-shadow'] },
 ];
+
+// ─── Token Labels 中文映射 (D-01: 简洁派 2-4 字) ────
+const TOKEN_LABELS = {
+  // 🎨 核心色
+  'primary': '主色',
+  'primary-subtle': '淡主色',
+  'danger': '危险色',
+  'danger-hover': '悬停色',
+  'accent': '强调色',
+  'accent-border': '边框色',
+  'shadow': '阴影',
+  'title-glow': '标题光晕',
+  'save-title': '存档标题',
+  'load-title': '读档标题',
+  // 📝 文字
+  'text': '正文',
+  'text-heading': '标题',
+  'text-secondary': '次要',
+  'text-muted': '弱化',
+  'text-dim': '暗淡',
+  'text-faint': '极淡',
+  // 📏 边框
+  'border': '边框',
+  'border-hover': '悬停',
+  'border-active': '激活',
+  // 🖼️ 背景
+  'dialogue-bg': '对话框',
+  'panel-bg': '面板',
+  'menu-bg': '菜单',
+  'card-bg': '卡片',
+  'card-bg-hover': '悬停卡片',
+  'title-bg': '标题背景',
+  'confirm-bg': '确认框',
+  // 🔘 按钮
+  'btn-bg': '底色',
+  'btn-text': '文字',
+  'btn-border': '边框',
+  'btn-hover-bg': '悬停色',
+  'btn-hover-text': '悬停文字',
+  'btn-hover-border': '悬停边框',
+  // 🔤 字体
+  'font-body': '正文',
+  'font-display': '标题',
+  // ⭕ 圆角
+  'radius': '小',
+  'radius-lg': '大',
+  // 🌫️ 模糊
+  'blur': '模糊',
+  // 🎛️ 控件
+  'slider-track': '滑轨',
+  'slider-thumb': '滑块',
+  'scrollbar': '滚动条',
+  // 💬 说话人
+  'speaker-shadow': '阴影',
+};
 
 // ─── Token Type Detection (D-05) ────────────────────
 function getTokenType(key) {

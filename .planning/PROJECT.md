@@ -67,6 +67,9 @@
 - ✓ 资源扫描器 + Web 构建（scanAssets 5 类解析 + vite.web.config.js 确定性输出） — v0.7 Phase 29
 - ✓ 导出管线（6 步 pipeline：构建→扫描→引擎→资源→HTML→ZIP，缺失资源跳过+警告） — v0.7 Phase 30
 - ✓ 导出 UI（ExportModal 3 态弹窗：配置→进度→完成，IPC 目录/文件对话框+打开文件夹） — v0.7 Phase 31
+- ✓ 桌面游戏运行时（4-way 环境检测 + game-main.js 模板 + 文件系统存档 + 窗口管理） — v0.8 Phase 32
+- ✓ 桌面导出管线（exportDesktop.js 9 步流水线 + @electron/packager 打包 + PNG→ICO 转换 + ZIP） — v0.8 Phase 33
+- ✓ ExportModal Web/桌面 格式切换 + 桌面图标选择器 + 格式感知导出分发 — v0.8 Phase 34
 
 ### Active
 
@@ -113,7 +116,7 @@
 - **资源库**：5 类资源（背景/角色/音频/字体/通用），统一 Pinia store + IPC 管理
 - **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认页面
 - **设置页覆盖层**：右侧滑入 overlay，ESC 优先级链（settings > game menu），stack-based 层管理
-- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）+ v0.5（游戏 UI 补全：快捷栏 + 存读档 + 快进 + 快存快读）
+- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）+ v0.5（游戏 UI 补全：快捷栏 + 存读档 + 快进 + 快存快读）+ v0.6（主题包系统）+ v0.7（游戏导出 Web 静态包）+ v0.8（游戏导出 Electron 桌面版）
 
 ### 已知问题
 
@@ -167,6 +170,10 @@
 | scanAssets 配置表驱动遍历 | 11 已知路径位置显式遍历，比递归更可靠 | ✓ Good |
 | 6 步导出流水线 + AbortController | 清晰步骤分离，支持取消 | ✓ Good |
 | ExportModal 3 态单弹窗 | 配置→进度→完成流畅无中断 | ✓ Good |
+| asar:false + win.loadFile() + 相对路径 | 避免 asset:// 协议，桌面游戏资源加载最简化 | ✓ Good |
+| 4-way 环境检测 (Electron/Preview/Web/Desktop) | 统一代码库四种运行模式 | ✓ Good |
+| exportDesktop 9 步流水线 + @electron/packager | 从编辑器到可运行 .exe 全自动 | ✓ Good |
+| Web/桌面 Segment Toggle 默认桌面版 | v0.8 焦点是桌面导出，默认选中 | ✓ Good |
 
 ## Evolution
 
@@ -182,8 +189,7 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v0.6** — 主题包系统 (Phases 23-27)
 
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
-
-## Current Milestone: v0.8 游戏导出 Electron 桌面版
+- ✅ **v0.8** — 游戏导出 Electron 桌面版 (Phases 32-34)
 
 **Goal:** 从编辑器一键导出 Windows 绿色免安装桌面游戏包（.exe）
 
@@ -197,7 +203,7 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.8 里程碑启动 — 游戏导出 Electron 桌面版。定义需求中。
+v0.8 里程碑完成 — 游戏导出 Electron 桌面版。15/15 需求全部交付。编辑器支持一键导出 Web 静态包和 Windows 桌面版。
 
 **已发布：** v0.1 ~ v0.7（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出）
 

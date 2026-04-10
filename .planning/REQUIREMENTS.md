@@ -9,11 +9,11 @@
 
 - [x] **L10N-01**: 主题编辑器 token 标签全部显示中文名（primary → 主色，dialogue-bg → 对话框背景 等 35+ 个 token）
 - [x] **L10N-02**: 字体选择器显示中文标签（Sans Serif → 无衬线体，Serif → 衬线体，Monospace → 等宽字体），覆盖所有 6+ 处下拉框
-- [ ] **L10N-03**: 转场选项显示中文（fade → 淡入淡出，slide-left → 左滑入，slide-right → 右滑入，none → 无）
-- [ ] **L10N-04**: AudioPicker tab 标签中文化（BGM → 背景音乐，SE → 音效）
-- [ ] **L10N-05**: ExportModal 格式按钮中文化（Web → 网页版）
-- [ ] **L10N-06**: 坐标/占位符本地化（Scenes.vue 的 X (px)/Y (px)、英文路径占位符改为中文示例）
-- [ ] **L10N-07**: Characters.vue 占位符中文化（"表情名称（如 smile）" → 纯中文示例）
+- [x] **L10N-03**: 转场选项显示中文（fade → 淡入淡出，slide-left → 左滑入，slide-right → 右滑入，none → 无）
+- [x] **L10N-04**: AudioPicker tab 标签中文化（BGM → 背景音乐，SE → 音效）
+- [x] **L10N-05**: ExportModal 格式按钮中文化（Web → 网页版）
+- [x] **L10N-06**: 坐标/占位符本地化（Scenes.vue 的 X (px)/Y (px)、英文路径占位符改为中文示例）
+- [x] **L10N-07**: Characters.vue 占位符中文化（"表情名称（如 smile）" → 纯中文示例）
 
 ### 帮助系统 (HELP)
 
@@ -42,11 +42,11 @@
 |-------------|-------|--------|
 | L10N-01 | Phase 35 | Complete |
 | L10N-02 | Phase 35 | Complete |
-| L10N-03 | Phase 35 | Pending |
-| L10N-04 | Phase 35 | Pending |
-| L10N-05 | Phase 35 | Pending |
-| L10N-06 | Phase 35 | Pending |
-| L10N-07 | Phase 35 | Pending |
+| L10N-03 | Phase 35 | Complete |
+| L10N-04 | Phase 35 | Complete |
+| L10N-05 | Phase 35 | Complete |
+| L10N-06 | Phase 35 | Complete |
+| L10N-07 | Phase 35 | Complete |
 | HELP-01 | Phase 36 | Pending |
 | HELP-02 | Phase 36 | Pending |
 | HELP-03 | Phase 36 | Pending |

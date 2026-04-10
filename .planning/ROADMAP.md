@@ -210,9 +210,9 @@ See .planning/milestones/v0.8-ROADMAP.md for full phase details.
 - Characters.vue 表情占位符中文示例
 
 **Requirements:** L10N-01 ~ L10N-07
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 35-01-PLAN.md — Theme editor token 中文化 (TOKEN_LABELS 映射 + row 组件 label prop + FontTokenRow 字体标签)
+- [x] 35-01-PLAN.md — Theme editor token 中文化 (TOKEN_LABELS 映射 + row 组件 label prop + FontTokenRow 字体标签)
 - [ ] 35-02-PLAN.md — 编辑器 UI 文本中文化 (字体选择器/转场/AudioPicker/ExportModal/坐标/占位符)
 
 **Files (~12):** TokenAccordion.vue, FontTokenRow.vue, DialogueBoxSettings.vue, SettingsDesigner.vue, TitleDesigner.vue, PageInspector.vue, AudioPicker.vue, ExportModal.vue, Scenes.vue, Characters.vue

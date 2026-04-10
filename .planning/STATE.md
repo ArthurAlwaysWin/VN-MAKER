@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: verifying
-stopped_at: Completed 35-02-PLAN.md (remaining UI text 中文化)
-last_updated: "2026-04-10T15:32:16.488Z"
+milestone: v0.9
+milestone_name: 编辑器本地化与帮助系统
+status: idle
+stopped_at: Phase 35 verified and complete — ready for Phase 36
+last_updated: "2026-04-10"
 last_activity: 2026-04-10
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 7
+  total_phases: 2
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -20,18 +20,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 35 — chinese-localization
+**Current focus:** Phase 36 — Tooltip 帮助系统 (next)
 
 ## Current Position
 
-Phase: 35 (chinese-localization) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 35 ✅ complete
+Plan: All plans executed and verified
+Status: Phase 35 complete — Phase 36 not started
 Last activity: 2026-04-10
 
 ```
-v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/2 phases (35-36)
-     Phase 35: context ✓ → planning next
+v0.9 ██████████░░░░░░░░░░ 1/2 phases (35-36)
+     Phase 35: ✅ 中文本地化 — verified, 6 commits
+     Phase 36: ⬜ Tooltip 帮助系统 — not started
 ```
 
 ## Performance Metrics
@@ -48,8 +49,7 @@ v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/2 phases (35
 | v0.6 | 5 | 4 | 26 |
 | v0.7 | 4 | 6 | 21 |
 | v0.8 | 3 | 4 | 15 |
-| Phase 35 P01 | 1.7m | 2 tasks | 5 files |
-| Phase 35 P02 | 3min | 2 tasks | 8 files |
+| v0.9-P35 | 2 plans | 4 tasks | 10 files, 6 commits |
 
 ## Accumulated Context
 
@@ -84,5 +84,5 @@ v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/2 phases (35
 
 Last session: 2026-04-10T15:32:16.485Z
 Stopped at: Completed 35-02-PLAN.md (remaining UI text 中文化)
-Resume hint: Run /gsd-plan-phase 35 to create implementation plan
-Next action: Plan Phase 35 (中文本地化)
+Resume hint: Run /gsd-discuss-phase 36 to start Tooltip 帮助系统
+Next action: Discuss Phase 36

@@ -51,7 +51,7 @@
           <div class="expr-item" v-for="(path, exprName) in selectedChar.expressions" :key="exprName">
             <input 
               type="text" 
-              placeholder="表情名称（如 smile）" 
+              placeholder="表情名称（如 微笑）" 
               :value="exprName" 
               @change="updateExpressionName(exprName, $event.target.value)" 
               class="expr-name-input" />

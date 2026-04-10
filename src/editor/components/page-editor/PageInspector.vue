@@ -23,10 +23,10 @@
             <label>过渡</label>
             <select :value="page.transition?.type || 'fade'"
               @change="setTransitionType($event.target.value)" class="field-input">
-              <option value="fade">fade</option>
-              <option value="slide-left">slide-left</option>
-              <option value="slide-right">slide-right</option>
-              <option value="none">none</option>
+              <option value="fade">淡入淡出</option>
+              <option value="slide-left">左滑入</option>
+              <option value="slide-right">右滑入</option>
+              <option value="none">无</option>
             </select>
           </div>
           <div class="form-group half">

@@ -9,7 +9,7 @@
 
         <div class="tab-bar" v-if="mode !== 'voice'">
           <button class="tab-btn" :class="{ active: activeTab === 'bgm' }" @click="switchTab('bgm')">BGM</button>
-          <button class="tab-btn" :class="{ active: activeTab === 'se' }" @click="switchTab('se')">SE</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'se' }" @click="switchTab('se')">音效</button>
         </div>
 
         <div class="picker-body">

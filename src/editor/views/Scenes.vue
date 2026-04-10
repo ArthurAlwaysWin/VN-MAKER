@@ -117,11 +117,11 @@
             <template v-if="showDialogueStyle">
               <div class="form-row">
                 <div class="form-group half">
-                  <label>X (px)</label>
+                  <label>X坐标</label>
                   <input type="number" :value="selectedCmd.style?.x" @input="setStyleField(selectedCmd, 'x', $event)" />
                 </div>
                 <div class="form-group half">
-                  <label>Y (px)</label>
+                  <label>Y坐标</label>
                   <input type="number" :value="selectedCmd.style?.y" @input="setStyleField(selectedCmd, 'y', $event)" />
                 </div>
               </div>
@@ -188,11 +188,11 @@
           <template v-if="selectedCmd.type === 'show_character' && selectedCmd.position === 'custom'">
             <div class="form-row">
               <div class="form-group half">
-                <label>X (px)</label>
+                <label>X坐标</label>
                 <input type="number" v-model.number="selectedCmd.x" />
               </div>
               <div class="form-group half">
-                <label>Y (px)</label>
+                <label>Y坐标</label>
                 <input type="number" v-model.number="selectedCmd.y" />
               </div>
             </div>
@@ -255,11 +255,11 @@
           <template v-if="selectedCmd.layout === 'custom'">
             <div class="form-row">
               <div class="form-group half">
-                <label>X (px)</label>
+                <label>X坐标</label>
                 <input type="number" :value="selectedCmd.style?.x" @input="setStyleField(selectedCmd, 'x', $event)" />
               </div>
               <div class="form-group half">
-                <label>Y (px)</label>
+                <label>Y坐标</label>
                 <input type="number" :value="selectedCmd.style?.y" @input="setStyleField(selectedCmd, 'y', $event)" />
               </div>
             </div>

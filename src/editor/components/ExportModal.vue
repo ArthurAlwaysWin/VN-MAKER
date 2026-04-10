@@ -10,7 +10,7 @@
               <button
                 :class="['format-btn', { active: format === 'web' }]"
                 @click="format = 'web'"
-              >Web</button>
+              >网页版</button>
               <button
                 :class="['format-btn', { active: format === 'desktop' }]"
                 @click="format = 'desktop'"

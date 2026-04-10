@@ -191,3 +191,46 @@ See .planning/milestones/v0.8-ROADMAP.md for full phase details.
 </details>
 
 ---
+
+## v0.9 — 编辑器本地化与帮助系统
+
+> **目标：** 消灭编辑器中所有残留英文 UI 文字 + 在配置项/操作按钮上添加 tooltip 帮助提示
+
+### Phase 35: 中文本地化
+
+**Goal:** 将编辑器中所有面向用户的英文文字翻译/映射为中文
+
+**Scope:**
+- Token 标签中文映射：35+ 个 CSS token key → 中文名（如 primary → 主色）
+- 字体选择器中文标签：6+ 处下拉框（Sans Serif → 无衬线体 等）
+- 转场选项中文化：fade → 淡入淡出，slide-left → 左滑入 等
+- AudioPicker tab 标签：BGM → 背景音乐，SE → 音效
+- ExportModal 格式按钮：Web → 网页版
+- 坐标标签 + 占位符文本中文化
+- Characters.vue 表情占位符中文示例
+
+**Requirements:** L10N-01 ~ L10N-07
+**Files (~12):** TokenAccordion.vue, FontTokenRow.vue, DialogueBoxSettings.vue, SettingsDesigner.vue, TitleDesigner.vue, PageInspector.vue, AudioPicker.vue, ExportModal.vue, Scenes.vue, Characters.vue
+**Risk:** Low — 纯文本替换，不涉及逻辑变更
+
+---
+
+### Phase 36: Tooltip 帮助系统
+
+**Goal:** 为编辑器添加上下文帮助提示，覆盖所有主要操作区
+
+**Scope:**
+- **HelpTip 组件**：`?` 图标 + hover 气泡，统一风格，支持多行文本
+- **按钮/工具栏 hover title**：所有图标按钮和工具栏操作添加/完善中文 title
+- **帮助内容覆盖**：
+  - 主题编辑器（调色盘、九宫格、预设、token 分组用途）
+  - 导出功能（格式区别、ZIP、图标）
+  - 项目设置（分辨率等）
+  - 剧本编辑器（转场、语音匹配、角色管理）
+  - 资源库（格式要求、背景去除、字体导入）
+  - 标题页/设置页设计器（预制组件、拖拽、属性）
+
+**Requirements:** HELP-01 ~ HELP-08
+**New component:** `src/editor/components/HelpTip.vue`
+**Files (~15+):** All major editor views + toolbar components
+**Risk:** Low — 纯 UI 增强，不影响核心逻辑

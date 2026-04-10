@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: — 编辑器本地化与帮助系统
-status: planning
-stopped_at: Milestone started, awaiting requirements + roadmap
-last_updated: "2026-04-10T16:00:00.000Z"
-last_activity: 2026-04-10
+status: discussing
+stopped_at: Phase 35 context gathered, ready for planning
+last_updated: "2026-04-11T01:15:00.000Z"
+last_activity: 2026-04-11
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,13 +24,14 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 
 ## Current Position
 
-Phase: TBD (awaiting roadmap)
+Phase: 35 — 中文本地化 (discussing → ready for planning)
 Plan: Not started
-Status: Planning v0.9 milestone
-Last activity: 2026-04-10
+Status: CONTEXT.md written, 6 decisions captured
+Last activity: 2026-04-11
 
 ```
-v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/? phases (35+)
+v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/2 phases (35-36)
+     Phase 35: context ✓ → planning next
 ```
 
 ## Performance Metrics
@@ -64,6 +65,12 @@ v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/? phases (35
 - [v0.9]: Tab renamed 游戏内容 → 剧本编辑, reordered for design/management grouping (commit 9524ae2)
 - [v0.9]: Tooltip dual-mode: ? icons for config items, direct hover for buttons
 - [v0.9]: No full tutorial or standalone docs — tooltips cover 90% of user confusion at lowest cost
+- [v0.9-P35]: Token 命名简洁派 — 2-4 字, 组名提供上下文
+- [v0.9-P35]: BGM 保留, SE → 音效
+- [v0.9-P35]: X (px)/Y (px) → X坐标/Y坐标, 去掉 px
+- [v0.9-P35]: Placeholder 保留英文 (值格式示例)
+- [v0.9-P35]: Transition 翻译显示文本: 淡入淡出/左滑入/右滑入/无
+- [v0.9-P35]: Export Web → 网页版
 
 ### Decisions (carried forward from v0.8)
 
@@ -73,7 +80,7 @@ v0.9 ░░░░░░░░░░░░░░░░░░░░ 0/? phases (35
 
 ## Session Continuity
 
-Last session: 2026-04-10
-Stopped at: v0.9 milestone started, PROJECT.md and STATE.md updated
-Resume hint: Continue with research decision → requirements → roadmap
-Next action: Decide if research is needed, then create REQUIREMENTS.md and ROADMAP.md
+Last session: 2026-04-11
+Stopped at: Phase 35 CONTEXT.md created with 6 decisions from discussion
+Resume hint: Run /gsd-plan-phase 35 to create implementation plan
+Next action: Plan Phase 35 (中文本地化)

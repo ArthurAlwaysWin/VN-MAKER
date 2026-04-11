@@ -2,7 +2,7 @@
   <div class="project-settings">
     <h2>项目设置</h2>
     <form @submit.prevent class="settings-form">
-      <label>项目名称
+      <label>项目名称 <HelpTip :text="HELP_SETTINGS.projectName" />
         <input v-model="project.projectData.name" @input="project.markDirty()" />
       </label>
       <label>作者
@@ -11,7 +11,7 @@
       <label>描述
         <textarea v-model="project.projectData.description" rows="3" @input="project.markDirty()"></textarea>
       </label>
-      <label>分辨率
+      <label>分辨率 <HelpTip :text="HELP_SETTINGS.resolution" />
         <div class="resolution-group">
           <input type="number" v-model.number="project.projectData.resolution.width" @input="project.markDirty()" /> ×
           <input type="number" v-model.number="project.projectData.resolution.height" @input="project.markDirty()" />
@@ -27,7 +27,7 @@
       </div>
     </form>
     <div class="export-section">
-      <button class="export-btn" @click="showExport = true">📦 导出游戏</button>
+      <button class="export-btn" @click="showExport = true" title="打开导出设置">📦 导出游戏</button>
     </div>
     <ExportModal :visible="showExport" @close="showExport = false" />
     <DialogueBoxSettings />
@@ -39,6 +39,8 @@ import { ref } from 'vue';
 import { useProjectStore } from '../stores/project.js';
 import DialogueBoxSettings from '../components/DialogueBoxSettings.vue';
 import ExportModal from '../components/ExportModal.vue';
+import HelpTip from '../components/HelpTip.vue';
+import { HELP_SETTINGS } from '../helpTexts.js';
 const project = useProjectStore();
 const showExport = ref(false);
 </script>

@@ -10,12 +10,15 @@
               <button
                 :class="['format-btn', { active: format === 'web' }]"
                 @click="format = 'web'"
+                title="切换为网页版导出"
               >网页版</button>
               <button
                 :class="['format-btn', { active: format === 'desktop' }]"
                 @click="format = 'desktop'"
+                title="切换为桌面版导出"
               >桌面版</button>
             </div>
+            <HelpTip v-if="state === 'config'" :text="HELP_EXPORT.formatDifference" />
           </div>
           <button v-if="state !== 'exporting'" class="export-close" @click="onClose">×</button>
         </div>
@@ -23,29 +26,29 @@
         <!-- STATE: config -->
         <div v-if="state === 'config'" class="export-body">
           <label class="export-field">
-            <span class="field-label">游戏标题</span>
+            <span class="field-label">游戏标题 <HelpTip :text="HELP_EXPORT.gameTitle" /></span>
             <input v-model="gameTitle" class="export-input" placeholder="输入游戏标题" />
           </label>
 
           <div class="export-field">
-            <span class="field-label">输出目录</span>
+            <span class="field-label">输出目录 <HelpTip :text="HELP_EXPORT.outputDir" /></span>
             <div class="picker-row">
               <span class="picker-value" :title="outputDir">{{ outputDir || '未选择' }}</span>
-              <button class="picker-btn" @click="pickOutputDir">选择文件夹</button>
+              <button class="picker-btn" @click="pickOutputDir" title="选择输出目录">选择文件夹</button>
             </div>
           </div>
 
           <div v-if="format === 'web'" class="export-field">
-            <span class="field-label">Favicon (可选)</span>
+            <span class="field-label">Favicon (可选) <HelpTip :text="HELP_EXPORT.favicon" /></span>
             <div class="picker-row">
               <span class="picker-value" :title="faviconPath">{{ faviconPath ? faviconPath.split(/[\\/]/).pop() : '无' }}</span>
-              <button class="picker-btn" @click="pickFavicon">选择文件</button>
+              <button class="picker-btn" @click="pickFavicon" title="选择 Favicon 文件">选择文件</button>
               <button v-if="faviconPath" class="clear-btn" @click="clearFavicon" title="清除">×</button>
             </div>
           </div>
 
           <div v-if="format === 'desktop'" class="export-field">
-            <span class="field-label">游戏图标 (可选)</span>
+            <span class="field-label">游戏图标 (可选) <HelpTip :text="HELP_EXPORT.desktopIcon" /></span>
             <div class="icon-preview-row">
               <img
                 :src="iconPreviewUrl || '/default-game-icon.png'"
@@ -55,7 +58,7 @@
               <div class="icon-info">
                 <span class="icon-name">{{ iconPath ? iconPath.split(/[\\/]/).pop() : '使用默认图标' }}</span>
                 <div class="icon-actions">
-                  <button class="picker-btn" @click="pickIcon">选择 PNG</button>
+                  <button class="picker-btn" @click="pickIcon" title="选择游戏图标 PNG">选择 PNG</button>
                   <button v-if="iconPath" class="clear-btn" @click="clearIcon" title="清除">×</button>
                 </div>
               </div>
@@ -63,7 +66,7 @@
           </div>
 
           <label class="export-field toggle-field">
-            <span class="field-label">打包为 ZIP</span>
+            <span class="field-label">打包为 ZIP <HelpTip :text="HELP_EXPORT.zipToggle" /></span>
             <input type="checkbox" v-model="enableZip" class="export-toggle" />
           </label>
         </div>
@@ -87,7 +90,7 @@
             <div v-if="result.zipPath" class="done-path zip-path" :title="result.zipPath">ZIP: {{ result.zipPath }}</div>
             <!-- Warnings (D-10) -->
             <div v-if="result.warnings?.length" class="warnings-section">
-              <button class="warnings-toggle" @click="warningsExpanded = !warningsExpanded">
+              <button class="warnings-toggle" @click="warningsExpanded = !warningsExpanded" title="展开/收起警告详情">
                 ⚠️ 导出成功，但有 {{ result.warnings.length }} 个资源未找到
                 <span class="toggle-arrow">{{ warningsExpanded ? '▼' : '▶' }}</span>
               </button>
@@ -114,8 +117,8 @@
             <button class="btn-secondary" @click="cancelExport">取消</button>
           </template>
           <template v-else>
-            <button v-if="result?.success" class="btn-secondary" @click="openOutputFolder">📂 打开文件夹</button>
-            <button v-if="!result?.success" class="btn-secondary" @click="retry">重试</button>
+            <button v-if="result?.success" class="btn-secondary" @click="openOutputFolder" title="在文件管理器中打开输出目录">📂 打开文件夹</button>
+            <button v-if="!result?.success" class="btn-secondary" @click="retry" title="重新导出">重试</button>
             <button class="btn-primary" @click="emit('close')">关闭</button>
           </template>
         </div>
@@ -127,6 +130,8 @@
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue';
 import { useProjectStore } from '../stores/project.js';
+import HelpTip from './HelpTip.vue';
+import { HELP_EXPORT } from '../helpTexts.js';
 
 const project = useProjectStore();
 

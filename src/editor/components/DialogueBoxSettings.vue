@@ -1,6 +1,6 @@
 <template>
   <div class="dlgbox-settings" v-if="settings">
-    <h3>🔤 对话框字体</h3>
+    <h3>🔤 对话框字体 <HelpTip :text="HELP_SETTINGS.dialogueFont" /></h3>
 
     <div class="font-settings-layout">
       <!-- Left: Controls -->
@@ -116,6 +116,8 @@
 import { computed } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { useAssetStore } from '../stores/assets.js';
+import HelpTip from './HelpTip.vue';
+import { HELP_SETTINGS } from '../helpTexts.js';
 
 const script = useScriptStore();
 const assets = useAssetStore();

@@ -197,9 +197,9 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v0.9 里程碑进行中 — 编辑器中文本地化（残留英文 UI 翻译）+ Tooltip 帮助系统（? 图标 + hover 提示双模式）。全部 8 个里程碑已交付（v0.1~v0.8）。
+v0.9 里程碑完成 — 编辑器中文本地化 + Tooltip 帮助系统（HelpTip 组件 + 全编辑器帮助文本覆盖）。全部 9 个里程碑已交付（v0.1~v0.9）。
 
-**已发布：** v0.1 ~ v0.8（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出 → 桌面导出）
+**已发布：** v0.1 ~ v0.9（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出 → 桌面导出 → 本地化与帮助系统）
 
 ---
-*Last updated: 2026-04-10 after v0.9 milestone start — 编辑器本地化与帮助系统*
+*Last updated: 2026-04-11 after v0.9 Phase 36 complete — Tooltip 帮助系统*

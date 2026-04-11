@@ -18,7 +18,7 @@
           <label>保存位置
             <div class="path-input">
               <input v-model="form.location" readonly />
-              <button @click="browseLocation">浏览...</button>
+              <button @click="browseLocation" title="选择项目保存位置">浏览...</button>
             </div>
           </label>
           <label>作者
@@ -65,11 +65,11 @@
       </div>
 
       <div class="wizard-footer">
-        <button class="btn-cancel" @click="$emit('cancel')">取消</button>
+        <button class="btn-cancel" @click="$emit('cancel')" title="取消创建">取消</button>
         <div class="footer-right">
-          <button v-if="step > 0" class="btn-back" @click="step--">上一步</button>
-          <button v-if="step < 3" class="btn-next" @click="step++" :disabled="!canNext">下一步</button>
-          <button v-if="step === 3" class="btn-create" @click="handleCreate" :disabled="creating">
+          <button v-if="step > 0" class="btn-back" @click="step--" title="返回上一步">上一步</button>
+          <button v-if="step < 3" class="btn-next" @click="step++" :disabled="!canNext" title="进入下一步">下一步</button>
+          <button v-if="step === 3" class="btn-create" @click="handleCreate" :disabled="creating" title="创建新项目">
             {{ creating ? '创建中...' : '✨ 创建项目' }}
           </button>
         </div>

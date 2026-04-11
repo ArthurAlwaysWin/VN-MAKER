@@ -4,12 +4,12 @@
       <div class="audio-picker-modal">
         <div class="picker-header">
           <span class="picker-title">{{ mode === 'voice' ? '选择语音文件' : '选择音频' }}</span>
-          <button class="picker-close" @click="$emit('close')">✕</button>
+          <button class="picker-close" @click="$emit('close')" title="关闭">✕</button>
         </div>
 
         <div class="tab-bar" v-if="mode !== 'voice'">
-          <button class="tab-btn" :class="{ active: activeTab === 'bgm' }" @click="switchTab('bgm')">BGM</button>
-          <button class="tab-btn" :class="{ active: activeTab === 'se' }" @click="switchTab('se')">音效</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'bgm' }" @click="switchTab('bgm')" title="背景音乐">BGM</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'se' }" @click="switchTab('se')" title="音效">音效</button>
         </div>
 
         <div class="picker-body">
@@ -39,8 +39,8 @@
         </div>
 
         <div class="picker-footer">
-          <button class="picker-cancel" @click="$emit('close')">取消</button>
-          <button class="picker-confirm" :disabled="!selectedFile" @click="confirm">确定</button>
+          <button class="picker-cancel" @click="$emit('close')" title="取消选择">取消</button>
+          <button class="picker-confirm" :disabled="!selectedFile" @click="confirm" title="确认选择">确定</button>
         </div>
       </div>
     </div>

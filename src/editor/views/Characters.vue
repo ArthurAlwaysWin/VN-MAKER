@@ -3,7 +3,7 @@
     <div class="sidebar-list">
       <div class="list-header">
         <h3>角色列表</h3>
-        <button @click="addCharacter">+</button>
+        <button @click="addCharacter" title="创建新角色">+</button>
       </div>
       <div class="list-items">
         <div 
@@ -20,7 +20,7 @@
     <div class="editor-pane" v-if="selectedChar">
       <div class="toolbar">
         <h2>编辑角色: {{ selectedId }}</h2>
-        <button class="save-btn" @click="save">保存更改</button>
+        <button class="save-btn" @click="save" title="保存角色更改">保存更改</button>
       </div>
       
       <div class="form-group">
@@ -44,7 +44,7 @@
       <div class="expressions-section">
         <div class="section-header">
           <h3>表情列表</h3>
-          <button @click="addExpression">添加表情</button>
+          <button @click="addExpression" title="添加新表情差分">添加表情</button>
         </div>
         
         <div class="expr-list">
@@ -60,7 +60,7 @@
               placeholder="图片路径（如 characters/sakura_smile.png）" 
               v-model="selectedChar.expressions[exprName]" 
               class="expr-path-input" />
-            <button class="danger-btn" @click="deleteExpression(exprName)">删除</button>
+            <button class="danger-btn" @click="deleteExpression(exprName)" title="删除此表情">删除</button>
           </div>
         </div>
       </div>

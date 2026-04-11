@@ -4,7 +4,7 @@
       <div class="palette-modal">
         <div class="modal-header">
           <h3>🎨 调色盘生成器 <HelpTip :text="HELP_THEME.paletteGenerator" /></h3>
-          <button class="close-btn" @click="$emit('close')">✕</button>
+          <button class="close-btn" @click="$emit('close')" title="关闭">✕</button>
         </div>
 
         <div class="modal-body">
@@ -60,8 +60,8 @@
         </div>
 
         <div class="modal-footer">
-          <button class="cancel-btn" @click="$emit('close')">取消</button>
-          <button class="apply-btn" :disabled="!fullPalette" @click="applyPalette">应用配色</button>
+          <button class="cancel-btn" @click="$emit('close')" title="取消">取消</button>
+          <button class="apply-btn" :disabled="!fullPalette" @click="applyPalette" title="应用生成的配色方案">应用配色</button>
         </div>
       </div>
     </div>

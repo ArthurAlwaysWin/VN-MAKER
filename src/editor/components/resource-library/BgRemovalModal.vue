@@ -4,7 +4,7 @@
       <div class="bgr-modal">
         <div class="bgr-header">
           <span>去除纯色背景 <HelpTip :text="HELP_RESOURCE.bgRemoval" /></span>
-          <button class="bgr-close" @click="$emit('cancel')">×</button>
+          <button class="bgr-close" @click="$emit('cancel')" title="关闭">×</button>
         </div>
         <div class="bgr-body">
           <!-- Left: Preview -->
@@ -69,7 +69,7 @@
             >{{ saving ? '保存中...' : '✅ 确认去背景' }}</button>
             <div class="bgr-btn-row">
               <button class="bgr-btn-secondary" @click="$emit('skip')" title="跳过去背景，直接使用原图">直接使用</button>
-              <button class="bgr-btn-secondary" @click="$emit('cancel')">取消</button>
+              <button class="bgr-btn-secondary" @click="$emit('cancel')" title="取消操作">取消</button>
             </div>
           </div>
         </div>

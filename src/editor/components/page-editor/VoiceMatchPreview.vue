@@ -4,7 +4,7 @@
       <div class="voice-match-modal" @click.stop>
         <div class="picker-header">
           <span class="picker-title">批量语音匹配结果</span>
-          <button class="picker-close" @click="$emit('close')">✕</button>
+          <button class="picker-close" @click="$emit('close')" title="关闭">✕</button>
         </div>
 
         <div class="match-summary">
@@ -30,13 +30,13 @@
         </div>
 
         <div class="picker-footer">
-          <button class="picker-cancel" @click="$emit('close')">取消</button>
+          <button class="picker-cancel" @click="$emit('close')" title="取消匹配">取消</button>
           <button v-if="existingDifferent > 0" class="picker-confirm overwrite"
-            @click="$emit('apply', true)">
+            @click="$emit('apply', true)" title="覆盖已有语音绑定">
             覆盖全部 ({{ result.newBindings + existingDifferent }})
           </button>
           <button class="picker-confirm" @click="$emit('apply', false)"
-            :disabled="result.newBindings === 0">
+            :disabled="result.newBindings === 0" title="仅绑定尚未绑定的语音">
             仅绑定新的 ({{ result.newBindings }})
           </button>
         </div>

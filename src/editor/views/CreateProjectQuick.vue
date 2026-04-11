@@ -8,12 +8,12 @@
       <label>保存位置
         <div class="path-input">
           <input v-model="location" readonly />
-          <button @click="browseLocation">浏览...</button>
+          <button @click="browseLocation" title="选择项目保存位置">浏览...</button>
         </div>
       </label>
       <div class="footer">
-        <button class="btn-cancel" @click="$emit('cancel')">取消</button>
-        <button class="btn-create" @click="handleCreate" :disabled="!canCreate || creating">
+        <button class="btn-cancel" @click="$emit('cancel')" title="取消创建">取消</button>
+        <button class="btn-create" @click="handleCreate" :disabled="!canCreate || creating" title="创建新项目">
           {{ creating ? '创建中...' : '✨ 创建项目' }}
         </button>
       </div>

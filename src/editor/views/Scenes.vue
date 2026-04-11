@@ -4,7 +4,7 @@
     <div class="scene-sidebar">
       <div class="list-header">
         <h3>场景列表</h3>
-        <button class="add-btn" @click="addScene">+</button>
+        <button class="add-btn" @click="addScene" title="创建新场景">+</button>
       </div>
       <div class="list-items">
         <div 
@@ -31,8 +31,8 @@
         <div class="actions">
           <!-- View toggle: Timeline / Canvas -->
           <div class="view-toggle">
-            <button :class="{ active: viewMode === 'timeline' }" @click="viewMode = 'timeline'">📋 时间线</button>
-            <button :class="{ active: viewMode === 'canvas' }" @click="viewMode = 'canvas'">🎨 画布</button>
+            <button :class="{ active: viewMode === 'timeline' }" @click="viewMode = 'timeline'" title="时间线视图">📋 时间线</button>
+            <button :class="{ active: viewMode === 'canvas' }" @click="viewMode = 'canvas'" title="画布视图">🎨 画布</button>
           </div>
           <select v-model="newCommandType" class="cmd-select">
             <option value="dialogue">对话</option>
@@ -49,8 +49,8 @@
             <option value="jump">跳转场景</option>
             <option value="end">结束游戏</option>
           </select>
-          <button class="primary-btn" @click="addCommand">添加指令</button>
-          <button class="save-btn" @click="save">保存脚本</button>
+          <button class="primary-btn" @click="addCommand" title="添加新指令">添加指令</button>
+          <button class="save-btn" @click="save" title="保存脚本更改">保存脚本</button>
         </div>
       </div>
       
@@ -67,9 +67,9 @@
             <span class="cmd-preview">{{ getCommandPreview(cmd) }}</span>
           </div>
           <div class="cmd-actions">
-            <button @click.stop="moveCmd(index, -1)" :disabled="index === 0">↑</button>
-            <button @click.stop="moveCmd(index, 1)" :disabled="index === selectedScene.commands.length - 1">↓</button>
-            <button @click.stop="deleteCmd(index)" class="del-btn">✕</button>
+            <button @click.stop="moveCmd(index, -1)" :disabled="index === 0" title="上移指令">↑</button>
+            <button @click.stop="moveCmd(index, 1)" :disabled="index === selectedScene.commands.length - 1" title="下移指令">↓</button>
+            <button @click.stop="deleteCmd(index)" class="del-btn" title="删除指令">✕</button>
           </div>
         </div>
         <div class="empty-commands" v-if="!selectedScene.commands || selectedScene.commands.length === 0">
@@ -269,9 +269,9 @@
             <div class="option-item" v-for="(opt, i) in selectedCmd.options" :key="i">
               <input type="text" v-model="opt.text" placeholder="选项文本" />
               <input type="text" v-model="opt.jump" placeholder="跳转场景" />
-              <button @click="selectedCmd.options.splice(i, 1)">x</button>
+              <button @click="selectedCmd.options.splice(i, 1)" title="删除选项">x</button>
             </div>
-            <button class="secondary-btn" @click="!selectedCmd.options ? selectedCmd.options = [{text:'', jump:''}] : selectedCmd.options.push({text:'', jump:''})">添加选项</button>
+            <button class="secondary-btn" @click="!selectedCmd.options ? selectedCmd.options = [{text:'', jump:''}] : selectedCmd.options.push({text:'', jump:''})" title="添加新选项">添加选项</button>
           </div>
         </template>
 

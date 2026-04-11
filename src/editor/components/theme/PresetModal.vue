@@ -5,7 +5,7 @@
         <!-- Header -->
         <div class="modal-header">
           <h3>📦 主题预设 <HelpTip :text="HELP_THEME.presets" /></h3>
-          <button class="close-btn" @click="onClose">✕</button>
+          <button class="close-btn" @click="onClose" title="关闭">✕</button>
         </div>
 
         <!-- Body: 2×2 preset card grid -->
@@ -44,8 +44,8 @@
 
         <!-- Footer -->
         <div class="modal-footer">
-          <button class="cancel-btn" @click="onClose">取消</button>
-          <button class="apply-btn" :disabled="!selectedId" @click="onApply">应用预设</button>
+          <button class="cancel-btn" @click="onClose" title="取消">取消</button>
+          <button class="apply-btn" :disabled="!selectedId" @click="onApply" title="应用选中的主题预设">应用预设</button>
         </div>
       </div>
     </div>

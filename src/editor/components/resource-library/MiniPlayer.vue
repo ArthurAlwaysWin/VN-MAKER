@@ -123,7 +123,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mini-player">
-    <button class="play-btn" @click="togglePlay" :aria-label="isPlaying ? '暂停' : '播放'">
+    <button class="play-btn" @click="togglePlay" :aria-label="isPlaying ? '暂停' : '播放'" :title="isPlaying ? '暂停' : '播放'">
       {{ isPlaying ? '⏸' : '▶' }}
     </button>
     <div class="track" @click="seek" @mousedown="startDrag">

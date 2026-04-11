@@ -4,7 +4,7 @@
       <div class="ns-modal">
         <div class="modal-header">
           <h3>🖼️ 九宫格配置 <HelpTip :text="HELP_THEME.nineSlice" /></h3>
-          <button class="close-btn" @click="onClose">✕</button>
+          <button class="close-btn" @click="onClose" title="关闭">✕</button>
         </div>
 
         <!-- Element tabs (D-11) -->

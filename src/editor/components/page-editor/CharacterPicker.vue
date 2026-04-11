@@ -3,7 +3,7 @@
     <div class="char-picker-panel">
       <div class="picker-header">
         <span>选择角色</span>
-        <button class="picker-close" @click="close">✕</button>
+        <button class="picker-close" @click="close" title="关闭">✕</button>
       </div>
       <div class="picker-list" v-if="characterEntries.length > 0">
         <div v-for="[charId, char] in characterEntries" :key="charId" class="char-section">
@@ -31,8 +31,8 @@
         暂无角色，请先在资源库中导入角色
       </div>
       <div class="picker-footer">
-        <button class="picker-cancel" @click="close">取消</button>
-        <button class="picker-confirm" :disabled="!pickedCharId" @click="confirmAdd">确定</button>
+        <button class="picker-cancel" @click="close" title="取消选择">取消</button>
+        <button class="picker-confirm" :disabled="!pickedCharId" @click="confirmAdd" title="确认添加角色">确定</button>
       </div>
     </div>
   </div>

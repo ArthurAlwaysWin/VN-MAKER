@@ -8,8 +8,8 @@
       </div>
 
       <div class="actions">
-        <button class="btn-primary" @click="$emit('create-project')">✨ 新建项目</button>
-        <button class="btn-secondary" @click="handleOpen">📂 打开项目</button>
+        <button class="btn-primary" @click="$emit('create-project')" title="创建一个新的视觉小说项目">✨ 新建项目</button>
+        <button class="btn-secondary" @click="handleOpen" title="打开已有项目文件夹">📂 打开项目</button>
       </div>
 
       <div class="recent" v-if="project.recentProjects.length > 0">

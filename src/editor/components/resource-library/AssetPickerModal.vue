@@ -43,7 +43,7 @@ function onOverlayClick(e) {
       <div class="picker-modal">
         <div class="picker-header">
           <span class="picker-title">选择{{ categoryLabel }}</span>
-          <button class="picker-close" @click="$emit('close')">✕</button>
+          <button class="picker-close" @click="$emit('close')" title="关闭">✕</button>
         </div>
         <div class="picker-body">
           <div v-if="fileList.length === 0" class="picker-empty">

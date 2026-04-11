@@ -70,7 +70,7 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </div>
-    <button @click="dismiss" aria-label="关闭通知">×</button>
+    <button @click="dismiss" aria-label="关闭通知" title="关闭通知">×</button>
   </div>
 </template>
 

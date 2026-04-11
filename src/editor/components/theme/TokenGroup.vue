@@ -1,6 +1,6 @@
 <template>
   <div class="token-group">
-    <button class="group-header" @click="expanded = !expanded">
+    <button class="group-header" @click="expanded = !expanded" :title="label">
       <span class="group-arrow" :class="{ expanded }">▶</span>
       <span class="group-label">{{ label }}</span>
       <HelpTip v-if="helpText" :text="helpText" />

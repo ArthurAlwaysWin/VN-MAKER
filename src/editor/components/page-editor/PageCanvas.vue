@@ -52,7 +52,8 @@
       <div v-if="page && page.dialogues && page.dialogues.length > 1" class="dialogue-nav">
         <button v-for="(dlg, i) in page.dialogues" :key="i"
           class="dlg-nav-btn" :class="{ active: editor.selectedDialogueIndex.value === i }"
-          @click.stop="editor.selectDialogue(i)">
+          @click.stop="editor.selectDialogue(i)"
+          :title="`切换到第 ${i + 1} 条对话`">
           {{ i + 1 }}
         </button>
       </div>
@@ -62,7 +63,7 @@
         <div class="choice-prompt" v-if="page.prompt">{{ page.prompt }}</div>
         <div class="choice-prompt choice-prompt-empty" v-else>请做出选择...</div>
         <button v-for="(opt, idx) in (page.options || [])" :key="idx"
-          class="choice-btn" @click.stop>
+          class="choice-btn" @click.stop :title="opt.text || `选项 ${idx + 1}`">
           {{ opt.text || `选项 ${idx + 1}` }}
         </button>
       </div>

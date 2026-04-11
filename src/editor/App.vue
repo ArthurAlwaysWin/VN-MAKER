@@ -22,7 +22,7 @@
         <button class="icon-btn" title="撤销 (Ctrl+Z)" :disabled="!canUndo" @click="script.undo(); project.markDirty()">↩</button>
         <button class="icon-btn" title="重做 (Ctrl+Y)" :disabled="!canRedo" @click="script.redo(); project.markDirty()">↪</button>
         <button class="icon-btn save-btn" title="保存 (Ctrl+S)" :disabled="!project.isDirty" @click="manualSave">💾</button>
-        <button class="preview-btn" @click="openPreview">▶ 预览</button>
+        <button class="preview-btn" @click="openPreview" title="在新窗口中预览游戏">▶ 预览</button>
       </div>
     </header>
 

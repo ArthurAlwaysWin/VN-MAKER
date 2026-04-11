@@ -4,9 +4,9 @@
       <h2>素材管理</h2>
       <div class="toolbar-right">
         <div class="tabs">
-          <button :class="{active: currentTab === 'backgrounds'}" @click="setTab('backgrounds')">背景</button>
-          <button :class="{active: currentTab === 'characters'}" @click="setTab('characters')">角色</button>
-          <button :class="{active: currentTab === 'audio'}" @click="setTab('audio')">音频</button>
+          <button :class="{active: currentTab === 'backgrounds'}" @click="setTab('backgrounds')" title="背景素材">背景</button>
+          <button :class="{active: currentTab === 'characters'}" @click="setTab('characters')" title="角色素材">角色</button>
+          <button :class="{active: currentTab === 'audio'}" @click="setTab('audio')" title="音频素材">音频</button>
         </div>
         <label class="upload-btn">
           📂 导入文件

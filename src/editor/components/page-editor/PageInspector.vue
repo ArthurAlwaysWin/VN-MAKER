@@ -302,7 +302,7 @@
                 :value="fontOverride.textColor || '#ffffff'"
                 @input="setOverrideField('textColor', $event.target.value)"
                 @change="script.pushState()" />
-              <button v-if="fontOverride.textColor" class="reset-btn" @click="setOverrideField('textColor', null); script.pushState()">重置</button>
+              <button v-if="fontOverride.textColor" class="reset-btn" @click="setOverrideField('textColor', null); script.pushState()" title="重置文字颜色">重置</button>
             </div>
           </div>
           <div class="form-group">
@@ -339,7 +339,7 @@
                 :value="fontOverride.nameplateColor || '#ffffff'"
                 @input="setOverrideField('nameplateColor', $event.target.value)"
                 @change="script.pushState()" />
-              <button v-if="fontOverride.nameplateColor" class="reset-btn" @click="setOverrideField('nameplateColor', null); script.pushState()">重置</button>
+              <button v-if="fontOverride.nameplateColor" class="reset-btn" @click="setOverrideField('nameplateColor', null); script.pushState()" title="重置铭牌颜色">重置</button>
             </div>
           </div>
         </template>

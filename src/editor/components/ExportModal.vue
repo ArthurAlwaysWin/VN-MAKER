@@ -20,7 +20,7 @@
             </div>
             <HelpTip v-if="state === 'config'" :text="HELP_EXPORT.formatDifference" />
           </div>
-          <button v-if="state !== 'exporting'" class="export-close" @click="onClose">×</button>
+          <button v-if="state !== 'exporting'" class="export-close" @click="onClose" title="关闭">×</button>
         </div>
 
         <!-- STATE: config -->
@@ -110,16 +110,16 @@
         <!-- Footer (state-dependent) -->
         <div class="export-footer">
           <template v-if="state === 'config'">
-            <button class="btn-secondary" @click="onClose">取消</button>
-            <button class="btn-primary" :disabled="!gameTitle.trim() || !outputDir" @click="startExport">开始导出</button>
+            <button class="btn-secondary" @click="onClose" title="取消导出">取消</button>
+            <button class="btn-primary" :disabled="!gameTitle.trim() || !outputDir" @click="startExport" title="开始导出游戏">开始导出</button>
           </template>
           <template v-else-if="state === 'exporting'">
-            <button class="btn-secondary" @click="cancelExport">取消</button>
+            <button class="btn-secondary" @click="cancelExport" title="取消导出">取消</button>
           </template>
           <template v-else>
             <button v-if="result?.success" class="btn-secondary" @click="openOutputFolder" title="在文件管理器中打开输出目录">📂 打开文件夹</button>
             <button v-if="!result?.success" class="btn-secondary" @click="retry" title="重新导出">重试</button>
-            <button class="btn-primary" @click="emit('close')">关闭</button>
+            <button class="btn-primary" @click="emit('close')" title="关闭导出窗口">关闭</button>
           </template>
         </div>
       </div>

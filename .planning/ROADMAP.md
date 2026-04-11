@@ -236,6 +236,11 @@ Plans:
   - 标题页/设置页设计器（预制组件、拖拽、属性）
 
 **Requirements:** HELP-01 ~ HELP-08
+**Plans:** 2 plans
+Plans:
+- [ ] 36-01-PLAN.md — HelpTip 组件 + helpTexts.js + 主题/导出/设置区帮助集成
+- [ ] 36-02-PLAN.md — 剧本/资源/设计器帮助集成 + 按钮 title 全覆盖扫描
+
 **New component:** `src/editor/components/HelpTip.vue`
-**Files (~15+):** All major editor views + toolbar components
+**Files (~25+):** All major editor views + toolbar components
 **Risk:** Low — 纯 UI 增强，不影响核心逻辑

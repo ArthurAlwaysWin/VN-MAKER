@@ -18,13 +18,13 @@
 ### 帮助系统 (HELP)
 
 - [x] **HELP-01**: HelpTip 组件（? 图标模式）：鼠标悬停显示说明气泡，支持多行文本，统一视觉风格
-- [ ] **HELP-02**: 按钮/工具栏 hover title 全覆盖：所有图标按钮和工具栏操作都有中文 title 属性
+- [x] **HELP-02**: 按钮/工具栏 hover title 全覆盖：所有图标按钮和工具栏操作都有中文 title 属性
 - [x] **HELP-03**: 主题编辑器帮助内容：调色盘生成器、九宫格配置、预设系统、各 token 分组的用途说明
 - [x] **HELP-04**: 导出功能帮助内容：Web vs 桌面格式区别、ZIP 压缩说明、图标选择说明
 - [x] **HELP-05**: 项目设置帮助内容：分辨率、项目名称等配置项说明
-- [ ] **HELP-06**: 剧本编辑器帮助内容：转场效果、语音匹配、角色管理等操作说明
-- [ ] **HELP-07**: 资源库帮助内容：格式要求、背景去除工具、字体导入说明
-- [ ] **HELP-08**: 标题页/设置页设计器帮助内容：预制组件用途、拖拽定位、属性配置说明
+- [x] **HELP-06**: 剧本编辑器帮助内容：转场效果、语音匹配、角色管理等操作说明
+- [x] **HELP-07**: 资源库帮助内容：格式要求、背景去除工具、字体导入说明
+- [x] **HELP-08**: 标题页/设置页设计器帮助内容：预制组件用途、拖拽定位、属性配置说明
 
 ## Out of Scope
 
@@ -48,13 +48,13 @@
 | L10N-06 | Phase 35 | Complete |
 | L10N-07 | Phase 35 | Complete |
 | HELP-01 | Phase 36 | Complete |
-| HELP-02 | Phase 36 | Pending |
+| HELP-02 | Phase 36 | Complete |
 | HELP-03 | Phase 36 | Complete |
 | HELP-04 | Phase 36 | Complete |
 | HELP-05 | Phase 36 | Complete |
-| HELP-06 | Phase 36 | Pending |
-| HELP-07 | Phase 36 | Pending |
-| HELP-08 | Phase 36 | Pending |
+| HELP-06 | Phase 36 | Complete |
+| HELP-07 | Phase 36 | Complete |
+| HELP-08 | Phase 36 | Complete |
 
 **Coverage:**
 - v0.9 requirements: 15 total

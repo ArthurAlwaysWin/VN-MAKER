@@ -4,6 +4,7 @@
       v-for="group in TOKEN_GROUPS"
       :key="group.id"
       :label="group.label"
+      :help-text="group.helpText || ''"
     >
       <template v-for="key in group.keys" :key="key">
         <ColorTokenRow
@@ -42,6 +43,7 @@
 
 <script setup>
 import { DEFAULT_TOKENS } from '../../../engine/tokens.js';
+import { HELP_THEME } from '../../helpTexts.js';
 import TokenGroup from './TokenGroup.vue';
 import ColorTokenRow from './ColorTokenRow.vue';
 import FontTokenRow from './FontTokenRow.vue';
@@ -50,16 +52,16 @@ import GradientTokenRow from './GradientTokenRow.vue';
 
 // ─── 10 Token Groups (D-14) ─────────────────────────
 const TOKEN_GROUPS = [
-  { id: 'core', label: '🎨 核心色', keys: ['primary', 'primary-subtle', 'danger', 'danger-hover', 'accent', 'accent-border', 'shadow', 'title-glow', 'save-title', 'load-title'] },
+  { id: 'core', label: '🎨 核心色', helpText: HELP_THEME.groupCore, keys: ['primary', 'primary-subtle', 'danger', 'danger-hover', 'accent', 'accent-border', 'shadow', 'title-glow', 'save-title', 'load-title'] },
   { id: 'text', label: '📝 文字', keys: ['text', 'text-heading', 'text-secondary', 'text-muted', 'text-dim', 'text-faint'] },
   { id: 'borders', label: '📏 边框', keys: ['border', 'border-hover', 'border-active'] },
-  { id: 'backgrounds', label: '🖼️ 背景', keys: ['dialogue-bg', 'panel-bg', 'menu-bg', 'card-bg', 'card-bg-hover', 'title-bg', 'confirm-bg'] },
-  { id: 'buttons', label: '🔘 按钮', keys: ['btn-bg', 'btn-text', 'btn-border', 'btn-hover-bg', 'btn-hover-text', 'btn-hover-border'] },
+  { id: 'backgrounds', label: '🖼️ 背景', helpText: HELP_THEME.groupBackgrounds, keys: ['dialogue-bg', 'panel-bg', 'menu-bg', 'card-bg', 'card-bg-hover', 'title-bg', 'confirm-bg'] },
+  { id: 'buttons', label: '🔘 按钮', helpText: HELP_THEME.groupButtons, keys: ['btn-bg', 'btn-text', 'btn-border', 'btn-hover-bg', 'btn-hover-text', 'btn-hover-border'] },
   { id: 'fonts', label: '🔤 字体', keys: ['font-body', 'font-display'] },
   { id: 'radii', label: '⭕ 圆角', keys: ['radius', 'radius-lg'] },
-  { id: 'blur', label: '🌫️ 模糊', keys: ['blur'] },
-  { id: 'controls', label: '🎛️ 控件', keys: ['slider-track', 'slider-thumb', 'scrollbar'] },
-  { id: 'speaker', label: '💬 说话人', keys: ['speaker-shadow'] },
+  { id: 'blur', label: '🌫️ 模糊', helpText: HELP_THEME.groupBlur, keys: ['blur'] },
+  { id: 'controls', label: '🎛️ 控件', helpText: HELP_THEME.groupControls, keys: ['slider-track', 'slider-thumb', 'scrollbar'] },
+  { id: 'speaker', label: '💬 说话人', helpText: HELP_THEME.groupSpeaker, keys: ['speaker-shadow'] },
 ];
 
 // ─── Token Labels 中文映射 (D-01: 简洁派 2-4 字) ────

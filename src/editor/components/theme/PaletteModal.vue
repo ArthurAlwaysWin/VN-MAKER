@@ -3,7 +3,7 @@
     <div class="palette-overlay" @click.self="$emit('close')">
       <div class="palette-modal">
         <div class="modal-header">
-          <h3>🎨 调色盘生成器</h3>
+          <h3>🎨 调色盘生成器 <HelpTip :text="HELP_THEME.paletteGenerator" /></h3>
           <button class="close-btn" @click="$emit('close')">✕</button>
         </div>
 
@@ -73,6 +73,8 @@ import { ref, computed } from 'vue';
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
 import { generatePalette } from '../../../engine/colorHarmony.js';
 import { DEFAULT_TOKENS } from '../../../engine/tokens.js';
+import HelpTip from '../HelpTip.vue';
+import { HELP_THEME } from '../../helpTexts.js';
 
 const emit = defineEmits(['close']);
 const editor = useThemeEditor();

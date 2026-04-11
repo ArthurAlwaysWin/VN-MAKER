@@ -4,7 +4,7 @@
       <div class="preset-modal">
         <!-- Header -->
         <div class="modal-header">
-          <h3>📦 主题预设</h3>
+          <h3>📦 主题预设 <HelpTip :text="HELP_THEME.presets" /></h3>
           <button class="close-btn" @click="onClose">✕</button>
         </div>
 
@@ -58,6 +58,8 @@ import { useThemeEditor } from '../../composables/useThemeEditor.js';
 import { useScriptStore } from '../../stores/script.js';
 import { THEME_PRESETS } from '../../../engine/presets.js';
 import { buildThemeZip, parseThemeZip } from '../../../utils/themePackager.js';
+import HelpTip from '../HelpTip.vue';
+import { HELP_THEME } from '../../helpTexts.js';
 
 const emit = defineEmits(['close']);
 const editor = useThemeEditor();

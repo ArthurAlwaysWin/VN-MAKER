@@ -3,6 +3,7 @@
     <button class="group-header" @click="expanded = !expanded">
       <span class="group-arrow" :class="{ expanded }">▶</span>
       <span class="group-label">{{ label }}</span>
+      <HelpTip v-if="helpText" :text="helpText" />
     </button>
     <div class="group-content" :class="{ expanded }">
       <slot />
@@ -12,9 +13,11 @@
 
 <script setup>
 import { ref } from 'vue';
+import HelpTip from '../HelpTip.vue';
 
 defineProps({
   label: String,
+  helpText: { type: String, default: '' },
 });
 
 const expanded = ref(true);

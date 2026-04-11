@@ -3,7 +3,7 @@
     <div class="ns-overlay" @click.self="onClose">
       <div class="ns-modal">
         <div class="modal-header">
-          <h3>🖼️ 九宫格配置</h3>
+          <h3>🖼️ 九宫格配置 <HelpTip :text="HELP_THEME.nineSlice" /></h3>
           <button class="close-btn" @click="onClose">✕</button>
         </div>
 
@@ -37,7 +37,7 @@
                       选择图片
                       <input type="file" accept="image/*" hidden @change="onImageUpload($event, elem.key)" />
                     </label>
-                    <button v-if="getElementConfig(elem.key).src" class="clear-btn" @click="clearImage(elem.key)">清除</button>
+                    <button v-if="getElementConfig(elem.key).src" class="clear-btn" @click="clearImage(elem.key)" title="清除背景图片">清除</button>
                   </div>
                 </div>
               </div>
@@ -72,7 +72,7 @@
                         选择图片
                         <input type="file" accept="image/*" hidden @change="onImageUpload($event, elem.key, state)" />
                       </label>
-                      <button v-if="getElementConfig(elem.key).states?.[state]?.src" class="clear-btn" @click="clearImage(elem.key, state)">清除</button>
+                      <button v-if="getElementConfig(elem.key).states?.[state]?.src" class="clear-btn" @click="clearImage(elem.key, state)" title="清除背景图片">清除</button>
                     </div>
                   </div>
                 </div>
@@ -89,6 +89,8 @@
 import { ref } from 'vue';
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import HelpTip from '../HelpTip.vue';
+import { HELP_THEME } from '../../helpTexts.js';
 
 const emit = defineEmits(['close']);
 const editor = useThemeEditor();

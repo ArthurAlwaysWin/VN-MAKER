@@ -2,7 +2,7 @@
   <DropOverlay :categoryLabel="categoryLabels[activeSubTab]" @drop="onFileDrop">
     <div class="resource-library">
       <div class="toolbar">
-        <h2>资源库</h2>
+        <h2>资源库 <HelpTip :text="HELP_RESOURCE.imageFormats" /></h2>
         <div class="toolbar-center">
           <div class="sub-tabs">
             <button
@@ -13,7 +13,7 @@
             >{{ tab.icon }} {{ tab.label }}</button>
           </div>
         </div>
-        <button v-if="showImportButton" class="import-btn" @click="onImportClick">📂 导入文件</button>
+        <button v-if="showImportButton" class="import-btn" @click="onImportClick" title="导入文件到当前分类">📂 导入文件</button>
         <span v-else style="width: 90px;"></span>
       </div>
       <ImportNotification :result="importResult" @dismiss="importResult = null" />
@@ -46,6 +46,8 @@ import AssetGrid from '../components/resource-library/AssetGrid.vue';
 import FontGrid from '../components/resource-library/FontGrid.vue';
 import AudioList from '../components/resource-library/AudioList.vue';
 import CharacterEditor from '../components/resource-library/CharacterEditor.vue';
+import HelpTip from '../components/HelpTip.vue';
+import { HELP_RESOURCE } from '../helpTexts.js';
 
 const assets = useAssetStore();
 const script = useScriptStore();

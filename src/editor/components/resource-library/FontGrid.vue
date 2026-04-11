@@ -9,6 +9,8 @@ import { useAssetStore } from '../../stores/assets.js';
 import { useScriptStore } from '../../stores/script.js';
 import InlineEdit from './InlineEdit.vue';
 import ContextMenu from './ContextMenu.vue';
+import HelpTip from '../HelpTip.vue';
+import { HELP_RESOURCE } from '../../helpTexts.js';
 
 const assets = useAssetStore();
 const script = useScriptStore();
@@ -134,7 +136,7 @@ async function onRename(oldName, newName) {
     <div class="empty-icon">🔤</div>
     <p class="empty-title">当前分类下暂无字体文件</p>
     <p class="empty-subtitle">拖放文件到此处，或点击上方"导入文件"按钮</p>
-    <p class="empty-formats">支持格式：TTF、OTF、WOFF、WOFF2</p>
+    <p class="empty-formats">支持格式：TTF、OTF、WOFF、WOFF2 <HelpTip :text="HELP_RESOURCE.fontFormats" /></p>
   </div>
 
   <!-- Font preview grid -->

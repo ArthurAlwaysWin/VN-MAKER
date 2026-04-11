@@ -3,7 +3,7 @@
     <!-- ─── 左：组件面板 ─── -->
     <div class="component-palette">
       <div class="palette-section">
-        <div class="palette-header">⚙️ 设置组件</div>
+        <div class="palette-header">⚙️ 设置组件 <HelpTip :text="HELP_DESIGNER.settingComponents" /></div>
         <div
           v-for="comp in settingComponents"
           :key="comp.settingType"
@@ -15,7 +15,7 @@
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'button')">✕ 关闭按钮</div>
       </div>
       <div class="palette-section">
-        <div class="palette-header">🎨 装饰元素</div>
+        <div class="palette-header">🎨 装饰元素 <HelpTip :text="HELP_DESIGNER.decorImage" /></div>
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'label')">🏷️ 文字标签</div>
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'image')">🖼️ 装饰图片</div>
       </div>
@@ -26,10 +26,10 @@
       <div class="toolbar">
         <h3>设置页设计</h3>
         <div class="toolbar-actions">
-          <button class="toolbar-btn" @click="pickBackground">🖼️ 背景</button>
-          <button class="toolbar-btn" v-if="layout.background" @click="clearBackground">✕ 清除背景</button>
+          <button class="toolbar-btn" @click="pickBackground" title="选择背景图片">🖼️ 背景</button>
+          <button class="toolbar-btn" v-if="layout.background" @click="clearBackground" title="清除背景图片">✕ 清除背景</button>
           <span class="toolbar-sep"></span>
-          <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected">🗑 删除</button>
+          <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected" title="删除选中元素">🗑 删除</button>
         </div>
       </div>
 
@@ -283,6 +283,8 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import DraggableElement from '../components/canvas/DraggableElement.vue';
+import HelpTip from '../components/HelpTip.vue';
+import { HELP_DESIGNER } from '../helpTexts.js';
 import {
   SETTING_DEFS,
   createSettingElement,

@@ -4,7 +4,7 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-title">角色列表</span>
-        <button class="add-btn" @click="addCharacter" aria-label="创建角色">+</button>
+        <button class="add-btn" @click="addCharacter" aria-label="创建角色" title="创建新角色">+</button>
       </div>
       <div class="sidebar-list">
         <!-- Empty sidebar -->
@@ -29,7 +29,7 @@
         </div>
       </div>
       <div class="sidebar-footer">
-        <button class="new-char-btn" @click="addCharacter">+ 新角色</button>
+        <button class="new-char-btn" @click="addCharacter" title="创建新角色">+ 新角色</button>
       </div>
     </div>
 
@@ -48,13 +48,13 @@
       </div>
 
       <!-- Delete character button -->
-      <button class="delete-char-btn" @click="deleteCharacter(selectedId)">删除此角色</button>
+      <button class="delete-char-btn" @click="deleteCharacter(selectedId)" title="永久删除该角色及其所有表情">删除此角色</button>
 
       <!-- Expression Grid -->
       <div class="expressions-section">
         <div class="section-header">
-          <h3>表情列表</h3>
-          <button class="import-expr-btn" @click="importExpression">+ 导入表情</button>
+          <h3>表情列表 <HelpTip :text="HELP_RESOURCE.characterExpr" /></h3>
+          <button class="import-expr-btn" @click="importExpression" title="导入表情图片文件">+ 导入表情</button>
         </div>
 
         <div v-if="expressions.length === 0" class="expr-empty">
@@ -135,6 +135,8 @@ import { useAssetStore } from '../../stores/assets.js';
 import InlineEdit from './InlineEdit.vue';
 import ContextMenu from './ContextMenu.vue';
 import BgRemovalModal from './BgRemovalModal.vue';
+import HelpTip from '../HelpTip.vue';
+import { HELP_RESOURCE } from '../../helpTexts.js';
 
 const script = useScriptStore();
 const assets = useAssetStore();

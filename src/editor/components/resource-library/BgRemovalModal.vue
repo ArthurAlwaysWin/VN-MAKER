@@ -3,7 +3,7 @@
     <div v-if="visible" class="bgr-overlay" @click.self="$emit('cancel')">
       <div class="bgr-modal">
         <div class="bgr-header">
-          <span>去除纯色背景</span>
+          <span>去除纯色背景 <HelpTip :text="HELP_RESOURCE.bgRemoval" /></span>
           <button class="bgr-close" @click="$emit('cancel')">×</button>
         </div>
         <div class="bgr-body">
@@ -65,9 +65,10 @@
               class="bgr-btn-primary"
               :disabled="!pickedColor || saving"
               @click="confirmRemoval"
+              title="保存去背景后的透明 PNG"
             >{{ saving ? '保存中...' : '✅ 确认去背景' }}</button>
             <div class="bgr-btn-row">
-              <button class="bgr-btn-secondary" @click="$emit('skip')">直接使用</button>
+              <button class="bgr-btn-secondary" @click="$emit('skip')" title="跳过去背景，直接使用原图">直接使用</button>
               <button class="bgr-btn-secondary" @click="$emit('cancel')">取消</button>
             </div>
           </div>
@@ -83,6 +84,8 @@
  * User clicks to pick background color, adjusts tolerance/feather, confirms to export transparent PNG.
  */
 import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
+import HelpTip from '../HelpTip.vue';
+import { HELP_RESOURCE } from '../../helpTexts.js';
 
 const props = defineProps({
   visible: Boolean,

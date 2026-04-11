@@ -20,7 +20,7 @@
         </div>
         <div class="form-row">
           <div class="form-group half">
-            <label>过渡</label>
+            <label>过渡 <HelpTip :text="HELP_SCRIPT.transition" /></label>
             <select :value="page.transition?.type || 'fade'"
               @change="setTransitionType($event.target.value)" class="field-input">
               <option value="fade">淡入淡出</option>
@@ -41,7 +41,7 @@
     <!-- Section 2: Characters -->
     <div class="inspector-section">
       <div class="section-toggle" @click="sections.chars = !sections.chars">
-        {{ sections.chars ? '▼' : '▶' }} 🧑 角色列表
+        {{ sections.chars ? '▼' : '▶' }} 🧑 角色列表 <HelpTip :text="HELP_SCRIPT.addCharacter" />
       </div>
       <div v-if="sections.chars" class="section-body">
         <div v-for="(char, idx) in page.characters" :key="char.id + '-' + idx"
@@ -66,7 +66,7 @@
           </div>
         </div>
         <div v-if="page.characters.length === 0" class="empty-hint">当前页面无角色</div>
-        <button class="add-btn" @click="editor.showCharPicker.value = true">+ 添加角色</button>
+        <button class="add-btn" @click="editor.showCharPicker.value = true" title="添加角色到当前页面">+ 添加角色</button>
       </div>
     </div>
 
@@ -89,9 +89,9 @@
           <span v-if="dlg.voice" class="dlg-voice-badge" title="已绑定语音">🔊</span>
           <span class="dlg-speaker-tag" v-if="dlg.speaker">{{ getCharName(dlg.speaker) }}:</span>
           <span class="dlg-preview">"{{ truncate(dlg.text, 15) }}"</span>
-          <button class="delete-x" @click.stop="removeDialogue(idx)">✕</button>
+          <button class="delete-x" @click.stop="removeDialogue(idx)" title="删除此对话">✕</button>
         </div>
-        <button class="add-btn" @click="addDialogue">+ 添加对话</button>
+        <button class="add-btn" @click="addDialogue" title="添加新对话">+ 添加对话</button>
 
         <!-- Detail editor for selected dialogue -->
         <div v-if="selectedDialogue" class="dialogue-editor">
@@ -154,7 +154,7 @@
     <!-- Section 3b: Choice Options (choice pages only) -->
     <div class="inspector-section" v-if="page && page.type === 'choice'">
       <div class="section-toggle" @click="sections.choices = !sections.choices">
-        {{ sections.choices ? '▼' : '▶' }} 🔀 选项编辑
+        {{ sections.choices ? '▼' : '▶' }} 🔀 选项编辑 <HelpTip :text="HELP_SCRIPT.choicePage" />
       </div>
       <div v-if="sections.choices" class="section-body">
         <div class="form-group">
@@ -212,7 +212,7 @@
         <div v-if="!page.options || page.options.length === 0" class="empty-hint">
           暂无选项，点击下方按钮添加
         </div>
-        <button class="add-btn" @click="addOption">+ 添加选项</button>
+        <button class="add-btn" @click="addOption" title="添加新选项">+ 添加选项</button>
       </div>
     </div>
 
@@ -364,6 +364,8 @@ import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
 import { useAssetStore } from '../../stores/assets.js';
 import AudioPicker from './AudioPicker.vue';
+import HelpTip from '../HelpTip.vue';
+import { HELP_SCRIPT } from '../../helpTexts.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();

@@ -2,9 +2,10 @@
   <div class="canvas-toolbar">
     <template v-if="!editor.isPreviewMode.value">
       <button class="add-char-btn" @click="editor.showCharPicker.value = true"
-        :disabled="!editor.currentPage.value">
+        :disabled="!editor.currentPage.value" title="添加角色到当前页面">
         + 添加角色
       </button>
+      <HelpTip :text="HELP_SCRIPT.addCharacter" />
       <span class="toolbar-sep"></span>
       <span class="toolbar-info" v-if="editor.currentPage.value">
         页面 {{ editor.selectedPageIndex.value + 1 }}
@@ -47,6 +48,8 @@
 
 <script setup>
 import { usePageEditor } from '../../composables/usePageEditor.js';
+import HelpTip from '../HelpTip.vue';
+import { HELP_SCRIPT } from '../../helpTexts.js';
 
 const editor = usePageEditor();
 </script>

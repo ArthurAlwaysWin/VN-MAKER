@@ -3,7 +3,7 @@
     <!-- ─── 左：组件面板 ─── -->
     <div class="component-palette">
       <div class="palette-section">
-        <div class="palette-header">🎮 预制按钮</div>
+        <div class="palette-header">🎮 预制按钮 <HelpTip :text="HELP_DESIGNER.presetButtons" /></div>
         <div v-for="preset in presetButtons" :key="preset.action"
           class="palette-item" :class="{ disabled: isButtonPlaced(preset.action) }"
           :draggable="!isButtonPlaced(preset.action)"
@@ -12,7 +12,7 @@
         </div>
       </div>
       <div class="palette-section">
-        <div class="palette-header">🎨 元素</div>
+        <div class="palette-header">🎨 元素 <HelpTip :text="HELP_DESIGNER.decorImage" /></div>
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'text')">🏷️ 文字标签</div>
         <div class="palette-item" draggable="true" @dragstart="onDragStart($event, 'image')">🖼️ 装饰图片</div>
       </div>
@@ -23,17 +23,17 @@
       <div class="toolbar">
         <h3>标题页设计</h3>
         <div class="toolbar-actions">
-          <button class="toolbar-btn" @click="pickBackground">🖼️ 背景</button>
-          <button class="toolbar-btn" v-if="layout.background" @click="clearBackground">✕ 清除背景</button>
+          <button class="toolbar-btn" @click="pickBackground" title="选择背景图片">🖼️ 背景</button>
+          <button class="toolbar-btn" v-if="layout.background" @click="clearBackground" title="清除背景图片">✕ 清除背景</button>
           <span class="toolbar-sep"></span>
-          <button class="toolbar-btn" @click="pickBgm">🎵 BGM</button>
+          <button class="toolbar-btn" @click="pickBgm" title="选择背景音乐">🎵 BGM</button>
           <template v-if="layout.bgm">
             <span class="toolbar-info">{{ bgmFilename }}</span>
-            <button class="toolbar-btn" @click="toggleBgmPreview">{{ bgmPlaying ? '⏸ 暂停' : '▶ 试听' }}</button>
-            <button class="toolbar-btn" @click="clearBgm">✕ 清除</button>
+            <button class="toolbar-btn" @click="toggleBgmPreview" :title="bgmPlaying ? '暂停试听' : '试听背景音乐'">{{ bgmPlaying ? '⏸ 暂停' : '▶ 试听' }}</button>
+            <button class="toolbar-btn" @click="clearBgm" title="清除背景音乐">✕ 清除</button>
           </template>
           <span class="toolbar-sep"></span>
-          <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected">🗑 删除</button>
+          <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected" title="删除选中元素">🗑 删除</button>
         </div>
       </div>
 
@@ -111,8 +111,8 @@
         <div class="inspector-section">
           <div class="section-title">📐 图层 <span class="hint">（↑↓ 方向键）</span></div>
           <div class="form-row">
-            <button class="layer-btn" :disabled="!canMoveUp" @click="moveUp">↑ 上移</button>
-            <button class="layer-btn" :disabled="!canMoveDown" @click="moveDown">↓ 下移</button>
+            <button class="layer-btn" :disabled="!canMoveUp" @click="moveUp" title="上移图层">↑ 上移</button>
+            <button class="layer-btn" :disabled="!canMoveDown" @click="moveDown" title="下移图层">↓ 下移</button>
           </div>
         </div>
 
@@ -241,6 +241,8 @@ import { useScriptStore } from '../stores/script.js';
 import { useAssetStore } from '../stores/assets.js';
 import DraggableElement from '../components/canvas/DraggableElement.vue';
 import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
+import HelpTip from '../components/HelpTip.vue';
+import { HELP_DESIGNER } from '../helpTexts.js';
 
 const scriptStore = useScriptStore();
 const assetStore = useAssetStore();

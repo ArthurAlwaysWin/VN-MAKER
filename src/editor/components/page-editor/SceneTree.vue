@@ -65,9 +65,10 @@
     </div>
 
     <div class="tree-footer">
-      <button class="footer-btn" @click.stop="onAddPage" :disabled="!selectedSceneId">+ 添加页面</button>
-      <button class="footer-btn" @click.stop="onAddScene">+ 添加场景</button>
-      <button class="footer-btn" @click.stop="onBatchMatchAll">🔊 批量语音匹配</button>
+      <button class="footer-btn" @click.stop="onAddPage" :disabled="!selectedSceneId" title="在当前场景末尾添加新页面">+ 添加页面</button>
+      <button class="footer-btn" @click.stop="onAddScene" title="创建新场景">+ 添加场景</button>
+      <button class="footer-btn" @click.stop="onBatchMatchAll" title="根据文件名自动匹配全部语音">🔊 批量语音匹配</button>
+      <HelpTip :text="HELP_SCRIPT.voiceMatch" />
     </div>
 
     <div v-if="contextMenu.visible" class="context-menu" :style="contextMenuStyle" @click.stop>
@@ -111,6 +112,8 @@ import { useScriptStore } from '../../stores/script.js';
 import { useVoiceMatch } from '../../composables/useVoiceMatch.js';
 import { useAssetStore } from '../../stores/assets.js';
 import VoiceMatchPreview from './VoiceMatchPreview.vue';
+import HelpTip from '../HelpTip.vue';
+import { HELP_SCRIPT } from '../../helpTexts.js';
 
 const editor = usePageEditor();
 const { selectedSceneId, selectedPageIndex, selectPage } = editor;

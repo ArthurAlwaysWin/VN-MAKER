@@ -1,237 +1,251 @@
-# Technology Stack — Electron Desktop Export Additions
+# Technology Stack — Character Expression/Variant Switching
 
-**Project:** Galgame Maker v0.8 — Electron Desktop Game Export
-**Researched:** 2025-07-23
-**Scope:** Only NEW capabilities needed for desktop game export. Existing stack (Electron 41, Vue 3, Pinia, Vite 6.3, fflate 0.8.2, vite-plugin-electron) is validated and not re-evaluated.
+**Project:** Galgame Maker v1.0 — 角色表情/差分場景切換
+**Researched:** 2025-07-15
+**Scope:** Only NEW capabilities needed for expression/variant switching. Existing stack (Electron 41, Vue 3, Pinia, Vite 6.3) is validated and not re-evaluated.
 
-## Executive Summary
+## Executive Summary: ZERO New Dependencies
 
-**Two new devDependencies are needed:** `@electron/packager` for Electron app packaging and `png-to-ico` for icon conversion. Everything else — Vite web engine build, Node.js fs operations, fflate for optional ZIP — is already in the stack.
+This milestone requires **no new libraries, no npm installs, no stack changes.** Every capability needed is already present in the codebase or achievable with browser-native APIs and pure CSS.
 
-The core insight: the existing v0.7 web export pipeline (scanAssets → Vite build → engine copy → asset copy → HTML gen) provides 70% of the desktop export flow. The new work is: (1) generating a minimal Electron main.js/preload.js/package.json for the game, (2) staging these into a temp directory, and (3) running `@electron/packager` programmatically to produce the final .exe directory.
+The existing data model (`page.characters[].expression`, `dialogue.expression`, `script.characters[id].expressions`) already stores everything needed. The work is purely about enhancing existing rendering (crossfade in CharacterLayer.js), adding inheritance logic (ScriptEngine.js), and improving editor UX (expression thumbnail selector).
 
-## Recommended Stack Changes
+**Confidence: HIGH** — Based on direct source code analysis of 10+ files spanning engine, UI layer, editor components, stores, and data model.
 
-### 1. @electron/packager — Electron App Packaging
+## Existing Stack (Unchanged)
 
-| Item | Value |
-|------|-------|
-| **Technology** | @electron/packager |
-| **Version** | ^19.1.0 |
-| **Purpose** | Package staged game directory into standalone .exe |
-| **Install** | devDependency (only used during export in editor's main process) |
-| **Confidence** | HIGH — verified API, version, release date via npm registry |
+### Core
+| Technology | Version | Purpose | v1.0 Impact |
+|------------|---------|---------|-------------|
+| Electron | 41.x | Desktop shell | No change |
+| Vue 3 | 3.5.31 | Editor UI | No change |
+| Pinia | 3.0.4 | State management | No change |
+| Vite | 6.3.0 | Build tool | No change |
+| fflate | 0.8.2 | Theme ZIP | Irrelevant to this milestone |
 
-**Why this tool:**
-- Simplest programmatic API: `await packager(opts)` → returns output paths
-- Default output is a portable directory with .exe (exactly "绿色免安装")
-- Built-in .ico icon embedding via `resedit` (no external tools needed for .exe icon)
-- Built-in ASAR packaging with `asarUnpack` glob patterns
-- Downloads and caches Electron binaries automatically (`@electron/get`)
-- Official Electron team project, actively maintained (last release: March 2026)
-- Pure JavaScript — no Go binary or native compilation needed
-- See COMPARISON.md for full analysis vs electron-builder and @electron-forge
+### Runtime Engine
+| Technology | Purpose | v1.0 Impact |
+|------------|---------|-------------|
+| Pure JS (ES Modules) | Game engine | Extend ScriptEngine + CharacterLayer |
+| CSS transitions | All animations | Extend for expression crossfade |
+| DOM rendering | Character/BG layers | Extend CharacterLayer.js |
 
-**Key API surface we'll use:**
-```js
-import packager from '@electron/packager';
+## Capabilities Needed (All Built With Existing Stack)
 
-const outputPaths = await packager({
-  dir: stagingDir,               // temp dir with game app structure
-  out: userChosenOutputDir,      // final output location
-  name: gameTitle,               // app name
-  platform: 'win32',
-  arch: 'x64',
-  electronVersion: '41.2.0',    // pin to same major as editor
-  executableName: gameTitle,     // rename .exe from "electron" to game title
-  icon: icoPath,                 // path to .ico file
-  asar: {
-    unpack: '{assets/**,script.json}',
-  },
-  overwrite: true,
-  prune: false,                  // game app has no node_modules
-  ignore: [/\.gitignore/],
-});
-// outputPaths[0] → "C:/Users/.../MyGame-win32-x64/"
+### 1. CSS Crossfade for Expression Changes
+
+**What:** Smooth opacity fade between expression images when a character's expression changes while they remain on screen.
+
+**How:** Dual-image technique, **exactly** as `BackgroundLayer.js` already implements for background crossfades (lines 13-54). This proven pattern exists in the codebase today.
+
+**BackgroundLayer pattern (already working):**
+```javascript
+// Two <div> layers: layerA, layerB
+// Swap .active class → CSS opacity transition handles the fade
+// Clean up old layer's backgroundImage after transition to free memory
 ```
 
-**ASAR strategy:**
-- `asar: true` → packs main.js, preload.js, index.html, engine.js, engine.css into app.asar
-- `asarUnpack: '{assets/**,script.json}'` → keeps large binary assets (images, audio, fonts) and script.json outside the ASAR archive as `app.asar.unpacked/`
-- Why unpack assets: ASAR is an archive format not optimized for random access of large binary files; Electron's `net.fetch` can read from both ASAR and filesystem, but large media files (100+ MB of images/audio) perform better unpacked
-- Why unpack script.json: the game runtime reads it via fetch; keeping it accessible simplifies debugging
+**Applied to CharacterLayer.js:** Instead of a single `<img>` per character, use two `<img>` elements (imgA/imgB) wrapped in a container `<div>`. When expression changes:
+1. Set new image `src` on the inactive `<img>`
+2. Wait for `onload` to ensure image is decoded
+3. Swap `.active` class (CSS `opacity: 0 → 1` and `1 → 0`)
+4. After transition duration, clear old image `src`
 
-**Electron version pinning:**
-- The editor runs Electron 41 (currently 41.2.0 is latest 41.x stable)
-- The exported game should use the same major version for compatibility
-- `electronVersion: '41.2.0'` pins explicitly; @electron/packager downloads and caches the binary via `@electron/get` on first use (~90 MB download, cached in `~/.electron/`)
-
-### 2. png-to-ico — Icon Conversion
-
-| Item | Value |
-|------|-------|
-| **Technology** | png-to-ico |
-| **Version** | ^3.0.1 |
-| **Purpose** | Convert user-provided PNG game icon to Windows .ico format |
-| **Install** | devDependency |
-| **Confidence** | HIGH — verified dependencies (pngjs only), pure JS |
-
-**Why this tool:**
-- Pure JavaScript (pngjs dependency only) — no native compilation, no sharp, no ImageMagick
-- Tiny footprint: just pngjs + minimist
-- Simple API: `pngToIco(pngBuffer)` → returns `.ico` Buffer
-- Users will provide PNG icons (standard format) — the tool converts to multi-size .ico
-
-**Why NOT require .ico from users:**
-- .ico is a Windows-specific format most creators won't have
-- Visual novel creators are artists, not Windows developers
-- PNG → .ico conversion is lossless and trivial with this library
-- Better UX: same PNG can be used for both web favicon and desktop icon
-
-**Why NOT sharp:**
-- sharp is ~30 MB with native libvips binary
-- Requires node-gyp or prebuilt binaries for the correct platform
-- Massive overkill for a single PNG → .ico conversion
-- png-to-ico does exactly one thing and does it with zero native deps
-
-**Usage in export pipeline:**
-```js
-import pngToIco from 'png-to-ico';
-import fs from 'node:fs/promises';
-
-const pngBuffer = await fs.readFile(userIconPath);
-const icoBuffer = await pngToIco(pngBuffer);
-const icoPath = path.join(stagingDir, 'icon.ico');
-await fs.writeFile(icoPath, icoBuffer);
-// Then pass icoPath to @electron/packager's icon option
+**CSS needed (pure CSS, no libraries):**
+```css
+.character-sprite-wrap {
+  position: absolute;
+  /* inherits positioning from existing .pos-left / .pos-center / .pos-right / .pos-custom */
+}
+.character-sprite-wrap .expr-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.character-sprite-wrap .expr-layer.active {
+  opacity: 1;
+}
 ```
 
-### 3. Existing Stack Reuse (No New Dependencies)
+**Confidence: HIGH** — BackgroundLayer.js proves this exact dual-layer crossfade pattern works in this codebase. The CSS transition infrastructure is already established in style.css.
 
-| Technology | Version | Role in Desktop Export |
-|------------|---------|----------------------|
-| **Vite** | 6.3.0 (existing) | Build engine bundle via `vite.web.config.js` (same as web export) |
-| **fflate** | 0.8.2 (existing) | Optional ZIP of final output directory |
-| **Node.js fs/path** | Built-in | File staging, directory creation, asset copying |
-| **scanAssets** | Existing module | Scan script.json for referenced asset paths |
-| **exportGame.js** | Existing module | Reuse Steps 1-5 of web export pipeline |
+### 2. Image Preloading for Smooth Transitions
 
-**Critical reuse:** The existing `exportGame.js` handles Vite build, asset scanning, engine copy, asset copy, and HTML generation. Desktop export reuses Steps 1-4 identically, then diverges at Step 5+ (generates Electron main.js instead of standalone HTML, then runs packager).
+**What:** Preload expression images before swapping to prevent a blank flash during crossfade.
+
+**How:** Browser-native `Image()` constructor — no library needed.
+
+```javascript
+function preloadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+```
+
+**Preload strategy:**
+- **On page enter:** Preload all expression images for characters appearing on the page
+- **On dialogue advance:** If `dlg.expression` differs from current, preload before emitting `set_expression`
+- **Scene-level (optional):** Preload all expressions for characters referenced anywhere in the scene
+
+**Confidence: HIGH** — `Image()` is a standard Web API. Works with `asset://` protocol (proven: all `<img>` elements in the editor already load via `asset://`), relative paths (Web export), and `basePath` parameter (preview iframe).
+
+### 3. Expression State Inheritance (Engine Logic)
+
+**What:** When a character persists from page N to page N+1 but page N+1 doesn't explicitly set an expression, inherit the last known expression.
+
+**How:** A `Map<string, string>` tracking `charId → lastExpression` in ScriptEngine, with a 3-tier fallback resolution:
+
+```javascript
+// Add to ScriptEngine constructor:
+/** @type {Map<string, string>} charId → last resolved expression */
+this._charExpressionState = new Map();
+
+// In _renderPage(), resolve expression:
+const resolvedExpression = char.expression                          // 1. explicit page value
+  || this._charExpressionState.get(char.id)                        // 2. inherited from prev page
+  || Object.keys(charDef?.expressions || {})[0]                    // 3. first defined expression
+  || 'normal';                                                     // 4. ultimate fallback
+
+// Store resolved state:
+this._charExpressionState.set(char.id, resolvedExpression);
+```
+
+**Reset on:** `startGame()`, `restoreState()` (then rebuild from page walk or store in save state).
+
+**Confidence: HIGH** — Pure logic addition, no external dependencies. The existing `_prevPageCharIds` Set in ScriptEngine (line 60) already demonstrates per-page state tracking for character diffing.
+
+### 4. Expression Thumbnail Selector (Editor UI)
+
+**What:** Replace the plain `<select>` dropdown in PageInspector (line 52-57) with a visual thumbnail grid.
+
+**How:** New Vue 3 component `ExpressionDropdown.vue`, reusing the thumbnail grid pattern from `CharacterPicker.vue` (lines 16-36).
+
+**Existing patterns to reuse directly:**
+- `CharacterPicker.vue` `.expr-grid` / `.expr-thumb` / `.expr-img-wrap` — 80px thumbnail grid with `asset://` URLs
+- `AssetPickerModal.vue` — overlay positioning pattern
+- `resolveAsset()` from `PageCanvas.vue` — `asset://` URL resolution
+
+**No new component libraries needed.** This is a ~100-line SFC with a click-to-toggle dropdown containing an expression thumbnail grid. The CSS is already 90% written in CharacterPicker.vue's `<style>` block.
+
+**Confidence: HIGH** — CharacterPicker.vue is a working reference implementation of the exact thumbnail grid needed.
+
+## Data Model: No Schema Changes Required
+
+The current `script.json` schema **already supports** everything needed:
+
+### Page-level character expression (EXISTS)
+```json
+{
+  "characters": [
+    { "id": "sakura", "expression": "smile", "position": "center", "x": null, "y": null, "scale": 1 }
+  ]
+}
+```
+
+### Mid-dialogue expression change (EXISTS)
+```json
+{
+  "dialogues": [
+    { "speaker": "sakura", "text": "...", "expression": "sad" }
+  ]
+}
+```
+
+### Character definition with expressions (EXISTS)
+```json
+{
+  "characters": {
+    "sakura": {
+      "name": "樱",
+      "color": "#FF9CAE",
+      "expressions": {
+        "normal": "characters/sakura_normal.png",
+        "smile": "characters/sakura_smile.png",
+        "制服_普通": "characters/sakura_uniform_normal.png"
+      }
+    }
+  }
+}
+```
+
+**Flat model (per PROJECT.md):** Costume/variant + expression combos are all same-level expression entries. "制服_普通" (uniform + normal) is just another expression key. No hierarchical variant structure needed.
+
+### Optional Future Enhancement (NOT for v1.0)
+
+Per-character expression fade duration override:
+```json
+{ "id": "sakura", "expression": "smile", "expressionTransition": { "duration": 300 } }
+```
+**Recommendation:** YAGNI. Use a hardcoded 300ms default. Add per-page control only if users request it.
 
 ## What NOT to Add
 
 | Don't Add | Why Not |
 |-----------|---------|
-| **electron-builder** | Overkill — downloads Go binary, complex config, installer-focused (see COMPARISON.md) |
-| **@electron-forge** | Designed to own project lifecycle, wraps @electron/packager internally |
-| **sharp** | 30+ MB native binary for a task png-to-ico handles in pure JS |
-| **electron-icon-maker** | v0.0.5 — abandoned, hasn't been updated |
-| **NSIS / Inno Setup** | PROJECT.md explicitly states "绿色免安装" (no installer) |
-| **@electron/rebuild** | No native modules in the game app |
-| **electron-notarize** | macOS only, out of scope for v0.8 (Windows only) |
-| **@electron/asar** (standalone) | @electron/packager includes ASAR support internally |
-| **any Node.js-based image resizer** | png-to-ico handles the one conversion we need |
+| **GreenSock / GSAP** | CSS transitions handle all needed fades. BackgroundLayer proves this. Adds 30KB+ for zero benefit. |
+| **anime.js** | Same — CSS transitions are simpler and already the established pattern in this codebase. |
+| **Framer Motion / Vue Motion** | Engine runs outside Vue (pure JS + DOM). Vue animation libs can't help engine rendering. |
+| **TypeScript** | Project explicitly excludes TS (PROJECT.md line 149). JSDoc is the pattern. |
+| **Canvas 2D / WebGL** | Engine is DOM-based. Switching rendering paradigm for a fade effect is absurd overkill. |
+| **Vue `<Transition>`** | Engine UI layer is pure JS DOM manipulation, not Vue components. Editor canvas uses Vue but expression display is just `<img>` binding. |
+| **Pinia plugin for expression state** | Expression inheritance is an engine runtime concern, not editor state. Keep it in ScriptEngine. |
+| **Image sprite sheets** | Current model is one full image per expression. Sprite sheets add complexity for no benefit at this scale. |
+| **Lottie / Rive** | Animated expressions are out of scope. Static image crossfade is the requirement. |
+| **lazy-loading library** | Native `Image()` preloading is 5 lines. A library adds overhead for nothing. |
 
-## Installation
+## Integration Points (All Compatible)
 
-```bash
-# New devDependencies for v0.8
-npm install -D @electron/packager@^19.1.0 png-to-ico@^3.0.1
-```
+### asset:// Protocol — ✓ No Change
+Expression images already load through `asset://` just like everything else. `CharacterLayer.js` uses `this.basePath + data.image` which resolves correctly across all 4 environments (Electron editor, preview iframe, Web export, Desktop export).
 
-No changes to production dependencies. Both tools run only in the editor's main process during export.
+### scanAssets.js — ✓ No Change
+Already scans `characters[id].expressions` values (lines 52-56). All expression images are already included in both Web and Desktop export pipelines.
 
-## Integration Points
+### Save/Restore State — Minor Addition
+`ScriptEngine.getState()` saves `currentScene`, `pageIndex`, `dialogueIndex`. **Recommend adding** `charExpressionState: Object.fromEntries(this._charExpressionState)` to the save state for instant restore without replaying page history. Small, backward-compatible addition — old saves without this field gracefully fall back to resolving from page data.
 
-### Build Pipeline (Unchanged)
+### Preview iframe — ✓ No Change
+`usePageEditor.startPreview()` deep-copies script data via `JSON.parse(JSON.stringify())` and sends via `postMessage`. Expression data is already part of the script. No protocol changes needed.
 
-```
-npm run dev         → existing Electron dev server
-npm run build       → existing Electron production build
-npm run build:web   → existing web engine build (reused for desktop export too)
-```
+### Editor Canvas (PageCanvas.vue) — Compatible
+`getCharImage(char)` at line 155-158 already resolves `script.data.characters[char.id].expressions[char.expression]` → `asset://` URL. The expression thumbnail selector just needs to update `char.expression` on the page data — the canvas reactively updates via Vue computed properties.
 
-The desktop export reuses `dist-web/` output (engine.js + engine.css) — same artifacts the web export uses. No new build scripts needed.
+## Implementation Summary
 
-### Export Flow (New: Desktop Path)
+| Capability | Approach | File(s) to Modify/Create | Effort |
+|-----------|----------|--------------------------|--------|
+| Expression crossfade | Dual-img + CSS opacity (BackgroundLayer pattern) | `CharacterLayer.js`, `style.css` | Medium |
+| Image preloading | Native `Image()` API | `CharacterLayer.js` (or new util) | Low |
+| State inheritance | `Map<string, string>` in ScriptEngine | `ScriptEngine.js` | Low |
+| Thumbnail selector | Vue SFC, reuse CharacterPicker grid CSS | New `ExpressionDropdown.vue` | Medium |
+| Inheritance display in editor | Computed walk-back through pages | `PageInspector.vue` | Low |
+| Save state extension | Add `charExpressionState` to getState/restoreState | `ScriptEngine.js` | Low |
 
-```
-Editor UI (renderer)
-  → ipcRenderer.invoke('export-game', { ...opts, format: 'desktop' })
-    → electron/main.js handler
-      → Step 1: Vite build (reuse existing, produces dist-web/)
-      → Step 2: scanAssets (reuse existing)
-      → Step 3: Create staging directory (temp dir)
-        → Generate package.json (minimal: name + main + version)
-        → Generate main.js (minimal: window + asset:// protocol + save IPC)
-        → Generate preload.js (save/load IPC channels only)
-        → Copy engine.js, engine.css, index.html from dist-web/
-        → Copy script.json from project
-        → Copy referenced assets to staging/assets/
-      → Step 4: Convert PNG icon to .ico (png-to-ico)
-      → Step 5: Run @electron/packager programmatically
-        → Downloads Electron binary (cached after first use)
-        → Packages staging dir → output/GameTitle-win32-x64/
-      → Step 6: Clean up staging directory
-      → Step 7: Optional ZIP of output
-    ← { success, outputPath, zipPath, warnings }
-```
-
-### What the Export Produces
-
-```
-GameTitle-win32-x64/
-  GameTitle.exe              ← renamed Electron binary with custom icon
-  resources/
-    app.asar                 ← packed: main.js, preload.js, index.html, engine.js, engine.css
-    app.asar.unpacked/       ← unpacked large assets
-      assets/
-        backgrounds/         ← only referenced files
-        characters/
-        audio/
-        fonts/
-        voices/
-      script.json
-  *.dll                      ← Electron runtime DLLs
-  LICENSE, LICENSES.chromium.html  ← Chromium licenses (required)
-```
-
-**Total package size estimate:** ~180-250 MB base (Electron + Chromium) + game assets. This is the standard Electron app size — unavoidable with embedded Chromium.
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Packaging tool | @electron/packager | electron-builder | Overkill, Go binary, installer-focused |
-| Packaging tool | @electron/packager | @electron-forge | Wraps packager, lifecycle-focused |
-| Icon conversion | png-to-ico | sharp | 30 MB native binary vs 50 KB pure JS |
-| Icon conversion | png-to-ico | require .ico from user | Bad UX for visual novel creators |
-| ASAR | Mixed (code=ASAR, assets=unpacked) | All ASAR | Large binary files slow in ASAR |
-| ASAR | Mixed | No ASAR | Exposes source code, slightly larger |
-
-## Version Summary
-
-| Technology | Version | Status | Role in v0.8 |
-|------------|---------|--------|--------------|
-| @electron/packager | ^19.1.0 | **NEW devDep** | Core packaging tool |
-| png-to-ico | ^3.0.1 | **NEW devDep** | PNG → .ico conversion |
-| Vite | 6.3.0 | Existing | Build web engine bundle (reused) |
-| fflate | 0.8.2 | Existing | Optional ZIP of output |
-| Electron | 41.2.0 | Existing (editor) / target version (game) | Runtime for exported game |
-
-**Total new npm dependencies: 2 (devDependencies only)**
+**Total new npm dependencies: 0**
+**Total new files: ~1-2** (ExpressionDropdown.vue, possibly a preload utility)
+**Total modified files: ~4-5** (CharacterLayer.js, ScriptEngine.js, PageInspector.vue, style.css, possibly PageCanvas.vue)
 
 ## Sources
 
-- npm registry: `@electron/packager@19.1.0` — version, API, dependencies, resedit integration (HIGH confidence)
-- npm registry: `electron-builder@26.8.2` — version, app-builder-lib dependency (HIGH confidence)
-- npm registry: `@electron-forge/cli@7.11.1` — version, architecture (HIGH confidence)
-- npm registry: `png-to-ico@3.0.1` — version, dependencies (pngjs only), pure JS (HIGH confidence)
-- npm registry: `@electron/asar@4.2.0` — createPackage API, unpack options (HIGH confidence)
-- npm registry: `resedit@3.0.2` — Windows PE resource editing, icon embedding (HIGH confidence)
-- npm registry: `@electron/get@4.0.3` — Electron binary download/caching (HIGH confidence)
-- Electron 41.x versions: 41.0.0 through 41.2.0 verified via npm registry (HIGH confidence)
-- Project source: `electron/exportGame.js` — existing 6-step pipeline, scanAssets integration (HIGH confidence)
-- Project source: `electron/main.js` — asset:// protocol, IPC handlers, window creation (HIGH confidence)
-- Project source: `src/engine/assetPath.js` — 3-way environment detection, BASE_PATH logic (HIGH confidence)
-- Project source: `src/engine/SaveManager.js` — IPC-based save/load API surface (HIGH confidence)
+All sources are direct codebase analysis (HIGH confidence):
+
+- `src/ui/CharacterLayer.js` — Current character rendering: `show()`, `hide()`, `setExpression()`, CSS class transitions
+- `src/ui/BackgroundLayer.js` — Dual-layer crossfade pattern (proven model to replicate for expressions)
+- `src/engine/ScriptEngine.js` — Page rendering with character diffing, `_renderPage()`, `_playCurrentDialogue()`, expression event emission
+- `src/editor/components/page-editor/PageInspector.vue` — Current expression `<select>` dropdown (lines 51-57), dialogue expression editor (lines 116-124)
+- `src/editor/components/page-editor/CharacterPicker.vue` — Expression thumbnail grid pattern (lines 16-36, reusable CSS)
+- `src/editor/components/page-editor/PageCanvas.vue` — `getCharImage()` resolution, canvas character rendering
+- `public/game/script.json` — Live data model showing character/expression/page structure
+- `src/editor/stores/script.js` — `createDefaultPage()` default data shape
+- `src/style.css` (lines 117-173) — Character sprite CSS: positioning, enter transitions, `.entered` state
+- `src/engine/scanAssets.js` — Confirms expression images already tracked for export (lines 52-56)
+- `.planning/PROJECT.md` — Flat model decision, no-TypeScript constraint, whole-image switching approach

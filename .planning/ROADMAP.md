@@ -232,7 +232,10 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
   1. 角色在 4 種定位模式（left/center/right/custom）下使用新雙圖層 DOM 結構正確顯示
   2. 現有腳本（demo script.json）渲染結果與重構前完全一致（零視覺回歸）
   3. 角色進場/退場動畫在新容器結構下正常運作
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 37-01-PLAN.md — CharacterLayer dual-layer DOM refactoring + style.css update + visual verification
 
 #### Phase 38: 表情交叉漸變
 **Goal**: 表情切換時平滑交叉漸變過渡，預加載防閃白，快進模式即時替換

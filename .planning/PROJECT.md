@@ -70,13 +70,12 @@
 - ✓ 桌面游戏运行时（4-way 环境检测 + game-main.js 模板 + 文件系统存档 + 窗口管理） — v0.8 Phase 32
 - ✓ 桌面导出管线（exportDesktop.js 9 步流水线 + @electron/packager 打包 + PNG→ICO 转换 + ZIP） — v0.8 Phase 33
 - ✓ ExportModal Web/桌面 格式切换 + 桌面图标选择器 + 格式感知导出分发 — v0.8 Phase 34
+- ✓ 编辑器中文本地化：TOKEN_LABELS 41 条映射 + 字体/转场/音频/导出/坐标全中文化 — v0.9 Phase 35
+- ✓ Tooltip 帮助系统：HelpTip.vue 组件 + helpTexts.js 35 keys + 26 实例 + 80+ 按钮 title — v0.9 Phase 36
 
 ### Active
 
-<!-- v0.9 requirements will be defined in REQUIREMENTS.md -->
-
-- [ ] **中文本地化**：编辑器残留英文 UI 全部翻译为中文（token 标签、字体选项、导出按钮、坐标标签等）
-- [ ] **Tooltip 帮助系统**：? 图标式补充说明 + 直接 hover 功能提示，双模式覆盖编辑器全部操作区
+<!-- Next milestone requirements will be defined in REQUIREMENTS.md -->
 
 ### Future — 后续候选
 
@@ -119,7 +118,7 @@
 - **资源库**：5 类资源（背景/角色/音频/字体/通用），统一 Pinia store + IPC 管理
 - **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认页面
 - **设置页覆盖层**：右侧滑入 overlay，ESC 优先级链（settings > game menu），stack-based 层管理
-- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）+ v0.5（游戏 UI 补全：快捷栏 + 存读档 + 快进 + 快存快读）+ v0.6（主题包系统）+ v0.7（游戏导出 Web 静态包）+ v0.8（游戏导出 Electron 桌面版）
+- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）+ v0.5（游戏 UI 补全：快捷栏 + 存读档 + 快进 + 快存快读）+ v0.6（主题包系统）+ v0.7（游戏导出 Web 静态包）+ v0.8（游戏导出 Electron 桌面版）+ v0.9（编辑器本地化与帮助系统）
 
 ### 已知问题
 
@@ -177,6 +176,10 @@
 | 4-way 环境检测 (Electron/Preview/Web/Desktop) | 统一代码库四种运行模式 | ✓ Good |
 | exportDesktop 9 步流水线 + @electron/packager | 从编辑器到可运行 .exe 全自动 | ✓ Good |
 | Web/桌面 Segment Toggle 默认桌面版 | v0.8 焦点是桌面导出，默认选中 | ✓ Good |
+| TOKEN_LABELS 数据映射 + label prop 透传 | 集中维护，row 组件只接收 label | ✓ Good |
+| HelpTip Teleport + fixed 定位 | 避免 overflow:hidden 裁切气泡 | ✓ Good |
+| helpTexts.js 集中管理帮助文本 | 6 区域导出，编辑器统一引用 | ✓ Good |
+| Tooltip 双模式：? 图标 + 按钮 title | 配置项用 ? 详解，按钮用 title 简提 | ✓ Good |
 
 ## Evolution
 
@@ -193,13 +196,13 @@ This document evolves at phase transitions and milestone boundaries.
 
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
 - ✅ **v0.8** — 游戏导出 Electron 桌面版 (Phases 32-34)
-- 🚧 **v0.9** — 编辑器本地化与帮助系统 (Phases 35+)
+- ✅ **v0.9** — 编辑器本地化与帮助系统 (Phases 35-36)
 
 ## Current State
 
-v0.9 里程碑完成 — 编辑器中文本地化 + Tooltip 帮助系统（HelpTip 组件 + 全编辑器帮助文本覆盖）。全部 9 个里程碑已交付（v0.1~v0.9）。
+v0.9 里程碑完成并归档 — 编辑器中文本地化 + Tooltip 帮助系统。全部 9 个里程碑已交付（v0.1~v0.9）。
 
 **已发布：** v0.1 ~ v0.9（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出 → 桌面导出 → 本地化与帮助系统）
 
 ---
-*Last updated: 2026-04-11 after v0.9 Phase 36 complete — Tooltip 帮助系统*
+*Last updated: 2026-04-12 after v0.9 milestone archived*

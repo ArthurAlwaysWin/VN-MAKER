@@ -1,5 +1,24 @@
 # Milestones
 
+## v0.9 编辑器本地化与帮助系统 (Shipped: 2026-04-12)
+
+**Phases completed:** 2 phases (35-36), 4 plans, 15 requirements
+**Git range:** v0.8..HEAD (~22 commits)
+**Files:** 54 changed, +3368/-222 lines
+
+**Key accomplishments:**
+
+- TOKEN_LABELS 41 条中文映射 + label prop 透传至 5 个 row 组件
+- 编辑器残留英文全部翻译（字体选择器、转场、AudioPicker、ExportModal、坐标、占位符）
+- HelpTip.vue 组件（Teleport + fixed 定位 + 150ms fade + viewport flip）+ helpTexts.js（6 导出、35 keys）
+- 全编辑器 HelpTip 覆盖（26 实例 × 16 文件）+ 按钮 title 扫描（80+ 按钮 × 28 文件）
+
+**Milestone audit:** 15/15 requirements passed — see v0.9-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v0.9-ROADMAP.md, milestones/v0.9-REQUIREMENTS.md
+
+---
+
 ## v0.8 游戏导出 Electron 桌面版 (Shipped: 2026-04-10)
 
 **Phases completed:** 3 phases (32-34), 4 plans, 15 requirements

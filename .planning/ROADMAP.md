@@ -209,3 +209,82 @@ See .planning/milestones/v0.8-ROADMAP.md for full phase details.
 See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v1.0 — 角色表情/差分場景切換 🚧
+
+### Phases
+
+- [ ] **Phase 37: CharacterLayer DOM 重構** — 單 `<img>` 重構為雙圖層容器結構，保持 4 種定位模式不變
+- [ ] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫
+- [ ] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置
+- [ ] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>`
+- [ ] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承表情預覽 + stale 引用優雅降級
+
+### Phase Details
+
+#### Phase 37: CharacterLayer DOM 重構
+**Goal**: 角色渲染層使用雙圖層 DOM 結構（容器 div + 兩個 img），為交叉漸變奠定基礎
+**Depends on**: Nothing (v1.0 first phase)
+**Requirements**: ENG-01
+**Success Criteria** (what must be TRUE):
+  1. 角色在 4 種定位模式（left/center/right/custom）下使用新雙圖層 DOM 結構正確顯示
+  2. 現有腳本（demo script.json）渲染結果與重構前完全一致（零視覺回歸）
+  3. 角色進場/退場動畫在新容器結構下正常運作
+**Plans**: TBD
+
+#### Phase 38: 表情交叉漸變
+**Goal**: 表情切換時平滑交叉漸變過渡，預加載防閃白，快進模式即時替換
+**Depends on**: Phase 37
+**Requirements**: ENG-02, ENG-03
+**Success Criteria** (what must be TRUE):
+  1. 切換角色表情時顯示平滑 CSS opacity 交叉漸變（無閃白或空白幀）
+  2. 新表情圖片完全預加載後才開始過渡動畫
+  3. 快進模式下表情切換為 0ms 即時替換（無過渡動畫）
+  4. 快速連續切換表情不產生殘影或堆疊異常
+**Plans**: TBD
+
+#### Phase 39: 表情狀態管理
+**Goal**: 引擎維護每角色表情狀態，跨頁繼承、存讀檔持久化、場景邊界重置
+**Depends on**: Phase 37
+**Requirements**: STATE-01, STATE-02, STATE-03
+**Success Criteria** (what must be TRUE):
+  1. 頁面未指定表情時，引擎沿用上一頁的表情（繼承）
+  2. 角色首次出現且無指定表情時，fallback 到該角色第一個表情
+  3. 存檔包含當前每角色表情狀態，讀檔後正確恢復表情顯示
+  4. 進入新場景時重置表情狀態（清除繼承，從 fallback 重新開始）
+**Plans**: TBD
+
+#### Phase 40: 表情選擇器 UI
+**Goal**: 編輯器提供視覺化縮略圖表情選擇器，替換 PageInspector 中的純文字 `<select>`
+**Depends on**: Phase 39
+**Requirements**: UI-01, UI-02
+**Success Criteria** (what must be TRUE):
+  1. ExpressionDropdown 顯示角色可用表情的縮略圖網格
+  2. PageInspector 角色行使用 ExpressionDropdown 替換舊 `<select>`
+  3. 對話級表情選擇同樣使用 ExpressionDropdown
+  4. 下拉框使用 Teleport + fixed 定位，不被 inspector overflow 裁切
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 41: 編輯器狀態展示與容錯
+**Goal**: 編輯器畫布準確顯示繼承表情，刪除表情後引擎和編輯器優雅降級
+**Depends on**: Phase 39, Phase 40
+**Requirements**: UI-03, UI-04
+**Success Criteria** (what must be TRUE):
+  1. 畫布預覽在未顯式設置表情時顯示繼承來源的實際表情
+  2. 刪除表情圖片後，引擎和編輯器均 fallback 到第一個可用表情（不顯示空白或破圖）
+  3. Inspector 中繼承的表情與顯式設置的表情有視覺區分
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 37. CharacterLayer DOM 重構 | 0/? | Not started | - |
+| 38. 表情交叉漸變 | 0/? | Not started | - |
+| 39. 表情狀態管理 | 0/? | Not started | - |
+| 40. 表情選擇器 UI | 0/? | Not started | - |
+| 41. 編輯器狀態展示與容錯 | 0/? | Not started | - |

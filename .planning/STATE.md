@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: 角色表情/差分场景切换
-status: defining-requirements
-stopped_at: Milestone v1.0 started
+status: ready-to-plan
+stopped_at: Roadmap created — 5 phases (37-41), 10 requirements mapped
 last_updated: "2026-04-12"
 last_activity: 2026-04-12
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v1.0 — 角色表情/差分场景切换（需求定义中）
+**Current focus:** v1.0 Phase 37 — CharacterLayer DOM 重構（待规划）
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-12 — Milestone v1.0 started
+Phase: 37 of 41 (CharacterLayer DOM 重構)
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-04-12 — Roadmap created for v1.0
 
 ```
-v1.0 ░░░░░░░░░░░░░░░░░░░░ 0/? phases — 需求定义中
+v1.0 ░░░░░░░░░░░░░░░░░░░░ 0/5 phases — ready to plan Phase 37
 ```
 
 ## Performance Metrics
@@ -64,6 +64,6 @@ v1.0 ░░░░░░░░░░░░░░░░░░░░ 0/? phases —
 ## Session Continuity
 
 Last session: 2026-04-12
-Stopped at: Milestone v1.0 started — defining requirements
-Resume hint: Continue defining requirements for v1.0
-Next action: Define REQUIREMENTS.md
+Stopped at: Roadmap created — 5 phases (37-41), ready to plan Phase 37
+Resume hint: Plan Phase 37 (CharacterLayer DOM 重構)
+Next action: /gsd-plan-phase 37

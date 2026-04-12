@@ -48,21 +48,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | — | Pending |
-| ENG-02 | — | Pending |
-| ENG-03 | — | Pending |
-| STATE-01 | — | Pending |
-| STATE-02 | — | Pending |
-| STATE-03 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
+| ENG-01 | Phase 37 | Pending |
+| ENG-02 | Phase 38 | Pending |
+| ENG-03 | Phase 38 | Pending |
+| STATE-01 | Phase 39 | Pending |
+| STATE-02 | Phase 39 | Pending |
+| STATE-03 | Phase 39 | Pending |
+| UI-01 | Phase 40 | Pending |
+| UI-02 | Phase 40 | Pending |
+| UI-03 | Phase 41 | Pending |
+| UI-04 | Phase 41 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️ (waiting for roadmap)
+- Mapped to phases: 10 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-12*

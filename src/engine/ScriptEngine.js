@@ -62,6 +62,8 @@ export class ScriptEngine extends EventEmitter {
     this._currentBgmFile = null;
     /** @type {string|null} Currently displayed background path */
     this._currentBg = null;
+    /** @type {Map<string, string>} Character ID → current expression name */
+    this._expressionState = new Map();
 
     /** @type {boolean} Preview mode — hides game menus when running inside editor iframe */
     this._previewMode = false;
@@ -158,6 +160,7 @@ export class ScriptEngine extends EventEmitter {
       dialogueIndex: this.dialogueIndex,
       variables: Object.fromEntries(this.variables),
       history: [...this.history],
+      expressionState: Object.fromEntries(this._expressionState),
     };
   }
 
@@ -171,6 +174,7 @@ export class ScriptEngine extends EventEmitter {
     this.dialogueIndex = state.dialogueIndex ?? 0;
     this.variables = new Map(Object.entries(state.variables || {}));
     this.history = state.history || [];
+    this._expressionState = new Map(Object.entries(state.expressionState || {}));
     this.ended = false;
     this.waiting = false;
   }
@@ -211,6 +215,7 @@ export class ScriptEngine extends EventEmitter {
     this._prevPageCharIds = new Set();
     this._currentBgmFile = null;
     this._currentBg = null;
+    this._expressionState.clear();
   }
 
   /**
@@ -227,6 +232,7 @@ export class ScriptEngine extends EventEmitter {
     this.currentScene = sceneId;
     this.pageIndex = 0;
     this.dialogueIndex = 0;
+    this._expressionState.clear();
     this.emit('scene_enter', { sceneId, sceneName: scene.name });
     this._processCurrentPage();
   }
@@ -322,16 +328,25 @@ export class ScriptEngine extends EventEmitter {
       const charDef = this.script.characters[char.id];
       const wasVisible = this._prevPageCharIds.has(char.id);
 
+      // Expression resolution chain (D-02):
+      // explicit page data → inherited from previous page → first expression → ''
+      const expressions = charDef?.expressions || {};
+      const resolvedExpr = char.expression
+        || this._expressionState.get(char.id)
+        || Object.keys(expressions)[0]
+        || '';
+      this._expressionState.set(char.id, resolvedExpr);
+
       this.emit('show_character', {
         id: char.id,
-        expression: char.expression,
+        expression: resolvedExpr,
         position: char.position || 'center',
         x: char.x,
         y: char.y,
         scale: char.scale ?? 1,
         transition: wasVisible ? 'none' : 'fade',
         duration: wasVisible ? 0 : 500,
-        image: charDef?.expressions?.[char.expression] || '',
+        image: expressions[resolvedExpr] || '',
       });
     }
 
@@ -379,6 +394,7 @@ export class ScriptEngine extends EventEmitter {
     // Handle mid-dialogue expression change for the speaking character
     if (dlg.expression && dlg.speaker) {
       const charDef = this.script.characters[dlg.speaker];
+      this._expressionState.set(dlg.speaker, dlg.expression);
       this.emit('set_expression', {
         id: dlg.speaker,
         expression: dlg.expression,

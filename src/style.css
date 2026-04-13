@@ -135,6 +135,7 @@ body {
   object-position: bottom center;
   opacity: 0;
   pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
 .char-img-a.active,

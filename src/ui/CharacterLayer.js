@@ -1,6 +1,6 @@
 /**
  * CharacterLayer — Manages character sprites (show/hide/expression changes)
- * Uses dual-layer DOM: container div + two img children (A/B) for future crossfade.
+ * Uses dual-layer DOM: container div + two img children (A/B) for crossfade transitions.
  */
 import { clampField } from './sanitize.js';
 
@@ -13,18 +13,19 @@ export class CharacterLayer {
     this.container = container;
     this.basePath = basePath;
 
-    /** @type {Map<string, {container: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B'}>} */
+    /** @type {Map<string, {container: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B', currentImage: string|null, _crossfadeGen: number, _crossfadeTimer: number|null}>} */
     this.characters = new Map();
   }
 
   /**
    * Show a character sprite
-   * @param {Object} data — { id, expression, position, transition, duration, image, x?, y?, scale? }
+   * @param {Object} data — { id, expression, position, transition, duration, image, x?, y?, scale?, skip? }
    */
   show(data) {
     let entry = this.characters.get(data.id);
+    const isNew = !entry;
 
-    if (!entry) {
+    if (isNew) {
       const container = document.createElement('div');
       container.classList.add('character-sprite');
       container.dataset.characterId = data.id;
@@ -41,15 +42,25 @@ export class CharacterLayer {
       container.appendChild(imgB);
       this.container.appendChild(container);
 
-      entry = { container, imgA, imgB, activeImg: 'A' };
+      entry = { container, imgA, imgB, activeImg: 'A', currentImage: null, _crossfadeGen: 0, _crossfadeTimer: null };
       this.characters.set(data.id, entry);
     }
 
-    const activeEl = entry.activeImg === 'A' ? entry.imgA : entry.imgB;
-    activeEl.src = this.basePath + data.image;
-    this._updateContainerSize(entry, activeEl);
+    // ─── Image handling ───
+    if (data.image) {
+      if (isNew) {
+        const activeEl = entry.imgA;
+        activeEl.src = this.basePath + data.image;
+        entry.currentImage = data.image;
+        this._updateContainerSize(entry, activeEl);
+      } else if (entry.currentImage !== data.image) {
+        // Existing character with changed expression — crossfade (D-02)
+        entry.currentImage = data.image;
+        this._crossfade(entry, this.basePath + data.image, { skip: !!data.skip });
+      }
+    }
 
-    // Reset classes and inline positioning on container
+    // ─── Container positioning ───
     entry.container.className = 'character-sprite';
     entry.container.style.left = '';
     entry.container.style.right = '';
@@ -57,7 +68,6 @@ export class CharacterLayer {
     entry.container.style.bottom = '';
     entry.container.style.transform = '';
 
-    // Positioning on container
     if (data.x !== undefined || data.y !== undefined) {
       entry.container.classList.add('pos-custom');
       entry.container.style.left = `${clampField('x', data.x ?? 640)}px`;
@@ -72,7 +82,7 @@ export class CharacterLayer {
       entry.container.classList.add(`pos-${data.position || 'center'}`);
     }
 
-    // Transition in on container
+    // ─── Container enter transition ───
     const transition = data.transition || 'fade';
     const duration = data.duration || 500;
     entry.container.style.transitionDuration = `${duration}ms`;
@@ -105,6 +115,11 @@ export class CharacterLayer {
     const entry = this.characters.get(data.id);
     if (!entry) return;
 
+    if (entry._crossfadeTimer) {
+      clearTimeout(entry._crossfadeTimer);
+      entry._crossfadeTimer = null;
+    }
+
     const duration = data.duration || 400;
     entry.container.style.transitionDuration = `${duration}ms`;
     entry.container.classList.remove('entered');
@@ -116,30 +131,33 @@ export class CharacterLayer {
   }
 
   /**
-   * Change a character's expression (instant swap, no crossfade — Phase 38 adds crossfade)
-   * @param {Object} data — { id, expression, image }
+   * Change a character's expression with crossfade transition.
+   * @param {Object} data — { id, expression, image, skip? }
    */
   setExpression(data) {
     const entry = this.characters.get(data.id);
     if (!entry) return;
-    const activeEl = entry.activeImg === 'A' ? entry.imgA : entry.imgB;
-    activeEl.src = this.basePath + data.image;
-    this._updateContainerSize(entry, activeEl);
+
+    if (entry.currentImage === data.image) return;
+
+    entry.currentImage = data.image;
+    this._crossfade(entry, this.basePath + data.image, { skip: !!data.skip });
   }
 
   /**
    * Remove all characters (e.g. when returning to title)
    */
   clear() {
-    this.characters.forEach(entry => entry.container.remove());
+    this.characters.forEach(entry => {
+      if (entry._crossfadeTimer) clearTimeout(entry._crossfadeTimer);
+      entry.container.remove();
+    });
     this.characters.clear();
   }
 
   /**
    * @private
    * Set container aspect-ratio from loaded image dimensions.
-   * A div has no intrinsic size from absolute children, so we derive
-   * the width from height × (naturalWidth / naturalHeight) via CSS aspect-ratio.
    */
   _updateContainerSize(entry, imgEl) {
     const apply = () => {
@@ -151,6 +169,65 @@ export class CharacterLayer {
       apply();
     } else {
       imgEl.onload = apply;
+    }
+  }
+
+  /**
+   * Crossfade between A/B img layers with preloading.
+   * @param {Object} entry — character Map entry
+   * @param {string} newImageUrl — full resolved image URL (basePath + relative)
+   * @param {{ skip?: boolean }} opts — skip: true for 0ms instant swap
+   * @private
+   */
+  async _crossfade(entry, newImageUrl, opts = {}) {
+    const skip = opts.skip || false;
+    const duration = skip ? 0 : 300;
+
+    // Increment generation to cancel any pending crossfade
+    entry._crossfadeGen = (entry._crossfadeGen || 0) + 1;
+    const gen = entry._crossfadeGen;
+
+    if (entry._crossfadeTimer) {
+      clearTimeout(entry._crossfadeTimer);
+      entry._crossfadeTimer = null;
+    }
+
+    const incoming = entry.activeImg === 'A' ? entry.imgB : entry.imgA;
+    const outgoing = entry.activeImg === 'A' ? entry.imgA : entry.imgB;
+
+    incoming.src = newImageUrl;
+
+    // Preload: wait for decode before starting transition (prevents flash-white)
+    if (duration > 0) {
+      try {
+        await incoming.decode();
+      } catch (e) {
+        // decode() failed (broken/missing image) — proceed anyway
+      }
+      if (entry._crossfadeGen !== gen) return;
+    }
+
+    incoming.style.transitionDuration = `${duration}ms`;
+    outgoing.style.transitionDuration = `${duration}ms`;
+
+    incoming.classList.add('active');
+    outgoing.classList.remove('active');
+
+    entry.activeImg = entry.activeImg === 'A' ? 'B' : 'A';
+
+    this._updateContainerSize(entry, incoming);
+
+    if (duration > 0) {
+      entry._crossfadeTimer = setTimeout(() => {
+        outgoing.src = '';
+        outgoing.style.transitionDuration = '';
+        incoming.style.transitionDuration = '';
+        entry._crossfadeTimer = null;
+      }, duration + 50);
+    } else {
+      outgoing.src = '';
+      outgoing.style.transitionDuration = '';
+      incoming.style.transitionDuration = '';
     }
   }
 }

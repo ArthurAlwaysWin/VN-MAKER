@@ -119,11 +119,27 @@ body {
   bottom: 0;
   height: 90%;
   max-width: 50%;
-  object-fit: contain;
-  object-position: bottom center;
   opacity: 0;
   transition-property: opacity, transform;
   transition-timing-function: ease-out;
+}
+
+/* Dual-layer child images */
+.char-img-a,
+.char-img-b {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.char-img-a.active,
+.char-img-b.active {
+  opacity: 1;
 }
 
 /* Positions */

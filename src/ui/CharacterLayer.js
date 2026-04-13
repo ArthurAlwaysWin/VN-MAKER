@@ -1,5 +1,6 @@
 /**
  * CharacterLayer — Manages character sprites (show/hide/expression changes)
+ * Uses dual-layer DOM: container div + two img children (A/B) for future crossfade.
  */
 import { clampField } from './sanitize.js';
 
@@ -12,73 +13,87 @@ export class CharacterLayer {
     this.container = container;
     this.basePath = basePath;
 
-    /** @type {Map<string, HTMLImageElement>} Currently visible character elements */
+    /** @type {Map<string, {container: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B'}>} */
     this.characters = new Map();
   }
 
   /**
    * Show a character sprite
-   * @param {Object} data — { id, expression, position, transition, duration, image }
+   * @param {Object} data — { id, expression, position, transition, duration, image, x?, y?, scale? }
    */
   show(data) {
-    let el = this.characters.get(data.id);
+    let entry = this.characters.get(data.id);
 
-    if (!el) {
-      el = document.createElement('img');
-      el.classList.add('character-sprite');
-      el.dataset.characterId = data.id;
-      el.draggable = false;
-      this.container.appendChild(el);
-      this.characters.set(data.id, el);
+    if (!entry) {
+      const container = document.createElement('div');
+      container.classList.add('character-sprite');
+      container.dataset.characterId = data.id;
+
+      const imgA = document.createElement('img');
+      imgA.className = 'char-img-a active';
+      imgA.draggable = false;
+
+      const imgB = document.createElement('img');
+      imgB.className = 'char-img-b';
+      imgB.draggable = false;
+
+      container.appendChild(imgA);
+      container.appendChild(imgB);
+      this.container.appendChild(container);
+
+      entry = { container, imgA, imgB, activeImg: 'A' };
+      this.characters.set(data.id, entry);
     }
 
-    el.src = this.basePath + data.image;
+    const activeEl = entry.activeImg === 'A' ? entry.imgA : entry.imgB;
+    activeEl.src = this.basePath + data.image;
+    this._updateContainerSize(entry, activeEl);
 
-    // Reset classes and inline positioning
-    el.className = 'character-sprite';
-    el.style.left = '';
-    el.style.right = '';
-    el.style.top = '';
-    el.style.bottom = '';
-    el.style.transform = '';
+    // Reset classes and inline positioning on container
+    entry.container.className = 'character-sprite';
+    entry.container.style.left = '';
+    entry.container.style.right = '';
+    entry.container.style.top = '';
+    entry.container.style.bottom = '';
+    entry.container.style.transform = '';
 
-    // Positioning: prefer explicit x/y over preset position strings
+    // Positioning on container
     if (data.x !== undefined || data.y !== undefined) {
-      el.classList.add('pos-custom');
-      el.style.left = `${clampField('x', data.x ?? 640)}px`;
+      entry.container.classList.add('pos-custom');
+      entry.container.style.left = `${clampField('x', data.x ?? 640)}px`;
       if (data.y !== undefined) {
-        el.style.bottom = 'auto';
-        el.style.top = `${clampField('y', data.y)}px`;
+        entry.container.style.bottom = 'auto';
+        entry.container.style.top = `${clampField('y', data.y)}px`;
       }
       if (data.scale) {
-        el.style.transform = `scale(${clampField('scale', data.scale)})`;
+        entry.container.style.transform = `scale(${clampField('scale', data.scale)})`;
       }
     } else {
-      el.classList.add(`pos-${data.position || 'center'}`);
+      entry.container.classList.add(`pos-${data.position || 'center'}`);
     }
 
-    // Transition in
+    // Transition in on container
     const transition = data.transition || 'fade';
     const duration = data.duration || 500;
-    el.style.transitionDuration = `${duration}ms`;
+    entry.container.style.transitionDuration = `${duration}ms`;
 
     if (transition === 'fade') {
-      el.classList.add('enter-fade');
+      entry.container.classList.add('enter-fade');
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => el.classList.add('entered'));
+        requestAnimationFrame(() => entry.container.classList.add('entered'));
       });
     } else if (transition === 'slide_left') {
-      el.classList.add('enter-slide-left');
+      entry.container.classList.add('enter-slide-left');
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => el.classList.add('entered'));
+        requestAnimationFrame(() => entry.container.classList.add('entered'));
       });
     } else if (transition === 'slide_right') {
-      el.classList.add('enter-slide-right');
+      entry.container.classList.add('enter-slide-right');
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => el.classList.add('entered'));
+        requestAnimationFrame(() => entry.container.classList.add('entered'));
       });
     } else {
-      el.classList.add('entered');
+      entry.container.classList.add('entered');
     }
   }
 
@@ -87,34 +102,55 @@ export class CharacterLayer {
    * @param {Object} data — { id, transition, duration }
    */
   hide(data) {
-    const el = this.characters.get(data.id);
-    if (!el) return;
+    const entry = this.characters.get(data.id);
+    if (!entry) return;
 
     const duration = data.duration || 400;
-    el.style.transitionDuration = `${duration}ms`;
-    el.classList.remove('entered');
+    entry.container.style.transitionDuration = `${duration}ms`;
+    entry.container.classList.remove('entered');
 
     setTimeout(() => {
-      el.remove();
+      entry.container.remove();
       this.characters.delete(data.id);
     }, duration);
   }
 
   /**
-   * Change a character's expression
+   * Change a character's expression (instant swap, no crossfade — Phase 38 adds crossfade)
    * @param {Object} data — { id, expression, image }
    */
   setExpression(data) {
-    const el = this.characters.get(data.id);
-    if (!el) return;
-    el.src = this.basePath + data.image;
+    const entry = this.characters.get(data.id);
+    if (!entry) return;
+    const activeEl = entry.activeImg === 'A' ? entry.imgA : entry.imgB;
+    activeEl.src = this.basePath + data.image;
+    this._updateContainerSize(entry, activeEl);
   }
 
   /**
    * Remove all characters (e.g. when returning to title)
    */
   clear() {
-    this.characters.forEach(el => el.remove());
+    this.characters.forEach(entry => entry.container.remove());
     this.characters.clear();
+  }
+
+  /**
+   * @private
+   * Set container aspect-ratio from loaded image dimensions.
+   * A div has no intrinsic size from absolute children, so we derive
+   * the width from height × (naturalWidth / naturalHeight) via CSS aspect-ratio.
+   */
+  _updateContainerSize(entry, imgEl) {
+    const apply = () => {
+      if (imgEl.naturalWidth && imgEl.naturalHeight) {
+        entry.container.style.aspectRatio = `${imgEl.naturalWidth} / ${imgEl.naturalHeight}`;
+      }
+    };
+    if (imgEl.complete && imgEl.naturalWidth) {
+      apply();
+    } else {
+      imgEl.onload = apply;
+    }
   }
 }

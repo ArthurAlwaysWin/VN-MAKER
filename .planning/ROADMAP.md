@@ -260,7 +260,10 @@ Plans:
   2. 角色首次出現且無指定表情時，fallback 到該角色第一個表情
   3. 存檔包含當前每角色表情狀態，讀檔後正確恢復表情顯示
   4. 進入新場景時重置表情狀態（清除繼承，從 fallback 重新開始）
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 39-01-PLAN.md — Expression state Map + resolution chain + save/load persistence + scene reset
 
 #### Phase 40: 表情選擇器 UI
 **Goal**: 編輯器提供視覺化縮略圖表情選擇器，替換 PageInspector 中的純文字 `<select>`

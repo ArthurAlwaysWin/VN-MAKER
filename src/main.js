@@ -192,7 +192,7 @@ engine.on('dialogue', (data) => {
 // ─── Visual events (skip-aware transitions D-08) ─────────
 engine.on('show_character', (data) => {
   if (skipMode) {
-    characters.show({ ...data, duration: 0, transition: 'none' });
+    characters.show({ ...data, duration: 0, transition: 'none', skip: true });
     return;
   }
   characters.show(data);
@@ -206,7 +206,13 @@ engine.on('hide_character', (data) => {
   characters.hide(data);
 });
 
-engine.on('set_expression', (data) => characters.setExpression(data));
+engine.on('set_expression', (data) => {
+  if (skipMode) {
+    characters.setExpression({ ...data, skip: true });
+    return;
+  }
+  characters.setExpression(data);
+});
 
 engine.on('set_background', (data) => {
   if (skipMode) {

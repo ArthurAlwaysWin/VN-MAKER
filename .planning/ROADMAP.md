@@ -216,7 +216,7 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 37: CharacterLayer DOM 重構** — 單 `<img>` 重構為雙圖層容器結構，保持 4 種定位模式不變
+- [x] **Phase 37: CharacterLayer DOM 重構** — 單 `<img>` 重構為雙圖層容器結構，保持 4 種定位模式不變 (completed 2026-04-13)
 - [ ] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫
 - [ ] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置
 - [ ] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>`
@@ -232,10 +232,10 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
   1. 角色在 4 種定位模式（left/center/right/custom）下使用新雙圖層 DOM 結構正確顯示
   2. 現有腳本（demo script.json）渲染結果與重構前完全一致（零視覺回歸）
   3. 角色進場/退場動畫在新容器結構下正常運作
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 37-01-PLAN.md — CharacterLayer dual-layer DOM refactoring + style.css update + visual verification
+- [x] 37-01-PLAN.md — CharacterLayer dual-layer DOM refactoring + style.css update + visual verification
 
 #### Phase 38: 表情交叉漸變
 **Goal**: 表情切換時平滑交叉漸變過渡，預加載防閃白，快進模式即時替換
@@ -286,7 +286,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 37. CharacterLayer DOM 重構 | 0/? | Not started | - |
+| 37. CharacterLayer DOM 重構 | 1/1 | Complete   | 2026-04-13 |
 | 38. 表情交叉漸變 | 0/? | Not started | - |
 | 39. 表情狀態管理 | 0/? | Not started | - |
 | 40. 表情選擇器 UI | 0/? | Not started | - |

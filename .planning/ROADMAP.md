@@ -217,7 +217,7 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 ### Phases
 
 - [x] **Phase 37: CharacterLayer DOM 重構** — 單 `<img>` 重構為雙圖層容器結構，保持 4 種定位模式不變 (completed 2026-04-13)
-- [ ] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫
+- [x] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫 (completed 2026-04-13)
 - [ ] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置
 - [ ] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>`
 - [ ] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承表情預覽 + stale 引用優雅降級
@@ -246,10 +246,10 @@ Plans:
   2. 新表情圖片完全預加載後才開始過渡動畫
   3. 快進模式下表情切換為 0ms 即時替換（無過渡動畫）
   4. 快速連續切換表情不產生殘影或堆疊異常
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 38-01-PLAN.md — CSS opacity crossfade + image preload + skipMode instant swap
+- [x] 38-01-PLAN.md — CSS opacity crossfade + image preload + skipMode instant swap
 
 #### Phase 39: 表情狀態管理
 **Goal**: 引擎維護每角色表情狀態，跨頁繼承、存讀檔持久化、場景邊界重置
@@ -290,7 +290,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 37. CharacterLayer DOM 重構 | 1/1 | Complete   | 2026-04-13 |
-| 38. 表情交叉漸變 | 0/? | Not started | - |
+| 38. 表情交叉漸變 | 1/1 | Complete   | 2026-04-13 |
 | 39. 表情狀態管理 | 0/? | Not started | - |
 | 40. 表情選擇器 UI | 0/? | Not started | - |
 | 41. 編輯器狀態展示與容錯 | 0/? | Not started | - |

@@ -72,6 +72,8 @@
 - ✓ ExportModal Web/桌面 格式切换 + 桌面图标选择器 + 格式感知导出分发 — v0.8 Phase 34
 - ✓ 编辑器中文本地化：TOKEN_LABELS 41 条映射 + 字体/转场/音频/导出/坐标全中文化 — v0.9 Phase 35
 - ✓ Tooltip 帮助系统：HelpTip.vue 组件 + helpTexts.js 35 keys + 26 实例 + 80+ 按钮 title — v0.9 Phase 36
+- ✓ CharacterLayer DOM 双层重構（A/B img 子元素 + 容器分離動畫）— v1.0 Phase 37
+- ✓ 表情交叉漸變：300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 0ms 即時替換 — v1.0 Phase 38
 
 ### Active
 

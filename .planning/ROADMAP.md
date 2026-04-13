@@ -246,7 +246,10 @@ Plans:
   2. 新表情圖片完全預加載後才開始過渡動畫
   3. 快進模式下表情切換為 0ms 即時替換（無過渡動畫）
   4. 快速連續切換表情不產生殘影或堆疊異常
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 38-01-PLAN.md — CSS opacity crossfade + image preload + skipMode instant swap
 
 #### Phase 39: 表情狀態管理
 **Goal**: 引擎維護每角色表情狀態，跨頁繼承、存讀檔持久化、場景邊界重置

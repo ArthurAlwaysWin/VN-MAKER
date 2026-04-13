@@ -24,7 +24,7 @@ export let BASE_PATH = './assets/';
 /** @type {string} Path to script.json */
 export let SCRIPT_PATH = './script.json';
 
-/** @type {MessageEvent['data']|null} Captured start message from handshake detection */
+/** @deprecated No longer set — 'ack-preview' handshake doesn't capture data */
 export let _capturedStartMsg = null;
 
 // ─── Environment Detection ───────────────────────────────
@@ -119,11 +119,10 @@ export function resolvePath(path) {
 /**
  * Wait for editor handshake to determine if we're in preview mode.
  *
- * Sends 'ready' message to parent, then listens for 'start' response.
- * The start message is captured (not consumed) so initPreview() can
- * read it later via _capturedStartMsg.
+ * Sends 'ready' message to parent, then listens for 'ack-preview' response.
+ * The actual 'start' message (with script data) arrives later when user clicks play.
  *
- * @returns {Promise<boolean>} true if editor responded with 'start'
+ * @returns {Promise<boolean>} true if editor responded with 'ack-preview'
  * @private
  */
 function _waitForEditorHandshake() {
@@ -131,12 +130,11 @@ function _waitForEditorHandshake() {
     let settled = false;
 
     const onMessage = (e) => {
-      if (e.data?.type === 'start') {
+      if (e.data?.type === 'ack-preview') {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
         window.removeEventListener('message', onMessage);
-        _capturedStartMsg = e.data;
         resolve(true);
       }
     };

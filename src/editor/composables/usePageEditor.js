@@ -104,6 +104,8 @@ export function createPageEditor() {
     switch (msg.type) {
       case 'ready':
         isEngineReady.value = true;
+        // Acknowledge preview context so iframe detects 'preview' env
+        event.source?.postMessage({ type: 'ack-preview' }, '*');
         break;
       case 'ended':
         stopPreview();

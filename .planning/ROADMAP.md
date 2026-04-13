@@ -218,7 +218,7 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 
 - [x] **Phase 37: CharacterLayer DOM 重構** — 單 `<img>` 重構為雙圖層容器結構，保持 4 種定位模式不變 (completed 2026-04-13)
 - [x] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫 (completed 2026-04-13)
-- [ ] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置
+- [x] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置 (completed 2026-04-13)
 - [ ] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>`
 - [ ] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承表情預覽 + stale 引用優雅降級
 
@@ -260,10 +260,10 @@ Plans:
   2. 角色首次出現且無指定表情時，fallback 到該角色第一個表情
   3. 存檔包含當前每角色表情狀態，讀檔後正確恢復表情顯示
   4. 進入新場景時重置表情狀態（清除繼承，從 fallback 重新開始）
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 39-01-PLAN.md — Expression state Map + resolution chain + save/load persistence + scene reset
+- [x] 39-01-PLAN.md — Expression state Map + resolution chain + save/load persistence + scene reset
 
 #### Phase 40: 表情選擇器 UI
 **Goal**: 編輯器提供視覺化縮略圖表情選擇器，替換 PageInspector 中的純文字 `<select>`
@@ -294,6 +294,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 37. CharacterLayer DOM 重構 | 1/1 | Complete   | 2026-04-13 |
 | 38. 表情交叉漸變 | 1/1 | Complete    | 2026-04-13 |
-| 39. 表情狀態管理 | 0/? | Not started | - |
+| 39. 表情狀態管理 | 1/1 | Complete   | 2026-04-13 |
 | 40. 表情選擇器 UI | 0/? | Not started | - |
 | 41. 編輯器狀態展示與容錯 | 0/? | Not started | - |

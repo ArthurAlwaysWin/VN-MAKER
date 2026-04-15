@@ -48,13 +48,12 @@
           class="char-row" :class="{ active: editor.selectedCharIndex.value === idx }"
           @click="editor.selectCharacter(idx)">
           <span class="char-name">{{ getCharName(char.id) }}</span>
-          <select :value="char.expression"
-            @change="setCharExpression(idx, $event.target.value)"
-            @click.stop class="mini-select">
-            <option v-for="(_, expr) in getCharExpressions(char.id)" :key="expr" :value="expr">
-              {{ expr }}
-            </option>
-          </select>
+          <ExpressionDropdown
+            :expressions="getCharExpressions(char.id)"
+            :modelValue="char.expression"
+            @update:modelValue="setCharExpression(idx, $event)"
+            @click.stop
+          />
           <button class="delete-x" @click.stop="removeCharacter(idx)" title="移除角色">✕</button>
           <div v-if="editor.selectedCharIndex.value === idx" class="char-scale-row" @click.stop>
             <label class="scale-label">缩放</label>
@@ -115,13 +114,12 @@
           </div>
           <div class="form-group" v-if="selectedDialogue.speaker && isCharId(selectedDialogue.speaker)">
             <label>表情变化</label>
-            <select :value="selectedDialogue.expression || ''"
-              @change="setDialogueExpression($event.target.value)" class="field-input">
-              <option value="">（不变）</option>
-              <option v-for="(_, expr) in getCharExpressions(selectedDialogue.speaker)" :key="expr" :value="expr">
-                {{ expr }}
-              </option>
-            </select>
+            <ExpressionDropdown
+              :expressions="getCharExpressions(selectedDialogue.speaker)"
+              :modelValue="selectedDialogue.expression || ''"
+              @update:modelValue="setDialogueExpression($event)"
+              nullable
+            />
           </div>
           <div class="form-group">
             <label>语音</label>
@@ -365,6 +363,7 @@ import { useScriptStore } from '../../stores/script.js';
 import { useAssetStore } from '../../stores/assets.js';
 import AudioPicker from './AudioPicker.vue';
 import HelpTip from '../HelpTip.vue';
+import ExpressionDropdown from './ExpressionDropdown.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
 
 const editor = usePageEditor();

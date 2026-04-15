@@ -230,6 +230,51 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  // D-05: Find all references to a character expression across all scenes
+  function findExpressionReferences(charId, exprName) {
+    const refs = [];
+    if (!data.value?.scenes) return refs;
+    for (const [sceneId, scene] of Object.entries(data.value.scenes)) {
+      for (let pageIdx = 0; pageIdx < (scene.pages || []).length; pageIdx++) {
+        const page = scene.pages[pageIdx];
+        for (const char of (page.characters || [])) {
+          if (char.id === charId && char.expression === exprName) {
+            refs.push({ sceneId, sceneName: scene.name || sceneId, pageIdx, source: 'character' });
+          }
+        }
+        for (const dlg of (page.dialogues || [])) {
+          if (dlg.speaker === charId && dlg.expression === exprName) {
+            refs.push({ sceneId, sceneName: scene.name || sceneId, pageIdx, source: 'dialogue' });
+          }
+        }
+      }
+    }
+    return refs;
+  }
+
+  // D-06: Replace all references from one expression to another (no pushState)
+  function replaceExpressionReferences(charId, oldExpr, newExpr) {
+    if (!data.value?.scenes) return 0;
+    let count = 0;
+    for (const scene of Object.values(data.value.scenes)) {
+      for (const page of (scene.pages || [])) {
+        for (const char of (page.characters || [])) {
+          if (char.id === charId && char.expression === oldExpr) {
+            char.expression = newExpr;
+            count++;
+          }
+        }
+        for (const dlg of (page.dialogues || [])) {
+          if (dlg.speaker === charId && dlg.expression === oldExpr) {
+            dlg.expression = newExpr;
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
   // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
   async function loadScript() {
     console.warn('loadScript() is deprecated — use loadFromData() via project store');
@@ -250,6 +295,7 @@ export const useScriptStore = defineStore('script', () => {
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
     convertPageType, setSceneNext,
+    findExpressionReferences, replaceExpressionReferences,
     loadScript, saveScript
   };
 });

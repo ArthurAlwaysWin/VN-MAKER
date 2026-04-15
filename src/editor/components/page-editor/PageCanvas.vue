@@ -152,8 +152,28 @@ function getCharY(char) {
   return char.y != null ? char.y : PRESET_Y;
 }
 
+function findInheritedExpression(charId) {
+  const scene = script.data?.scenes?.[editor.selectedSceneId.value];
+  if (!scene?.pages) return null;
+  const pageIdx = editor.selectedPageIndex.value;
+  for (let i = pageIdx - 1; i >= 0; i--) {
+    const prevChars = scene.pages[i]?.characters || [];
+    const match = prevChars.find(c => c.id === charId);
+    if (match?.expression) return match.expression;
+  }
+  return null;
+}
+
 function getCharImage(char) {
-  const path = script.data?.characters?.[char.id]?.expressions?.[char.expression];
+  const charDef = script.data?.characters?.[char.id];
+  const expressions = charDef?.expressions || {};
+  // D-08 resolution: explicit (validated) → inherited → first expression → null
+  const explicit = char.expression && expressions[char.expression] ? char.expression : null;
+  const inherited = !explicit ? findInheritedExpression(char.id) : null;
+  const validInherited = inherited && expressions[inherited] ? inherited : null;
+  const resolved = explicit || validInherited || Object.keys(expressions)[0] || null;
+  if (!resolved) return null;
+  const path = expressions[resolved];
   return path ? resolveAsset(path) : null;
 }
 

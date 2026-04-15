@@ -335,18 +335,24 @@ export class ScriptEngine extends EventEmitter {
         || this._expressionState.get(char.id)
         || Object.keys(expressions)[0]
         || '';
-      this._expressionState.set(char.id, resolvedExpr);
+
+      // D-07: Validate resolved expression actually exists
+      const validExpr = expressions[resolvedExpr]
+        ? resolvedExpr
+        : (Object.keys(expressions)[0] || '');
+
+      this._expressionState.set(char.id, validExpr);
 
       this.emit('show_character', {
         id: char.id,
-        expression: resolvedExpr,
+        expression: validExpr,
         position: char.position || 'center',
         x: char.x,
         y: char.y,
         scale: char.scale ?? 1,
         transition: wasVisible ? 'none' : 'fade',
         duration: wasVisible ? 0 : 500,
-        image: expressions[resolvedExpr] || '',
+        image: expressions[validExpr] || '',
       });
     }
 
@@ -394,11 +400,16 @@ export class ScriptEngine extends EventEmitter {
     // Handle mid-dialogue expression change for the speaking character
     if (dlg.expression && dlg.speaker) {
       const charDef = this.script.characters[dlg.speaker];
-      this._expressionState.set(dlg.speaker, dlg.expression);
+      const expressions = charDef?.expressions || {};
+      // D-07: Validate expression exists
+      const validExpr = expressions[dlg.expression]
+        ? dlg.expression
+        : (Object.keys(expressions)[0] || '');
+      this._expressionState.set(dlg.speaker, validExpr);
       this.emit('set_expression', {
         id: dlg.speaker,
-        expression: dlg.expression,
-        image: charDef?.expressions?.[dlg.expression] || '',
+        expression: validExpr,
+        image: expressions[validExpr] || '',
       });
     }
 

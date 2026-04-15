@@ -448,4 +448,73 @@ describe('expression state', () => {
     // After entering sceneB, expression state should be cleared
     strictEqual(engine._expressionState.size, 0);
   });
+
+  it('falls back to first expression when resolved expression is stale (D-07)', () => {
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {
+        hero: {
+          name: 'Hero',
+          expressions: { normal: 'n.png', happy: 'h.png' },
+        },
+      },
+      scenes: {
+        start: {
+          name: 'Test',
+          pages: [
+            {
+              type: 'normal',
+              // expression 'deleted_expr' does NOT exist in hero's expressions dict
+              characters: [{ id: 'hero', expression: 'deleted_expr', position: 'center' }],
+              dialogues: [{ speaker: null, text: 'p1', voice: null }],
+            },
+          ],
+        },
+      },
+    };
+
+    const showEvents = [];
+    engine.on('show_character', (data) => showEvents.push(data));
+    engine.startGame('start');
+
+    const ev = showEvents[0];
+    strictEqual(ev.expression, 'normal', 'Should fallback to first expression "normal"');
+    strictEqual(ev.image, 'n.png', 'Should use first expression image');
+  });
+
+  it('falls back to first expression for stale mid-dialogue expression (D-07)', () => {
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {
+        hero: {
+          name: 'Hero',
+          expressions: { normal: 'n.png', happy: 'h.png' },
+        },
+      },
+      scenes: {
+        start: {
+          name: 'Test',
+          pages: [
+            {
+              type: 'normal',
+              characters: [{ id: 'hero', expression: 'normal', position: 'center' }],
+              dialogues: [
+                { speaker: 'hero', text: 'hi', expression: null, voice: null },
+                { speaker: 'hero', text: 'stale', expression: 'gone', voice: null },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const setExprEvents = [];
+    engine.on('set_expression', (data) => setExprEvents.push(data));
+    engine.startGame('start');
+    engine.next(); // advance to second dialogue with stale expression 'gone'
+
+    const ev = setExprEvents[0];
+    strictEqual(ev.expression, 'normal', 'Should fallback to first expression "normal"');
+    strictEqual(ev.image, 'n.png', 'Should use first expression image');
+  });
 });

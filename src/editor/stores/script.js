@@ -168,6 +168,15 @@ export const useScriptStore = defineStore('script', () => {
     if (!scene) return null;
     const newPage = createDefaultPage();
     const insertAt = afterIndex >= 0 ? afterIndex + 1 : scene.pages.length;
+
+    // D-03/D-04: PPT-style copy from previous page
+    const prevPage = scene.pages[insertAt - 1];
+    if (prevPage) {
+      newPage.characters = JSON.parse(JSON.stringify(prevPage.characters || []));
+      newPage.background = prevPage.background || null;
+      newPage.bgm = prevPage.bgm ? JSON.parse(JSON.stringify(prevPage.bgm)) : null;
+    }
+
     scene.pages.splice(insertAt, 0, newPage);
     pushState();
     return { page: newPage, index: insertAt };

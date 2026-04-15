@@ -394,21 +394,52 @@ function renameExpression(oldName, newName) {
   script.pushState();
 }
 
+function formatReferenceList(refs) {
+  const lines = refs.map(r => `  • ${r.sceneName} 第${r.pageIdx + 1}頁 (${r.source === 'dialogue' ? '對話' : '角色'})`);
+  if (lines.length <= 5) return lines.join('\n');
+  return lines.slice(0, 5).join('\n') + `\n  …及其他 ${lines.length - 5} 處`;
+}
+
 /**
- * Delete an expression — removes metadata and deletes the image file from disk.
+ * Delete an expression — checks references, confirms with user, batch-replaces, then deletes.
+ * D-05/D-06: Reference check + confirmation + single undo step.
  * @param {string} exprName - Expression name to delete
  */
 async function deleteExpression(exprName) {
   if (!selectedChar.value) return;
-  if (confirm(`确定要删除表情 "${exprName}" 吗？\n图片文件也会从磁盘删除。`)) {
-    const exprPath = selectedChar.value.expressions[exprName];
-    delete selectedChar.value.expressions[exprName];
-    script.pushState();
+  const charId = selectedId.value;
+  const expressions = selectedChar.value.expressions || {};
+  const exprKeys = Object.keys(expressions);
 
-    if (exprPath) {
-      const filename = exprPath.split('/').pop();
-      await assets.deleteAsset('characters', filename);
-    }
+  // Find replacement: first expression that isn't the one being deleted
+  const replacement = exprKeys.find(k => k !== exprName) || null;
+
+  // Scan all scenes for references
+  const refs = script.findExpressionReferences(charId, exprName);
+
+  let msg = `确定要删除表情 "${exprName}" 吗？\n图片文件也会从磁盘删除。`;
+  if (refs.length > 0) {
+    const target = replacement ? `「${replacement}」` : '空值';
+    msg += `\n\n⚠️ 此表情在以下位置被引用（共 ${refs.length} 處），刪除後將自動替換為 ${target}：\n`;
+    msg += formatReferenceList(refs);
+  }
+
+  if (!confirm(msg)) return;
+
+  // Batch replace references before deletion (no pushState per replacement)
+  if (refs.length > 0) {
+    script.replaceExpressionReferences(charId, exprName, replacement);
+  }
+
+  const exprPath = expressions[exprName];
+  delete selectedChar.value.expressions[exprName];
+
+  // Single pushState for the entire operation (one undo step)
+  script.pushState();
+
+  if (exprPath) {
+    const filename = exprPath.split('/').pop();
+    await assets.deleteAsset('characters', filename);
   }
 }
 </script>

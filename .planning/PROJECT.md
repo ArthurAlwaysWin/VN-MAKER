@@ -74,9 +74,6 @@
 - ✓ Tooltip 帮助系统：HelpTip.vue 组件 + helpTexts.js 35 keys + 26 实例 + 80+ 按钮 title — v0.9 Phase 36
 - ✓ CharacterLayer DOM 双层重構（A/B img 子元素 + 容器分離動畫）— v1.0 Phase 37
 - ✓ 表情交叉漸變：300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 0ms 即時替換 — v1.0 Phase 38
-
-- ✓ CharacterLayer DOM 双层重構（A/B img 子元素 + 容器分離動畫）— v1.0 Phase 37
-- ✓ 表情交叉漸變：300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 0ms 即時替換 — v1.0 Phase 38
 - ✓ 表情狀態管理：引擎 Map 追蹤每角色表情，頁面繼承 + 存讀檔持久化 + 場景重置 — v1.0 Phase 39
 - ✓ ExpressionDropdown 縮略圖網格選擇器 + PageInspector 雙處集成 — v1.0 Phase 40
 - ✓ 畫布繼承表情預覽 + stale 引用優雅降級（全場景掃描 + 批量替換 + 單步撤銷）— v1.0 Phase 41

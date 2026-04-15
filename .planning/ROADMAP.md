@@ -220,7 +220,7 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 - [x] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫 (completed 2026-04-13)
 - [x] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置 (completed 2026-04-13)
 - [x] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>` (completed 2026-04-15)
-- [ ] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承表情預覽 + stale 引用優雅降級
+- [x] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承表情預覽 + stale 引用優雅降級 (completed 2026-04-15)
 
 ### Phase Details
 
@@ -290,11 +290,11 @@ Plans:
   1. 畫布預覽在未顯式設置表情時顯示繼承來源的實際表情
   2. 刪除表情圖片後，引擎和編輯器均 fallback 到第一個可用表情（不顯示空白或破圖）
   3. Inspector 中繼承的表情與顯式設置的表情有視覺區分
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 41-01-PLAN.md — Canvas expression resolution + PPT-style addPage + engine/canvas fallback validation
-- [ ] 41-02-PLAN.md — Expression deletion reference check + confirmation dialog + batch replacement
+- [x] 41-02-PLAN.md — Expression deletion reference check + confirmation dialog + batch replacement
 
 **UI hint**: yes
 
@@ -306,4 +306,4 @@ Plans:
 | 38. 表情交叉漸變 | 1/1 | Complete    | 2026-04-13 |
 | 39. 表情狀態管理 | 1/1 | Complete    | 2026-04-13 |
 | 40. 表情選擇器 UI | 2/2 | Complete   | 2026-04-15 |
-| 41. 編輯器狀態展示與容錯 | 1/2 | In Progress|  |
+| 41. 編輯器狀態展示與容錯 | 2/2 | Complete   | 2026-04-15 |

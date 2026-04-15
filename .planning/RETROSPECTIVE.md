@@ -110,3 +110,66 @@
 - 本地化工作量主要在"找到所有英文"，翻译本身很快 — 下次可先做全量英文扫描再动手
 - Tooltip 的 viewport flip 逻辑（上/下翻转）比想象中简单，getBoundingClientRect 即可
 - gsd-tools 的 milestone complete 命令统计数据不准（把所有历史 phase 计入），需手动修正
+
+---
+
+## v1.0 — 角色表情/差分場景切換
+
+**Duration:** 3 days (2026-04-12 ~ 2026-04-15)
+**Scope:** 5 phases (37-41), 7 plans, 10 requirements, 60 files changed, +9533/-849 lines
+
+### What Was Built
+
+- CharacterLayer 雙圖層重構（div+imgA/imgB 容器結構，4 種定位模式保留）
+- 表情交叉漸變（300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 即時替換）
+- 表情狀態管理（引擎 Map + 頁面繼承 + 存讀檔持久化 + 場景重置 + 36 單元測試）
+- ExpressionDropdown 視覺選擇器（Teleport 縮略圖網格 + 角色行/對話行雙處集成）
+- 畫布繼承預覽 + 安全刪除（反向頁面查找 + 全場景引用掃描 + 批量替換 + 單步撤銷）
+
+### What Worked Well
+
+- **A/B crossfade 架構精巧**：Phase 37 奠基（雙圖層），Phase 38 添加 crossfade，兩步分離清晰，Phase 37 可獨立驗證
+- **Resolution chain 統一模式**：`char.expression → inherited → first → ''`，引擎/畫布/刪除三處復用同一解析邏輯
+- **TDD 引擎驗證**：D-07 stale expression 測試先寫失敗（RED），再實作（GREEN），確保 fallback 正確
+- **PPT-style addPage**：深拷貝上一頁角色/背景/BGM，符合用戶直覺（"下一頁應該延續上一頁的畫面"）
+- **整合檢查器有效**：gsd-integration-checker 掃描 12 個跨 phase 導出全部消費，0 孤立導出
+- **VERIFICATION.md 逐 phase 驗證**：5 個 phase 全部有正式驗證報告（37:5/5, 38:5/5, 39:5/5, 40:8/8, 41:10/10）
+
+### What Could Be Better
+
+- **gsd-tools milestone complete 統計仍不準**：報告 9 phases/13 plans/18 tasks（累計值），需手動修正 MILESTONES.md — 此問題 v0.5 就存在，至今未修
+- **Phase 37/40 缺少 VERIFICATION.md**：原始執行時未生成，milestone audit 發現後才補。應在 execute-phase 流程中強制生成
+- **SUMMARY frontmatter 不一致**：Phase 37 無 frontmatter，Phase 38 有但格式不同於 39-41。標準化 frontmatter 可改善自動提取
+- **Canvas vs Engine 繼承不對稱**：雖然是有意設計（靜態 vs 運行時），但初次理解需要看 HelpTip 才知道差異，可能造成用戶困惑
+
+### Patterns Established
+
+- **A/B 雙圖層 crossfade**：可復用於任何需要平滑過渡的圖片切換（如背景切換）
+- **Generation counter 防快速切換**：過期操作不執行，防殘影堆疊
+- **全場景引用掃描 + 批量替換 + 單步撤銷**：安全刪除資源的標準模式
+- **反向頁面查找繼承**：畫布預覽「向上找」最近顯式值的模式
+
+### Key Lessons
+
+- 整圖切換（vs 分層合成）大幅簡化實作，扁平式數據模型易於理解和遍歷
+- img.decode() 是防閃白的關鍵 — 瀏覽器 decode 完成後才觸發 CSS transition
+- 表情系統的核心複雜度在「繼承」和「刪除」，渲染本身反而簡單
+- Teleport + fixed 定位已成為專案標準 UI 模式（HelpTip、ExpressionDropdown）
+
+---
+
+## Cross-Milestone Trends
+
+| Milestone | Phases | Plans | Days | Files | +Lines | Reqs |
+|-----------|--------|-------|------|-------|--------|------|
+| v0.5 | 4 | 8 | 2 | ~60 | ~6k | 27 |
+| v0.6 | 5 | 4 | 2 | ~40 | ~5k | 26 |
+| v0.7 | 4 | 6 | 2 | ~45 | ~6k | 21 |
+| v0.8 | 3 | 4 | 2 | 45 | 8585 | 15 |
+| v0.9 | 2 | 4 | 1 | 54 | 3368 | 15 |
+| v1.0 | 5 | 7 | 3 | 60 | 9533 | 10 |
+
+**趨勢觀察：**
+- v1.0 是代碼量最大的里程碑（+9533 行），反映引擎級重構的複雜度
+- 里程碑粒度穩定在 2-5 phases，避免過大或過小
+- VERIFICATION.md 補充機制在 v1.0 首次啟用，應納入標準流程

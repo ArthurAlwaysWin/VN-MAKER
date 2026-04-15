@@ -75,26 +75,21 @@
 - ✓ CharacterLayer DOM 双层重構（A/B img 子元素 + 容器分離動畫）— v1.0 Phase 37
 - ✓ 表情交叉漸變：300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 0ms 即時替換 — v1.0 Phase 38
 
+- ✓ CharacterLayer DOM 双层重構（A/B img 子元素 + 容器分離動畫）— v1.0 Phase 37
+- ✓ 表情交叉漸變：300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 0ms 即時替換 — v1.0 Phase 38
+- ✓ 表情狀態管理：引擎 Map 追蹤每角色表情，頁面繼承 + 存讀檔持久化 + 場景重置 — v1.0 Phase 39
+- ✓ ExpressionDropdown 縮略圖網格選擇器 + PageInspector 雙處集成 — v1.0 Phase 40
+- ✓ 畫布繼承表情預覽 + stale 引用優雅降級（全場景掃描 + 批量替換 + 單步撤銷）— v1.0 Phase 41
+
 ### Active
 
-<!-- v1.0 requirements defined in REQUIREMENTS.md -->
+<!-- 下一里程碑需求待定義 — 使用 /gsd-new-milestone 開始 -->
 
-- [ ] **角色表情/差分场景切换**：在剧本编辑器中支持角色表情与差分（服装）选择、引擎渲染、淡入淡出过渡、状态继承
+（暫無 — 等待下一里程碑定義）
 
-## Current Milestone: v1.0 角色表情/差分场景切换
+## Current Milestone: 待定義
 
-**Goal:** 在剧本编辑器和引擎中支持角色表情与差分（服装）切换
-
-**Target features:**
-- 页面编辑器中角色表情选择器（缩略图网格下拉）
-- 引擎渲染时根据页面数据显示正确表情
-- 表情切换淡入淡出过渡动画
-- 表情状态继承（沿用上一页表情，无则用第一个）
-
-**Key decisions:**
-- 数据模型：扁平式（所有差分/服装+表情组合都是同级表情条目）
-- 整图切换（非分层合成）— 每个状态一张完整立绘
-- 选择器 UI 复用资源选择器模式（缩略图网格下拉）
+使用 `/gsd-new-milestone` 開始下一里程碑的需求收集與路線規劃。
 
 ### Future — 后续候选
 
@@ -136,7 +131,7 @@
 - **资源库**：5 类资源（背景/角色/音频/字体/通用），统一 Pinia store + IPC 管理
 - **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认页面
 - **设置页覆盖层**：右侧滑入 overlay，ESC 优先级链（settings > game menu），stack-based 层管理
-- **已发布**：v0.1（设置页设计器）+ v0.2（资源库 & 标题页 & 设置叠加层）+ v0.3（PPT 式游戏内容编辑器）+ v0.4（语音 & 全局字体设置）+ v0.5（游戏 UI 补全：快捷栏 + 存读档 + 快进 + 快存快读）+ v0.6（主题包系统）+ v0.7（游戏导出 Web 静态包）+ v0.8（游戏导出 Electron 桌面版）+ v0.9（编辑器本地化与帮助系统）
+- **已发布**：v0.1 ~ v1.0（设置页设计器 → 资源库 → PPT 编辑器 → 语音字体 → 游戏 UI → 主题包 → Web 导出 → 桌面导出 → 本地化帮助 → 角色表情差分）
 
 ### 已知问题
 
@@ -198,6 +193,15 @@
 | HelpTip Teleport + fixed 定位 | 避免 overflow:hidden 裁切气泡 | ✓ Good |
 | helpTexts.js 集中管理帮助文本 | 6 区域导出，编辑器统一引用 | ✓ Good |
 | Tooltip 双模式：? 图标 + 按钮 title | 配置项用 ? 详解，按钮用 title 简提 | ✓ Good |
+| 扁平式表情数据模型 | 所有差分/服装+表情同级，避免嵌套复杂度 | ✓ Good |
+| 整图切换（非分层合成）| 每个状态一张完整立绘，简单可靠 | ✓ Good |
+| CharacterLayer div+imgA/imgB 双图层 | A/B 交替实现 crossfade，无闪白 | ✓ Good |
+| img.decode() 预加载门控 | decode() 完成后才触发 crossfade，防白闪 | ✓ Good |
+| Generation counter 防快速切换 | 过期 crossfade 不执行，防残影堆叠 | ✓ Good |
+| ExpressionDropdown Teleport+fixed | 避免 inspector overflow 裁切下拉框 | ✓ Good |
+| 表情状态 Map + resolution chain | char.expression → inherited → first → '' | ✓ Good |
+| Canvas vs Engine 继承不对称 | 画布静态预览 vs 引擎运行时，意图正确 | ✓ Good |
+| 删除表情前全场景引用扫描 | 批量替换+单步 pushState，安全可撤销 | ✓ Good |
 
 ## Evolution
 
@@ -215,13 +219,13 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v0.7** — 游戏导出 Web 静态包 (Phases 28-31)
 - ✅ **v0.8** — 游戏导出 Electron 桌面版 (Phases 32-34)
 - ✅ **v0.9** — 编辑器本地化与帮助系统 (Phases 35-36)
-- 🚧 **v1.0** — 角色表情/差分场景切换 (Phases 37+)
+- ✅ **v1.0** — 角色表情/差分場景切換 (Phases 37-41)
 
 ## Current State
 
-v1.0 里程碑启动 — 角色表情/差分场景切换。全部 9 个里程碑已交付（v0.1~v0.9），v1.0 进入需求定义阶段。
+v1.0 里程碑完成 — 角色表情/差分場景切換。全部 10 個里程碑已交付（v0.1~v1.0）。
 
-**已发布：** v0.1 ~ v0.9（设置页设计器 → 资源库 → 编辑器 → 语音字体 → 游戏 UI 补全 → 主题包系统 → Web 导出 → 桌面导出 → 本地化与帮助系统）
+**已發布：** v0.1 ~ v1.0（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換）
 
 ---
-*Last updated: 2026-04-12 after v1.0 milestone started — 角色表情/差分场景切换*
+*Last updated: 2026-04-15 after v1.0 milestone shipped — 角色表情/差分場景切換*

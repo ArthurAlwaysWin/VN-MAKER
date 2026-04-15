@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.0 角色表情/差分場景切換 (Shipped: 2026-04-15)
+
+**Phases completed:** 5 phases (37-41), 7 plans, 10 requirements
+**Git range:** v0.9..HEAD (~86 commits)
+**Files:** 60 changed, +9533/-849 lines
+
+**Key accomplishments:**
+
+- CharacterLayer 雙圖層重構 — 單 `<img>` 重構為 div+imgA/imgB 容器結構，4 種定位模式完整保留
+- 表情交叉漸變 — 300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 即時替換
+- 表情狀態管理 — 引擎 Map 追蹤每角色表情，頁面繼承 + 存讀檔持久化 + 場景重置
+- ExpressionDropdown 視覺選擇器 — Teleport 縮略圖網格替換 `<select>`，角色行 + 對話行雙處集成
+- 畫布繼承預覽 + 安全刪除 — 反向頁面查找顯示繼承表情，刪除前全場景引用掃描 + 批量替換
+
+**Milestone audit:** 10/10 requirements passed — see v1.0-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v1.0-ROADMAP.md, milestones/v1.0-REQUIREMENTS.md
+
+---
+
 ## v0.9 编辑器本地化与帮助系统 (Shipped: 2026-04-12)
 
 **Phases completed:** 2 phases (35-36), 4 plans, 15 requirements

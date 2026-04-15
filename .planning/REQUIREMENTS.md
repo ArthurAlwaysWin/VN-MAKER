@@ -19,7 +19,7 @@
 
 ### 编辑器 UI (UI)
 
-- [ ] **UI-01**: ExpressionDropdown 缩略图网格选择器组件（Teleport + fixed 定位，复用 CharacterPicker 网格模式）
+- [x] **UI-01**: ExpressionDropdown 缩略图网格选择器组件（Teleport + fixed 定位，复用 CharacterPicker 网格模式）
 - [ ] **UI-02**: PageInspector 集成 — 角色行和对话表情处均使用 ExpressionDropdown 替换现有 `<select>`
 - [ ] **UI-03**: 画布预览显示继承后的实际表情（未显式设置时显示继承来源的表情）
 - [ ] **UI-04**: 删除表情后的 stale 引用优雅降级 — 引擎和编辑器均 fallback 到第一个可用表情，不显示空白
@@ -54,7 +54,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STATE-01 | Phase 39 | Pending |
 | STATE-02 | Phase 39 | Pending |
 | STATE-03 | Phase 39 | Pending |
-| UI-01 | Phase 40 | Pending |
+| UI-01 | Phase 40 | Complete |
 | UI-02 | Phase 40 | Pending |
 | UI-03 | Phase 41 | Pending |
 | UI-04 | Phase 41 | Pending |

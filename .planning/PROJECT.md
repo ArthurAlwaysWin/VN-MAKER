@@ -92,6 +92,33 @@
 
 <!-- 已讨论但推迟到后续里程碑 -->
 
+**UI Theme System v2（来源：docs/superpowers/specs/ui-theme-system-v2-design.md，Review 契合度 ~75%）**
+
+采纳项（P0 — 引擎配置化，下一里程碑优先）：
+- [ ] **Layer 2: widgetStyles 控件风格系统**：tab(5 shape) / toggle(4 style) / slider / panel / button — script.json `ui.widgetStyles` 新增节，引擎读取后驱动控件 DOM 和样式。所有字段 null = 使用引擎默认值，向后兼容
+- [ ] **SaveLoadScreen 配置化**：新增 `setLayout(config)` 方法，接受 `ui.saveLoadScreen`（背景/标题/slotGrid/slot 样式/分页样式），null 时保持现有硬编码行为
+- [ ] **BacklogScreen 配置化**：新增 `setLayout(config)` 方法，接受 `ui.backlogScreen`（背景/header/条目样式），null 时保持现有硬编码行为
+- [ ] **GameMenu 配置化**：新增 `setLayout(config)` 方法，接受 `ui.gameMenu`（位置/背景/按钮文字/图标），null 时保持现有硬编码行为
+- [ ] **SettingsScreen 结构化模式**：elements 为空时使用 header/tabBar/contentArea 结构渲染，控件样式从 widgetStyles 取。与现有自由布局共存（elements 非空优先自由布局）
+- [ ] **main.js 配置传入统一**：engine.load() 后从 `ui.*` 取各界面配置，调用 setLayout/setWidgetStyles
+- [ ] **DialogueBox nameplateStyle 扩展**：inline(现有) / floating / banner 三种名牌样式 — 注意：原文档约束 #6 说不动 DialogueBox 但同时提了此需求，矛盾已识别，建议做
+
+采纳项（P1 — 内置主题 + 编辑器，可与 P0 同里程碑或下一个）：
+- [ ] **1-2 套示范主题**：default(现有) + wafuu(和风)，完整 tokens + widgetStyles + 各界面配置 + 贴图
+- [ ] **控件风格编辑器**：在编辑器中可视化编辑 widgetStyles（形状缩略图选择 + 颜色 + 实时预览）
+- [ ] **各界面布局编辑器**：SaveLoad/Backlog/GameMenu 的结构化编辑器
+
+推迟项（P2/P3 — 后续里程碑）：
+- [ ] **.gmtheme 主题包格式**：ZIP 打包 theme.json + assets/，导入/导出/社区共享
+- [ ] **5 套内置主题**：wafuu/modern-sky/fantasy-dark/minimal-white + default
+- [ ] **Tab ribbon/trapezoid clip-path 精细实现**
+- [ ] **编辑器 UI 设计器合并标签页** — 现有 6 标签已稳定，不急于合并，新功能可作为子页添加
+
+不采纳项（与现有架构冲突或不必要）：
+- ✗ iframe + postMessage 预览方案 — 现有 Vue 组件直接预览更轻量
+- ✗ 约束 #6「不要动 DialogueBox/CharacterLayer/BackgroundLayer」中的 DialogueBox 部分 — 已有 applyGlobalStyle()，扩展它是合理路线
+
+**其他候选**
 - [ ] **每组件独立样式覆盖**：对话框/菜单独立主色配置 — v0.7
 - [ ] **每场景/每页面主题切换** — v0.7+
 - [ ] **布局变体**：每个界面 2-3 种预设布局选择 — v0.7

@@ -54,6 +54,7 @@
             @update:modelValue="setCharExpression(idx, $event)"
             @click.stop
           />
+          <HelpTip :text="HELP_SCRIPT.charExpression" />
           <button class="delete-x" @click.stop="removeCharacter(idx)" title="移除角色">✕</button>
           <div v-if="editor.selectedCharIndex.value === idx" class="char-scale-row" @click.stop>
             <label class="scale-label">缩放</label>
@@ -113,7 +114,7 @@
             </div>
           </div>
           <div class="form-group" v-if="selectedDialogue.speaker && isCharId(selectedDialogue.speaker)">
-            <label>表情变化</label>
+            <label>表情变化 <HelpTip :text="HELP_SCRIPT.dialogueExpression" /></label>
             <ExpressionDropdown
               :expressions="getCharExpressions(selectedDialogue.speaker)"
               :modelValue="selectedDialogue.expression || ''"

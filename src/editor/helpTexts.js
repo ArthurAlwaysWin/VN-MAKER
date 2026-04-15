@@ -43,6 +43,8 @@ export const HELP_SCRIPT = {
   sceneJump: '场景结束后跳转到\n指定的下一个场景',
   choicePage: '选择页包含多个选项按钮\n每个选项可链接到不同场景',
   addCharacter: '将角色添加到当前页面\n可在画布上拖拽定位',
+  charExpression: '角色进入页面时的初始表情\n修改后画布会立即更新',
+  dialogueExpression: '播放到该对话时切换的表情\n设为"不变"则保持当前表情\n仅在游戏运行时生效',
 };
 
 // ─── 资源库 (HELP-07) ──────────────────────────────────

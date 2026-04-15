@@ -71,7 +71,14 @@ async function atomicWrite(filePath, content) {
   const bak = filePath + '.bak';
   await fs.writeFile(tmp, content, 'utf-8');
   try { await fs.rename(filePath, bak); } catch {}
-  await fs.rename(tmp, filePath);
+  try {
+    await fs.rename(tmp, filePath);
+  } catch (err) {
+    // rename failed — restore backup and clean up temp, then rethrow
+    try { await fs.rename(bak, filePath); } catch {}
+    try { await fs.unlink(tmp); } catch {}
+    throw err;
+  }
   try { await fs.unlink(bak); } catch {}
 }
 
@@ -499,6 +506,9 @@ ipcMain.handle('close-project', () => {
 ipcMain.handle('save-slot', async (event, { slot, state, previewText, thumbnail }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    if (!Number.isInteger(slot) || slot < 1 || slot > 108) {
+      return { success: false, error: 'Invalid slot number' };
+    }
     const savesDir = path.join(currentProjectPath, 'saves');
     await fs.mkdir(savesDir, { recursive: true });
     const padded = String(slot).padStart(3, '0');

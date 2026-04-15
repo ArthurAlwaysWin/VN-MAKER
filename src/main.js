@@ -76,6 +76,7 @@ let readHistory = null;
 let currentVoicePromise = null;
 const VOICE_END_DELAY = 300;
 let isPlaying = false; // whether the game is actively playing (not on title)
+let _autoCallbackId = 0; // incremented on every startAutoTimer/clearAutoTimer to cancel stale callbacks
 
 // ─── Toast notifications (D-11, D-12) ──────────────────
 function showToast(message, duration = 3000) {
@@ -113,7 +114,8 @@ async function captureGameScreenshot() {
 
   try {
     // Hide dialogue box for cleaner screenshot (bar follows as DOM child)
-    const dlgWasVisible = !dialogueBox.el?.classList.contains('hidden');
+    // DialogueBox only uses 'visible' class — it never adds 'hidden', so check for 'visible'
+    const dlgWasVisible = dialogueBox.el?.classList.contains('visible');
     dialogueBox.hide();
 
     // Wait one frame for DOM update
@@ -453,6 +455,8 @@ document.addEventListener('keydown', (e) => {
     if (settingsScreen.isVisible) { settingsScreen.hide(); return; }
     if (!backlogScreen.el.classList.contains('hidden')) { backlogScreen.hide(); return; }
     if (!gameMenu.el.classList.contains('hidden')) { gameMenu.hide(); return; }
+    // ESC when no overlay is open → toggle game menu (standard VN behavior)
+    if (isPlaying) { gameMenu.show(); return; }
   }
 
   if (!isPlaying) return;
@@ -594,6 +598,9 @@ function stopAuto() {
 
 function startAutoTimer() {
   clearAutoTimer();
+  // Snapshot the current callback ID so stale callbacks (from a previous auto cycle
+  // that resolved after stopAuto() was called) can detect they are outdated and bail.
+  const myCallbackId = ++_autoCallbackId;
 
   // Text completion wait: poll isComplete(), then wait autoSpeed (existing behavior)
   const textWait = new Promise((resolve) => {
@@ -616,6 +623,8 @@ function startAutoTimer() {
   // D-04: max(voiceDuration, textComplete + autoSpeed) — Promise.all = whoever is longer
   const waits = voiceWait ? [textWait, voiceWait] : [textWait];
   Promise.all(waits).then(() => {
+    // Guard: if clearAutoTimer() was called since this cycle started, bail out
+    if (myCallbackId !== _autoCallbackId) return;
     if (autoMode && engine.waiting) {
       engine.next();
     }
@@ -623,6 +632,8 @@ function startAutoTimer() {
 }
 
 function clearAutoTimer() {
+  // Invalidate any in-flight startAutoTimer callbacks before clearing timers
+  _autoCallbackId++;
   if (autoTimerInterval) {
     clearInterval(autoTimerInterval);
     autoTimerInterval = null;
@@ -775,7 +786,8 @@ async function init() {
     await engine.load(SCRIPT_PATH);
 
     // ReadHistory — cross-save shared read tracking (D-03, D-12)
-    readHistory = new ReadHistory(engine.script.meta.title || 'untitled');
+    // Use optional chaining — script.json may not have a meta section (HIST-02)
+    readHistory = new ReadHistory(engine.script.meta?.title || 'untitled');
 
     // Load custom fonts before any rendering (INFRA-02)
     if (engine.script.assets?.fonts?.length) {

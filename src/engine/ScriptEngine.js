@@ -418,6 +418,11 @@ export class ScriptEngine extends EventEmitter {
       voice: dlg.voice || null,
     });
 
+    // Cap in-memory history to prevent unbounded growth during long sessions (HIST-01)
+    if (this.history.length > 200) {
+      this.history = this.history.slice(-200);
+    }
+
     this.waiting = true;
     this.emit('dialogue', data);
   }
@@ -461,6 +466,7 @@ export class ScriptEngine extends EventEmitter {
       case '<=':  result = val <= page.value;  break;
       default:
         console.warn(`[ScriptEngine] Unknown operator: ${page.operator}`);
+        this.emit('error', { type: 'unknown_operator', operator: page.operator, page });
     }
 
     const target = result ? page.trueTarget : page.falseTarget;

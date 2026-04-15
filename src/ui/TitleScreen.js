@@ -53,7 +53,7 @@ export class TitleScreen {
   _renderDefault() {
     this.el.style.cssText = '';
     this.el.innerHTML = `
-      <div class="title-game-name">${this.gameTitle}</div>
+      <div class="title-game-name"></div>
       <div class="title-menu">
         <button class="title-button" id="title-start">开 始 游 戏</button>
         ${this.hasSave ? '<button class="title-button" id="title-continue">继 续 游 戏</button>' : ''}
@@ -61,6 +61,8 @@ export class TitleScreen {
       </div>
       <div class="title-subtitle">Powered by Galgame Maker</div>
     `;
+    // Use textContent to safely set game title — avoids XSS via innerHTML interpolation
+    this.el.querySelector('.title-game-name').textContent = this.gameTitle;
     this._bindButtons();
   }
 

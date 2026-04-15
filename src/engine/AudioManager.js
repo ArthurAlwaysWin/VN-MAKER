@@ -12,6 +12,8 @@ export class AudioManager {
     this._bgm = null;
     /** @type {number} Master BGM volume (0-1) */
     this.bgmVolume = 0.5;
+    /** @type {number} Per-track volume of the currently playing BGM (from data.volume) */
+    this._currentBgmTrackVolume = 1;
     /** @type {number} Master SE volume (0-1) */
     this.seVolume = 0.8;
     /** @type {number|null} Fade interval ID */
@@ -47,7 +49,9 @@ export class AudioManager {
     this._bgm = new Audio(this.basePath + data.file);
     this._bgm.loop = true;
 
-    const targetVolume = (data.volume ?? 0.5) * this.bgmVolume;
+    // Store per-track volume so setBgmVolume can correctly scale it later
+    this._currentBgmTrackVolume = data.volume ?? 0.5;
+    const targetVolume = this._currentBgmTrackVolume * this.bgmVolume;
 
     if (data.fadeIn && data.fadeIn > 0) {
       this._bgm.volume = 0;
@@ -83,6 +87,7 @@ export class AudioManager {
       this._bgm.currentTime = 0;
     }
     this._bgm = null;
+    this._currentBgmTrackVolume = 1; // reset track volume on stop
   }
 
   /**
@@ -102,7 +107,8 @@ export class AudioManager {
   setBgmVolume(vol) {
     this.bgmVolume = vol;
     if (this._bgm) {
-      this._bgm.volume = vol;
+      // Multiply master volume by per-track volume to preserve the original track balance
+      this._bgm.volume = Math.max(0, Math.min(1, vol * this._currentBgmTrackVolume));
     }
   }
 

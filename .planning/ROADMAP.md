@@ -290,10 +290,10 @@ Plans:
   1. 畫布預覽在未顯式設置表情時顯示繼承來源的實際表情
   2. 刪除表情圖片後，引擎和編輯器均 fallback 到第一個可用表情（不顯示空白或破圖）
   3. Inspector 中繼承的表情與顯式設置的表情有視覺區分
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 41-01-PLAN.md — Canvas expression resolution + PPT-style addPage + engine/canvas fallback validation
+- [x] 41-01-PLAN.md — Canvas expression resolution + PPT-style addPage + engine/canvas fallback validation
 - [ ] 41-02-PLAN.md — Expression deletion reference check + confirmation dialog + batch replacement
 
 **UI hint**: yes
@@ -306,4 +306,4 @@ Plans:
 | 38. 表情交叉漸變 | 1/1 | Complete    | 2026-04-13 |
 | 39. 表情狀態管理 | 1/1 | Complete    | 2026-04-13 |
 | 40. 表情選擇器 UI | 2/2 | Complete   | 2026-04-15 |
-| 41. 編輯器狀態展示與容錯 | 0/2 | Not started | - |
+| 41. 編輯器狀態展示與容錯 | 1/2 | In Progress|  |

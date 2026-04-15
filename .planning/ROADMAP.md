@@ -274,7 +274,12 @@ Plans:
   2. PageInspector 角色行使用 ExpressionDropdown 替換舊 `<select>`
   3. 對話級表情選擇同樣使用 ExpressionDropdown
   4. 下拉框使用 Teleport + fixed 定位，不被 inspector overflow 裁切
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 40-PLAN-01.md — Create ExpressionDropdown.vue component (thumbnail grid dropdown)
+- [ ] 40-PLAN-02.md — Integrate ExpressionDropdown into PageInspector (both character & dialogue rows)
+
 **UI hint**: yes
 
 #### Phase 41: 編輯器狀態展示與容錯

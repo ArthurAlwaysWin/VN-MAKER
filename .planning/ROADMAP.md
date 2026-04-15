@@ -219,7 +219,7 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 - [x] **Phase 37: CharacterLayer DOM 重構** — 單 `<img>` 重構為雙圖層容器結構，保持 4 種定位模式不變 (completed 2026-04-13)
 - [x] **Phase 38: 表情交叉漸變** — CSS opacity crossfade 過渡 + 圖片預加載 + 快進模式跳過動畫 (completed 2026-04-13)
 - [x] **Phase 39: 表情狀態管理** — 引擎表情狀態 Map + 頁面繼承 + 存讀檔持久化 + 場景邊界重置 (completed 2026-04-13)
-- [ ] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>`
+- [x] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格組件 + PageInspector 集成替換 `<select>` (completed 2026-04-15)
 - [ ] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承表情預覽 + stale 引用優雅降級
 
 ### Phase Details
@@ -265,20 +265,20 @@ Plans:
 Plans:
 - [x] 39-01-PLAN.md — Expression state Map + resolution chain + save/load persistence + scene reset
 
-#### Phase 40: 表情選擇器 UI
+#### Phase 40: 表情選擇器 UI ✅
 **Goal**: 編輯器提供視覺化縮略圖表情選擇器，替換 PageInspector 中的純文字 `<select>`
 **Depends on**: Phase 39
-**Requirements**: UI-01, UI-02
+**Requirements**: UI-01 ✅, UI-02 ✅
 **Success Criteria** (what must be TRUE):
-  1. ExpressionDropdown 顯示角色可用表情的縮略圖網格
-  2. PageInspector 角色行使用 ExpressionDropdown 替換舊 `<select>`
-  3. 對話級表情選擇同樣使用 ExpressionDropdown
-  4. 下拉框使用 Teleport + fixed 定位，不被 inspector overflow 裁切
-**Plans:** 1/2 plans executed
+  1. ✅ ExpressionDropdown 顯示角色可用表情的縮略圖網格
+  2. ✅ PageInspector 角色行使用 ExpressionDropdown 替換舊 `<select>`
+  3. ✅ 對話級表情選擇同樣使用 ExpressionDropdown
+  4. ✅ 下拉框使用 Teleport + fixed 定位，不被 inspector overflow 裁切
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 40-PLAN-01.md — Create ExpressionDropdown.vue component (thumbnail grid dropdown)
-- [ ] 40-PLAN-02.md — Integrate ExpressionDropdown into PageInspector (both character & dialogue rows)
+- [x] 40-01-PLAN.md — Create ExpressionDropdown.vue component (thumbnail grid dropdown)
+- [x] 40-02-PLAN.md — Integrate ExpressionDropdown into PageInspector (both character & dialogue rows)
 
 **UI hint**: yes
 
@@ -300,5 +300,5 @@ Plans:
 | 37. CharacterLayer DOM 重構 | 1/1 | Complete   | 2026-04-13 |
 | 38. 表情交叉漸變 | 1/1 | Complete    | 2026-04-13 |
 | 39. 表情狀態管理 | 1/1 | Complete    | 2026-04-13 |
-| 40. 表情選擇器 UI | 1/2 | In Progress|  |
+| 40. 表情選擇器 UI | 2/2 | Complete   | 2026-04-15 |
 | 41. 編輯器狀態展示與容錯 | 0/? | Not started | - |

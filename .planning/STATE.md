@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: — 设置页设计器 ✅
-status: executing
-stopped_at: Phase 40 planned — 2 plans verified (PASS)
-last_updated: "2026-04-15T07:34:31.473Z"
+milestone: v1.0
+milestone_name: 角色表情/差分場景切換
+status: phase-complete
+stopped_at: Phase 40 complete — both plans executed, user-verified
+last_updated: "2026-04-15T11:15:00.000Z"
 progress:
-  total_phases: 8
-  completed_phases: 6
+  total_phases: 5
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 11
 ---
 
 # Project State
@@ -19,17 +19,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 40 — expression-selector-ui
+**Current focus:** v1.0 — Phase 40 complete, Phase 41 remaining
 
 ## Current Position
 
-Phase: 40 (expression-selector-ui) — EXECUTING
-Plan: 2 of 2
-Next: Phase 38
-Status: Ready to execute
+Phase: 40 (expression-selector-ui) — COMPLETE ✅
+Plan: 2 of 2 — all done
+Next: Phase 41
+Status: Phase 40 verified — ready for Phase 41
 
 ```
-v1.0 ████░░░░░░░░░░░░░░░░ 1/5 phases complete
+v1.0 ████████████████░░░░ 4/5 phases complete
 ```
 
 ## Performance Metrics
@@ -47,7 +47,7 @@ v1.0 ████░░░░░░░░░░░░░░░░ 1/5 phases com
 | v0.7 | 4 | 6 | 21 |
 | v0.8 | 3 | 4 | 15 |
 | v0.9 | 2 | 4 | 15 |
-| v1.0 | 1/5 | 1 | - |
+| v1.0 | 4/5 | 11 | UI-01 ✅, UI-02 ✅ |
 
 ## Accumulated Context
 
@@ -62,10 +62,12 @@ v1.0 ████░░░░░░░░░░░░░░░░ 1/5 phases com
 - 现有角色系统: CharacterEditor 管理表情，CharacterLayer 引擎渲染
 - Phase 37: CharacterLayer dual-layer DOM (div + imgA/imgB) ✅
 - Preview handshake fix: ack-preview protocol ✅
+- Phase 40: ExpressionDropdown.vue + PageInspector integration ✅
+- HelpTip: charExpression + dialogueExpression 说明文字已添加
 
 ## Session Continuity
 
-Last session: 2026-04-15T08:00:00.000Z
-Stopped at: Phase 40 planned — 2 plans verified (PASS)
-Resume hint: Execute Phase 40 (表情選擇器 UI)
-Next action: /gsd-execute-phase 40
+Last session: 2026-04-15T11:15:00.000Z
+Stopped at: Phase 40 complete — ExpressionDropdown + PageInspector integration
+Resume hint: Start Phase 41 or review milestone progress
+Next action: /gsd-discuss-phase 41 or /gsd-progress

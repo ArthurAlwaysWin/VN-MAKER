@@ -1,8 +1,9 @@
 /**
  * SettingsScreen — Renders game settings UI.
  *
- * Supports two modes:
+ * Supports three modes:
  *  - Custom layout: renders elements from ui.settingsScreen JSON at absolute positions
+ *  - Structured layout: auto-renders SETTING_DEFS grouped into tabs (header/tabBar/contentArea)
  *  - Default layout: built-in settings page (fallback when no custom layout exists)
  */
 import { SETTING_DEFS, DEFAULT_SETTING_STYLE, DEFAULT_LABEL_STYLE, DEFAULT_BUTTON_STYLE } from '../engine/settingDefs.js';
@@ -11,6 +12,19 @@ import { resolvePath } from '../engine/assetPath.js';
 import { deepMergeWidgetStyles } from '../engine/widgetDefaults.js';
 import { createToggle } from './widgets/ToggleWidget.js';
 import { createSlider, getSliderCSS } from './widgets/SliderWidget.js';
+import { createTabBar } from './widgets/TabWidget.js';
+
+// ─── Structured Mode Constants ───────────────────────────
+
+/** Setting keys grouped by tab (index-ordered) */
+const SETTING_GROUP_KEYS = [
+  ['master-volume', 'bgm-volume', 'se-volume', 'voice-volume'],   // Tab 0: 声音
+  ['dialogue-opacity', 'window-mode'],                              // Tab 1: 画面
+  ['text-speed', 'auto-speed', 'skip-mode'],                       // Tab 2: 游戏
+];
+
+/** Default tab labels when layout.tabBar.tabs is not specified */
+const DEFAULT_TAB_LABELS = ['声音', '画面', '游戏'];
 
 export class SettingsScreen {
   /**
@@ -24,6 +38,8 @@ export class SettingsScreen {
     /** @type {object|null} Merged widgetStyles config, null = use legacy rendering */
     this._widgetStyles = null;
     this._sliderCssInjected = false;
+    /** @type {number} Active tab index for structured mode */
+    this._activeTab = 0;
 
     this.el = document.createElement('div');
     this.el.id = 'settings-screen';
@@ -67,6 +83,8 @@ export class SettingsScreen {
 
     if (this.customLayout?.elements?.length > 0) {
       this._renderCustom(this.customLayout);
+    } else if (this.customLayout?.header || this.customLayout?.tabBar || this.customLayout?.contentArea) {
+      this._renderStructured(this.customLayout);
     } else {
       this._renderDefault();
     }

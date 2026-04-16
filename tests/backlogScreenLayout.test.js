@@ -143,8 +143,8 @@ describe('BacklogScreen.setLayout', () => {
     it('applies character color to speaker', () => {
       screen.show(SAMPLE_HISTORY, CHARACTERS);
       const speakers = screen.el.querySelectorAll('.backlog-speaker');
-      expect(speakers[0].style.color).toBe('#ff0000');
-      expect(speakers[1].style.color).toBe('#00ff00');
+      expect(speakers[0].style.color).toContain('255, 0, 0');
+      expect(speakers[1].style.color).toContain('0, 255, 0');
     });
 
     it('narrator entry has no speaker div', () => {
@@ -192,7 +192,7 @@ describe('BacklogScreen.setLayout', () => {
       it('applies background color', () => {
         screen.setLayout({ background: 'rgba(0,0,0,0.85)' });
         screen.show(SAMPLE_HISTORY, CHARACTERS);
-        expect(screen.el.style.background).toBe('rgba(0,0,0,0.85)');
+        expect(screen.el.style.background).toContain('rgba(0, 0, 0, 0.85)');
       });
 
       it('applies backgroundImage via resolvePath', () => {
@@ -208,7 +208,8 @@ describe('BacklogScreen.setLayout', () => {
           backgroundImage: 'ui/bg.png',
         });
         screen.show(SAMPLE_HISTORY, CHARACTERS);
-        expect(screen.el.style.background).toBe('rgba(0,0,0,0.9)');
+        // background shorthand absorbs backgroundImage in jsdom
+        expect(screen.el.style.background).toContain('rgba(0, 0, 0, 0.9)');
         expect(screen.el.style.backgroundImage).toContain('resolved:ui/bg.png');
       });
     });
@@ -249,17 +250,17 @@ describe('BacklogScreen.setLayout', () => {
         screen.setLayout({ entry: { speakerColor: '#ffcc00' } });
         screen.show(SAMPLE_HISTORY, CHARACTERS);
         const speakers = screen.el.querySelectorAll('.backlog-speaker');
-        // speakerColor overrides character color
-        expect(speakers[0].style.color).toBe('#ffcc00');
-        expect(speakers[1].style.color).toBe('#ffcc00');
+        // speakerColor overrides character color (jsdom normalizes hex → rgb)
+        expect(speakers[0].style.color).toContain('255, 204, 0');
+        expect(speakers[1].style.color).toContain('255, 204, 0');
       });
 
       it('uses character color when entry.speakerColor is null', () => {
         screen.setLayout({ entry: { speakerColor: null } });
         screen.show(SAMPLE_HISTORY, CHARACTERS);
         const speakers = screen.el.querySelectorAll('.backlog-speaker');
-        expect(speakers[0].style.color).toBe('#ff0000');
-        expect(speakers[1].style.color).toBe('#00ff00');
+        expect(speakers[0].style.color).toContain('255, 0, 0');
+        expect(speakers[1].style.color).toContain('0, 255, 0');
       });
 
       it('applies entry.speakerFontSize', () => {
@@ -280,14 +281,15 @@ describe('BacklogScreen.setLayout', () => {
         screen.setLayout({ entry: { background: 'rgba(10,10,10,0.5)' } });
         screen.show(SAMPLE_HISTORY, CHARACTERS);
         const entries = screen.el.querySelectorAll('.backlog-entry');
-        expect(entries[0].style.background).toBe('rgba(10,10,10,0.5)');
+        expect(entries[0].style.background).toContain('rgba(10, 10, 10, 0.5)');
       });
 
       it('applies entry.borderBottom', () => {
         screen.setLayout({ entry: { borderBottom: '1px solid rgba(255,255,255,0.06)' } });
         screen.show(SAMPLE_HISTORY, CHARACTERS);
         const entries = screen.el.querySelectorAll('.backlog-entry');
-        expect(entries[0].style.borderBottom).toBe('1px solid rgba(255,255,255,0.06)');
+        expect(entries[0].style.borderBottom).toContain('1px solid');
+        expect(entries[0].style.borderBottom).toContain('rgba(255, 255, 255, 0.06)');
       });
 
       it('applies entry.padding as array [y, x]', () => {
@@ -311,7 +313,7 @@ describe('BacklogScreen.setLayout', () => {
         screen.show(SAMPLE_HISTORY, CHARACTERS);
         const entry = screen.el.querySelector('.backlog-entry');
         entry.dispatchEvent(new Event('mouseenter'));
-        expect(entry.style.background).toBe('rgba(255,255,255,0.05)');
+        expect(entry.style.background).toContain('rgba(255, 255, 255, 0.05)');
       });
 
       it('removes hoverBackground on mouseleave', () => {
@@ -324,7 +326,7 @@ describe('BacklogScreen.setLayout', () => {
         screen.show(SAMPLE_HISTORY, CHARACTERS);
         const entry = screen.el.querySelector('.backlog-entry');
         entry.dispatchEvent(new Event('mouseenter'));
-        expect(entry.style.background).toBe('rgba(255,255,255,0.05)');
+        expect(entry.style.background).toContain('rgba(255, 255, 255, 0.05)');
         entry.dispatchEvent(new Event('mouseleave'));
         expect(entry.style.background).toBe('transparent');
       });
@@ -386,8 +388,8 @@ describe('BacklogScreen.setLayout', () => {
       screen.setLayout({ entry: { padding: [999, 999] } });
       screen.show(SAMPLE_HISTORY, CHARACTERS);
       const entry = screen.el.querySelector('.backlog-entry');
-      // Each padding value clamped to 200 max
-      expect(entry.style.padding).toBe('200px 200px');
+      // Each padding value clamped to 200 max; jsdom may collapse identical values
+      expect(entry.style.padding).toContain('200px');
     });
   });
 
@@ -398,8 +400,8 @@ describe('BacklogScreen.setLayout', () => {
       screen.setLayout(FULL_CONFIG);
       screen.show(SAMPLE_HISTORY, CHARACTERS);
 
-      // Background
-      expect(screen.el.style.background).toBe('rgba(0,0,0,0.85)');
+      // Background (shorthand absorbs backgroundImage in jsdom)
+      expect(screen.el.style.background).toContain('rgba(0, 0, 0, 0.85)');
       expect(screen.el.style.backgroundImage).toContain('resolved:ui/backlog-bg.png');
 
       // Header
@@ -412,9 +414,9 @@ describe('BacklogScreen.setLayout', () => {
       const entries = screen.el.querySelectorAll('.backlog-entry');
       expect(entries.length).toBe(3);
 
-      // Speaker color overrides
+      // Speaker color overrides (jsdom normalizes hex → rgb)
       const speakers = screen.el.querySelectorAll('.backlog-speaker');
-      expect(speakers[0].style.color).toBe('#ffcc00');
+      expect(speakers[0].style.color).toContain('255, 204, 0');
     });
 
     it('re-show with different config updates styles', () => {
@@ -436,9 +438,9 @@ describe('BacklogScreen.setLayout', () => {
 
       // Default title
       expect(screen.el.querySelector('.backlog-title').textContent).toBe('回 想');
-      // Default character colors
+      // Default character colors (jsdom normalizes hex → rgb)
       const speakers = screen.el.querySelectorAll('.backlog-speaker');
-      expect(speakers[0].style.color).toBe('#ff0000');
+      expect(speakers[0].style.color).toContain('255, 0, 0');
       // No inline background
       expect(screen.el.style.background).toBe('');
     });

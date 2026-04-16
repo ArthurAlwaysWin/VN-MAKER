@@ -1,6 +1,9 @@
 /**
  * BacklogScreen — Shows dialogue history with voice replay
  */
+import { sanitizeCssValue, clampField } from './sanitize.js';
+import { resolvePath } from '../engine/assetPath.js';
+
 export class BacklogScreen {
   /**
    * @param {HTMLElement} container
@@ -10,6 +13,7 @@ export class BacklogScreen {
     this.container = container;
     this.audio = audio;
     this._playingEntry = null;
+    this._layoutConfig = null;
     this.el = document.createElement('div');
     this.el.id = 'backlog-screen';
     this.el.classList.add('hidden');
@@ -17,10 +21,25 @@ export class BacklogScreen {
   }
 
   /**
+   * Store a layout configuration for customizing appearance.
+   * Pass null to revert to default hardcoded rendering (COMPAT-02).
+   * @param {object|null} config — layout config from ui.backlogScreen
+   */
+  setLayout(config) {
+    this._layoutConfig = config || null;
+  }
+
+  /**
    * @param {Array<{speaker:string|null, speakerName:string|null, text:string, voice:string|null}>} history
    * @param {Object} characters — character definitions (for colors)
    */
   show(history, characters = {}) {
+    const cfg = this._layoutConfig;
+
+    // Reset inline styles from any previous config render (COMPAT-02)
+    this.el.style.background = '';
+    this.el.style.backgroundImage = '';
+
     this.el.innerHTML = `
       <div class="backlog-header">
         <div class="backlog-title">回 想</div>
@@ -30,6 +49,11 @@ export class BacklogScreen {
     `;
 
     this.el.querySelector('.backlog-close').addEventListener('click', () => this.hide());
+
+    // ── Apply screen-level config (background, header) ───
+    if (cfg) {
+      this._applyScreenConfig(cfg);
+    }
 
     const content = this.el.querySelector('.backlog-content');
     history.forEach(entry => {
@@ -72,6 +96,11 @@ export class BacklogScreen {
         div.classList.add('backlog-has-voice');
       }
 
+      // ── Apply entry-level config ───────────────────────
+      if (cfg?.entry) {
+        this._applyEntryConfig(cfg.entry, div, charColor);
+      }
+
       content.appendChild(div);
     });
 
@@ -82,6 +111,123 @@ export class BacklogScreen {
     requestAnimationFrame(() => {
       content.scrollTop = content.scrollHeight;
     });
+  }
+
+  // ── Layout config helpers ─────────────────────────────
+
+  /**
+   * Apply screen-level config: background, backgroundImage, header.
+   * @param {object} cfg — _layoutConfig
+   * @private
+   */
+  _applyScreenConfig(cfg) {
+    // Background color
+    if (cfg.background) {
+      const safeBg = sanitizeCssValue(cfg.background);
+      if (safeBg) this.el.style.background = safeBg;
+    }
+
+    // Background image
+    if (cfg.backgroundImage) {
+      const resolved = resolvePath(cfg.backgroundImage);
+      if (resolved) this.el.style.backgroundImage = `url("${resolved}")`;
+    }
+
+    // Header config
+    if (cfg.header) {
+      const header = this.el.querySelector('.backlog-header');
+
+      // Custom title text
+      if (cfg.header.title) {
+        const titleEl = this.el.querySelector('.backlog-title');
+        titleEl.textContent = cfg.header.title;
+      }
+
+      // Header background image
+      if (cfg.header.backgroundImage) {
+        const resolved = resolvePath(cfg.header.backgroundImage);
+        if (resolved) header.style.backgroundImage = `url("${resolved}")`;
+      }
+
+      // Header height
+      if (cfg.header.height != null) {
+        const h = clampField('height', cfg.header.height);
+        if (h != null) header.style.height = `${h}px`;
+      }
+    }
+  }
+
+  /**
+   * Apply entry-level config to a single backlog entry div.
+   * @param {object} entryCfg — _layoutConfig.entry
+   * @param {HTMLElement} div — the .backlog-entry element
+   * @param {string|null} charColor — character color from existing logic
+   * @private
+   */
+  _applyEntryConfig(entryCfg, div, charColor) {
+    const speakerDiv = div.querySelector('.backlog-speaker');
+
+    // Speaker color: config overrides character color
+    if (speakerDiv) {
+      if (entryCfg.speakerColor) {
+        const safeColor = sanitizeCssValue(entryCfg.speakerColor);
+        if (safeColor) speakerDiv.style.color = safeColor;
+      }
+      // else: charColor already applied by existing code
+    }
+
+    // Speaker font size
+    if (speakerDiv && entryCfg.speakerFontSize != null) {
+      const size = clampField('fontSize', entryCfg.speakerFontSize);
+      if (size != null) speakerDiv.style.fontSize = `${size}px`;
+    }
+
+    // Text font size
+    if (entryCfg.textFontSize != null) {
+      const size = clampField('fontSize', entryCfg.textFontSize);
+      if (size != null) {
+        const textDiv = div.querySelector('.backlog-text');
+        if (textDiv) textDiv.style.fontSize = `${size}px`;
+      }
+    }
+
+    // Entry background
+    if (entryCfg.background) {
+      const safeBg = sanitizeCssValue(entryCfg.background);
+      if (safeBg) div.style.background = safeBg;
+    }
+
+    // Entry border-bottom
+    if (entryCfg.borderBottom) {
+      const safeBorder = sanitizeCssValue(entryCfg.borderBottom);
+      if (safeBorder) div.style.borderBottom = safeBorder;
+    }
+
+    // Entry padding (array → CSS string)
+    if (Array.isArray(entryCfg.padding)) {
+      const clamped = entryCfg.padding
+        .map(v => clampField('padding', v))
+        .filter(v => v != null);
+      if (clamped.length > 0) {
+        div.style.padding = clamped.map(v => `${v}px`).join(' ');
+      }
+    }
+
+    // Hover background (mouseenter/mouseleave)
+    if (entryCfg.hoverBackground) {
+      const safeHover = sanitizeCssValue(entryCfg.hoverBackground);
+      if (safeHover) {
+        const baseBg = entryCfg.background
+          ? (sanitizeCssValue(entryCfg.background) || '')
+          : '';
+        div.addEventListener('mouseenter', () => {
+          div.style.background = safeHover;
+        });
+        div.addEventListener('mouseleave', () => {
+          div.style.background = baseBg;
+        });
+      }
+    }
   }
 
   /** @private */

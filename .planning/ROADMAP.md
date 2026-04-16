@@ -291,7 +291,9 @@ Plans:
   2. Tab 栏使用 `widgetStyles.tab.shape` 渲染对应形状，点击切换设置分组（声音/画面/游戏）
   3. 内容区的 Toggle/Slider 控件使用 `widgetStyles.toggle.style` 和 `widgetStyles.slider.*` 渲染对应外观
   4. 当 `elements[]` 非空时，现有自由布局模式照常渲染，不受结构化模式影响
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 44-01-PLAN.md — SettingsScreen _renderStructured() with tab-based SETTING_DEFS rendering
 **UI hint**: yes
 
 #### Phase 45: 名牌样式 + 配置统一 + 编辑器预览

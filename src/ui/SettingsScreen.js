@@ -8,6 +8,9 @@
 import { SETTING_DEFS, DEFAULT_SETTING_STYLE, DEFAULT_LABEL_STYLE, DEFAULT_BUTTON_STYLE } from '../engine/settingDefs.js';
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
+import { deepMergeWidgetStyles } from '../engine/widgetDefaults.js';
+import { createToggle } from './widgets/ToggleWidget.js';
+import { createSlider, getSliderCSS } from './widgets/SliderWidget.js';
 
 export class SettingsScreen {
   /**
@@ -18,6 +21,9 @@ export class SettingsScreen {
     this.container = container;
     this.configManager = configManager;
     this.customLayout = null;
+    /** @type {object|null} Merged widgetStyles config, null = use legacy rendering */
+    this._widgetStyles = null;
+    this._sliderCssInjected = false;
 
     this.el = document.createElement('div');
     this.el.id = 'settings-screen';
@@ -38,7 +44,27 @@ export class SettingsScreen {
     this.customLayout = layout;
   }
 
+  /**
+   * Set widget styles configuration. When non-null, controls render using
+   * new widget renderers (SliderWidget, ToggleWidget). When null, legacy
+   * rendering is preserved for backward compatibility (COMPAT-01).
+   *
+   * @param {object|null} styles — raw widgetStyles from script.json, or null
+   */
+  setWidgetStyles(styles) {
+    this._widgetStyles = styles ? deepMergeWidgetStyles(styles) : null;
+  }
+
   show() {
+    // Inject slider CSS once when widget styles are active
+    if (this._widgetStyles && !this._sliderCssInjected) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'gm-slider-styles';
+      styleEl.textContent = getSliderCSS();
+      document.head.appendChild(styleEl);
+      this._sliderCssInjected = true;
+    }
+
     if (this.customLayout?.elements?.length > 0) {
       this._renderCustom(this.customLayout);
     } else {
@@ -118,6 +144,30 @@ export class SettingsScreen {
   }
 
   _buildSlider(wrapper, def, cfg, style) {
+    if (this._widgetStyles) {
+      // New widget-based slider
+      const sliderConfig = this._widgetStyles.slider;
+      const { el, setValue } = createSlider(
+        sliderConfig,
+        cfg.get(def.settingKey),
+        def.min,
+        def.max,
+        def.step,
+        (v) => {
+          cfg.set(def.settingKey, v);
+          valueEl.textContent = this._formatValue(def, v);
+          this._notifyChange();
+        }
+      );
+      const valueEl = document.createElement('span');
+      valueEl.classList.add('sc-setting-value');
+      this._applyTextStyle(valueEl, style.labelColor, style.fontSize, style.fontFamily);
+      valueEl.textContent = this._formatValue(def, cfg.get(def.settingKey));
+      wrapper.appendChild(el);
+      wrapper.appendChild(valueEl);
+      return;
+    }
+    // Legacy slider (COMPAT-01: preserved exactly)
     const control = document.createElement('input');
     control.type = 'range';
     control.classList.add('sc-slider');
@@ -150,6 +200,22 @@ export class SettingsScreen {
   }
 
   _buildToggle(wrapper, def, cfg, style) {
+    if (this._widgetStyles) {
+      // New widget-based toggle
+      const toggleConfig = this._widgetStyles.toggle;
+      const { el } = createToggle(
+        def.settingKey,
+        toggleConfig,
+        !!cfg.get(def.settingKey),
+        (newVal) => {
+          cfg.set(def.settingKey, newVal);
+          this._notifyChange();
+        }
+      );
+      wrapper.appendChild(el);
+      return;
+    }
+    // Legacy toggle (COMPAT-01: preserved exactly)
     const toggle = document.createElement('label');
     toggle.classList.add('sc-toggle');
     const input = document.createElement('input');

@@ -317,5 +317,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 42. widgetStyles 控件风格基础 | 3/3 | Complete    | 2026-04-16 |
 | 43. 界面布局配置 | 3/2 | Complete    | 2026-04-16 |
-| 44. SettingsScreen 结构化模式 | 1/1 | Complete   | 2026-04-16 |
+| 44. SettingsScreen 结构化模式 | 1/1 | Complete    | 2026-04-16 |
 | 45. 名牌样式 + 配置统一 + 编辑器预览 | 0/? | Not started | - |

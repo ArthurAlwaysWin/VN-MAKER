@@ -262,9 +262,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v1.1 里程碑启动 — UI Theme System v2 引擎配置化。
+v1.1 Phase 42 完成 — widgetStyles 控件风格基础。WIDGET_DEFAULTS + deepMerge + 5 widget renderers (Tab/Toggle/Slider/Panel/Button) + SettingsScreen.setWidgetStyles() 集成。向后兼容验证通过。
 
 **已交付：** v0.1 ~ v1.0（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換）
 
+**v1.1 进展：** Phase 42 ✅ (widgetStyles) → Phase 43 (界面布局配置) → Phase 44 (SettingsScreen 结构化) → Phase 45 (名牌+配置统一)
+
 ---
-*Last updated: 2026-04-16 after v1.1 milestone started — UI Theme System v2 引擎配置化*
+*Last updated: 2026-04-16 after Phase 42 complete — widgetStyles 控件风格基础*

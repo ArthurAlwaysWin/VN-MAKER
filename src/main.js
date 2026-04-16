@@ -891,6 +891,31 @@ function initPreview() {
           dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
         }
 
+        // Apply screen layouts for preview (v1.1)
+        if (engine.script.ui?.titleScreen) {
+          titleScreen.setLayout(engine.script.ui.titleScreen);
+        }
+        if (engine.script.ui?.settingsScreen) {
+          settingsScreen.setLayout(engine.script.ui.settingsScreen);
+        }
+        if (engine.script.ui?.widgetStyles) {
+          settingsScreen.setWidgetStyles(engine.script.ui.widgetStyles);
+        }
+        if (engine.script.ui?.saveLoadScreen) {
+          saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen);
+        }
+        if (engine.script.ui?.backlogScreen) {
+          backlogScreen.setLayout(engine.script.ui.backlogScreen);
+        }
+        if (engine.script.ui?.gameMenu) {
+          gameMenu.setLayout(engine.script.ui.gameMenu);
+        }
+
+        // Apply nameplate style for preview
+        if (engine.script.ui?.dialogueBox?.nameplateStyle) {
+          dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
+        }
+
         // Start from specified position (per D-05, D-06)
         engine.restoreState({
           currentScene: msg.sceneId || 'start',

@@ -25,8 +25,8 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 
 ### 配置传入统一
 
-- [ ] **CONFIG-01**: `main.js` 的 `init()` 函数在 `engine.load()` 之后，从 `ui.*` 读取 saveLoadScreen/backlogScreen/gameMenu/widgetStyles 配置并通过 setLayout/setWidgetStyles 传入各组件
-- [ ] **CONFIG-02**: 编辑器试玩 iframe（postMessage 协议）正确传递所有 `ui.*` 配置到引擎，使预览效果与最终游戏一致
+- [x] **CONFIG-01**: `main.js` 的 `init()` 函数在 `engine.load()` 之后，从 `ui.*` 读取 saveLoadScreen/backlogScreen/gameMenu/widgetStyles 配置并通过 setLayout/setWidgetStyles 传入各组件
+- [x] **CONFIG-02**: 编辑器试玩 iframe（postMessage 协议）正确传递所有 `ui.*` 配置到引擎，使预览效果与最终游戏一致
 
 ### 名牌样式
 
@@ -76,8 +76,8 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | SCREEN-03 | Phase 43 | Complete |
 | SCREEN-04 | Phase 44 | Complete |
 | SCREEN-05 | Phase 44 | Complete |
-| CONFIG-01 | Phase 45 | Pending |
-| CONFIG-02 | Phase 45 | Pending |
+| CONFIG-01 | Phase 45 | Complete |
+| CONFIG-02 | Phase 45 | Complete |
 | NAMEPLATE-01 | Phase 45 | Complete |
 | NAMEPLATE-02 | Phase 45 | Complete |
 | NAMEPLATE-03 | Phase 45 | Complete |

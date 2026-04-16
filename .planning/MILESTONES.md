@@ -1,5 +1,17 @@
 # Milestones
 
+## v1.1 v1.1 (Shipped: 2026-04-16)
+
+**Phases completed:** 4 phases, 9 plans, 20 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- BacklogScreen accepts layout config for background/header/entry customization with sanitized CSS, hover effects, and zero-regression null-config path
+- Config-driven GameMenu rendering with position/background/button-text/icon support via setLayout(config), null-config COMPAT-02 preserved
+
+---
+
 ## v1.0 角色表情/差分場景切換 (Shipped: 2026-04-15)
 
 **Phases completed:** 5 phases (37-41), 7 plans, 10 requirements

@@ -17,7 +17,7 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 
 ### 界面配置化
 
-- [ ] **SCREEN-01**: SaveLoadScreen 新增 `setLayout(config)` 方法，可配置背景/标题文字和颜色/网格布局（行列数/间距/位置）/槽位样式/分页样式
+- [x] **SCREEN-01**: SaveLoadScreen 新增 `setLayout(config)` 方法，可配置背景/标题文字和颜色/网格布局（行列数/间距/位置）/槽位样式/分页样式
 - [ ] **SCREEN-02**: BacklogScreen 新增 `setLayout(config)` 方法，可配置背景/标题栏（标题文字/背景图/高度）/条目样式（说话人颜色/字号/文字字号/悬停效果）
 - [ ] **SCREEN-03**: GameMenu 新增 `setLayout(config)` 方法，可配置位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
 - [ ] **SCREEN-04**: SettingsScreen 结构化模式：当 `elements` 为空但存在 `header`/`tabBar`/`contentArea` 配置时，自动将 SETTING_DEFS 按分组渲染到对应 Tab 页
@@ -37,7 +37,7 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 ### 向后兼容
 
 - [x] **COMPAT-01**: 未提供 `widgetStyles` 的旧项目（v1.0 及之前）保持现有外观不变，零视觉回归
-- [ ] **COMPAT-02**: 所有 `setLayout(null)` 调用保持现有硬编码行为，零视觉变化
+- [x] **COMPAT-02**: 所有 `setLayout(null)` 调用保持现有硬编码行为，零视觉变化
 
 ## Future Requirements
 
@@ -71,7 +71,7 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | WIDGET-03 | Phase 42 | Complete |
 | WIDGET-04 | Phase 42 | Complete |
 | WIDGET-05 | Phase 42 | Complete |
-| SCREEN-01 | Phase 43 | Pending |
+| SCREEN-01 | Phase 43 | Complete |
 | SCREEN-02 | Phase 43 | Pending |
 | SCREEN-03 | Phase 43 | Pending |
 | SCREEN-04 | Phase 44 | Pending |
@@ -82,7 +82,7 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | NAMEPLATE-02 | Phase 45 | Pending |
 | NAMEPLATE-03 | Phase 45 | Pending |
 | COMPAT-01 | Phase 42 | Complete |
-| COMPAT-02 | Phase 43 | Pending |
+| COMPAT-02 | Phase 43 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 17 total

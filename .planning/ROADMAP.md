@@ -259,7 +259,11 @@ See .planning/milestones/v1.0-ROADMAP.md for full phase details.
   3. Toggle 控件根据 `toggle.style` 正确渲染 4 种样式（pill/radio/checkbox/button-pair），ON/OFF 状态切换正常
   4. Slider 轨道颜色/填充颜色/滑块形状和颜色/尺寸全部由 `widgetStyles.slider` 配置驱动
   5. 没有 `widgetStyles` 的旧项目（v1.0 及之前）显示完全相同的视觉效果——零回归
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — Data model (WIDGET_DEFAULTS + deepMerge) + Panel/Button widgets
+- [ ] 42-02-PLAN.md — Tab (5 shapes) + Toggle (4 styles) + Slider widgets
+- [ ] 42-03-PLAN.md — SettingsScreen integration + backward compatibility verification
 **UI hint**: yes
 
 #### Phase 43: 界面布局配置
@@ -305,7 +309,7 @@ See .planning/milestones/v1.0-ROADMAP.md for full phase details.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 42. widgetStyles 控件风格基础 | 0/? | Not started | - |
+| 42. widgetStyles 控件风格基础 | 0/3 | Planned | - |
 | 43. 界面布局配置 | 0/? | Not started | - |
 | 44. SettingsScreen 结构化模式 | 0/? | Not started | - |
 | 45. 名牌样式 + 配置统一 + 编辑器预览 | 0/? | Not started | - |

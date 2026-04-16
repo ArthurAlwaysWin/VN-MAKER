@@ -44,6 +44,10 @@ export class DialogueBox {
     this._globalSettings = {};
     /** @type {string|null} Active nameplate color (from global or per-page override) */
     this._activeNameplateColor = null;
+    /** @type {string} Nameplate visual style: 'inline'|'floating'|'banner' */
+    this._nameplateStyle = 'inline';
+    /** @type {boolean} Whether nameplate CSS has been injected into document.head */
+    this._nameplateCssInjected = false;
 
     // Hidden by default
     this.hide();
@@ -64,6 +68,11 @@ export class DialogueBox {
 
     // Apply custom style if provided, with font override support
     this._applyStyle(data.style, data.fontOverride);
+
+    // Apply nameplate style class
+    const namePlate = this.nameEl.parentElement;
+    namePlate.classList.remove('nameplate-inline', 'nameplate-floating', 'nameplate-banner');
+    namePlate.classList.add(`nameplate-${this._nameplateStyle}`);
 
     // Speaker name
     if (data.speakerName) {
@@ -184,6 +193,54 @@ export class DialogueBox {
       this.nameEl.style.color = nc;
       this._activeNameplateColor = nc;
     }
+  }
+
+  // ─── Nameplate style ─────────────────────────────────────
+
+  /**
+   * Set the visual style for the speaker name-plate.
+   * @param {string} style — 'inline'|'floating'|'banner'
+   */
+  setNameplateStyle(style) {
+    const valid = ['inline', 'floating', 'banner'];
+    this._nameplateStyle = valid.includes(style) ? style : 'inline';
+    if (!this._nameplateCssInjected && this._nameplateStyle !== 'inline') {
+      this._injectNameplateCSS();
+      this._nameplateCssInjected = true;
+    }
+  }
+
+  /**
+   * Inject CSS rules for floating and banner nameplate styles.
+   * Called once on first non-inline style usage.
+   * @private
+   */
+  _injectNameplateCSS() {
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+/* Floating style — bubble positioned above dialogue box */
+#dialogue-box .dialogue-name-plate.nameplate-floating {
+  position: absolute;
+  top: -32px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 4px 14px;
+  border-radius: 12px;
+  z-index: 1;
+  display: inline-block;
+  width: auto;
+}
+
+/* Banner style — full-width bar across top of dialogue box */
+#dialogue-box .dialogue-name-plate.nameplate-banner {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 20px;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+`;
+    document.head.appendChild(styleEl);
   }
 
   hide() {

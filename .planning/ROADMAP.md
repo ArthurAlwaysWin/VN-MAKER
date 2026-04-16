@@ -278,8 +278,8 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 43-01-PLAN.md — SaveLoadScreen.setLayout() (SCREEN-01)
-- [ ] 43-02-PLAN.md — BacklogScreen.setLayout() (SCREEN-02)
-- [ ] 43-03-PLAN.md — GameMenu.setLayout() (SCREEN-03)
+- [x] 43-02-PLAN.md — BacklogScreen.setLayout() (SCREEN-02)
+- [x] 43-03-PLAN.md — GameMenu.setLayout() (SCREEN-03)
 **UI hint**: yes
 
 #### Phase 44: SettingsScreen 结构化模式
@@ -314,6 +314,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 42. widgetStyles 控件风格基础 | 3/3 | Complete    | 2026-04-16 |
-| 43. 界面布局配置 | 1/1 | Complete   | 2026-04-16 |
+| 43. 界面布局配置 | 3/2 | Complete   | 2026-04-16 |
 | 44. SettingsScreen 结构化模式 | 0/? | Not started | - |
 | 45. 名牌样式 + 配置统一 + 编辑器预览 | 0/? | Not started | - |

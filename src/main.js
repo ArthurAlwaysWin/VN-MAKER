@@ -810,6 +810,27 @@ async function init() {
       settingsScreen.setLayout(engine.script.ui.settingsScreen);
     }
 
+    // Apply widget styles for settings controls (v1.1 Phase 42)
+    if (engine.script.ui?.widgetStyles) {
+      settingsScreen.setWidgetStyles(engine.script.ui.widgetStyles);
+    }
+
+    // Apply screen layouts (v1.1 Phase 43)
+    if (engine.script.ui?.saveLoadScreen) {
+      saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen);
+    }
+    if (engine.script.ui?.backlogScreen) {
+      backlogScreen.setLayout(engine.script.ui.backlogScreen);
+    }
+    if (engine.script.ui?.gameMenu) {
+      gameMenu.setLayout(engine.script.ui.gameMenu);
+    }
+
+    // Apply nameplate style (v1.1 Phase 45)
+    if (engine.script.ui?.dialogueBox?.nameplateStyle) {
+      dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
+    }
+
     // Apply theme token overrides (D-08: theme first, font settings can override)
     applyTheme(gameContainer, engine.script.ui?.theme);
     applyNineSlice(engine.script.ui?.theme);

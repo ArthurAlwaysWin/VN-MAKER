@@ -275,7 +275,11 @@ Plans:
   2. BacklogScreen.setLayout(config) 正确应用背景/标题栏/条目样式（说话人颜色、字号、悬停效果）
   3. GameMenu.setLayout(config) 正确应用位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
   4. 三个界面调用 setLayout(null) 时渲染结果与当前硬编码行为完全一致——零视觉变化
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 43-01-PLAN.md — SaveLoadScreen.setLayout() (SCREEN-01)
+- [ ] 43-02-PLAN.md — BacklogScreen.setLayout() (SCREEN-02)
+- [ ] 43-03-PLAN.md — GameMenu.setLayout() (SCREEN-03)
 **UI hint**: yes
 
 #### Phase 44: SettingsScreen 结构化模式

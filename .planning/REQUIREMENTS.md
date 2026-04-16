@@ -30,9 +30,9 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 
 ### 名牌样式
 
-- [ ] **NAMEPLATE-01**: DialogueBox 支持 `nameplateStyle` 配置项，inline 为默认值（保持当前行为不变）
-- [ ] **NAMEPLATE-02**: floating 样式将名牌浮动定位在对话框左上角外侧（气泡形式）
-- [ ] **NAMEPLATE-03**: banner 样式将名牌渲染为横跨对话框整个宽度的横幅条
+- [x] **NAMEPLATE-01**: DialogueBox 支持 `nameplateStyle` 配置项，inline 为默认值（保持当前行为不变）
+- [x] **NAMEPLATE-02**: floating 样式将名牌浮动定位在对话框左上角外侧（气泡形式）
+- [x] **NAMEPLATE-03**: banner 样式将名牌渲染为横跨对话框整个宽度的横幅条
 
 ### 向后兼容
 
@@ -78,9 +78,9 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | SCREEN-05 | Phase 44 | Complete |
 | CONFIG-01 | Phase 45 | Pending |
 | CONFIG-02 | Phase 45 | Pending |
-| NAMEPLATE-01 | Phase 45 | Pending |
-| NAMEPLATE-02 | Phase 45 | Pending |
-| NAMEPLATE-03 | Phase 45 | Pending |
+| NAMEPLATE-01 | Phase 45 | Complete |
+| NAMEPLATE-02 | Phase 45 | Complete |
+| NAMEPLATE-03 | Phase 45 | Complete |
 | COMPAT-01 | Phase 42 | Complete |
 | COMPAT-02 | Phase 43 | Complete |
 

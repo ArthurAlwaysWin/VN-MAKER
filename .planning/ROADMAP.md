@@ -233,3 +233,79 @@ See .planning/milestones/v0.9-ROADMAP.md for full phase details.
 See .planning/milestones/v1.0-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v1.1 — UI Theme System v2 引擎配置化 🚧
+
+**Milestone Goal:** 让游戏所有 UI 界面（存读档/回想/菜单/设置/对话框名牌）都可通过 `script.json` 的 `ui.*` 配置来定制外观，无需修改引擎代码。所有 setLayout 方法 null = 保持现有硬编码行为，完全向后兼容。
+
+### Phases
+
+- [ ] **Phase 42: widgetStyles 控件风格基础** — 数据模型 + 默认值深合并 + Tab/Toggle/Slider/Panel/Button 五类控件数据驱动渲染
+- [ ] **Phase 43: 界面布局配置** — SaveLoadScreen/BacklogScreen/GameMenu 新增 setLayout 方法，接受 ui.* 配置驱动外观
+- [ ] **Phase 44: SettingsScreen 结构化模式** — elements 为空时自动按 SETTING_DEFS 分组渲染 header/tabBar/contentArea 结构，控件样式从 widgetStyles 取
+- [ ] **Phase 45: 名牌样式 + 配置统一 + 编辑器预览** — DialogueBox nameplateStyle 三种样式 + main.js 统一配置传入 + 编辑器 iframe 预览集成
+
+### Phase Details
+
+#### Phase 42: widgetStyles 控件风格基础
+**Goal**: 引擎从数据驱动渲染所有控件类型——Tab/Toggle/Slider/Panel/Button 的形状、颜色、尺寸全部由 `ui.widgetStyles` 配置决定
+**Depends on**: Nothing (v1.1 foundation)
+**Requirements**: WIDGET-01, WIDGET-02, WIDGET-03, WIDGET-04, WIDGET-05, COMPAT-01
+**Success Criteria** (what must be TRUE):
+  1. 引擎读取 `ui.widgetStyles`，与内置默认值深合并——任何缺失/null 字段产出当前默认视觉效果
+  2. Tab 控件根据 `tab.shape` 正确渲染 5 种形状（rectangle/pill/underline/trapezoid/ribbon），包括对应 DOM 结构和 CSS
+  3. Toggle 控件根据 `toggle.style` 正确渲染 4 种样式（pill/radio/checkbox/button-pair），ON/OFF 状态切换正常
+  4. Slider 轨道颜色/填充颜色/滑块形状和颜色/尺寸全部由 `widgetStyles.slider` 配置驱动
+  5. 没有 `widgetStyles` 的旧项目（v1.0 及之前）显示完全相同的视觉效果——零回归
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 43: 界面布局配置
+**Goal**: 三个封闭 UI 界面（存读档/回想/游戏菜单）接受布局配置并渲染自定义外观
+**Depends on**: Nothing (independent of Phase 42)
+**Requirements**: SCREEN-01, SCREEN-02, SCREEN-03, COMPAT-02
+**Success Criteria** (what must be TRUE):
+  1. SaveLoadScreen.setLayout(config) 正确应用背景/标题文字和颜色/网格布局/槽位样式/分页样式
+  2. BacklogScreen.setLayout(config) 正确应用背景/标题栏/条目样式（说话人颜色、字号、悬停效果）
+  3. GameMenu.setLayout(config) 正确应用位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
+  4. 三个界面调用 setLayout(null) 时渲染结果与当前硬编码行为完全一致——零视觉变化
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 44: SettingsScreen 结构化模式
+**Goal**: SettingsScreen 在无自定义 elements 时自动从 SETTING_DEFS 按分组渲染完整结构化设置界面
+**Depends on**: Phase 42 (needs widgetStyles for control rendering)
+**Requirements**: SCREEN-04, SCREEN-05
+**Success Criteria** (what must be TRUE):
+  1. 当 `elements[]` 为空但存在 `header`/`tabBar`/`contentArea` 配置时，SettingsScreen 渲染 header + Tab 栏 + 内容面板结构布局
+  2. Tab 栏使用 `widgetStyles.tab.shape` 渲染对应形状，点击切换设置分组（声音/画面/游戏）
+  3. 内容区的 Toggle/Slider 控件使用 `widgetStyles.toggle.style` 和 `widgetStyles.slider.*` 渲染对应外观
+  4. 当 `elements[]` 非空时，现有自由布局模式照常渲染，不受结构化模式影响
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 45: 名牌样式 + 配置统一 + 编辑器预览
+**Goal**: 所有 UI 配置通过 main.js 单一初始化路径流入各组件，名牌支持 3 种视觉样式，编辑器预览反映全部配置
+**Depends on**: Phase 42, Phase 43, Phase 44 (CONFIG-01 needs all setLayout methods to exist)
+**Requirements**: NAMEPLATE-01, NAMEPLATE-02, NAMEPLATE-03, CONFIG-01, CONFIG-02
+**Success Criteria** (what must be TRUE):
+  1. `main.js` init() 在 engine.load() 之后从 `ui.*` 读取配置，集中调用 setLayout/setWidgetStyles 传入所有 UI 组件
+  2. DialogueBox `nameplateStyle: "inline"`（或缺失）渲染说话人名字在文字区上方——与当前行为完全一致
+  3. DialogueBox `nameplateStyle: "floating"` 渲染说话人名字为浮动气泡，定位在对话框左上角外侧
+  4. DialogueBox `nameplateStyle: "banner"` 渲染说话人名字为横跨对话框整个宽度的横幅条
+  5. 编辑器试玩 iframe 通过 postMessage 传递完整 `ui.*` 配置，预览效果与最终导出游戏一致
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+**Execution Order:** Phase 42 → 43 → 44 → 45
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 42. widgetStyles 控件风格基础 | 0/? | Not started | - |
+| 43. 界面布局配置 | 0/? | Not started | - |
+| 44. SettingsScreen 结构化模式 | 0/? | Not started | - |
+| 45. 名牌样式 + 配置统一 + 编辑器预览 | 0/? | Not started | - |

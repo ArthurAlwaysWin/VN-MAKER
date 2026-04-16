@@ -66,28 +66,28 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WIDGET-01 | — | Pending |
-| WIDGET-02 | — | Pending |
-| WIDGET-03 | — | Pending |
-| WIDGET-04 | — | Pending |
-| WIDGET-05 | — | Pending |
-| SCREEN-01 | — | Pending |
-| SCREEN-02 | — | Pending |
-| SCREEN-03 | — | Pending |
-| SCREEN-04 | — | Pending |
-| SCREEN-05 | — | Pending |
-| CONFIG-01 | — | Pending |
-| CONFIG-02 | — | Pending |
-| NAMEPLATE-01 | — | Pending |
-| NAMEPLATE-02 | — | Pending |
-| NAMEPLATE-03 | — | Pending |
-| COMPAT-01 | — | Pending |
-| COMPAT-02 | — | Pending |
+| WIDGET-01 | Phase 42 | Pending |
+| WIDGET-02 | Phase 42 | Pending |
+| WIDGET-03 | Phase 42 | Pending |
+| WIDGET-04 | Phase 42 | Pending |
+| WIDGET-05 | Phase 42 | Pending |
+| SCREEN-01 | Phase 43 | Pending |
+| SCREEN-02 | Phase 43 | Pending |
+| SCREEN-03 | Phase 43 | Pending |
+| SCREEN-04 | Phase 44 | Pending |
+| SCREEN-05 | Phase 44 | Pending |
+| CONFIG-01 | Phase 45 | Pending |
+| CONFIG-02 | Phase 45 | Pending |
+| NAMEPLATE-01 | Phase 45 | Pending |
+| NAMEPLATE-02 | Phase 45 | Pending |
+| NAMEPLATE-03 | Phase 45 | Pending |
+| COMPAT-01 | Phase 42 | Pending |
+| COMPAT-02 | Phase 43 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️ (awaiting roadmap creation)
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-16*

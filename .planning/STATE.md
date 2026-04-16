@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Theme System v2 — 引擎配置化
-status: defining_requirements
-stopped_at: Milestone v1.1 started — defining requirements
-last_updated: "2026-04-16T00:57:00.000Z"
+status: ready_to_plan
+stopped_at: Roadmap created — 4 phases (42-45), 17 requirements mapped
+last_updated: "2026-04-16T01:30:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -19,14 +19,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** UI Theme System v2 — 让所有游戏界面可通过 ui.* 配置定制
+**Current focus:** Phase 42 — widgetStyles 控件风格基础
 
 ## Current Position
 
-Milestone v1.1 started. Defining requirements.
+Phase: 42 (first of 4 in v1.1) — widgetStyles 控件风格基础
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-04-16 — Roadmap created
 
 ```
-v1.1 ░░░░░░░░░░░░░░░░░░░░ 0/? phases — DEFINING REQUIREMENTS
+v1.1 ░░░░░░░░░░░░░░░░░░░░ 0/4 phases — READY TO PLAN Phase 42
 ```
 
 ## Performance Metrics
@@ -45,11 +48,25 @@ v1.1 ░░░░░░░░░░░░░░░░░░░░ 0/? phases —
 | v0.8 | 3 | 4 | 15 |
 | v0.9 | 2 | 4 | 15 |
 | v1.0 | 5 | 7 | 10 ✅ |
-| v1.1 | — | — | — |
+| v1.1 | 4 | — | 17 |
+
+## Accumulated Context
+
+### Decisions
+
+- Design spec has 4-layer architecture; v1.1 covers Layer 2 (widgetStyles) + Layer 3 (screen layouts) only
+- COMPAT-01/02 are cross-cutting but mapped to the phases where their mechanisms live (42/43)
+- Phase 43 is independent of Phase 42 (screen layouts don't need widgetStyles)
+- Phase 44 depends on Phase 42 (SettingsScreen structured mode renders widgetStyles controls)
+- Phase 45 is the integration phase (CONFIG-01 needs all setLayout methods to exist)
+
+### Blockers/Concerns
+
+None yet.
 
 ## Session Continuity
 
 Last session: 2026-04-16
-Stopped at: Milestone v1.1 started, defining requirements
-Resume hint: Continue with requirements definition and roadmap creation
-Next action: Define REQUIREMENTS.md → Create ROADMAP.md
+Stopped at: Roadmap created — 4 phases (42-45), 17 requirements mapped
+Resume hint: Plan Phase 42 next
+Next action: `/gsd-plan-phase 42`

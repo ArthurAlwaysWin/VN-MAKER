@@ -1,32 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: 角色表情/差分場景切換 ✅
-status: shipped
-stopped_at: v1.0 milestone shipped — all 10 requirements verified
-last_updated: "2026-04-15T14:00:00.000Z"
+milestone: v1.1
+milestone_name: UI Theme System v2 — 引擎配置化
+status: defining_requirements
+stopped_at: Milestone v1.1 started — defining requirements
+last_updated: "2026-04-16T00:57:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-15)
+See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Planning next milestone
+**Current focus:** UI Theme System v2 — 让所有游戏界面可通过 ui.* 配置定制
 
 ## Current Position
 
-Milestone v1.0 shipped. Ready for `/gsd-new-milestone` to start next version.
+Milestone v1.1 started. Defining requirements.
 
 ```
-v1.0 ████████████████████ 5/5 phases — SHIPPED
+v1.1 ░░░░░░░░░░░░░░░░░░░░ 0/? phases — DEFINING REQUIREMENTS
 ```
 
 ## Performance Metrics
@@ -45,10 +45,11 @@ v1.0 ████████████████████ 5/5 phases —
 | v0.8 | 3 | 4 | 15 |
 | v0.9 | 2 | 4 | 15 |
 | v1.0 | 5 | 7 | 10 ✅ |
+| v1.1 | — | — | — |
 
 ## Session Continuity
 
-Last session: 2026-04-15
-Stopped at: v1.0 milestone shipped
-Resume hint: Use /gsd-new-milestone to start next version
-Next action: /gsd-new-milestone
+Last session: 2026-04-16
+Stopped at: Milestone v1.1 started, defining requirements
+Resume hint: Continue with requirements definition and roadmap creation
+Next action: Define REQUIREMENTS.md → Create ROADMAP.md

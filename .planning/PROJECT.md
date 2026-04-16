@@ -80,13 +80,28 @@
 
 ### Active
 
-<!-- 下一里程碑需求待定義 — 使用 /gsd-new-milestone 開始 -->
+<!-- v1.1 UI Theme System v2 — 引擎配置化 -->
 
-（暫無 — 等待下一里程碑定義）
+- [ ] widgetStyles 控件风格系统（tab 5 shape / toggle 4 style / slider / panel / button）
+- [ ] SaveLoadScreen 配置化（setLayout → ui.saveLoadScreen）
+- [ ] BacklogScreen 配置化（setLayout → ui.backlogScreen）
+- [ ] GameMenu 配置化（setLayout → ui.gameMenu）
+- [ ] SettingsScreen 结构化模式（elements 空时 header/tabBar/contentArea）
+- [ ] main.js 配置传入统一（engine.load → ui.*）
+- [ ] DialogueBox nameplateStyle 扩展（inline/floating/banner）
 
-## Current Milestone: 待定義
+## Current Milestone: v1.1 UI Theme System v2 — 引擎配置化
 
-使用 `/gsd-new-milestone` 開始下一里程碑的需求收集與路線規劃。
+**Goal:** 让游戏所有 UI 界面（存读档/回想/菜单/设置/对话框名牌）都可通过 script.json 的 `ui.*` 配置来定制外观，无需修改引擎代码。所有 setLayout 方法 null = 保持现有硬编码行为，完全向后兼容。
+
+**Target features:**
+- widgetStyles 控件风格系统 (tab/toggle/slider/panel/button 参数化)
+- SaveLoadScreen 配置化 (背景/标题/slotGrid/slot 样式/分页样式)
+- BacklogScreen 配置化 (背景/header/条目样式)
+- GameMenu 配置化 (位置/背景/按钮文字/图标)
+- SettingsScreen 结构化模式 (header/tabBar/contentArea，从 widgetStyles 取控件样式)
+- main.js 配置传入统一 (engine.load() 后从 ui.* 取各界面配置)
+- DialogueBox nameplateStyle 扩展 (inline/floating/banner 三种名牌样式)
 
 ### Future — 后续候选
 
@@ -247,9 +262,9 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-v1.0 里程碑完成 — 角色表情/差分場景切換。全部 10 個里程碑已交付（v0.1~v1.0）。
+v1.1 里程碑启动 — UI Theme System v2 引擎配置化。
 
-**已發布：** v0.1 ~ v1.0（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換）
+**已交付：** v0.1 ~ v1.0（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換）
 
 ---
-*Last updated: 2026-04-15 after v1.0 milestone shipped — 角色表情/差分場景切換*
+*Last updated: 2026-04-16 after v1.1 milestone started — UI Theme System v2 引擎配置化*

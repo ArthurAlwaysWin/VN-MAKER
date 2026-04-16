@@ -373,6 +373,235 @@ export class SettingsScreen {
     return String(value);
   }
 
+  // ── Structured layout rendering ───────────────────────
+
+  /**
+   * Render structured mode: header + tab bar + content area + footer.
+   * Activated when elements[] is empty but header/tabBar/contentArea exist.
+   *
+   * @param {object} layout — customLayout with header/tabBar/contentArea/footer
+   * @private
+   */
+  _renderStructured(layout) {
+    this.el.innerHTML = '';
+    this.el.classList.remove('settings-custom');
+    this.el.classList.add('settings-structured');
+    this.el.style.backgroundImage = '';
+    this.el.style.backgroundColor = '';
+
+    // ── Header ──────────────────────────────────────────
+    const hdr = layout.header || {};
+    const header = document.createElement('div');
+    header.className = 'settings-structured-header';
+    const hdrHeight = clampField('height', hdr.height) || 90;
+    header.style.height = hdrHeight + 'px';
+    header.style.position = 'relative';
+
+    if (hdr.backgroundImage) {
+      const safeBg = sanitizeCssValue(hdr.backgroundImage);
+      if (safeBg) {
+        header.style.backgroundImage = `url("${resolvePath(safeBg)}")`;
+        header.style.backgroundSize = 'cover';
+        header.style.backgroundPosition = 'center';
+      }
+    }
+
+    // Title
+    const title = document.createElement('div');
+    title.className = 'settings-structured-title';
+    title.textContent = hdr.title?.text || '系统设定';
+    const titleStyle = hdr.title || {};
+    this._applyTextStyle(
+      title,
+      titleStyle.color || '#fff',
+      titleStyle.fontSize || 28,
+      titleStyle.fontFamily
+    );
+    const tx = clampField('x', titleStyle.x);
+    const ty = clampField('y', titleStyle.y);
+    title.style.position = 'absolute';
+    if (tx !== undefined) title.style.left = tx + 'px';
+    if (ty !== undefined) title.style.top = ty + 'px';
+    header.appendChild(title);
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'settings-structured-close';
+    closeBtn.textContent = '×';
+    closeBtn.style.position = 'absolute';
+    closeBtn.style.right = '16px';
+    closeBtn.style.top = '50%';
+    closeBtn.style.transform = 'translateY(-50%)';
+    closeBtn.style.background = 'none';
+    closeBtn.style.border = 'none';
+    closeBtn.style.color = '#fff';
+    closeBtn.style.fontSize = '28px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.addEventListener('click', () => this.hide());
+    header.appendChild(closeBtn);
+
+    this.el.appendChild(header);
+
+    // ── Tab bar ─────────────────────────────────────────
+    const tabCfg = layout.tabBar || {};
+    const tabLabels = tabCfg.tabs || DEFAULT_TAB_LABELS;
+
+    const tabContainer = document.createElement('div');
+    tabContainer.className = 'settings-structured-tab-bar';
+    const tabY = clampField('y', tabCfg.y);
+    const tabH = clampField('height', tabCfg.height) || 56;
+    tabContainer.style.height = tabH + 'px';
+    if (tabY !== undefined) tabContainer.style.marginTop = '0';
+    const safeBg = sanitizeCssValue(tabCfg.background);
+    if (safeBg) tabContainer.style.background = safeBg;
+    tabContainer.style.display = 'flex';
+    tabContainer.style.alignItems = 'center';
+
+    if (this._widgetStyles) {
+      // Widget-based tab bar
+      const { el: tabEl, setActive } = createTabBar(
+        tabLabels,
+        this._widgetStyles.tab,
+        (index) => {
+          this._activeTab = index;
+          this._renderStructuredContent(layout);
+        }
+      );
+      this._tabSetActive = setActive;
+      tabContainer.appendChild(tabEl);
+    } else {
+      // Fallback: simple button-based tabs
+      tabLabels.forEach((label, i) => {
+        const btn = document.createElement('button');
+        btn.className = `settings-tab-btn${i === this._activeTab ? ' active' : ''}`;
+        btn.textContent = label;
+        btn.style.background = 'none';
+        btn.style.border = 'none';
+        btn.style.color = i === this._activeTab ? '#fff' : 'rgba(255,255,255,0.5)';
+        btn.style.cursor = 'pointer';
+        btn.style.padding = '8px 20px';
+        btn.style.fontSize = '16px';
+        btn.addEventListener('click', () => {
+          this._activeTab = i;
+          // Update button active states
+          tabContainer.querySelectorAll('.settings-tab-btn').forEach((b, idx) => {
+            b.classList.toggle('active', idx === i);
+            b.style.color = idx === i ? '#fff' : 'rgba(255,255,255,0.5)';
+          });
+          this._renderStructuredContent(layout);
+        });
+        tabContainer.appendChild(btn);
+      });
+    }
+
+    this.el.appendChild(tabContainer);
+
+    // ── Content area ────────────────────────────────────
+    const areaCfg = layout.contentArea || {};
+    const contentWrap = document.createElement('div');
+    contentWrap.className = 'settings-structured-content';
+    contentWrap.style.position = 'absolute';
+    contentWrap.style.overflowY = 'auto';
+    const cx = clampField('x', areaCfg.x) || 40;
+    const cy = clampField('y', areaCfg.y) || 160;
+    const cw = clampField('width', areaCfg.width) || 1200;
+    const ch = clampField('height', areaCfg.height) || 500;
+    contentWrap.style.left = cx + 'px';
+    contentWrap.style.top = cy + 'px';
+    contentWrap.style.width = cw + 'px';
+    contentWrap.style.height = ch + 'px';
+    this.el.appendChild(contentWrap);
+
+    // Populate first tab content
+    this._renderStructuredContent(layout);
+
+    // ── Footer ──────────────────────────────────────────
+    if (layout.footer?.buttons?.length) {
+      const footer = document.createElement('div');
+      footer.className = 'settings-structured-footer';
+      footer.style.position = 'relative';
+      footer.style.height = (clampField('height', layout.footer.height) || 60) + 'px';
+
+      for (const btnCfg of layout.footer.buttons) {
+        const btn = document.createElement('button');
+        btn.className = 'settings-structured-footer-btn';
+        btn.textContent = btnCfg.text || '';
+        btn.style.position = 'absolute';
+        const bx = clampField('x', btnCfg.x);
+        const by = clampField('y', btnCfg.y);
+        if (bx !== undefined) btn.style.left = bx + 'px';
+        if (by !== undefined) btn.style.top = by + 'px';
+        btn.style.background = 'none';
+        btn.style.border = 'none';
+        btn.style.color = '#fff';
+        btn.style.cursor = 'pointer';
+        btn.style.fontSize = '16px';
+
+        btn.addEventListener('click', () => {
+          if (btnCfg.id && btnCfg.id.includes('title') && this.onTitle) {
+            this.onTitle();
+          } else {
+            this.hide();
+          }
+        });
+
+        footer.appendChild(btn);
+      }
+      this.el.appendChild(footer);
+    }
+  }
+
+  /**
+   * Render setting items for the active tab in the structured content area.
+   * Called on initial render and on each tab switch.
+   *
+   * @param {object} layout — customLayout reference for positioning
+   * @private
+   */
+  _renderStructuredContent(layout) {
+    const container = this.el.querySelector('.settings-structured-content');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const groupKeys = SETTING_GROUP_KEYS[this._activeTab];
+    if (!groupKeys) return;
+
+    const cfg = this.configManager;
+
+    for (const key of groupKeys) {
+      const def = SETTING_DEFS[key];
+      if (!def) continue;
+
+      const item = document.createElement('div');
+      item.className = 'settings-structured-item';
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.padding = '12px 0';
+
+      const label = document.createElement('div');
+      label.className = 'settings-structured-label';
+      label.textContent = def.label;
+      label.style.minWidth = '140px';
+      label.style.color = '#fff';
+      item.appendChild(label);
+
+      const control = document.createElement('div');
+      control.className = 'settings-structured-control';
+      control.style.flex = '1';
+
+      if (def.type === 'slider') {
+        this._buildSlider(control, def, cfg, DEFAULT_SETTING_STYLE);
+      } else if (def.type === 'toggle') {
+        this._buildToggle(control, def, cfg, DEFAULT_SETTING_STYLE);
+      } else if (def.type === 'select') {
+        this._buildSelect(control, def, cfg, DEFAULT_SETTING_STYLE);
+      }
+
+      item.appendChild(control);
+      container.appendChild(item);
+    }
+  }
+
   // ── Default layout (fallback) ─────────────────────────
 
   _renderDefault() {

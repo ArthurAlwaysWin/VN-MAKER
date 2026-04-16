@@ -36,7 +36,7 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 
 ### 向后兼容
 
-- [ ] **COMPAT-01**: 未提供 `widgetStyles` 的旧项目（v1.0 及之前）保持现有外观不变，零视觉回归
+- [x] **COMPAT-01**: 未提供 `widgetStyles` 的旧项目（v1.0 及之前）保持现有外观不变，零视觉回归
 - [ ] **COMPAT-02**: 所有 `setLayout(null)` 调用保持现有硬编码行为，零视觉变化
 
 ## Future Requirements
@@ -81,7 +81,7 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | NAMEPLATE-01 | Phase 45 | Pending |
 | NAMEPLATE-02 | Phase 45 | Pending |
 | NAMEPLATE-03 | Phase 45 | Pending |
-| COMPAT-01 | Phase 42 | Pending |
+| COMPAT-01 | Phase 42 | Complete |
 | COMPAT-02 | Phase 43 | Pending |
 
 **Coverage:**

@@ -277,9 +277,9 @@ Plans:
   4. 三个界面调用 setLayout(null) 时渲染结果与当前硬编码行为完全一致——零视觉变化
 **Plans**: 3 plans
 Plans:
-- [x] 43-01-PLAN.md — SaveLoadScreen.setLayout() (SCREEN-01)
-- [x] 43-02-PLAN.md — BacklogScreen.setLayout() (SCREEN-02)
-- [x] 43-03-PLAN.md — GameMenu.setLayout() (SCREEN-03)
+- [ ] 43-01-PLAN.md — SaveLoadScreen setLayout: background/header/grid/slot/pagination config
+- [ ] 43-02-PLAN.md — BacklogScreen setLayout: background/header/entry config
+- [ ] 43-03-PLAN.md — GameMenu setLayout: position/background/button config
 **UI hint**: yes
 
 #### Phase 44: SettingsScreen 结构化模式

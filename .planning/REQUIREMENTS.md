@@ -10,9 +10,9 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 ### 控件风格系统
 
 - [x] **WIDGET-01**: 引擎从 `ui.widgetStyles` 读取控件风格配置（tab/toggle/slider/panel/button），与内置默认值深合并
-- [ ] **WIDGET-02**: Tab 控件支持 5 种形状（rectangle/pill/underline/trapezoid/ribbon），由 `tab.shape` 驱动 DOM 结构和 CSS
-- [ ] **WIDGET-03**: Toggle 控件支持 4 种样式（pill/radio/checkbox/button-pair），由 `toggle.style` 驱动完全不同的 DOM 结构
-- [ ] **WIDGET-04**: Slider 控件的轨道颜色/填充颜色/滑块形状和颜色由 `widgetStyles.slider` 配置驱动
+- [x] **WIDGET-02**: Tab 控件支持 5 种形状（rectangle/pill/underline/trapezoid/ribbon），由 `tab.shape` 驱动 DOM 结构和 CSS
+- [x] **WIDGET-03**: Toggle 控件支持 4 种样式（pill/radio/checkbox/button-pair），由 `toggle.style` 驱动完全不同的 DOM 结构
+- [x] **WIDGET-04**: Slider 控件的轨道颜色/填充颜色/滑块形状和颜色由 `widgetStyles.slider` 配置驱动
 - [x] **WIDGET-05**: Panel 和 Button 的背景/圆角/边框/模糊效果/背景贴图由 `widgetStyles.panel` 和 `widgetStyles.button` 驱动
 
 ### 界面配置化
@@ -67,9 +67,9 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | WIDGET-01 | Phase 42 | Complete |
-| WIDGET-02 | Phase 42 | Pending |
-| WIDGET-03 | Phase 42 | Pending |
-| WIDGET-04 | Phase 42 | Pending |
+| WIDGET-02 | Phase 42 | Complete |
+| WIDGET-03 | Phase 42 | Complete |
+| WIDGET-04 | Phase 42 | Complete |
 | WIDGET-05 | Phase 42 | Complete |
 | SCREEN-01 | Phase 43 | Pending |
 | SCREEN-02 | Phase 43 | Pending |

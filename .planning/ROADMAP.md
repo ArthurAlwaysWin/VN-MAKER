@@ -244,7 +244,7 @@ See .planning/milestones/v1.0-ROADMAP.md for full phase details.
 
 - [x] **Phase 42: widgetStyles 控件风格基础** — 数据模型 + 默认值深合并 + Tab/Toggle/Slider/Panel/Button 五类控件数据驱动渲染 (completed 2026-04-16)
 - [x] **Phase 43: 界面布局配置** — SaveLoadScreen/BacklogScreen/GameMenu 新增 setLayout 方法，接受 ui.* 配置驱动外观 (completed 2026-04-16)
-- [ ] **Phase 44: SettingsScreen 结构化模式** — elements 为空时自动按 SETTING_DEFS 分组渲染 header/tabBar/contentArea 结构，控件样式从 widgetStyles 取
+- [x] **Phase 44: SettingsScreen 结构化模式** — elements 为空时自动按 SETTING_DEFS 分组渲染 header/tabBar/contentArea 结构，控件样式从 widgetStyles 取 (completed 2026-04-16)
 - [ ] **Phase 45: 名牌样式 + 配置统一 + 编辑器预览** — DialogueBox nameplateStyle 三种样式 + main.js 统一配置传入 + 编辑器 iframe 预览集成
 
 ### Phase Details
@@ -293,7 +293,7 @@ Plans:
   4. 当 `elements[]` 非空时，现有自由布局模式照常渲染，不受结构化模式影响
 **Plans**: 1 plan
 Plans:
-- [ ] 44-01-PLAN.md — SettingsScreen _renderStructured() with tab-based SETTING_DEFS rendering
+- [x] 44-01-PLAN.md — SettingsScreen _renderStructured() with tab-based SETTING_DEFS rendering
 **UI hint**: yes
 
 #### Phase 45: 名牌样式 + 配置统一 + 编辑器预览
@@ -317,5 +317,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 42. widgetStyles 控件风格基础 | 3/3 | Complete    | 2026-04-16 |
 | 43. 界面布局配置 | 3/2 | Complete    | 2026-04-16 |
-| 44. SettingsScreen 结构化模式 | 0/? | Not started | - |
+| 44. SettingsScreen 结构化模式 | 1/1 | Complete   | 2026-04-16 |
 | 45. 名牌样式 + 配置统一 + 编辑器预览 | 0/? | Not started | - |

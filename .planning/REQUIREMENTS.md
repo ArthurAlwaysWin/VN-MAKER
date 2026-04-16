@@ -20,8 +20,8 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 - [x] **SCREEN-01**: SaveLoadScreen 新增 `setLayout(config)` 方法，可配置背景/标题文字和颜色/网格布局（行列数/间距/位置）/槽位样式/分页样式
 - [x] **SCREEN-02**: BacklogScreen 新增 `setLayout(config)` 方法，可配置背景/标题栏（标题文字/背景图/高度）/条目样式（说话人颜色/字号/文字字号/悬停效果）
 - [x] **SCREEN-03**: GameMenu 新增 `setLayout(config)` 方法，可配置位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
-- [ ] **SCREEN-04**: SettingsScreen 结构化模式：当 `elements` 为空但存在 `header`/`tabBar`/`contentArea` 配置时，自动将 SETTING_DEFS 按分组渲染到对应 Tab 页
-- [ ] **SCREEN-05**: SettingsScreen 结构化模式的控件从 `widgetStyles` 取样式（Tab 使用 tab.shape 渲染形状，Toggle 使用 toggle.style 渲染样式，Slider 使用 slider.* 渲染外观）
+- [x] **SCREEN-04**: SettingsScreen 结构化模式：当 `elements` 为空但存在 `header`/`tabBar`/`contentArea` 配置时，自动将 SETTING_DEFS 按分组渲染到对应 Tab 页
+- [x] **SCREEN-05**: SettingsScreen 结构化模式的控件从 `widgetStyles` 取样式（Tab 使用 tab.shape 渲染形状，Toggle 使用 toggle.style 渲染样式，Slider 使用 slider.* 渲染外观）
 
 ### 配置传入统一
 
@@ -74,8 +74,8 @@ UI Theme System v2 — 引擎配置化。让游戏所有 UI 界面都可通过 `
 | SCREEN-01 | Phase 43 | Complete |
 | SCREEN-02 | Phase 43 | Complete |
 | SCREEN-03 | Phase 43 | Complete |
-| SCREEN-04 | Phase 44 | Pending |
-| SCREEN-05 | Phase 44 | Pending |
+| SCREEN-04 | Phase 44 | Complete |
+| SCREEN-05 | Phase 44 | Complete |
 | CONFIG-01 | Phase 45 | Pending |
 | CONFIG-02 | Phase 45 | Pending |
 | NAMEPLATE-01 | Phase 45 | Pending |

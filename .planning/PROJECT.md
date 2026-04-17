@@ -259,14 +259,15 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v0.8** — 游戏导出 Electron 桌面版 (Phases 32-34)
 - ✅ **v0.9** — 编辑器本地化与帮助系统 (Phases 35-36)
 - ✅ **v1.0** — 角色表情/差分場景切換 (Phases 37-41)
+- ✅ **v1.1** — UI Theme System v2 引擎配置化 (Phases 42-45)
 
 ## Current State
 
-v1.1 Phase 42 完成 — widgetStyles 控件风格基础。WIDGET_DEFAULTS + deepMerge + 5 widget renderers (Tab/Toggle/Slider/Panel/Button) + SettingsScreen.setWidgetStyles() 集成。向后兼容验证通过。
+**已交付：** v0.1 ~ v1.1（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換 → UI Theme System v2 引擎配置化）
 
-**已交付：** v0.1 ~ v1.0（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換）
+**v1.1 已完成：** widgetStyles 控件风格系统 + 三界面 setLayout 配置 + SettingsScreen 结构化模式 + 名牌三样式 + main.js 配置统一路由 + 编辑器预览同步。17/17 需求全部验证通过，219 测试。
 
-**v1.1 进展：** Phase 42 ✅ (widgetStyles) → Phase 43 (界面布局配置) → Phase 44 (SettingsScreen 结构化) → Phase 45 (名牌+配置统一)
+**下一步：** 规划 v1.2 里程碑
 
 ---
-*Last updated: 2026-04-16 after Phase 42 complete — widgetStyles 控件风格基础*
+*Last updated: 2026-04-17 after v1.1 milestone complete*

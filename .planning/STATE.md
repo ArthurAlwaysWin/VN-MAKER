@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Theme System v2 — P0 引擎配置化 ✅
-status: complete
-stopped_at: Milestone v1.1 archived
-last_updated: "2026-04-16T14:14:56.947Z"
-last_activity: 2026-04-16
+status: archived
+stopped_at: Milestone v1.1 fully archived, ready for v1.2
+last_updated: "2026-04-17T00:27:00.000Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 4
@@ -92,7 +92,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-16T13:11:59.310Z
-Stopped at: Completed 45-02-PLAN.md
-Resume hint: Milestone v1.1 complete
-Next action: `/gsd-new-milestone` or `/gsd-complete-milestone`
+Last session: 2026-04-17T00:27:00.000Z
+Stopped at: Milestone v1.1 fully archived
+Resume hint: Ready for v1.2
+Next action: `/gsd-new-milestone`

@@ -1,14 +1,23 @@
 # Milestones
 
-## v1.1 v1.1 (Shipped: 2026-04-16)
+## v1.1 UI Theme System v2 — 引擎配置化 (Shipped: 2026-04-16)
 
-**Phases completed:** 4 phases, 9 plans, 20 tasks
+**Phases completed:** 4 phases (42-45), 9 plans, 17 requirements
+**Git range:** v1.0..HEAD (~49 commits)
+**Files:** 54 changed, +10198/-67 lines
 
 **Key accomplishments:**
 
-- One-liner:
-- BacklogScreen accepts layout config for background/header/entry customization with sanitized CSS, hover effects, and zero-regression null-config path
-- Config-driven GameMenu rendering with position/background/button-text/icon support via setLayout(config), null-config COMPAT-02 preserved
+- widgetStyles 控件风格系统 — WIDGET_DEFAULTS + deepMerge + Tab(5 形状)/Toggle(4 样式)/Slider/Panel/Button 五类控件数据驱动渲染
+- 三界面配置化 — SaveLoadScreen/BacklogScreen/GameMenu 各新增 setLayout(config)，背景/标题/网格/条目/按钮全部可配置
+- SettingsScreen 结构化模式 — elements 为空时自动按 SETTING_DEFS 分组渲染 header/tabBar/contentArea 结构
+- DialogueBox 名牌三样式 — inline(默认)/floating(气泡)/banner(横幅) + CSS 懒注入
+- main.js 配置统一路由 — engine.load() 后从 ui.* 读取配置集中调用 setLayout/setWidgetStyles
+- 编辑器预览同步 — initPreview() 包含 titleScreen/settingsScreen setLayout，iframe postMessage 传递完整 ui.*
+
+**All 4 phases verified:** 42 ✅ 43 ✅ 44 ✅ 45 ✅ (219 total tests)
+
+**Archives:** milestones/v1.1-ROADMAP.md, milestones/v1.1-REQUIREMENTS.md
 
 ---
 

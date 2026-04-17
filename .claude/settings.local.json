@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --test tests/exportGame.test.js)",
+      "Bash(node --test tests/scanAssets.test.js)",
+      "Bash(node --test tests/scriptEngine.test.js)",
+      "Bash(node --test tests/exportGame.test.js tests/scanAssets.test.js tests/scriptEngine.test.js)"
+    ]
+  }
+}

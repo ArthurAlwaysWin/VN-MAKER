@@ -6,7 +6,24 @@
         <span class="ws-panel-title">控件风格</span>
       </div>
       <div class="ws-scroll">
-        <p class="ws-placeholder">控件风格表单将在后续阶段添加</p>
+        <div
+          v-for="section in SECTIONS"
+          :key="section.id"
+          class="ws-section"
+        >
+          <button
+            class="ws-section-header"
+            @click="toggleSection(section.id)"
+          >
+            <span class="ws-section-arrow">{{ expanded[section.id] ? '▼' : '▶' }}</span>
+            <span class="ws-section-label">{{ section.label }}</span>
+          </button>
+          <div v-if="expanded[section.id]" class="ws-section-body">
+            <TabShapeSection v-if="section.id === 'tab'" />
+            <ToggleStyleSection v-if="section.id === 'toggle'" />
+            <SliderConfigSection v-if="section.id === 'slider'" />
+          </div>
+        </div>
       </div>
     </div>
     <!-- Right panel: iframe preview -->
@@ -21,12 +38,29 @@
 </template>
 
 <script setup>
-import { onMounted, onActivated, onBeforeUnmount } from 'vue';
+import { reactive, onMounted, onActivated, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { createWidgetStylesEditor } from '../composables/useWidgetStylesEditor.js';
+import TabShapeSection from '../components/widget/TabShapeSection.vue';
+import ToggleStyleSection from '../components/widget/ToggleStyleSection.vue';
+import SliderConfigSection from '../components/widget/SliderConfigSection.vue';
 
 const script = useScriptStore();
 const editor = createWidgetStylesEditor();
+
+const SECTIONS = [
+  { id: 'tab', label: '📑 Tab 形状' },
+  { id: 'toggle', label: '🔘 Toggle 样式' },
+  { id: 'slider', label: '🎚️ Slider 外观' },
+];
+
+const expanded = reactive({ tab: true, toggle: false, slider: false });
+
+function toggleSection(id) {
+  for (const key of Object.keys(expanded)) {
+    expanded[key] = key === id ? !expanded[key] : false;
+  }
+}
 
 function onIframeRef(el) {
   editor.iframeRef.value = el;
@@ -75,13 +109,36 @@ onBeforeUnmount(() => {
 .ws-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
 }
-.ws-placeholder {
-  color: #666;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 40px;
+.ws-section {
+  border-bottom: 1px solid #333;
+}
+.ws-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  background: #2d2d2d;
+  border: none;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.ws-section-header:hover {
+  background: #333;
+}
+.ws-section-arrow {
+  font-size: 10px;
+  width: 12px;
+  color: #888;
+}
+.ws-section-label {
+  font-weight: 500;
+}
+.ws-section-body {
+  padding: 8px 12px 12px;
 }
 .ws-preview {
   flex: 1;

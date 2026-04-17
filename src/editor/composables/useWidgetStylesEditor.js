@@ -9,6 +9,7 @@
 
 import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
+import { WIDGET_DEFAULTS } from '../../engine/widgetDefaults.js';
 
 // ─── Symbol Key ────────────────────────────────────────
 const WIDGET_STYLES_EDITOR_KEY = Symbol('widgetStylesEditor');
@@ -76,6 +77,23 @@ export function createWidgetStylesEditor() {
     }
   }
 
+  // ─── Widget Field Helpers ─────────────────────────
+
+  function setWidgetField(category, field, value) {
+    const ws = script.getWidgetStyles();
+    if (!ws) return;
+    ws[category] ??= {};
+    ws[category][field] = value;
+    sendWidgetStylesToPreview();
+  }
+
+  function commitWidgetStyles() {
+    const ws = script.getWidgetStyles();
+    if (!ws) return;
+    script.updateWidgetStyles(JSON.parse(JSON.stringify(ws)));
+    flushPreview();
+  }
+
   // ─── Cleanup ───────────────────────────────────────
 
   function cleanup() {
@@ -89,6 +107,9 @@ export function createWidgetStylesEditor() {
   const editor = {
     iframeRef,
     isEngineReady,
+    WIDGET_DEFAULTS,
+    setWidgetField,
+    commitWidgetStyles,
     sendWidgetStylesToPreview,
     flushPreview,
     startEngine,

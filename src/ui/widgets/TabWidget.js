@@ -17,7 +17,7 @@ const RIBBON_CLIP = 'polygon(0% 0%, calc(100% - 16px) 0%, 100% 50%, calc(100% - 
 /**
  * Create a tab bar with styled tab buttons.
  *
- * @param {string[]} labels — tab label strings (e.g. ['声音', '画面', '游戏'])
+ * @param {(string|{label: string, icon?: string})[]} labels — tab entries (strings or objects)
  * @param {object} config — merged widgetStyles.tab config
  * @param {string} [config.shape='rectangle'] — rectangle|pill|underline|trapezoid|ribbon
  * @param {string} [config.activeColor] — background color for active tab
@@ -35,6 +35,11 @@ export function createTabBar(labels, config, onSelect) {
   const buttons = [];
   let _activeIndex = 0;
 
+  // Normalize: accept string[] or {label, icon?}[]
+  const items = labels.map(entry =>
+    typeof entry === 'string' ? { label: entry } : entry
+  );
+
   // ─── Container ─────────────────────────────────────
   const el = document.createElement('div');
   el.className = 'gm-tab-bar';
@@ -45,10 +50,29 @@ export function createTabBar(labels, config, onSelect) {
   });
 
   // ─── Create Tab Buttons ────────────────────────────
-  for (let i = 0; i < labels.length; i++) {
+  for (let i = 0; i < items.length; i++) {
     const btn = document.createElement('button');
     btn.className = 'gm-tab';
-    btn.textContent = labels[i];
+
+    const item = items[i];
+    if (item.icon) {
+      btn.style.display = 'flex';
+      btn.style.alignItems = 'center';
+      btn.style.gap = '6px';
+      const img = document.createElement('img');
+      img.src = resolvePath(item.icon);
+      img.width = 24;
+      img.height = 24;
+      img.style.objectFit = 'contain';
+      img.alt = '';
+      btn.appendChild(img);
+      const span = document.createElement('span');
+      span.textContent = item.label;
+      btn.appendChild(span);
+    } else {
+      btn.textContent = item.label;
+    }
+
     _applyBaseStyle(btn, config);
     _applyTabShape(btn, shape, i === 0, config);
 

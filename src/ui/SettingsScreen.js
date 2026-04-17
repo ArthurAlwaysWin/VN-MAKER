@@ -26,6 +26,48 @@ const SETTING_GROUP_KEYS = [
 /** Default tab labels when layout.tabBar.tabs is not specified */
 const DEFAULT_TAB_LABELS = ['声音', '画面', '游戏'];
 
+/**
+ * Normalize tabBar.tabs input to a uniform `{label, icon?, settingKeys?}[]` format.
+ * Returns null when input is absent (signals "use defaults").
+ * @param {*} rawTabs — undefined, string[], or {label,icon?,settingKeys?}[]
+ * @returns {{label:string, icon?:string, settingKeys?:string[]}[] | null}
+ */
+export function normalizeTabs(rawTabs) {
+  if (!Array.isArray(rawTabs) || rawTabs.length === 0) return null;
+  if (typeof rawTabs[0] === 'string') {
+    return rawTabs.map(s => ({ label: String(s) }));
+  }
+  return rawTabs;
+}
+
+/**
+ * Resolve each tab's settingKeys — fall back to SETTING_GROUP_KEYS, append
+ * unassigned SETTING_DEFS keys to the last tab, and strip cross-tab duplicates.
+ * @param {{label:string, icon?:string, settingKeys?:string[]}[]} tabs
+ * @returns {{label:string, icon?:string, settingKeys:string[]}[]}
+ */
+export function resolveTabSettingKeys(tabs) {
+  const allKeys = Object.keys(SETTING_DEFS);
+  const seen = new Set();
+  const resolved = tabs.map((tab, idx) => {
+    const raw = Array.isArray(tab.settingKeys)
+      ? tab.settingKeys
+      : (SETTING_GROUP_KEYS[idx] || []);
+    const unique = raw.filter(k => {
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    return { label: tab.label, icon: tab.icon, settingKeys: unique };
+  });
+  // Append unassigned keys to the last tab
+  const unassigned = allKeys.filter(k => !seen.has(k));
+  if (unassigned.length > 0 && resolved.length > 0) {
+    resolved[resolved.length - 1].settingKeys.push(...unassigned);
+  }
+  return resolved;
+}
+
 export class SettingsScreen {
   /**
    * @param {HTMLElement} container
@@ -444,7 +486,11 @@ export class SettingsScreen {
 
     // ── Tab bar ─────────────────────────────────────────
     const tabCfg = layout.tabBar || {};
-    const tabLabels = tabCfg.tabs || DEFAULT_TAB_LABELS;
+    const normalized = normalizeTabs(tabCfg.tabs);
+    const resolvedTabs = normalized
+      ? resolveTabSettingKeys(normalized)
+      : DEFAULT_TAB_LABELS.map((label, i) => ({ label, settingKeys: SETTING_GROUP_KEYS[i] }));
+    this._resolvedTabs = resolvedTabs;
 
     const tabContainer = document.createElement('div');
     tabContainer.className = 'settings-structured-tab-bar';
@@ -458,9 +504,9 @@ export class SettingsScreen {
     tabContainer.style.alignItems = 'center';
 
     if (this._widgetStyles) {
-      // Widget-based tab bar
+      // Widget-based tab bar (supports {label, icon?} objects)
       const { el: tabEl, setActive } = createTabBar(
-        tabLabels,
+        resolvedTabs,
         this._widgetStyles.tab,
         (index) => {
           this._activeTab = index;
@@ -470,11 +516,29 @@ export class SettingsScreen {
       this._tabSetActive = setActive;
       tabContainer.appendChild(tabEl);
     } else {
-      // Fallback: simple button-based tabs
-      tabLabels.forEach((label, i) => {
+      // Fallback: simple button-based tabs with optional icon
+      resolvedTabs.forEach((tab, i) => {
         const btn = document.createElement('button');
         btn.className = `settings-tab-btn${i === this._activeTab ? ' active' : ''}`;
-        btn.textContent = label;
+
+        if (tab.icon) {
+          btn.style.display = 'flex';
+          btn.style.alignItems = 'center';
+          btn.style.gap = '6px';
+          const img = document.createElement('img');
+          img.src = resolvePath(tab.icon);
+          img.width = 24;
+          img.height = 24;
+          img.style.objectFit = 'contain';
+          img.alt = '';
+          btn.appendChild(img);
+          const span = document.createElement('span');
+          span.textContent = tab.label;
+          btn.appendChild(span);
+        } else {
+          btn.textContent = tab.label;
+        }
+
         btn.style.background = 'none';
         btn.style.border = 'none';
         btn.style.color = i === this._activeTab ? '#fff' : 'rgba(255,255,255,0.5)';
@@ -483,7 +547,6 @@ export class SettingsScreen {
         btn.style.fontSize = '16px';
         btn.addEventListener('click', () => {
           this._activeTab = i;
-          // Update button active states
           tabContainer.querySelectorAll('.settings-tab-btn').forEach((b, idx) => {
             b.classList.toggle('active', idx === i);
             b.style.color = idx === i ? '#fff' : 'rgba(255,255,255,0.5)';
@@ -563,7 +626,8 @@ export class SettingsScreen {
     if (!container) return;
     container.innerHTML = '';
 
-    const groupKeys = SETTING_GROUP_KEYS[this._activeTab];
+    const groupKeys = this._resolvedTabs?.[this._activeTab]?.settingKeys
+      || SETTING_GROUP_KEYS[this._activeTab];
     if (!groupKeys) return;
 
     const cfg = this.configManager;

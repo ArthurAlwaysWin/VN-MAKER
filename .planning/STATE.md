@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: 主题系统表达力升级
-status: requirements
-stopped_at: Defining requirements for v1.3
+status: roadmap
+stopped_at: Roadmap created, ready for phase planning
 last_updated: "2026-04-18T00:00:00.000Z"
 last_activity: 2026-04-18
 progress:
-  total_phases: 0
+  total_phases: 9
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v1.3 主题系统表达力升级 — requirements phase
+**Current focus:** v1.3 主题系统表达力升级 — roadmap complete, ready for Phase 52 planning
 
 ## Current Position
 
-Phase: 52 (next)
+Phase: 52 (next — Smart Color Foundation)
 Plan: Not started
-Status: Defining requirements for v1.3
+Status: Roadmap created with 9 phases (52-60), 27 requirements mapped
 Last activity: 2026-04-18
 
 ```
-v1.3 ░░░░░░░░░░░░░░░░░░░░░ 0/? phases
+v1.3 ░░░░░░░░░░░░░░░░░░░░░ 0/9 phases
 ```
 
 ## Performance Metrics
@@ -50,41 +50,21 @@ v1.3 ░░░░░░░░░░░░░░░░░░░░░ 0/? phases
 | v0.9 | 2 | 4 | 15 |
 | v1.0 | 5 | 7 | 10 ✅ |
 | v1.1 | 4 | 9 | 17 ✅ |
-| Phase 42 P01 | 3m | 2 tasks | 4 files |
-| Phase 42 P02 | -35731s | 2 tasks | 3 files |
-| Phase 42-03 P03 | 4m | 1 tasks | 1 files |
-| Phase 43 P01 | 7m | 3 tasks | 4 files |
-| Phase 43 P02 | 7m | 2 tasks | 2 files |
-| Phase 43 P03 | 7m | 4 tasks | 2 files |
-| Phase 44 P01 | 5m | 6 tasks | 2 files |
-| Phase 45 P01 | 4m | 3 tasks | 2 files |
-| Phase 45 P02 | 4m | 3 tasks | 2 files |
+| v1.2 | 6 | ? | ? ✅ |
+| v1.3 | 9 | TBD | 27 |
 
 ## Accumulated Context
 
 ### Decisions
 
-- Design spec has 4-layer architecture; v1.1 covers Layer 2 (widgetStyles) + Layer 3 (screen layouts) only
-- COMPAT-01/02 are cross-cutting but mapped to the phases where their mechanisms live (42/43)
-- Phase 43 is independent of Phase 42 (screen layouts don't need widgetStyles)
-- Phase 44 depends on Phase 42 (SettingsScreen structured mode renders widgetStyles controls)
-- Phase 45 is the integration phase (CONFIG-01 needs all setLayout methods to exist)
-- [Phase 42]: WIDGET_DEFAULTS deeply-frozen with 5 categories matching design spec Section 4.1
-- [Phase 42]: Panel/Button widgets use child-div nineSlice pattern from ThemeManager (not pseudo-elements)
-- [Phase 42]: SliderWidget auto-injects CSS on first call; Webkit fill via linear-gradient with --gm-fill-pct
-- [Phase 42]: Pill toggle 0.15s transition for usability; nineSlice ribbon uses border-image
-- [Phase 42-03]: Slider CSS injected in show() not constructor to avoid unused CSS when widgetStyles never set
-- [Phase 42-03]: Legacy code paths preserved byte-for-byte in _buildSlider/_buildToggle for COMPAT-01
-- [Phase 43]: SaveLoadScreen.setLayout(config) follows SettingsScreen pattern with config branching in render methods
-- [Phase 43]: BacklogScreen config applied as post-render overlay preserving COMPAT-02 byte-for-byte default path
-- [Phase 43]: Inline styles reset at start of show() for clean config switching
-- [Phase 43]: Click handler moved to constructor to prevent duplicate listeners on setLayout re-render
-- [Phase 43]: DEFAULT_LABELS uses simplified Chinese matching codebase, not traditional from design spec
-- [Phase 44]: Tab bar uses createTabBar when widgetStyles set, simple button fallback otherwise
-- [Phase 44]: Settings grouped by SETTING_GROUP_KEYS with index-based tab mapping for 声音/画面/游戏
-- [Phase 45]: CSS injected lazily on first non-inline style; inline class has no CSS rules for exact backward compat
-- [Phase 45]: Config routing blocks placed after settingsScreen.setLayout in init(), before applyTheme
-- [Phase 45]: initPreview() includes titleScreen/settingsScreen setLayout since they were missing from preview
+- Two independent tracks: Smart Color (Phases 52, 56) and Structural Params (Phases 53-55, 57-58)
+- Engine-before-editor ordering enforced: Phases 52-55 (engine) → Phases 56-58 (editor)
+- OKLCH zero-dependency: 60-line pure JS module, no npm packages added to engine
+- colorRecipe storage: recipe + tokens + overrides three-layer merge at apply time
+- Tab sections deferred: flat settingKeys list sufficient for v1.3 (< 15 settings)
+- Unassigned setting keys appended to last tab for forward-compat
+- Title page preview (Phase 59) is independent, can parallelize with editor phases
+- Built-in theme upgrade (Phase 60) comes last as integration test of all new features
 
 ### Blockers/Concerns
 
@@ -92,7 +72,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17
-Stopped at: v1.2 milestone archived and tagged
-Resume hint: Run `/gsd-new-milestone` to start v1.3 planning
-Next action: Start v1.3 milestone
+Last session: 2026-04-18
+Stopped at: Roadmap created with 9 phases, 27/27 requirements mapped
+Resume hint: Run `/gsd-plan-phase 52` to plan Smart Color Foundation
+Next action: Plan Phase 52

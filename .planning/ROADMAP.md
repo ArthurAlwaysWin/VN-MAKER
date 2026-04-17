@@ -280,3 +280,165 @@ See .planning/milestones/v1.1-ROADMAP.md for full phase details.
 See .planning/milestones/v1.2-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v1.3 — 主题系统表达力升级
+
+主题系统表达力升级 — 让用户通过内置模板 + 关键结构参数，能做出从 Aokana 到千恋万花跨度的 UI 美术风格。
+
+Two tracks: **Smart Color** (OKLCH derivation, 2-input editor) + **Structural Params** (tab config, layout, decorations, editor UI). Engine changes first, then editor, themes last.
+
+### Phases
+
+- [ ] **Phase 52: Smart Color Foundation** - OKLCH module + rule table + derivation function (pure engine library)
+- [ ] **Phase 53: Configurable Tabs (Engine)** - Tab structure, icons, setting-key assignment, backward compat
+- [ ] **Phase 54: Content Layout + Row Styling (Engine)** - Two-column grid, dividers, zebra, label options
+- [ ] **Phase 55: Left-Tab Mode + Decorations (Engine)** - Sidebar navigation, header decorations, footer reset, panel background
+- [ ] **Phase 56: Smart Color Editor UI** - 2-picker panel, recipe storage, live preview
+- [ ] **Phase 57: Tab & Layout Editor** - Tab CRUD + setting matrix + layout controls + tab position toggle
+- [ ] **Phase 58: Decoration & Background Editor** - Header decoration manager + footer button config + panel background + live preview
+- [ ] **Phase 59: Title Page Preview** - Iframe engine preview in title page editor
+- [ ] **Phase 60: Built-in Theme Upgrade** - 5 themes with colorRecipe + structural params + commercial VN aesthetics
+
+### Phase Details
+
+#### Phase 52: Smart Color Foundation
+**Goal**: Engine can derive a complete 35-token color palette from two hex colors + dark/light mode choice
+**Depends on**: Nothing (pure library, zero coupling to existing code)
+**Requirements**: COLOR-01, COLOR-02, COLOR-03
+**Success Criteria** (what must be TRUE):
+  1. `rgbToOklch()` and `oklchToRgb()` roundtrip any sRGB color with ΔE < 1 (visually indistinguishable)
+  2. `deriveTokens('#b4a0ff', '#ff6b9d', 'dark')` returns all 35 token keys with valid rgba/hex/gradient strings
+  3. `deriveTokens()` produces correct light-mode tokens when mode='light' (text near-black, backgrounds near-white)
+  4. Out-of-gamut OKLCH values are clamped to valid sRGB via binary-search chroma reduction
+**Plans**: TBD
+
+#### Phase 53: Configurable Tabs (Engine)
+**Goal**: Users can define custom tab structure with icons and per-tab setting assignment in the engine settings screen
+**Depends on**: Nothing (independent engine track)
+**Requirements**: STRUCT-01, STRUCT-02, STRUCT-03, STRUCT-07
+**Success Criteria** (what must be TRUE):
+  1. Setting `tabBar.tabs` to a 4-item array renders 4 tab buttons with custom labels
+  2. Each tab shows exactly the settings listed in its `settingKeys` array
+  3. Tab buttons display icon image + text when `tabs[].icon` is set to an asset path
+  4. Omitting `tabBar.tabs` entirely renders the settings screen identically to v1.2 (zero visual regression)
+  5. Setting keys not assigned to any tab are appended to the last tab (graceful forward-compat)
+**Plans**: TBD
+
+#### Phase 54: Content Layout + Row Styling (Engine)
+**Goal**: Engine settings content area supports two-column grid layout and visual row decoration
+**Depends on**: Phase 53 (layout builds on configurable tab content rendering)
+**Requirements**: STRUCT-04, STRUCT-05
+**Success Criteria** (what must be TRUE):
+  1. Setting `contentArea.columns=2` renders setting items in a 2-column CSS Grid
+  2. `itemStyle.showDividers=true` draws hairline separators between setting rows
+  3. `itemStyle.alternateBackground=true` applies zebra-striped row backgrounds
+  4. `itemStyle.labelPosition='top'` stacks label above control instead of beside it
+  5. `itemStyle.showValueLabel=false` hides the numeric readout next to sliders
+**Plans**: TBD
+
+#### Phase 55: Left-Tab Mode + Decorations (Engine)
+**Goal**: Engine supports sidebar tab navigation and decorative elements for commercial VN aesthetics
+**Depends on**: Phase 53 (left-tab needs tab structure; decorations need structured mode)
+**Requirements**: STRUCT-06, DECOR-01, DECOR-02, DECOR-03
+**Success Criteria** (what must be TRUE):
+  1. `tabBar.position='left'` renders vertical sidebar navigation (Senrenbanka style) with content area beside it
+  2. `header.decorations[]` renders positioned images (corner ornaments, divider lines) within the header area
+  3. Footer button with `action: 'reset'` resets all settings to `ConfigManager.defaults`
+  4. `settingsScreen.background` displays a background image (e.g., character watermark) behind the settings panel content
+**Plans**: TBD
+
+#### Phase 56: Smart Color Editor UI
+**Goal**: Users edit theme colors through two color pickers + mode toggle instead of 41 individual token controls
+**Depends on**: Phase 52 (editor imports OKLCH + deriveTokens from engine)
+**Requirements**: COLOR-04, COLOR-05, COLOR-06
+**Success Criteria** (what must be TRUE):
+  1. SmartColorPanel shows 2 color pickers (primary + accent) and a dark/light mode toggle
+  2. Changing primary color immediately derives and previews all 35 tokens in the iframe
+  3. User can select harmony algorithm (complementary/analogous/triadic/split-complementary) to auto-derive accent from primary
+  4. Color recipe (primary/accent/mode/algorithm) persists in script.json alongside the full generated token set
+  5. Individual token overrides survive when user re-derives from recipe changes (overrides stored separately)
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 57: Tab & Layout Editor
+**Goal**: Users visually configure tab structure and content layout without touching JSON
+**Depends on**: Phases 53, 54, 55 (editor configures features that engine already renders)
+**Requirements**: EDITOR-01, EDITOR-02, EDITOR-04
+**Success Criteria** (what must be TRUE):
+  1. User can add/remove tabs, rename labels, and assign an icon image to each tab
+  2. Checkbox matrix shows all SETTING_DEFS keys; user assigns each key to exactly one tab (assigned keys grayed out in other tabs)
+  3. Column count radio (1/2) and row style toggles (dividers, zebra, value labels, label width, label position) update the settings screen
+  4. Tab position toggle (top/left) switches between horizontal tabs and sidebar navigation
+  5. All changes preview in real-time via iframe postMessage
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 58: Decoration & Background Editor
+**Goal**: Users configure header decorations, footer buttons, and panel background through the editor
+**Depends on**: Phase 57 (builds on the editor infrastructure established for tab/layout editing)
+**Requirements**: EDITOR-03, EDITOR-05, EDITOR-06
+**Success Criteria** (what must be TRUE):
+  1. User can add/remove header decoration images with position (x/y) and size (width/height) controls
+  2. Footer button editor allows configuring button text and action (close/title/reset) for each button
+  3. User can select a panel background image and adjust its opacity
+  4. All structural parameter edits from both Phase 57 and Phase 58 preview live in the iframe
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 59: Title Page Preview
+**Goal**: Users see actual engine-rendered title page in the editor
+**Depends on**: Nothing specific (independent feature; iframe basics already exist from v0.3 Phase 14)
+**Requirements**: TITLE-01
+**Success Criteria** (what must be TRUE):
+  1. Title page editor tab embeds an iframe showing the engine's rendered title page
+  2. Title screen buttons and background are visible in the preview
+  3. Changes to title page settings (background, BGM, button positions) reflect in the iframe preview
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 60: Built-in Theme Upgrade
+**Goal**: All 5 built-in themes demonstrate the full expressiveness of v1.3 structural + color features
+**Depends on**: Phases 56, 58 (themes exercise all new color and structural features)
+**Requirements**: UPGRADE-01, UPGRADE-02, UPGRADE-03, UPGRADE-04
+**Success Criteria** (what must be TRUE):
+  1. All 5 themes use `colorRecipe` format (primary/accent/mode/algorithm) instead of hand-coded token values
+  2. At least 1 theme uses `tabBar.position='left'` showcasing Senrenbanka-style sidebar navigation
+  3. At least 1 theme uses `columns=2` + `itemStyle` row decorations showcasing Aokana-style two-column layout
+  4. At least 2 themes include tab icons and header decorations for commercial VN aesthetics
+
+**Plans**: TBD
+
+### Coverage
+
+```
+COLOR-01  → Phase 52    STRUCT-01 → Phase 53    DECOR-01  → Phase 55
+COLOR-02  → Phase 52    STRUCT-02 → Phase 53    DECOR-02  → Phase 55
+COLOR-03  → Phase 52    STRUCT-03 → Phase 53    DECOR-03  → Phase 55
+COLOR-04  → Phase 56    STRUCT-04 → Phase 54    EDITOR-01 → Phase 57
+COLOR-05  → Phase 56    STRUCT-05 → Phase 54    EDITOR-02 → Phase 57
+COLOR-06  → Phase 56    STRUCT-06 → Phase 55    EDITOR-03 → Phase 58
+                        STRUCT-07 → Phase 53    EDITOR-04 → Phase 57
+TITLE-01  → Phase 59                            EDITOR-05 → Phase 58
+UPGRADE-01 → Phase 60                           EDITOR-06 → Phase 58
+UPGRADE-02 → Phase 60
+UPGRADE-03 → Phase 60
+UPGRADE-04 → Phase 60
+
+Mapped: 27/27 ✓
+```
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 52. Smart Color Foundation | 0/? | Not started | - |
+| 53. Configurable Tabs (Engine) | 0/? | Not started | - |
+| 54. Content Layout + Row Styling | 0/? | Not started | - |
+| 55. Left-Tab + Decorations (Engine) | 0/? | Not started | - |
+| 56. Smart Color Editor UI | 0/? | Not started | - |
+| 57. Tab & Layout Editor | 0/? | Not started | - |
+| 58. Decoration & Background Editor | 0/? | Not started | - |
+| 59. Title Page Preview | 0/? | Not started | - |
+| 60. Built-in Theme Upgrade | 0/? | Not started | - |

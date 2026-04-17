@@ -283,7 +283,12 @@ See .planning/milestones/v1.1-ROADMAP.md for full phase details.
   2. 打开项目时，script.json 中已有的 `ui.widgetStyles` 和各界面布局配置正确加载到 store
   3. 通过 store 修改 widgetStyles 或布局数据后，2s 内自动保存到磁盘（复用现有自动保存机制）
   4. Ctrl+Z / Ctrl+Y 可撤销/重做 widgetStyles 和布局的编辑操作
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 46-01-PLAN.md — Store persistence methods + Engine preview protocol
+- [ ] 46-02-PLAN.md — Editor view shells + Composables + Tab registration
+
 **UI hint**: yes
 
 #### Phase 47: 控件编辑器 — Tab/Toggle/Slider
@@ -353,7 +358,7 @@ See .planning/milestones/v1.1-ROADMAP.md for full phase details.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 46. 数据持久化 + 编辑器骨架 | 0/? | Not started | - |
+| 46. 数据持久化 + 编辑器骨架 | 0/2 | Not started | - |
 | 47. 控件编辑器 — Tab/Toggle/Slider | 0/? | Not started | - |
 | 48. 控件编辑器 — Panel/Button + 实时预览 | 0/? | Not started | - |
 | 49. 布局编辑器 — SaveLoad/Backlog | 0/? | Not started | - |

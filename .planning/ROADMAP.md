@@ -303,16 +303,13 @@ Two tracks: **Smart Color** (OKLCH derivation, 2-input editor) + **Structural Pa
 
 ### Phase Details
 
-#### Phase 52: Smart Color Foundation
-**Goal**: Engine can derive a complete 35-token color palette from two hex colors + dark/light mode choice
+#### Phase 52: Smart Color Foundation ✅
+**Goal**: Engine can derive a complete 36-token color palette from two hex colors + dark/light mode choice
 **Depends on**: Nothing (pure library, zero coupling to existing code)
 **Requirements**: COLOR-01, COLOR-02, COLOR-03
-**Success Criteria** (what must be TRUE):
-  1. `rgbToOklch()` and `oklchToRgb()` roundtrip any sRGB color with ΔE < 1 (visually indistinguishable)
-  2. `deriveTokens('#b4a0ff', '#ff6b9d', 'dark')` returns all 35 token keys with valid rgba/hex/gradient strings
-  3. `deriveTokens()` produces correct light-mode tokens when mode='light' (text near-black, backgrounds near-white)
-  4. Out-of-gamut OKLCH values are clamped to valid sRGB via binary-search chroma reduction
-**Plans**: TBD
+**Status**: COMPLETE
+**Plans**: 52-01 (OKLCH Module + Rule Table + Derivation Function) ✅
+**Commits**: `8fcd655` (feat), `dc49779` (test)
 
 #### Phase 53: Configurable Tabs (Engine)
 **Goal**: Users can define custom tab structure with icons and per-tab setting assignment in the engine settings screen

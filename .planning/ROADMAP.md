@@ -362,8 +362,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 46. 数据持久化 + 编辑器骨架 | 0/2 | Complete    | 2026-04-17 |
-| 47. 控件编辑器 — Tab/Toggle/Slider | 0/? | Not started | - |
-| 48. 控件编辑器 — Panel/Button + 实时预览 | 0/? | Not started | - |
-| 49. 布局编辑器 — SaveLoad/Backlog | 0/? | Not started | - |
-| 50. 布局编辑器 — GameMenu/Settings + 实时预览 | 0/? | Not started | - |
-| 51. 内置主题 + 主题选择器 | 0/? | Not started | - |
+| 47. 控件编辑器 — Tab/Toggle/Slider | 1/1 | Complete | 2026-04-17 |
+| 48. 控件编辑器 — Panel/Button + 实时预览 | 1/1 | Complete | 2026-04-17 |
+| 49. 布局编辑器 — SaveLoad/Backlog | 1/1 | Complete | 2026-04-17 |
+| 50. 布局编辑器 — GameMenu/Settings + 实时预览 | 1/1 | Complete | 2026-04-17 |
+| 51. 内置主题 + 主题选择器 | 1/1 | Complete | 2026-04-17 |

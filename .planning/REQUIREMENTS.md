@@ -26,10 +26,10 @@
 
 ### 内置主题
 
-- [ ] **THEME-01**: default 主题数据包 — 将现有引擎默认值封装为完整主题（tokens + widgetStyles + 各界面配置）
-- [ ] **THEME-02**: wafuu（和风）全配置主题 — 完整 tokens + widgetStyles + 各界面配置 + 九宫格贴图资源
-- [ ] **THEME-03**: modern-sky / fantasy-dark / minimal-white 三套纯配色主题（tokens + widgetStyles 颜色方案，无自定义贴图）
-- [ ] **THEME-04**: 主题选择器 UI — 用户可在编辑器中一键切换内置主题并实时预览效果
+- [x] **THEME-01**: default 主题数据包 — 将现有引擎默认值封装为完整主题（tokens + widgetStyles + 各界面配置）
+- [x] **THEME-02**: wafuu（和风）全配置主题 — 完整 tokens + widgetStyles + 各界面配置 + 九宫格贴图资源
+- [x] **THEME-03**: modern-sky / fantasy-dark / minimal-white 三套纯配色主题（tokens + widgetStyles 颜色方案，无自定义贴图）
+- [x] **THEME-04**: 主题选择器 UI — 用户可在编辑器中一键切换内置主题并实时预览效果
 
 ### 数据持久化
 
@@ -69,10 +69,10 @@
 | LEDITOR-03 | Phase 50 | Pending |
 | LEDITOR-04 | Phase 50 | Pending |
 | LEDITOR-05 | Phase 50 | Pending |
-| THEME-01 | Phase 51 | Pending |
-| THEME-02 | Phase 51 | Pending |
-| THEME-03 | Phase 51 | Pending |
-| THEME-04 | Phase 51 | Pending |
+| THEME-01 | Phase 51 | Complete |
+| THEME-02 | Phase 51 | Complete |
+| THEME-03 | Phase 51 | Complete |
+| THEME-04 | Phase 51 | Complete |
 | DATA-01 | Phase 46 | Pending |
 | DATA-02 | Phase 46 | Pending |
 

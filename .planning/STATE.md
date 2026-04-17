@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: 编辑器侧主题配置
-status: executing
-stopped_at: Phase 50 complete — moving to Phase 51
-last_updated: "2026-04-17T08:00:00.000Z"
+status: complete
+stopped_at: All 6 phases (46-51) complete — v1.2 milestone done
+last_updated: "2026-04-17T09:00:00.000Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 6
   completed_plans: 6
 ---
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Phase 51 — builtin-themes-selector
+**Current focus:** v1.2 milestone complete — all 17 requirements delivered
 
 ## Current Position
 
-Phase: 51
-Plan: Not started
-Status: Phase 50 complete, ready for Phase 51
+Phase: 51 (final)
+Plan: Complete
+Status: All phases complete, ready for milestone audit
 Last activity: 2026-04-17
 
 ```
@@ -92,7 +92,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T08:00:00.000Z
-Stopped at: Phase 50 complete — all 4 screen layout editors done
-Resume hint: Run `/gsd-discuss-phase 51` or continue auto mode
-Next action: Discuss → Plan → Execute Phase 51 (内置主题 + 主题选择器)
+Last session: 2026-04-17T09:00:00.000Z
+Stopped at: v1.2 milestone complete — all 6 phases (46-51) delivered
+Resume hint: Run `/gsd-audit-milestone` to validate, then `/gsd-complete-milestone`
+Next action: Milestone audit → complete → tag v1.2

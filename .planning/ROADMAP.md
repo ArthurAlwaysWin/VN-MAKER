@@ -265,7 +265,7 @@ See .planning/milestones/v1.1-ROADMAP.md for full phase details.
 
 ### Phases
 
-- [ ] **Phase 46: 数据持久化 + 编辑器骨架** — Store 读写 widgetStyles/布局 + 控件风格编辑器视图骨架 + iframe 预览区
+- [x] **Phase 46: 数据持久化 + 编辑器骨架** — Store 读写 widgetStyles/布局 + 控件风格编辑器视图骨架 + iframe 预览区 (completed 2026-04-17)
 - [ ] **Phase 47: 控件编辑器 — Tab/Toggle/Slider** — Tab 形状缩略图网格 + Toggle 样式缩略图网格 + Slider 颜色/形状配置
 - [ ] **Phase 48: 控件编辑器 — Panel/Button + 实时预览** — Panel 背景/圆角/边框/模糊/贴图 + Button 三态 + 全控件 iframe 实时预览
 - [ ] **Phase 49: 布局编辑器 — SaveLoad/Backlog** — 存读档/回想界面结构化表单配置
@@ -283,7 +283,7 @@ See .planning/milestones/v1.1-ROADMAP.md for full phase details.
   2. 打开项目时，script.json 中已有的 `ui.widgetStyles` 和各界面布局配置正确加载到 store
   3. 通过 store 修改 widgetStyles 或布局数据后，2s 内自动保存到磁盘（复用现有自动保存机制）
   4. Ctrl+Z / Ctrl+Y 可撤销/重做 widgetStyles 和布局的编辑操作
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 46-01-PLAN.md — Store persistence methods + Engine preview protocol
@@ -358,7 +358,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 46. 数据持久化 + 编辑器骨架 | 0/2 | Not started | - |
+| 46. 数据持久化 + 编辑器骨架 | 0/2 | Complete    | 2026-04-17 |
 | 47. 控件编辑器 — Tab/Toggle/Slider | 0/? | Not started | - |
 | 48. 控件编辑器 — Panel/Button + 实时预览 | 0/? | Not started | - |
 | 49. 布局编辑器 — SaveLoad/Backlog | 0/? | Not started | - |

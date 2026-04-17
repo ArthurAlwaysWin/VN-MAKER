@@ -1,0 +1,114 @@
+# Requirements: Galgame Maker v1.3
+
+**Defined:** 2026-04-18
+**Core Value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
+
+## v1.3 Requirements
+
+主题系统表达力升级。通过智能配色简化颜色编辑 + 结构参数释放设置页定制能力，让用户能做出从 Aokana 到千恋万花跨度的 UI 美术风格。
+
+### 智能配色系统
+
+- [ ] **COLOR-01**: OKLCH 颜色空间模块 — 纯 JS 实现 RGB↔OKLCH 转换 + sRGB gamut clamping，零外部依赖
+- [ ] **COLOR-02**: 配色规则表 — 声明式规则表定义 35 个颜色 token 的派生规则（5 组：primary-alpha / accent-alpha / text-opacity / background / special），支持 dark/light 两套规则
+- [ ] **COLOR-03**: 配色派生函数 — 输入 primary + accent + mode → 输出完整 35 token 对象，替代现有 colorHarmony.generatePalette 流程
+- [ ] **COLOR-04**: 智能配色编辑器 UI — 2 个颜色选择器（primary + accent）+ dark/light 模式切换 + 色彩和谐算法选择（互补/类似/三角/分裂互补），替代当前 41 个独立 token 控件
+- [ ] **COLOR-05**: 配色方案存储 — script.json 存储 colorRecipe（primary/accent/mode/algorithm）+ 生成的完整 tokens，支持单 token 覆盖（覆盖值在 re-derive 时保留）
+- [ ] **COLOR-06**: 配色实时预览 — 编辑器中调整 primary/accent 时 iframe 实时更新所有 token
+
+### 设置页结构参数（引擎侧）
+
+- [ ] **STRUCT-01**: Tab 数量/标签可配置 — tabBar.tabs[] 数组支持 1-N 个自定义标签页（替代硬编码 3 tab）
+- [ ] **STRUCT-02**: Tab 图标支持 — tabs[].icon 可配图片路径，Tab 按钮显示 icon + text
+- [ ] **STRUCT-03**: 设置项分组自定义 — tabs[].settingKeys 指定每个 Tab 包含哪些设置项（替代硬编码 SETTING_GROUP_KEYS）
+- [ ] **STRUCT-04**: 双列布局 — contentArea.columns=2 时设置项两列排列（CSS Grid），columns=1 为当前单列行为
+- [ ] **STRUCT-05**: 行样式控制 — contentArea.itemStyle 支持 showDividers（分隔线）、alternateBackground（条纹背景）、labelWidth、labelPosition(left/top)、showValueLabel
+- [ ] **STRUCT-06**: 左侧 Tab 模式 — tabBar.position='left' 时渲染为垂直侧边栏导航（Senrenbanka 风格），默认 'top' 保持现有水平 Tab
+- [ ] **STRUCT-07**: 后向兼容 — 所有新参数缺省时引擎行为与 v1.2 完全一致，现有主题配置无需修改
+
+### 页头/页脚灵活化（引擎侧）
+
+- [ ] **DECOR-01**: 页头装饰图 — header.decorations[] 数组支持放置装饰图片（src/x/y/width/height），用于角花、分隔线等
+- [ ] **DECOR-02**: 页脚按钮扩展 — footer.buttons[] 新增 'reset' action（恢复默认设置），与现有 'close'/'title' 并列
+- [ ] **DECOR-03**: 设置页面板背景 — settingsScreen.background 独立于 widgetStyles.panel 的背景图，支持人物水印等场景特有装饰
+
+### 设置页结构编辑器（编辑器侧）
+
+- [ ] **EDITOR-01**: Tab 编辑器 — 可视化增删改 Tab（标签名、图标选择、设置项分配 checkbox 矩阵）
+- [ ] **EDITOR-02**: 布局控制 — columns 切换（1/2）、行样式开关（分隔线/条纹/值标签）、标签宽度/位置调整
+- [ ] **EDITOR-03**: 装饰编辑器 — 页头装饰图管理（添加/移除/拖拽定位）+ 页脚按钮配置（action 选择 + 文案编辑）
+- [ ] **EDITOR-04**: Tab 位置切换 — tabBar.position 在 top/left 之间切换，UI 实时展示切换效果说明
+- [ ] **EDITOR-05**: 面板背景编辑 — 设置页独立背景图选择 + 透明度调节
+- [ ] **EDITOR-06**: 所有结构参数编辑实时通过 postMessage 预览到 iframe 中
+
+### 标题页引擎预览
+
+- [ ] **TITLE-01**: 标题页 iframe 预览 — 在标题页编辑器中嵌入 iframe 加载引擎，展示标题页实际渲染效果（含标题屏 + 按钮交互）
+
+### 内置主题升级
+
+- [ ] **UPGRADE-01**: 升级现有 5 套内置主题 — 为 wafuu/modern-sky/fantasy-dark/minimal-white 补充结构参数（tab 图标、双列布局、装饰图等）
+- [ ] **UPGRADE-02**: 至少 1 套主题展示左侧 Tab 模式（Senrenbanka 风格）
+- [ ] **UPGRADE-03**: 至少 1 套主题展示双列布局 + 行样式（Aokana 风格）
+- [ ] **UPGRADE-04**: 所有主题使用新配色系统的 colorRecipe 格式存储 tokens
+
+## Future Requirements
+
+### 主题包扩展（P2/P3）
+
+- **THEMEPKG-01**: .gmtheme 主题包格式升级（包含完整配置 + 资源文件 ZIP）
+- **THEMEPKG-02**: 社区主题导入/导出
+- **THEMEPKG-03**: widgetStyles 颜色也纳入智能配色派生（~20 个额外 token）
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Figma 级自由画布设计 | Canva 路线 — 模板 + 参数，不做完全自由定位 |
+| 3+ 列设置布局 | 商业 VN 99% 用 1-2 列，3 列无实际场景 |
+| 每个设置项独立图标 | 低价值高复杂度，tab 图标已够用 |
+| Tab 内分组/section header | 当前设置项数量（<15）不需要 tab 内再分组，SETTING_DEFS 扩展后再考虑 |
+| 动画装饰（GIF/APNG） | 兔子洞，静态图片足够 |
+| 自定义控件类型 | slider/toggle 由 SETTING_DEFS 决定，widgetStyles 管外观 |
+| 运行时动态配色（不存储） | 编辑时派生 + 存储完整 tokens，避免运行时性能开销 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| COLOR-01 | TBD | Pending |
+| COLOR-02 | TBD | Pending |
+| COLOR-03 | TBD | Pending |
+| COLOR-04 | TBD | Pending |
+| COLOR-05 | TBD | Pending |
+| COLOR-06 | TBD | Pending |
+| STRUCT-01 | TBD | Pending |
+| STRUCT-02 | TBD | Pending |
+| STRUCT-03 | TBD | Pending |
+| STRUCT-04 | TBD | Pending |
+| STRUCT-05 | TBD | Pending |
+| STRUCT-06 | TBD | Pending |
+| STRUCT-07 | TBD | Pending |
+| DECOR-01 | TBD | Pending |
+| DECOR-02 | TBD | Pending |
+| DECOR-03 | TBD | Pending |
+| EDITOR-01 | TBD | Pending |
+| EDITOR-02 | TBD | Pending |
+| EDITOR-03 | TBD | Pending |
+| EDITOR-04 | TBD | Pending |
+| EDITOR-05 | TBD | Pending |
+| EDITOR-06 | TBD | Pending |
+| TITLE-01 | TBD | Pending |
+| UPGRADE-01 | TBD | Pending |
+| UPGRADE-02 | TBD | Pending |
+| UPGRADE-03 | TBD | Pending |
+| UPGRADE-04 | TBD | Pending |
+
+**Coverage:**
+- v1.3 requirements: 27 total
+- Mapped to phases: 0
+- Unmapped: 27 ⚠️
+
+---
+*Requirements defined: 2026-04-18*
+*Last updated: 2026-04-18 after initial definition*

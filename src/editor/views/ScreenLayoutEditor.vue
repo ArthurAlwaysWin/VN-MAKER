@@ -22,7 +22,8 @@
           <div v-if="expanded[screen.id]" class="sl-section-body">
             <SaveLoadSection v-if="screen.id === 'saveLoadScreen'" />
             <BacklogSection v-if="screen.id === 'backlogScreen'" />
-            <p v-if="screen.id === 'gameMenu' || screen.id === 'settingsScreen'" class="sl-placeholder">{{ screen.label }}配置表单将在后续阶段添加</p>
+            <GameMenuSection v-if="screen.id === 'gameMenu'" />
+            <SettingsSection v-if="screen.id === 'settingsScreen'" />
           </div>
         </div>
       </div>
@@ -44,6 +45,8 @@ import { useScriptStore } from '../stores/script.js';
 import { createScreenLayoutEditor } from '../composables/useScreenLayoutEditor.js';
 import SaveLoadSection from '../components/layout/SaveLoadSection.vue';
 import BacklogSection from '../components/layout/BacklogSection.vue';
+import GameMenuSection from '../components/layout/GameMenuSection.vue';
+import SettingsSection from '../components/layout/SettingsSection.vue';
 
 const script = useScriptStore();
 const editor = createScreenLayoutEditor();
@@ -140,12 +143,6 @@ onBeforeUnmount(() => {
 }
 .sl-section-body {
   padding: 8px 14px 12px;
-}
-.sl-placeholder {
-  color: #666;
-  font-size: 12px;
-  text-align: center;
-  margin: 12px 0;
 }
 .sl-preview {
   flex: 1;

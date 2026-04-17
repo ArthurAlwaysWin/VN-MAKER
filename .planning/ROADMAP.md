@@ -300,7 +300,10 @@ Plans:
   2. 用户从 4 个缩略图网格中选择 Toggle 样式（pill/radio/checkbox/button-pair），当前选中项高亮显示
   3. 用户通过颜色选择器和下拉框配置 Slider 的轨道颜色、填充颜色、滑块形状和颜色
   4. 所有选择立即更新 store 数据，保存后重新打开项目数据不丢失
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 47-01-PLAN.md — Tab/Toggle thumbnail grids + Slider color config + accordion integration
 **UI hint**: yes
 
 #### Phase 48: 控件编辑器 — Panel/Button + 实时预览

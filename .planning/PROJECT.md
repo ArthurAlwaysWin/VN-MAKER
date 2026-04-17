@@ -83,11 +83,20 @@
 
 ### Active
 
-<!-- 下一个里程碑的需求将通过 /gsd-new-milestone 定义 -->
+<!-- v1.3 目标需求 — 通过 /gsd-new-milestone 定义 -->
 
-(No active milestone — run `/gsd-new-milestone` to start v1.3)
+- 智能配色系统：用户选 2-3 个基础色，引擎自动派生全部 41 个 token
+- 设置页结构参数：Tab 数量/名称/图标自定义、设置项自由分组、多列布局
+- 行/条目样式控制：条纹背景、分隔线、间距等视觉细节
+- 页头/页脚灵活化：装饰图、多按钮配置
+- 标题页引擎预览：iframe 中预览标题页实际效果
+- 内置主题升级：利用新结构参数做出商业 VN 水准模板
 
-## Current Milestone: ✅ v1.2 编辑器主题配置 + 示范主题 (Shipped 2026-04-17)
+## Current Milestone: v1.3 主题系统表达力升级
+
+**Goal:** 让用户通过内置模板 + 关键结构参数，能做出从 Aokana 到千恋万花跨度的 UI 美术风格。继续 Canva 路线（模板 + 参数），不做 Figma 化自由画布。重点补"结构参数"（Tab 数量、布局方式等），同时用智能配色简化颜色编辑复杂度。
+
+## Previous Milestone: ✅ v1.2 编辑器主题配置 + 示范主题 (Shipped 2026-04-17)
 
 **Delivered:** 编辑器中可视化编辑所有 v1.1 新增的引擎配置项（widgetStyles 控件风格 / 界面布局），5 套内置主题一键应用。
 

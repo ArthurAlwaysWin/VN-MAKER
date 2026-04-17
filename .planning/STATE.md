@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: — 编辑器主题配置 + 示范主题 ✅
-status: completed
-stopped_at: v1.2 milestone archived, tagged, ready for v1.3
-last_updated: "2026-04-17T06:00:00.000Z"
-last_activity: 2026-04-17
+milestone: v1.3
+milestone_name: 主题系统表达力升级
+status: requirements
+stopped_at: Defining requirements for v1.3
+last_updated: "2026-04-18T00:00:00.000Z"
+last_activity: 2026-04-18
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-17)
+See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v1.2 complete — planning v1.3
+**Current focus:** v1.3 主题系统表达力升级 — requirements phase
 
 ## Current Position
 
-Phase: 51 (final)
-Plan: Complete
-Status: Milestone v1.2 archived and tagged
-Last activity: 2026-04-17
+Phase: 52 (next)
+Plan: Not started
+Status: Defining requirements for v1.3
+Last activity: 2026-04-18
 
 ```
-v1.2 ██████████████████████ 6/6 phases ✅
+v1.3 ░░░░░░░░░░░░░░░░░░░░░ 0/? phases
 ```
 
 ## Performance Metrics

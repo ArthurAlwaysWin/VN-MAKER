@@ -58,28 +58,28 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WEDITOR-01 | TBD | Pending |
-| WEDITOR-02 | TBD | Pending |
-| WEDITOR-03 | TBD | Pending |
-| WEDITOR-04 | TBD | Pending |
-| WEDITOR-05 | TBD | Pending |
-| WEDITOR-06 | TBD | Pending |
-| LEDITOR-01 | TBD | Pending |
-| LEDITOR-02 | TBD | Pending |
-| LEDITOR-03 | TBD | Pending |
-| LEDITOR-04 | TBD | Pending |
-| LEDITOR-05 | TBD | Pending |
-| THEME-01 | TBD | Pending |
-| THEME-02 | TBD | Pending |
-| THEME-03 | TBD | Pending |
-| THEME-04 | TBD | Pending |
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
+| WEDITOR-01 | Phase 47 | Pending |
+| WEDITOR-02 | Phase 47 | Pending |
+| WEDITOR-03 | Phase 47 | Pending |
+| WEDITOR-04 | Phase 48 | Pending |
+| WEDITOR-05 | Phase 48 | Pending |
+| WEDITOR-06 | Phase 48 | Pending |
+| LEDITOR-01 | Phase 49 | Pending |
+| LEDITOR-02 | Phase 49 | Pending |
+| LEDITOR-03 | Phase 50 | Pending |
+| LEDITOR-04 | Phase 50 | Pending |
+| LEDITOR-05 | Phase 50 | Pending |
+| THEME-01 | Phase 51 | Pending |
+| THEME-02 | Phase 51 | Pending |
+| THEME-03 | Phase 51 | Pending |
+| THEME-04 | Phase 51 | Pending |
+| DATA-01 | Phase 46 | Pending |
+| DATA-02 | Phase 46 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-17*

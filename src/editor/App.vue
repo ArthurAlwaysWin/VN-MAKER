@@ -64,6 +64,8 @@ import SettingsDesigner from './views/SettingsDesigner.vue';
 import ResourceLibrary from './views/ResourceLibrary.vue';
 import ProjectSettings from './views/ProjectSettings.vue';
 import ThemeDesigner from './views/ThemeDesigner.vue';
+import WidgetStylesEditor from './views/WidgetStylesEditor.vue';
+import ScreenLayoutEditor from './views/ScreenLayoutEditor.vue';
 
 const script = useScriptStore();
 const project = useProjectStore();
@@ -80,6 +82,8 @@ const tabs = [
   { id: 'title', icon: '🖼️', label: '标题页' },
   { id: 'settings-design', icon: '⚙️', label: '设置页' },
   { id: 'theme', icon: '🎨', label: '主题' },
+  { id: 'widget-styles', icon: '🎛️', label: '控件风格' },
+  { id: 'screen-layout', icon: '📐', label: '界面布局' },
   { id: 'resource-library', icon: '📦', label: '资源库' },
   { id: 'project-settings', icon: '⚡', label: '项目设置' },
 ];
@@ -91,6 +95,8 @@ const tabComponents = {
   'resource-library': markRaw(ResourceLibrary),
   'project-settings': markRaw(ProjectSettings),
   'theme': markRaw(ThemeDesigner),
+  'widget-styles': markRaw(WidgetStylesEditor),
+  'screen-layout': markRaw(ScreenLayoutEditor),
 };
 
 // --- Undo/Redo ---

@@ -6,6 +6,7 @@
         @open-palette="editor.showPalette.value = true"
         @open-nine-slice="editor.showNineSlice.value = true"
         @open-preset="editor.showPreset.value = true"
+        @open-package="showPackage = true"
       />
       <div class="token-scroll">
         <TokenAccordion />
@@ -23,11 +24,12 @@
     <PaletteModal v-if="editor.showPalette.value" @close="editor.showPalette.value = false" />
     <NineSliceModal v-if="editor.showNineSlice.value" @close="editor.showNineSlice.value = false" />
     <PresetModal v-if="editor.showPreset.value" @close="editor.showPreset.value = false" />
+    <ThemePackageModal v-if="showPackage" @close="showPackage = false" />
   </div>
 </template>
 
 <script setup>
-import { onMounted, onActivated, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onActivated, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
 import ThemeToolbar from '../components/theme/ThemeToolbar.vue';
@@ -35,9 +37,11 @@ import TokenAccordion from '../components/theme/TokenAccordion.vue';
 import PaletteModal from '../components/theme/PaletteModal.vue';
 import NineSliceModal from '../components/theme/NineSliceModal.vue';
 import PresetModal from '../components/theme/PresetModal.vue';
+import ThemePackageModal from '../components/theme/ThemePackageModal.vue';
 
 const script = useScriptStore();
 const editor = createThemeEditor();
+const showPackage = ref(false);
 
 function onIframeRef(el) {
   editor.iframeRef.value = el;

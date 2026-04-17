@@ -339,6 +339,43 @@ export const useScriptStore = defineStore('script', () => {
     console.warn('saveScript() is deprecated — use project.saveProject()');
   }
 
+  /**
+   * Apply a built-in theme package: tokens + widgetStyles + screen layouts.
+   * Each section is deep-merged so unset keys fall back to engine defaults.
+   * Pushes a single undo state for the entire theme application.
+   */
+  function applyBuiltinTheme(theme) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+
+    // tokens → theme.tokens
+    data.value.ui.theme = { tokens: { ...(theme.tokens ?? {}) } };
+
+    // widgetStyles → flat merge per category
+    const ws = {};
+    for (const [cat, vals] of Object.entries(theme.widgetStyles ?? {})) {
+      ws[cat] = { ...vals };
+    }
+    data.value.ui.widgetStyles = ws;
+
+    // screen layouts → deep merge (1 level of nesting)
+    const screenKeys = ['saveLoadScreen', 'backlogScreen', 'gameMenu', 'settingsScreen'];
+    for (const key of screenKeys) {
+      if (theme.screens?.[key]) {
+        const src = theme.screens[key];
+        const dst = {};
+        for (const [k, v] of Object.entries(src)) {
+          dst[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? { ...v } : v;
+        }
+        data.value.ui[key] = dst;
+      } else {
+        data.value.ui[key] = {};
+      }
+    }
+
+    pushState();
+  }
+
   return {
     data, isLoading, _skipWatch,
     pushState, undo, redo,
@@ -352,6 +389,7 @@ export const useScriptStore = defineStore('script', () => {
     getSaveLoadScreen, updateSaveLoadScreen,
     getBacklogScreen, updateBacklogScreen,
     getGameMenu, updateGameMenu,
+    applyBuiltinTheme,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
     convertPageType, setSceneNext,

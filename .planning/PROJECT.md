@@ -80,52 +80,32 @@
 
 ### Active
 
-<!-- v1.1 UI Theme System v2 — 引擎配置化 -->
+<!-- v1.2 编辑器主题配置 + 示范主题 -->
 
-- [ ] widgetStyles 控件风格系统（tab 5 shape / toggle 4 style / slider / panel / button）
-- [ ] SaveLoadScreen 配置化（setLayout → ui.saveLoadScreen）
-- [ ] BacklogScreen 配置化（setLayout → ui.backlogScreen）
-- [ ] GameMenu 配置化（setLayout → ui.gameMenu）
-- [ ] SettingsScreen 结构化模式（elements 空时 header/tabBar/contentArea）
-- [ ] main.js 配置传入统一（engine.load → ui.*）
-- [ ] DialogueBox nameplateStyle 扩展（inline/floating/banner）
+- [ ] 控件风格编辑器（widgetStyles 可视化编辑：Tab 形状/Toggle 样式/Slider·Panel·Button 颜色 + iframe 实时预览）
+- [ ] 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置 + iframe 预览）
+- [ ] 5 套内置主题：2 套全配置(default+wafuu) + 3 套纯配色(modern-sky/fantasy-dark/minimal-white)
 
-## Current Milestone: v1.1 UI Theme System v2 — 引擎配置化
+## Current Milestone: v1.2 编辑器主题配置 + 示范主题
 
-**Goal:** 让游戏所有 UI 界面（存读档/回想/菜单/设置/对话框名牌）都可通过 script.json 的 `ui.*` 配置来定制外观，无需修改引擎代码。所有 setLayout 方法 null = 保持现有硬编码行为，完全向后兼容。
+**Goal:** 让用户在编辑器中可视化编辑所有 v1.1 新增的引擎配置项（widgetStyles/界面布局），并提供 5 套内置主题作为起点。
 
 **Target features:**
-- widgetStyles 控件风格系统 (tab/toggle/slider/panel/button 参数化)
-- SaveLoadScreen 配置化 (背景/标题/slotGrid/slot 样式/分页样式)
-- BacklogScreen 配置化 (背景/header/条目样式)
-- GameMenu 配置化 (位置/背景/按钮文字/图标)
-- SettingsScreen 结构化模式 (header/tabBar/contentArea，从 widgetStyles 取控件样式)
-- main.js 配置传入统一 (engine.load() 后从 ui.* 取各界面配置)
-- DialogueBox nameplateStyle 扩展 (inline/floating/banner 三种名牌样式)
+- 控件风格编辑器（表单模式，Tab 形状缩略图选择 + Toggle 样式选择 + Slider/Panel/Button 颜色配置 + iframe 实时预览）
+- 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置，类似 ThemeDesigner 模式 + iframe 预览）
+- 5 套内置主题（2 套全配置含九宫格贴图：default + wafuu；3 套纯配色：modern-sky/fantasy-dark/minimal-white）
 
 ### Future — 后续候选
 
 <!-- 已讨论但推迟到后续里程碑 -->
 
-**UI Theme System v2（来源：docs/superpowers/specs/ui-theme-system-v2-design.md，Review 契合度 ~75%）**
+**UI Theme System v2（来源：docs/superpowers/specs/ui-theme-system-v2-design.md）**
 
-采纳项（P0 — 引擎配置化，下一里程碑优先）：
-- [ ] **Layer 2: widgetStyles 控件风格系统**：tab(5 shape) / toggle(4 style) / slider / panel / button — script.json `ui.widgetStyles` 新增节，引擎读取后驱动控件 DOM 和样式。所有字段 null = 使用引擎默认值，向后兼容
-- [ ] **SaveLoadScreen 配置化**：新增 `setLayout(config)` 方法，接受 `ui.saveLoadScreen`（背景/标题/slotGrid/slot 样式/分页样式），null 时保持现有硬编码行为
-- [ ] **BacklogScreen 配置化**：新增 `setLayout(config)` 方法，接受 `ui.backlogScreen`（背景/header/条目样式），null 时保持现有硬编码行为
-- [ ] **GameMenu 配置化**：新增 `setLayout(config)` 方法，接受 `ui.gameMenu`（位置/背景/按钮文字/图标），null 时保持现有硬编码行为
-- [ ] **SettingsScreen 结构化模式**：elements 为空时使用 header/tabBar/contentArea 结构渲染，控件样式从 widgetStyles 取。与现有自由布局共存（elements 非空优先自由布局）
-- [ ] **main.js 配置传入统一**：engine.load() 后从 `ui.*` 取各界面配置，调用 setLayout/setWidgetStyles
-- [ ] **DialogueBox nameplateStyle 扩展**：inline(现有) / floating / banner 三种名牌样式 — 注意：原文档约束 #6 说不动 DialogueBox 但同时提了此需求，矛盾已识别，建议做
-
-采纳项（P1 — 内置主题 + 编辑器，可与 P0 同里程碑或下一个）：
-- [ ] **1-2 套示范主题**：default(现有) + wafuu(和风)，完整 tokens + widgetStyles + 各界面配置 + 贴图
-- [ ] **控件风格编辑器**：在编辑器中可视化编辑 widgetStyles（形状缩略图选择 + 颜色 + 实时预览）
-- [ ] **各界面布局编辑器**：SaveLoad/Backlog/GameMenu 的结构化编辑器
+P0 引擎配置化 — ✅ 已在 v1.1 完成
+P1 编辑器 + 内置主题 — 🚧 v1.2 进行中
 
 推迟项（P2/P3 — 后续里程碑）：
 - [ ] **.gmtheme 主题包格式**：ZIP 打包 theme.json + assets/，导入/导出/社区共享
-- [ ] **5 套内置主题**：wafuu/modern-sky/fantasy-dark/minimal-white + default
 - [ ] **Tab ribbon/trapezoid clip-path 精细实现**
 - [ ] **编辑器 UI 设计器合并标签页** — 现有 6 标签已稳定，不急于合并，新功能可作为子页添加
 

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: UI Theme System v2 — P0 引擎配置化 ✅
-status: archived
-stopped_at: Milestone v1.1 fully archived, ready for v1.2
+milestone: v1.2
+milestone_name: 编辑器主题配置 + 示范主题
+status: defining_requirements
+stopped_at: Milestone v1.2 started — defining requirements
 last_updated: "2026-04-17T00:27:00.000Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 45 (final)
-Plan: All complete
-Status: Milestone v1.1 complete — 4/4 phases verified
-Last activity: 2026-04-16
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-17 — Milestone v1.2 started
 
 ```
 v1.1 ████████████████████ 4/4 phases — ALL COMPLETE ✅
@@ -93,6 +93,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-17T00:27:00.000Z
-Stopped at: Milestone v1.1 fully archived
-Resume hint: Ready for v1.2
-Next action: `/gsd-new-milestone`
+Stopped at: Milestone v1.2 started, defining requirements
+Resume hint: Continue with requirements and roadmap
+Next action: Define REQUIREMENTS.md → create roadmap

@@ -1,0 +1,86 @@
+# Requirements: Galgame Maker v1.2
+
+**Defined:** 2026-04-17
+**Core Value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
+
+## v1.2 Requirements
+
+编辑器主题配置 + 示范主题。让用户在编辑器中可视化编辑所有 v1.1 新增的引擎配置项（widgetStyles/界面布局），并提供 5 套内置主题作为起点。
+
+### 控件风格编辑器
+
+- [ ] **WEDITOR-01**: 编辑器中可选择 Tab 控件的 5 种形状（rectangle/pill/underline/trapezoid/ribbon），通过形状缩略图网格选择
+- [ ] **WEDITOR-02**: 编辑器中可选择 Toggle 控件的 4 种样式（pill/radio/checkbox/button-pair），通过样式缩略图网格选择
+- [ ] **WEDITOR-03**: 编辑器中可配置 Slider 控件的轨道颜色、填充颜色、滑块形状和颜色（颜色选择器 + 下拉框）
+- [ ] **WEDITOR-04**: 编辑器中可配置 Panel 的背景色/圆角/边框/模糊效果/背景贴图
+- [ ] **WEDITOR-05**: 编辑器中可配置 Button 的背景色/圆角/边框/背景贴图/三态样式(normal/hover/active)
+- [ ] **WEDITOR-06**: 所有控件风格编辑实时通过 postMessage 预览到 iframe 中
+
+### 界面布局编辑器
+
+- [ ] **LEDITOR-01**: SaveLoadScreen 布局编辑器 — 表单模式配置背景/标题文字和颜色/网格行列数和间距/槽位样式/分页样式
+- [ ] **LEDITOR-02**: BacklogScreen 布局编辑器 — 表单模式配置背景/标题栏（文字/背景图/高度）/条目样式（说话人颜色/字号/悬停效果）
+- [ ] **LEDITOR-03**: GameMenu 布局编辑器 — 表单模式配置位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
+- [ ] **LEDITOR-04**: SettingsScreen 结构化模式编辑器 — 表单模式配置 header/tabBar/contentArea 样式
+- [ ] **LEDITOR-05**: 所有界面布局编辑实时通过 postMessage 预览到 iframe 中
+
+### 内置主题
+
+- [ ] **THEME-01**: default 主题数据包 — 将现有引擎默认值封装为完整主题（tokens + widgetStyles + 各界面配置）
+- [ ] **THEME-02**: wafuu（和风）全配置主题 — 完整 tokens + widgetStyles + 各界面配置 + 九宫格贴图资源
+- [ ] **THEME-03**: modern-sky / fantasy-dark / minimal-white 三套纯配色主题（tokens + widgetStyles 颜色方案，无自定义贴图）
+- [ ] **THEME-04**: 主题选择器 UI — 用户可在编辑器中一键切换内置主题并实时预览效果
+
+### 数据持久化
+
+- [ ] **DATA-01**: widgetStyles 编辑结果持久化到 script.json 的 `ui.widgetStyles` 节
+- [ ] **DATA-02**: 界面布局编辑结果持久化到 script.json 的 `ui.saveLoadScreen` / `ui.backlogScreen` / `ui.gameMenu` / `ui.settingsScreen` 各节
+
+## Future Requirements
+
+### 主题包扩展（P2/P3）
+
+- **THEMEPKG-01**: .gmtheme 主题包格式升级（包含 widgetStyles + screens 配置）
+- **THEMEPKG-02**: Tab ribbon/trapezoid clip-path 精细实现
+- **THEMEPKG-03**: 编辑器 UI 设计器标签页合并
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| .gmtheme 主题包格式升级 | P2 范围，需先稳定编辑器侧 |
+| 画布拖拽式布局编辑 | 界面配置用表单模式，不需要拖拽 |
+| 自定义主题导入/导出 | 已有 .theme ZIP 机制，本里程碑做内置主题 |
+| 每场景/每页面主题切换 | 后续里程碑候选 |
+| 社区主题市场 | 远期功能 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| WEDITOR-01 | TBD | Pending |
+| WEDITOR-02 | TBD | Pending |
+| WEDITOR-03 | TBD | Pending |
+| WEDITOR-04 | TBD | Pending |
+| WEDITOR-05 | TBD | Pending |
+| WEDITOR-06 | TBD | Pending |
+| LEDITOR-01 | TBD | Pending |
+| LEDITOR-02 | TBD | Pending |
+| LEDITOR-03 | TBD | Pending |
+| LEDITOR-04 | TBD | Pending |
+| LEDITOR-05 | TBD | Pending |
+| THEME-01 | TBD | Pending |
+| THEME-02 | TBD | Pending |
+| THEME-03 | TBD | Pending |
+| THEME-04 | TBD | Pending |
+| DATA-01 | TBD | Pending |
+| DATA-02 | TBD | Pending |
+
+**Coverage:**
+- v1.2 requirements: 17 total
+- Mapped to phases: 0
+- Unmapped: 17 ⚠️
+
+---
+*Requirements defined: 2026-04-17*
+*Last updated: 2026-04-17 after initial definition*

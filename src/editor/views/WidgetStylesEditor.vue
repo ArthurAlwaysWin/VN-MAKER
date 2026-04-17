@@ -22,6 +22,8 @@
             <TabShapeSection v-if="section.id === 'tab'" />
             <ToggleStyleSection v-if="section.id === 'toggle'" />
             <SliderConfigSection v-if="section.id === 'slider'" />
+            <PanelConfigSection v-if="section.id === 'panel'" />
+            <ButtonConfigSection v-if="section.id === 'button'" />
           </div>
         </div>
       </div>
@@ -44,6 +46,8 @@ import { createWidgetStylesEditor } from '../composables/useWidgetStylesEditor.j
 import TabShapeSection from '../components/widget/TabShapeSection.vue';
 import ToggleStyleSection from '../components/widget/ToggleStyleSection.vue';
 import SliderConfigSection from '../components/widget/SliderConfigSection.vue';
+import PanelConfigSection from '../components/widget/PanelConfigSection.vue';
+import ButtonConfigSection from '../components/widget/ButtonConfigSection.vue';
 
 const script = useScriptStore();
 const editor = createWidgetStylesEditor();
@@ -52,9 +56,11 @@ const SECTIONS = [
   { id: 'tab', label: '📑 Tab 形状' },
   { id: 'toggle', label: '🔘 Toggle 样式' },
   { id: 'slider', label: '🎚️ Slider 外观' },
+  { id: 'panel', label: '📦 Panel 面板' },
+  { id: 'button', label: '🔲 Button 按钮' },
 ];
 
-const expanded = reactive({ tab: true, toggle: false, slider: false });
+const expanded = reactive({ tab: true, toggle: false, slider: false, panel: false, button: false });
 
 function toggleSection(id) {
   for (const key of Object.keys(expanded)) {

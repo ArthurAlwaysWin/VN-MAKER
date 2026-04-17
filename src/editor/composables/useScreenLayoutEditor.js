@@ -21,6 +21,14 @@ const SCREENS = [
   { id: 'settingsScreen', label: '设置' },
 ];
 
+// ─── Screen updaters ──────────────────────────────────
+const SCREEN_UPDATERS = {
+  saveLoadScreen: 'updateSaveLoadScreen',
+  backlogScreen: 'updateBacklogScreen',
+  gameMenu: 'updateGameMenu',
+  settingsScreen: 'updateSettingsScreen',
+};
+
 // ─── Create (called once in ScreenLayoutEditor) ───────
 
 export function createScreenLayoutEditor() {
@@ -105,6 +113,37 @@ export function createScreenLayoutEditor() {
     }
   }
 
+  // ─── Screen Field Helpers ─────────────────────────
+
+  function setScreenField(field, value) {
+    const getter = screenGetters[activeScreen.value];
+    const cfg = getter ? getter() : null;
+    if (!cfg) return;
+    cfg[field] = value;
+    sendScreenLayoutToPreview();
+  }
+
+  function setScreenNestedField(group, field, value) {
+    const getter = screenGetters[activeScreen.value];
+    const cfg = getter ? getter() : null;
+    if (!cfg) return;
+    cfg[group] ??= {};
+    cfg[group][field] = value;
+    sendScreenLayoutToPreview();
+  }
+
+  function commitScreenLayout() {
+    const screenId = activeScreen.value;
+    const getter = screenGetters[screenId];
+    const cfg = getter ? getter() : null;
+    if (!cfg) return;
+    const updater = SCREEN_UPDATERS[screenId];
+    if (updater && script[updater]) {
+      script[updater](JSON.parse(JSON.stringify(cfg)));
+    }
+    flushPreview();
+  }
+
   // ─── Cleanup ───────────────────────────────────────
 
   function cleanup() {
@@ -121,6 +160,9 @@ export function createScreenLayoutEditor() {
     activeScreen,
     SCREENS,
     getActiveScreenConfig,
+    setScreenField,
+    setScreenNestedField,
+    commitScreenLayout,
     sendScreenLayoutToPreview,
     flushPreview,
     startEngine,

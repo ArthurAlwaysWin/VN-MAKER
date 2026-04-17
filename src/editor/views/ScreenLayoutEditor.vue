@@ -20,7 +20,9 @@
             <span class="sl-section-label">{{ screen.label }}</span>
           </button>
           <div v-if="expanded[screen.id]" class="sl-section-body">
-            <p class="sl-placeholder">{{ screen.label }}配置表单将在后续阶段添加</p>
+            <SaveLoadSection v-if="screen.id === 'saveLoadScreen'" />
+            <BacklogSection v-if="screen.id === 'backlogScreen'" />
+            <p v-if="screen.id === 'gameMenu' || screen.id === 'settingsScreen'" class="sl-placeholder">{{ screen.label }}配置表单将在后续阶段添加</p>
           </div>
         </div>
       </div>
@@ -40,6 +42,8 @@
 import { reactive, onMounted, onActivated, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { createScreenLayoutEditor } from '../composables/useScreenLayoutEditor.js';
+import SaveLoadSection from '../components/layout/SaveLoadSection.vue';
+import BacklogSection from '../components/layout/BacklogSection.vue';
 
 const script = useScriptStore();
 const editor = createScreenLayoutEditor();

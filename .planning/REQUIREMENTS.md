@@ -9,20 +9,20 @@
 
 ### 控件风格编辑器
 
-- [ ] **WEDITOR-01**: 编辑器中可选择 Tab 控件的 5 种形状（rectangle/pill/underline/trapezoid/ribbon），通过形状缩略图网格选择
-- [ ] **WEDITOR-02**: 编辑器中可选择 Toggle 控件的 4 种样式（pill/radio/checkbox/button-pair），通过样式缩略图网格选择
-- [ ] **WEDITOR-03**: 编辑器中可配置 Slider 控件的轨道颜色、填充颜色、滑块形状和颜色（颜色选择器 + 下拉框）
-- [ ] **WEDITOR-04**: 编辑器中可配置 Panel 的背景色/圆角/边框/模糊效果/背景贴图
-- [ ] **WEDITOR-05**: 编辑器中可配置 Button 的背景色/圆角/边框/背景贴图/三态样式(normal/hover/active)
-- [ ] **WEDITOR-06**: 所有控件风格编辑实时通过 postMessage 预览到 iframe 中
+- [x] **WEDITOR-01**: 编辑器中可选择 Tab 控件的 5 种形状（rectangle/pill/underline/trapezoid/ribbon），通过形状缩略图网格选择
+- [x] **WEDITOR-02**: 编辑器中可选择 Toggle 控件的 4 种样式（pill/radio/checkbox/button-pair），通过样式缩略图网格选择
+- [x] **WEDITOR-03**: 编辑器中可配置 Slider 控件的轨道颜色、填充颜色、滑块形状和颜色（颜色选择器 + 下拉框）
+- [x] **WEDITOR-04**: 编辑器中可配置 Panel 的背景色/圆角/边框/模糊效果/背景贴图
+- [x] **WEDITOR-05**: 编辑器中可配置 Button 的背景色/圆角/边框/背景贴图/三态样式(normal/hover/active)
+- [x] **WEDITOR-06**: 所有控件风格编辑实时通过 postMessage 预览到 iframe 中
 
 ### 界面布局编辑器
 
-- [ ] **LEDITOR-01**: SaveLoadScreen 布局编辑器 — 表单模式配置背景/标题文字和颜色/网格行列数和间距/槽位样式/分页样式
-- [ ] **LEDITOR-02**: BacklogScreen 布局编辑器 — 表单模式配置背景/标题栏（文字/背景图/高度）/条目样式（说话人颜色/字号/悬停效果）
-- [ ] **LEDITOR-03**: GameMenu 布局编辑器 — 表单模式配置位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
-- [ ] **LEDITOR-04**: SettingsScreen 结构化模式编辑器 — 表单模式配置 header/tabBar/contentArea 样式
-- [ ] **LEDITOR-05**: 所有界面布局编辑实时通过 postMessage 预览到 iframe 中
+- [x] **LEDITOR-01**: SaveLoadScreen 布局编辑器 — 表单模式配置背景/标题文字和颜色/网格行列数和间距/槽位样式/分页样式
+- [x] **LEDITOR-02**: BacklogScreen 布局编辑器 — 表单模式配置背景/标题栏（文字/背景图/高度）/条目样式（说话人颜色/字号/悬停效果）
+- [x] **LEDITOR-03**: GameMenu 布局编辑器 — 表单模式配置位置/宽度/背景/圆角/模糊/按钮间距/各按钮文字和图标
+- [x] **LEDITOR-04**: SettingsScreen 结构化模式编辑器 — 表单模式配置 header/tabBar/contentArea 样式
+- [x] **LEDITOR-05**: 所有界面布局编辑实时通过 postMessage 预览到 iframe 中
 
 ### 内置主题
 
@@ -33,8 +33,8 @@
 
 ### 数据持久化
 
-- [ ] **DATA-01**: widgetStyles 编辑结果持久化到 script.json 的 `ui.widgetStyles` 节
-- [ ] **DATA-02**: 界面布局编辑结果持久化到 script.json 的 `ui.saveLoadScreen` / `ui.backlogScreen` / `ui.gameMenu` / `ui.settingsScreen` 各节
+- [x] **DATA-01**: widgetStyles 编辑结果持久化到 script.json 的 `ui.widgetStyles` 节
+- [x] **DATA-02**: 界面布局编辑结果持久化到 script.json 的 `ui.saveLoadScreen` / `ui.backlogScreen` / `ui.gameMenu` / `ui.settingsScreen` 各节
 
 ## Future Requirements
 
@@ -58,23 +58,23 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WEDITOR-01 | Phase 47 | Pending |
-| WEDITOR-02 | Phase 47 | Pending |
-| WEDITOR-03 | Phase 47 | Pending |
-| WEDITOR-04 | Phase 48 | Pending |
-| WEDITOR-05 | Phase 48 | Pending |
-| WEDITOR-06 | Phase 48 | Pending |
-| LEDITOR-01 | Phase 49 | Pending |
-| LEDITOR-02 | Phase 49 | Pending |
-| LEDITOR-03 | Phase 50 | Pending |
-| LEDITOR-04 | Phase 50 | Pending |
-| LEDITOR-05 | Phase 50 | Pending |
+| WEDITOR-01 | Phase 47 | Complete |
+| WEDITOR-02 | Phase 47 | Complete |
+| WEDITOR-03 | Phase 47 | Complete |
+| WEDITOR-04 | Phase 48 | Complete |
+| WEDITOR-05 | Phase 48 | Complete |
+| WEDITOR-06 | Phase 48 | Complete |
+| LEDITOR-01 | Phase 49 | Complete |
+| LEDITOR-02 | Phase 49 | Complete |
+| LEDITOR-03 | Phase 50 | Complete |
+| LEDITOR-04 | Phase 50 | Complete |
+| LEDITOR-05 | Phase 50 | Complete |
 | THEME-01 | Phase 51 | Complete |
 | THEME-02 | Phase 51 | Complete |
 | THEME-03 | Phase 51 | Complete |
 | THEME-04 | Phase 51 | Complete |
-| DATA-01 | Phase 46 | Pending |
-| DATA-02 | Phase 46 | Pending |
+| DATA-01 | Phase 46 | Complete |
+| DATA-02 | Phase 46 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 17 total

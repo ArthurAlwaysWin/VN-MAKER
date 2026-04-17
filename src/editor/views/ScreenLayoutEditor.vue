@@ -59,7 +59,9 @@ const expanded = reactive({
 });
 
 function toggleSection(screenId) {
-  expanded[screenId] = !expanded[screenId];
+  const wasOpen = expanded[screenId];
+  for (const key of Object.keys(expanded)) expanded[key] = false;
+  expanded[screenId] = !wasOpen;
   editor.activeScreen.value = screenId;
 }
 

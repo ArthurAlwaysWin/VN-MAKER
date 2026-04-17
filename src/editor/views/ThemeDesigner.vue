@@ -24,7 +24,7 @@
     <PaletteModal v-if="editor.showPalette.value" @close="editor.showPalette.value = false" />
     <NineSliceModal v-if="editor.showNineSlice.value" @close="editor.showNineSlice.value = false" />
     <PresetModal v-if="editor.showPreset.value" @close="editor.showPreset.value = false" />
-    <ThemePackageModal v-if="showPackage" @close="showPackage = false" />
+    <ThemePackageModal v-if="showPackage" @close="onPackageClose" />
   </div>
 </template>
 
@@ -45,6 +45,14 @@ const showPackage = ref(false);
 
 function onIframeRef(el) {
   editor.iframeRef.value = el;
+}
+
+function onPackageClose() {
+  showPackage.value = false;
+  if (editor.isEngineReady.value) {
+    editor.startEngine();
+    editor.flushPreview();
+  }
 }
 
 onMounted(() => {

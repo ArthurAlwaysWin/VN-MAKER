@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.2 编辑器主题配置 + 示范主题 (Shipped: 2026-04-17)
+
+**Phases completed:** 6 phases (46-51), 8 plans, 17 requirements
+**Git range:** v1.1..HEAD (~19 commits)
+**Files:** 21 changed, +2453/-2 lines
+
+**Key accomplishments:**
+
+- 数据持久化层 — 8 对 store get/update 方法 + 2 个 composable + postMessage 预览协议
+- 控件风格编辑器 — 5 类手风琴（Tab 形状/Toggle 样式/Slider 配置/Panel 配置/Button 配置）+ iframe 实时预览
+- 界面布局编辑器 — 4 界面全覆盖（SaveLoad/Backlog/GameMenu/Settings）+ 表单配置 + iframe 预览
+- 内置主题系统 — 5 套主题包（default/wafuu/modern-sky/fantasy-dark/minimal-white）一键应用
+- 主题选择器 UI — ThemePackageModal 卡片选择 + 范围徽章（色彩/控件/布局）+ Ctrl+Z 撤销支持
+
+**Milestone audit:** 17/17 requirements passed — see v1.2-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v1.2-ROADMAP.md, milestones/v1.2-REQUIREMENTS.md
+
+---
+
 ## v1.1 UI Theme System v2 — 引擎配置化 (Shipped: 2026-04-16)
 
 **Phases completed:** 4 phases (42-45), 9 plans, 17 requirements

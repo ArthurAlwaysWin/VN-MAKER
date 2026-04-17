@@ -77,23 +77,28 @@
 - ✓ 表情狀態管理：引擎 Map 追蹤每角色表情，頁面繼承 + 存讀檔持久化 + 場景重置 — v1.0 Phase 39
 - ✓ ExpressionDropdown 縮略圖網格選擇器 + PageInspector 雙處集成 — v1.0 Phase 40
 - ✓ 畫布繼承表情預覽 + stale 引用優雅降級（全場景掃描 + 批量替換 + 單步撤銷）— v1.0 Phase 41
+- ✓ 控件风格编辑器（widgetStyles 可视化编辑：Tab 形状/Toggle 样式/Slider·Panel·Button 颜色 + iframe 实时预览）— v1.2
+- ✓ 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置 + iframe 预览）— v1.2
+- ✓ 5 套内置主题（default/wafuu/modern-sky/fantasy-dark/minimal-white）一键应用 + 主题选择器 UI — v1.2
 
 ### Active
 
-<!-- v1.2 编辑器主题配置 + 示范主题 -->
+<!-- 下一个里程碑的需求将通过 /gsd-new-milestone 定义 -->
 
-- [ ] 控件风格编辑器（widgetStyles 可视化编辑：Tab 形状/Toggle 样式/Slider·Panel·Button 颜色 + iframe 实时预览）
-- [ ] 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置 + iframe 预览）
-- [ ] 5 套内置主题：2 套全配置(default+wafuu) + 3 套纯配色(modern-sky/fantasy-dark/minimal-white)
+(No active milestone — run `/gsd-new-milestone` to start v1.3)
 
-## Current Milestone: v1.2 编辑器主题配置 + 示范主题
+## Current Milestone: ✅ v1.2 编辑器主题配置 + 示范主题 (Shipped 2026-04-17)
 
-**Goal:** 让用户在编辑器中可视化编辑所有 v1.1 新增的引擎配置项（widgetStyles/界面布局），并提供 5 套内置主题作为起点。
+**Delivered:** 编辑器中可视化编辑所有 v1.1 新增的引擎配置项（widgetStyles 控件风格 / 界面布局），5 套内置主题一键应用。
 
-**Target features:**
-- 控件风格编辑器（表单模式，Tab 形状缩略图选择 + Toggle 样式选择 + Slider/Panel/Button 颜色配置 + iframe 实时预览）
-- 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置，类似 ThemeDesigner 模式 + iframe 预览）
-- 5 套内置主题（2 套全配置含九宫格贴图：default + wafuu；3 套纯配色：modern-sky/fantasy-dark/minimal-white）
+<details>
+<summary>v1.2 target features (delivered)</summary>
+
+- ✅ 控件风格编辑器（表单模式，Tab 形状缩略图选择 + Toggle 样式选择 + Slider/Panel/Button 颜色配置 + iframe 实时预览）
+- ✅ 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置，类似 ThemeDesigner 模式 + iframe 预览）
+- ✅ 5 套内置主题（2 套全配置含九宫格贴图：default + wafuu；3 套纯配色：modern-sky/fantasy-dark/minimal-white）
+
+</details>
 
 ### Future — 后续候选
 
@@ -102,7 +107,7 @@
 **UI Theme System v2（来源：docs/superpowers/specs/ui-theme-system-v2-design.md）**
 
 P0 引擎配置化 — ✅ 已在 v1.1 完成
-P1 编辑器 + 内置主题 — 🚧 v1.2 进行中
+P1 编辑器 + 内置主题 — ✅ 已在 v1.2 完成
 
 推迟项（P2/P3 — 后续里程碑）：
 - [ ] **.gmtheme 主题包格式**：ZIP 打包 theme.json + assets/，导入/导出/社区共享

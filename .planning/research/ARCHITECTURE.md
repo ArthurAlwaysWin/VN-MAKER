@@ -1,12 +1,12 @@
-# Architecture Patterns — Character Expression/Variant Switching
+# Architecture Patterns — Settings Screen Structural Customization
 
-**Domain:** Expression/variant scene switching in Galgame Maker (visual novel editor + runtime engine)
+**Domain:** Settings screen layout parameterization in Galgame Maker (visual novel engine + editor)
 **Researched:** 2025-07-27
-**Confidence:** HIGH — based entirely on direct codebase inspection of existing integration points
+**Confidence:** HIGH — based entirely on direct codebase inspection of SettingsScreen.js, settingDefs.js, widgetDefaults.js, TabWidget.js, SettingsSection.vue, builtinThemes.js
 
 ## Executive Summary
 
-Character expression switching integrates into an established page-based architecture where the editor (Vue 3 + Pinia) and engine (pure JS + DOM) communicate through a shared `script.json` data model. The existing code already has most scaffolding — `page.characters[].expression` field, `CharacterLayer.setExpression()`, `ScriptEngine._playCurrentDialogue()` expression change events — but lacks **crossfade transitions**, **expression state inheritance**, and a **visual thumbnail picker** in the inspector. The architecture changes are surgical: ~4 modified files, ~1 new component, no new libraries.
+The settings screen structural customization integrates into an established config-driven architecture where the editor (Vue 3 + Pinia) writes layout config to `script.json → ui.settingsScreen`, and the engine (pure JS) renders from it. The existing code already has a 3-mode rendering system (custom/structured/default) with sparse config merging. The new work extends the **structured mode** with user-configurable tab structure, multi-column content layout, row styling, and header/footer flexibility — all as optional config parameters with backward-compatible defaults.
 
 ## Recommended Architecture
 
@@ -15,53 +15,49 @@ Character expression switching integrates into an established page-based archite
 ```
 ┌─────────────── EDITOR (Vue 3 + Pinia) ───────────────┐
 │                                                        │
-│  script.js store        — No changes needed            │
-│  usePageEditor.js       — No changes needed            │
-│  CharacterPicker.vue    — No changes needed (already   │
-│                           picks expression on add)     │
+│  script.js store          — No changes (getters exist) │
+│  useScreenLayoutEditor.js — No changes (wiring exists) │
 │                                                        │
-│  PageInspector.vue      — MODIFY: replace <select>     │
-│    ├─ Char expression     with ExpressionPicker        │
-│    └─ Dialogue expression  inline thumbnail picker     │
+│  SettingsSection.vue      — MAJOR EXTEND: add tab      │
+│    ├─ Tab list editor        editor, layout controls,  │
+│    ├─ Layout controls        row style, header deco,   │
+│    ├─ Row style              footer buttons editor     │
+│    └─ Header/Footer                                    │
 │                                                        │
-│  ExpressionPicker.vue   — NEW: thumbnail grid popover  │
-│                                                        │
-│  PageCanvas.vue         — MODIFY: resolve inherited    │
-│                           expression for display       │
+│  builtinThemes.js         — UPDATE: add structural     │
+│                             params to existing themes   │
 │                                                        │
 ├─────────────── DATA MODEL (script.json) ──────────────┤
 │                                                        │
-│  characters[id].expressions  — No changes (flat map    │
-│    { exprName: "characters/file.png" }    is correct)  │
+│  ui.settingsScreen        — EXTEND (all new fields     │
+│    ├─ background             optional with defaults):  │
+│    ├─ backgroundOpacity      - tabBar.tabs[].settingKeys│
+│    ├─ header.decorations[]   - tabBar.position          │
+│    ├─ tabBar.tabs[]          - contentArea.columns      │
+│    ├─ tabBar.position        - contentArea.itemStyle    │
+│    ├─ contentArea.columns    - header.decorations[]     │
+│    ├─ contentArea.itemStyle  - footer.buttons[].action  │
+│    └─ footer.buttons[]                                 │
 │                                                        │
-│  page.characters[]      — expression field already     │
-│    { id, expression, x, y, scale }    exists.          │
-│    NEW SEMANTIC: null/undefined = "inherit from        │
-│    previous page" (was previously always explicit)     │
-│                                                        │
-│  page.dialogues[]       — expression field already     │
-│    { speaker, text, expression, voice }    exists.     │
-│    No changes to schema.                               │
+│  settingDefs.js           — No changes (registry       │
+│    SETTING_DEFS              stays as-is, tabs now     │
+│                              reference keys from it)   │
 │                                                        │
 ├─────────────── ENGINE (Pure JS) ──────────────────────┤
 │                                                        │
-│  ScriptEngine.js        — MODIFY: track per-character  │
-│    _prevPageExpressions   expression state, resolve    │
-│    Map<charId, exprName>  inheritance, detect changes  │
+│  SettingsScreen.js        — MAJOR EXTEND:              │
+│    _renderStructured()       config-driven tabs,       │
+│    _renderStructuredContent  2-col grid, item styling, │
+│    NEW: _renderLeftTabs()    left-tab mode, header     │
+│    NEW: _renderHeaderDeco()  decorations, reset action │
+│    NEW: _renderFooterBtn()                             │
 │                                                        │
-│  CharacterLayer.js      — MODIFY: crossfade in         │
-│    setExpression()        setExpression() using dual-   │
-│                           <img> technique               │
+│  ConfigManager.js         — ADD: resetToDefaults()     │
 │                                                        │
-│  style.css              — MODIFY: add .expr-crossfade  │
-│                           transition rules              │
+│  widgetDefaults.js        — No changes                 │
+│  TabWidget.js             — Minor: icon support        │
+│  style.css                — Minor: grid/zebra rules    │
 │                                                        │
-│  main.js                — MODIFY: pass crossfade       │
-│                           data through set_expression  │
-│                           event, skip-mode handling     │
-│                                                        │
-│  scanAssets.js          — No changes (already scans    │
-│                           characters[id].expressions)  │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -69,521 +65,328 @@ Character expression switching integrates into an established page-based archite
 
 | Component | Responsibility | Action | Communicates With |
 |-----------|---------------|--------|-------------------|
-| **PageInspector.vue** (modify) | Expression selection UI for characters + dialogues | Replace `<select>` with ExpressionPicker | ExpressionPicker, script store |
-| **ExpressionPicker.vue** (new) | Thumbnail grid popover for expression selection | Emit selected expression name | PageInspector, script store |
-| **PageCanvas.vue** (modify) | Resolve displayed expression (with inheritance) | Add `resolveCharExpression()` helper | script store, usePageEditor |
-| **ScriptEngine.js** (modify) | Track expression state, diff across pages, resolve inheritance | Add `_prevPageExpressions` Map, modify `_renderPage()` | CharacterLayer via events |
-| **CharacterLayer.js** (modify) | Crossfade expression changes | Dual-`<img>` technique in `setExpression()` | DOM, CSS transitions |
-| **style.css** (modify) | Crossfade animation rules | Add `.expr-incoming` / `.expr-outgoing` classes | CharacterLayer |
-| **main.js** (modify) | Wire expression crossfade events, skip-mode awareness | Extend `set_expression` handler | ScriptEngine, CharacterLayer |
+| **SettingsScreen.js** (major extend) | Render settings UI from config | Extend `_renderStructured()` for new params | ConfigManager, TabWidget, widgetStyles |
+| **ConfigManager.js** (minor extend) | User preference storage + reset | Add `resetToDefaults()` method | SettingsScreen (via reset action) |
+| **TabWidget.js** (minor extend) | Tab button rendering | Add icon image support | SettingsScreen |
+| **SettingsSection.vue** (major extend) | Editor form for settings layout | Add tab editor, layout controls, row style | useScreenLayoutEditor, script store |
+| **builtinThemes.js** (update) | Built-in theme presets | Add structural params to themes | Theme application system |
 
 ### Data Flow
 
-#### A. Page Render — Expression Resolution
+#### A. Config Loading → Engine Rendering
 
 ```
-ScriptEngine._renderPage(page)
+script.json → ui.settingsScreen
   │
-  ├─ For each char in page.characters[]:
-  │   │
-  │   ├─ char.expression is set?
-  │   │   ├─ YES → resolvedExpr = char.expression
-  │   │   └─ NO  → resolvedExpr = _prevPageExpressions.get(char.id)
-  │   │             └─ still null? → resolvedExpr = first key of characters[id].expressions
-  │   │
-  │   ├─ Was this character visible on prev page?
-  │   │   ├─ YES, same expression → no event (skip redundant update)
-  │   │   ├─ YES, different expression → emit 'set_expression' { id, expression, image, crossfade: true }
-  │   │   └─ NO → emit 'show_character' { id, expression, image, ... } (entrance transition)
-  │   │
-  │   └─ _prevPageExpressions.set(char.id, resolvedExpr)
+  ├─ main.js → settingsScreen.setLayout(config)
   │
-  └─ _prevPageCharIds = currentCharIds (existing logic)
+  └─ SettingsScreen.show()
+      │
+      ├─ Has elements[]? → _renderCustom (absolute positioning mode)
+      │                     NO CHANGES — backward compat
+      │
+      ├─ Has header/tabBar/contentArea? → _renderStructured
+      │   │
+      │   ├─ Read tabBar.tabs[] (NEW) or fall back to defaults
+      │   │
+      │   ├─ tabBar.position === 'left'?
+      │   │   ├─ YES → _renderLeftTabStructured (NEW render path)
+      │   │   └─ NO  → _renderTopTabStructured (existing, extended)
+      │   │
+      │   ├─ Render header (with decorations[] if present)
+      │   ├─ Render tab bar (with icons if present)
+      │   ├─ Render content area
+      │   │   ├─ columns === 2? → CSS Grid 1fr 1fr
+      │   │   └─ columns === 1 → Flex column (default)
+      │   │
+      │   ├─ Render items with itemStyle
+      │   │   ├─ showDividers → border-top on items
+      │   │   ├─ alternateBackground → background on odd items
+      │   │   ├─ labelPosition === 'top' → flex-direction: column
+      │   │   └─ showValueLabel → skip/show value span
+      │   │
+      │   └─ Render footer (with reset action if present)
+      │
+      └─ No config? → _renderDefault (fallback mode)
+                       NO CHANGES — backward compat
 ```
 
-#### B. Mid-Dialogue Expression Change
+#### B. Tab Content Resolution
 
 ```
-ScriptEngine._playCurrentDialogue()
+Tab rendering:
   │
-  ├─ dlg.expression && dlg.speaker?
-  │   ├─ YES → emit 'set_expression' { id, expression, image, crossfade: true }
-  │   │         _prevPageExpressions.set(dlg.speaker, dlg.expression)
-  │   └─ NO  → no expression change
-  │
-  └─ emit 'dialogue' { speaker, text, voice, ... }
-```
-
-#### C. CharacterLayer Crossfade
-
-```
-CharacterLayer.setExpression({ id, expression, image, crossfade, duration })
-  │
-  ├─ Get existing <img> element from this.characters Map
-  │
-  ├─ crossfade && duration > 0?
+  ├─ tabs[] exists in config?
   │   │
-  │   ├─ Create new <img> clone, position identically
-  │   ├─ Set new img.src = basePath + image
-  │   ├─ Set old img.style.opacity = 0 (CSS transition handles fade)
-  │   ├─ Set new img.style.opacity = 1
-  │   ├─ After transition ends: remove old <img>, store new in Map
+  │   ├─ YES → For each tab, use tab.settingKeys to determine items
+  │   │         │
+  │   │         └─ Collect all assigned keys across tabs
+  │   │            Unassigned SETTING_DEFS keys → append to last tab
   │   │
-  │   └─ (Same dual-element pattern as BackgroundLayer crossfade)
+  │   └─ NO → Fall back to DEFAULT_TAB_LABELS + SETTING_GROUP_KEYS
   │
-  └─ No crossfade?
-      └─ el.src = basePath + image (instant swap, existing behavior)
+  └─ On tab switch:
+      ├─ _activeTab = index
+      ├─ Read tabs[_activeTab].settingKeys
+      └─ _renderStructuredContent() with those keys
+```
+
+#### C. Editor → Engine Preview
+
+```
+SettingsSection.vue
+  │
+  ├─ User edits config in form controls
+  ├─ editor.setScreenNestedField(group, field, value)
+  ├─ editor.sendScreenLayoutToPreview()
+  │
+  └─ postMessage to iframe → engine receives layout config
+      └─ settingsScreen.setLayout(newConfig)
+         settingsScreen.show() → re-renders with new params
 ```
 
 ## Detailed Integration Points
 
-### 1. Data Model Extension
+### 1. Tab Structure (settingDefs.js ↔ SettingsScreen.js)
 
-**Current `page.characters[]` item:**
+**Current state:**
 ```js
-{ id: "char_1", expression: "normal", position: "custom", x: 640, y: 200, scale: 1 }
+// Hardcoded in SettingsScreen.js
+const SETTING_GROUP_KEYS = [
+  ['master-volume', 'bgm-volume', 'se-volume', 'voice-volume'],   // Tab 0
+  ['dialogue-opacity', 'window-mode'],                              // Tab 1
+  ['text-speed', 'auto-speed', 'skip-mode'],                       // Tab 2
+];
+const DEFAULT_TAB_LABELS = ['声音', '画面', '游戏'];
 ```
 
-**New semantic (no schema change):**
-- `expression: "happy"` → explicit expression for this page
-- `expression: null` or `expression: undefined` → inherit from previous page (NEW)
-- Inheritance chain: previous page → first expression key (final fallback)
-
-**Why no schema change:** The `expression` field already exists. Adding inheritance semantics (`null` = inherit) is a runtime behavior change in ScriptEngine, not a data format change. Existing projects where every page character has explicit expression set continue to work identically.
-
-**Backward compatibility:** Existing script.json files always have explicit `expression` values (CharacterPicker.confirmAdd() sets it). Inheritance only kicks in for pages created after this feature, where the user explicitly clears the expression field or where state-carry is desired.
-
-### 2. ScriptEngine.js Changes
-
-**New state field:**
+**New approach:**
 ```js
-constructor() {
-  // ... existing fields ...
+// In _renderStructured():
+const tabCfg = layout.tabBar || {};
+const tabs = tabCfg.tabs?.map(t => ({
+  label: t.label,
+  icon: t.icon || null,
+  settingKeys: t.settingKeys || [],
+}));
 
-  /** @type {Map<string, string>} Last resolved expression per character */
-  this._prevPageExpressions = new Map();
+// Fallback when tabs not configured:
+if (!tabs) {
+  const tabs = DEFAULT_TAB_LABELS.map((label, i) => ({
+    label,
+    icon: null,
+    settingKeys: SETTING_GROUP_KEYS[i] || [],
+  }));
+}
+
+// Handle unassigned SETTING_DEFS keys:
+const allAssigned = new Set(tabs.flatMap(t => t.settingKeys));
+const unassigned = Object.keys(SETTING_DEFS).filter(k => !allAssigned.has(k));
+if (unassigned.length > 0 && tabs.length > 0) {
+  tabs[tabs.length - 1].settingKeys.push(...unassigned);
 }
 ```
 
-**Modified `_resetRenderState()`:**
+**Backward compat:** `SETTING_GROUP_KEYS` and `DEFAULT_TAB_LABELS` remain as fallback constants. Only used when `tabBar.tabs` is absent.
+
+### 2. Content Layout (CSS Grid)
+
+**Current state:**
 ```js
-_resetRenderState() {
-  this._prevPageCharIds = new Set();
-  this._prevPageExpressions = new Map(); // ← ADD
-  this._currentBgmFile = null;
-  this._currentBg = null;
+// In _renderStructuredContent() — items rendered as flex column
+item.style.display = 'flex';
+item.style.alignItems = 'center';
+item.style.padding = '12px 0';
+```
+
+**New approach:**
+```js
+// Content container layout
+const columns = areaCfg.columns || 1;
+const gap = areaCfg.gap || 16;
+
+if (columns === 2) {
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = '1fr 1fr';
+  container.style.gap = `${gap}px`;
+} else {
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = `${gap}px`;
 }
 ```
 
-**Modified `_renderPage(page)` — character block:**
-```js
-// Show/update characters on this page
-for (const char of (page.characters || [])) {
-  const charDef = this.script.characters[char.id];
-  const wasVisible = this._prevPageCharIds.has(char.id);
+### 3. Left-Tab Sidebar Mode
 
-  // ── Expression resolution (NEW) ──
-  let resolvedExpr = char.expression;
-  if (!resolvedExpr) {
-    resolvedExpr = this._prevPageExpressions.get(char.id);
+**Current DOM structure (top tabs):**
+```
+#settings-screen.settings-structured
+  ├── .settings-structured-header
+  ├── .settings-structured-tab-bar (horizontal flex)
+  ├── .settings-structured-content (absolute positioned)
+  └── .settings-structured-footer
+```
+
+**New DOM structure (left tabs):**
+```
+#settings-screen.settings-structured.settings-left-tabs
+  ├── .settings-tab-sidebar (vertical flex, fixed width)
+  │   └── tab buttons (stacked vertically)
+  └── .settings-main-area (flex: 1)
+      ├── .settings-structured-header
+      ├── .settings-structured-content
+      └── .settings-structured-footer
+```
+
+**Implementation:** Separate render path `_renderLeftTabStructured()` rather than trying to reconfigure the existing top-tab structure. This is cleaner because the DOM hierarchy is fundamentally different (tabs are a sibling of the main area, not a child).
+
+### 4. ConfigManager.resetToDefaults()
+
+**New method:**
+```js
+resetToDefaults() {
+  this.config = { ...this.defaults };
+  this.save();
+}
+```
+
+**Footer button handler in SettingsScreen:**
+```js
+if (btnCfg.action === 'reset') {
+  this.configManager.resetToDefaults();
+  // Re-render to update all controls
+  this._renderStructuredContent(layout);
+}
+```
+
+### 5. Header Decorations
+
+**Rendering pattern (reuses `_renderImageElem` approach):**
+```js
+if (hdr.decorations?.length) {
+  for (const deco of hdr.decorations) {
+    if (!deco.src) continue;
+    const img = document.createElement('img');
+    img.src = resolvePath(sanitizeCssValue(deco.src));
+    img.style.position = 'absolute';
+    img.style.left = clampField('x', deco.x) + 'px';
+    img.style.top = clampField('y', deco.y) + 'px';
+    img.style.width = clampField('width', deco.width) + 'px';
+    img.style.height = clampField('height', deco.height) + 'px';
+    img.style.pointerEvents = 'none';
+    img.draggable = false;
+    header.appendChild(img);
   }
-  if (!resolvedExpr) {
-    const exprKeys = Object.keys(charDef?.expressions || {});
-    resolvedExpr = exprKeys[0] || 'normal';
-  }
-
-  const prevExpr = this._prevPageExpressions.get(char.id);
-  const expressionChanged = wasVisible && prevExpr && prevExpr !== resolvedExpr;
-
-  // ── Emit events ──
-  if (expressionChanged) {
-    // Character already visible, expression changed → crossfade
-    this.emit('set_expression', {
-      id: char.id,
-      expression: resolvedExpr,
-      image: charDef?.expressions?.[resolvedExpr] || '',
-      crossfade: true,
-      duration: 300,
-    });
-  }
-
-  // Always emit show_character for position/scale updates
-  this.emit('show_character', {
-    id: char.id,
-    expression: resolvedExpr,
-    position: char.position || 'center',
-    x: char.x,
-    y: char.y,
-    scale: char.scale ?? 1,
-    transition: wasVisible ? 'none' : 'fade',
-    duration: wasVisible ? 0 : 500,
-    image: charDef?.expressions?.[resolvedExpr] || '',
-  });
-
-  this._prevPageExpressions.set(char.id, resolvedExpr);
 }
-```
-
-**Modified `_playCurrentDialogue()` — expression change:**
-```js
-if (dlg.expression && dlg.speaker) {
-  const charDef = this.script.characters[dlg.speaker];
-  this.emit('set_expression', {
-    id: dlg.speaker,
-    expression: dlg.expression,
-    image: charDef?.expressions?.[dlg.expression] || '',
-    crossfade: true,    // ← ADD
-    duration: 300,      // ← ADD
-  });
-  this._prevPageExpressions.set(dlg.speaker, dlg.expression); // ← ADD
-}
-```
-
-**Modified `getState()` / `restoreState()` — save expression state:**
-```js
-getState() {
-  return {
-    currentScene: this.currentScene,
-    pageIndex: this.pageIndex,
-    dialogueIndex: this.dialogueIndex,
-    variables: Object.fromEntries(this.variables),
-    history: [...this.history],
-    expressions: Object.fromEntries(this._prevPageExpressions), // ← ADD
-  };
-}
-
-restoreState(state) {
-  // ... existing ...
-  this._prevPageExpressions = new Map(
-    Object.entries(state.expressions || {})  // ← ADD
-  );
-}
-```
-
-### 3. CharacterLayer.js Crossfade
-
-**Modified `setExpression()` — dual-image crossfade:**
-```js
-/**
- * Change a character's expression with optional crossfade
- * @param {Object} data — { id, expression, image, crossfade, duration }
- */
-setExpression(data) {
-  const el = this.characters.get(data.id);
-  if (!el) return;
-
-  const newSrc = this.basePath + data.image;
-
-  // Instant swap (existing behavior) when no crossfade requested
-  if (!data.crossfade || !data.duration) {
-    el.src = newSrc;
-    return;
-  }
-
-  // ── Dual-image crossfade ──
-  const duration = data.duration || 300;
-
-  // Clone the outgoing image as a fading-out overlay
-  const outgoing = el.cloneNode(false);
-  outgoing.classList.add('expr-outgoing');
-  outgoing.style.transitionDuration = `${duration}ms`;
-  el.parentNode.insertBefore(outgoing, el.nextSibling);
-
-  // Update the main element (incoming)
-  el.src = newSrc;
-  el.style.opacity = '0';
-
-  // Trigger crossfade on next frame
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.style.transitionDuration = `${duration}ms`;
-      el.style.opacity = '1';
-      outgoing.style.opacity = '0';
-    });
-  });
-
-  // Clean up outgoing element after transition
-  setTimeout(() => {
-    outgoing.remove();
-    el.style.transitionDuration = '';
-  }, duration + 50);
-}
-```
-
-**Why dual-image (not src swap):** Changing `<img>.src` causes a flash — the browser clears the old image before the new one renders. Dual-image crossfade (same pattern as BackgroundLayer's A/B layers) overlaps old and new for smooth blending. The outgoing clone is a temporary disposable element.
-
-### 4. CSS Additions (style.css)
-
-```css
-/* Expression crossfade — outgoing clone */
-.character-sprite.expr-outgoing {
-  transition-property: opacity;
-  transition-timing-function: ease-in-out;
-  pointer-events: none;
-  z-index: -1;  /* behind the incoming sprite */
-}
-```
-
-The incoming sprite's opacity transition is set inline by `setExpression()`. No additional CSS class needed — the existing `.character-sprite` base styles handle positioning.
-
-### 5. ExpressionPicker.vue Component
-
-**Pattern:** Follows existing thumbnail grid popover pattern from CharacterPicker.vue's expression grid.
-
-```
-┌────────────────────────────────┐
-│  选择表情             ✕        │
-├────────────────────────────────┤
-│ ┌─────┐ ┌─────┐ ┌─────┐      │
-│ │ img │ │ img │ │ img │      │
-│ │     │ │  ✓  │ │     │      │
-│ └─────┘ └─────┘ └─────┘      │
-│ normal   happy    angry       │
-│                                │
-│ ┌─────┐ ┌─────┐              │
-│ │ img │ │ img │              │
-│ │     │ │     │              │
-│ └─────┘ └─────┘              │
-│  sad      思考                │
-│                                │
-│  ☑ 继承上一页 (清除显式选择)   │
-└────────────────────────────────┘
-```
-
-**Props:**
-```js
-props: {
-  characterId: String,     // Which character's expressions to show
-  modelValue: String,      // Current expression name (v-model)
-  allowInherit: Boolean,   // Show "inherit" checkbox (true for page chars, false for dialogue)
-}
-emits: ['update:modelValue']
-```
-
-**Implementation strategy:** Reuse the exact thumbnail card styling from CharacterPicker.vue's `.expr-grid` / `.expr-thumb` classes. The component is a small popover (position: absolute, triggered by clicking the current expression thumbnail in PageInspector).
-
-### 6. PageInspector.vue Changes
-
-**Character expression section (line ~51-57) — replace `<select>` with thumbnail picker:**
-
-Current code:
-```html
-<select :value="char.expression"
-  @change="setCharExpression(idx, $event.target.value)"
-  @click.stop class="mini-select">
-  <option v-for="(_, expr) in getCharExpressions(char.id)" :key="expr" :value="expr">
-    {{ expr }}
-  </option>
-</select>
-```
-
-Replace with:
-```html
-<ExpressionPicker
-  :character-id="char.id"
-  :model-value="char.expression"
-  :allow-inherit="true"
-  @update:model-value="setCharExpression(idx, $event)" />
-```
-
-**Dialogue expression section (line ~117-124) — replace `<select>` with thumbnail picker:**
-
-Current code:
-```html
-<select :value="selectedDialogue.expression || ''"
-  @change="setDialogueExpression($event.target.value)" class="field-input">
-  <option value="">（不变）</option>
-  <option v-for="..." :value="expr">{{ expr }}</option>
-</select>
-```
-
-Replace with:
-```html
-<ExpressionPicker
-  v-if="selectedDialogue.speaker && isCharId(selectedDialogue.speaker)"
-  :character-id="selectedDialogue.speaker"
-  :model-value="selectedDialogue.expression || null"
-  :allow-inherit="false"
-  @update:model-value="setDialogueExpression($event)" />
-```
-
-### 7. PageCanvas.vue — Expression Inheritance for Preview
-
-**Modified `getCharImage()` to resolve inherited expressions for WYSIWYG display:**
-
-```js
-function getCharImage(char) {
-  let expr = char.expression;
-
-  // Inheritance resolution for canvas preview
-  if (!expr) {
-    expr = resolveInheritedExpression(char.id);
-  }
-  if (!expr) {
-    const exprKeys = Object.keys(script.data?.characters?.[char.id]?.expressions || {});
-    expr = exprKeys[0] || null;
-  }
-
-  const path = script.data?.characters?.[char.id]?.expressions?.[expr];
-  return path ? resolveAsset(path) : null;
-}
-
-/**
- * Walk backwards through pages to find the most recent explicit expression
- * for a character. Used for editor canvas preview only.
- */
-function resolveInheritedExpression(charId) {
-  const scene = editor.currentScene.value;
-  if (!scene?.pages) return null;
-
-  const currentIdx = editor.selectedPageIndex.value;
-  for (let i = currentIdx - 1; i >= 0; i--) {
-    const pageChar = scene.pages[i].characters?.find(c => c.id === charId);
-    if (pageChar?.expression) return pageChar.expression;
-  }
-  return null;
-}
-```
-
-### 8. main.js Wiring Changes
-
-**Modified `set_expression` handler (line 209):**
-
-Current:
-```js
-engine.on('set_expression', (data) => characters.setExpression(data));
-```
-
-Updated:
-```js
-engine.on('set_expression', (data) => {
-  if (skipMode) {
-    // Instant swap during skip — no crossfade
-    characters.setExpression({ ...data, crossfade: false, duration: 0 });
-    return;
-  }
-  characters.setExpression(data);
-});
 ```
 
 ## Patterns to Follow
 
-### Pattern 1: Dual-Element Crossfade (Proven)
+### Pattern 1: Sparse Config Merge (Established)
 
-**What:** Use two overlapping DOM elements to crossfade between states, disposing the outgoing element after transition.
+**What:** All new config parameters have defaults. Missing fields use defaults, not errors.
 
-**When:** Any visual transition where `src` swap causes a flash.
+**When:** ALWAYS — this is THE architectural pattern of the project.
 
-**Why:** This exact pattern already works in `BackgroundLayer.js` (layerA/layerB). It's proven in the codebase, has no library dependency, and handles edge cases (rapid switching, cleanup).
+**Why:** Proven across widgetDefaults.js (`deepMergeWidgetStyles`), all theme configs, all screen layout configs. Zero breaking changes for existing projects.
 
-**Difference from BackgroundLayer:** BackgroundLayer permanently keeps 2 layers and toggles. CharacterLayer creates a temporary clone because characters have independent positioning that must be preserved. The clone approach is simpler for per-character elements.
+### Pattern 2: Fallback Chain (Established)
 
-### Pattern 2: Engine-Side State Tracking (Not Editor-Side)
+**What:** When new config field is missing, fall back to previous behavior.
 
-**What:** Expression inheritance logic lives in `ScriptEngine._prevPageExpressions`, not in the editor's data model.
+```js
+const tabs = tabCfg.tabs || DEFAULT_TAB_LABELS.map((label, i) => ({
+  label, settingKeys: SETTING_GROUP_KEYS[i]
+}));
+```
 
-**When:** Any feature where "carry forward from previous page" semantics are needed.
+**When:** For every new structural parameter.
 
-**Why:**
-- The editor data model stays clean — `null` means "inherit", not "I haven't decided"
-- Engine already tracks `_prevPageCharIds` and `_currentBgmFile` with identical diff semantics
-- Save/restore naturally captures expression state via `getState()`/`restoreState()`
-- Editor canvas preview resolves inheritance separately with a simple backward walk (it has the full page list)
+**Why:** Ensures existing `settingsScreen` configs in saved projects and built-in themes continue working without migration.
 
-### Pattern 3: Opt-in Crossfade via Event Data
+### Pattern 3: Isolated Render Paths (New for Left Tabs)
 
-**What:** The `set_expression` event carries `crossfade: true/false` and `duration` as optional fields. CharacterLayer checks these to decide behavior.
+**What:** `tabBar.position === 'left'` uses a separate `_renderLeftTabStructured()` method instead of conditionals throughout existing render code.
 
-**When:** Always — keeps the API backward-compatible.
+**When:** A structural variant requires fundamentally different DOM hierarchy.
 
-**Why:** Allows ScriptEngine and main.js to control crossfade behavior per-event. Skip mode passes `crossfade: false` for instant transitions. Future features (like per-character transition settings) only need to modify the event data, not the CharacterLayer API.
+**Why:** Avoids spaghetti conditionals in `_renderStructured()`. Each mode is readable and testable in isolation.
 
-### Pattern 4: Thumbnail Grid Popover (Established UI Pattern)
+### Pattern 4: Engine Config + Editor Form (Established)
 
-**What:** ExpressionPicker uses the same thumbnail grid design as CharacterPicker's expression cards.
+**What:** Engine reads config and renders. Editor writes config through form controls. Communication via `setLayout()` + `postMessage` preview.
 
-**When:** Any picker that selects from a visual set of options.
+**When:** ALWAYS — established by `SettingsSection.vue` ↔ `useScreenLayoutEditor.js` ↔ `SettingsScreen.js`.
 
-**Why:** CharacterPicker already has this UI with `.expr-grid`, `.expr-thumb`, `.expr-img-wrap`, `.expr-name`, `.check-badge` styles. Users are already familiar with it. Extract as reusable component rather than duplicating.
+**Why:** Clean separation of concerns. Editor doesn't know about rendering, engine doesn't know about Vue.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Layered Compositing (Face + Body + Clothes)
+### Anti-Pattern 1: Mixing Structured and Custom Layout
+**What:** Allowing elements[] AND structural params in the same config.
+**Why bad:** Two layout systems fighting over the same DOM. The existing mode detection (line 84-89) is clean: elements[] → custom mode, header/tabBar → structured mode. Don't blur this boundary.
+**Instead:** Structured mode only. For pixel-perfect control, use custom layout mode.
 
-**What:** Splitting character art into layers (base body, face overlay, clothing overlay) and compositing at runtime.
-**Why bad:** The project decision is explicit: "整图切换（非分层合成）— 每个状态一张完整立绘". Layered compositing adds Canvas2D/WebGL dependency, complicates the asset pipeline, and doesn't match the flat expression model (`expressions: { name: path }`).
-**Instead:** Keep full-image switching. Each expression/variant is one complete PNG.
+### Anti-Pattern 2: Runtime Config Validation with Errors
+**What:** Throwing errors when config is malformed.
+**Why bad:** Crashes the settings screen. Users can't fix it from the game.
+**Instead:** `console.warn()` + skip invalid items + fall back to defaults. The settings screen must always render.
 
-### Anti-Pattern 2: Storing Resolved Expression in Page Data
+### Anti-Pattern 3: Deep Config Nesting (> 3 Levels)
+**What:** `settingsScreen.contentArea.itemStyle.label.font.family`.
+**Why bad:** Hard to merge, hard to edit in forms, easy to get path wrong.
+**Instead:** Maximum 3 levels: `settingsScreen.contentArea.itemStyle.labelFontSize`. Flatten where possible.
 
-**What:** When a page inherits expression from previous page, writing the resolved value back into `page.characters[].expression`.
-**Why bad:** Mutates the source data. Changes to earlier pages wouldn't propagate. Undo/redo becomes confused. Export produces incorrect data.
-**Instead:** Keep `null` in data, resolve at render time (both engine and editor canvas).
+### Anti-Pattern 4: Per-Setting Style Overrides in Layout Config
+**What:** `settingKeys: [{ key: 'bgm-volume', labelColor: '#ff0', trackColor: '#0f0' }]`.
+**Why bad:** Duplicates widgetStyles system. Creates per-item style explosion. Editor UI becomes impossibly complex.
+**Instead:** widgetStyles controls ALL setting appearance globally. Layout config controls only structural arrangement.
 
-### Anti-Pattern 3: Expression State in a Separate Global Store
-
-**What:** Creating a new Pinia store or global variable to track "current expression per character" across pages.
-**Why bad:** Duplicates state that ScriptEngine already tracks (`_prevPageExpressions`). Two sources of truth will inevitably desync. The editor canvas only needs backward page-walk (read-only, no store needed).
-**Instead:** ScriptEngine owns expression state tracking. Editor canvas derives it from page data.
-
-### Anti-Pattern 4: Animating Src Changes with CSS
-
-**What:** Setting `transition: opacity` on a single `<img>` and swapping `src`, expecting CSS to animate between images.
-**Why bad:** CSS cannot transition between two `src` values. Changing `src` causes an abrupt content swap. The only way to crossfade images is overlapping two `<img>` elements.
-**Instead:** Dual-image technique (clone outgoing, overlap, fade).
-
-### Anti-Pattern 5: Expression Picker as Modal Dialog
-
-**What:** Opening a full-screen modal overlay for expression selection (like CharacterPicker).
-**Why bad:** Expression changes are frequent micro-interactions while editing. A modal is too heavy — it breaks flow and requires explicit open/close. Character addition (CharacterPicker) is an infrequent setup action, so modal is acceptable.
-**Instead:** Inline popover anchored to the expression field. Click thumbnail → popover grid appears → click expression → popover closes. Same interaction weight as a dropdown.
-
-## Build Order (Dependency-Driven)
+## Build Order
 
 ```
-Phase 1: Data Model + Engine Foundation
-  ├─ ScriptEngine: _prevPageExpressions, inheritance resolution, save/restore
-  ├─ ScriptEngine: expression diff detection in _renderPage()
-  └─ No UI changes yet — can be tested with console/unit tests
+Phase 1: Tab Structure + Setting Assignment (Engine)
+  ├─ Replace SETTING_GROUP_KEYS lookup with config-driven tabs
+  ├─ Unassigned-keys-to-last-tab fallback
+  ├─ Tab icon rendering
+  └─ Testable: manually set tabBar.tabs in script.json
 
-Phase 2: CharacterLayer Crossfade
-  ├─ CharacterLayer.setExpression() dual-image technique
-  ├─ style.css .expr-outgoing rule
-  ├─ main.js set_expression handler (skip-mode awareness)
-  └─ Testable: manually emit set_expression events → see crossfade
+Phase 2: Content Layout + Row Styling (Engine)
+  ├─ contentArea.columns (1 or 2) → CSS Grid
+  ├─ contentArea.gap → spacing
+  ├─ itemStyle (dividers, zebra, labelPosition, labelWidth, showValueLabel)
+  └─ Testable: manually set contentArea in script.json
 
-Phase 3: Editor UI
-  ├─ ExpressionPicker.vue component
-  ├─ PageInspector.vue integration (both char section + dialogue section)
-  ├─ PageCanvas.vue inherited expression resolution
-  └─ Testable: full editor workflow, preview mode verification
+Phase 3: Chrome Features (Engine)
+  ├─ header.decorations[] rendering
+  ├─ header.showCloseButton toggle
+  ├─ footer reset action + ConfigManager.resetToDefaults()
+  ├─ Panel background image
+  ├─ tabBar.position: 'left' (separate render path)
+  └─ Testable: manually set full config
+
+Phase 4: Editor UI (Vue)
+  ├─ Tab list editor (add/remove/reorder, label, icon, setting assignment)
+  ├─ Content layout controls (columns, gap, labelPosition)
+  ├─ Row style controls (dividers, zebra)
+  ├─ Header decoration editor
+  ├─ Footer button editor
+  └─ All connected via useScreenLayoutEditor composable
+
+Phase 5: Built-in Theme Updates
+  ├─ Update existing themes with structural params
+  └─ Create showcase configs demonstrating different layouts
 ```
-
-**Why this order:**
-- Phase 1 is pure logic, no visual deps — safest to build and verify first
-- Phase 2 depends on Phase 1's event shape (`crossfade`, `duration` fields)
-- Phase 3 depends on both (needs engine to render expressions correctly in preview)
-
-## Scalability Considerations
-
-| Concern | 5 Characters | 20 Characters | 50+ Characters |
-|---------|-------------|---------------|----------------|
-| Expression thumbnails in picker | Grid fits in viewport | Scrollable, still fast | Consider search/filter |
-| Backward walk for inheritance | Instant (<50 pages) | Instant (<500 pages) | Consider caching if >1000 pages |
-| DOM elements during crossfade | Max 2 per character | Max 2 per character | Max 2 per character (bounded) |
-| Memory (preloaded images) | Negligible | Moderate if all loaded | Browser handles via cache eviction |
-
-Expression crossfade is inherently bounded: at most 2 `<img>` elements per character during a transition, cleaned up within 300-500ms. No accumulation risk.
 
 ## Sources
 
-- `src/ui/CharacterLayer.js` — current show/hide/setExpression implementation (direct inspection, HIGH confidence)
-- `src/engine/ScriptEngine.js` — _renderPage, _playCurrentDialogue, event schema, state tracking (direct inspection, HIGH confidence)
-- `src/editor/components/page-editor/PageInspector.vue` — character expression select, dialogue expression select (direct inspection, HIGH confidence)
-- `src/editor/components/page-editor/PageCanvas.vue` — getCharImage, DraggableElement rendering (direct inspection, HIGH confidence)
-- `src/editor/components/page-editor/CharacterPicker.vue` — expression thumbnail grid pattern (direct inspection, HIGH confidence)
-- `src/ui/BackgroundLayer.js` — dual-layer crossfade pattern as reference (direct inspection, HIGH confidence)
-- `src/main.js` — event wiring, skip-mode pattern (direct inspection, HIGH confidence)
-- `src/editor/composables/usePageEditor.js` — provide/inject architecture (direct inspection, HIGH confidence)
-- `src/editor/stores/script.js` — page CRUD, undo/redo, pushState pattern (direct inspection, HIGH confidence)
-- `src/engine/scanAssets.js` — already scans character expressions, no changes needed (direct inspection, HIGH confidence)
+- `src/ui/SettingsScreen.js` — 3-mode rendering, structured mode implementation (lines 376-603)
+- `src/engine/settingDefs.js` — SETTING_DEFS registry (9 settings, 3 types), config schema documentation
+- `src/engine/widgetDefaults.js` — WIDGET_DEFAULTS, deepMergeWidgetStyles sparse merge pattern
+- `src/ui/widgets/TabWidget.js` — createTabBar(), 5 shape variants, style application
+- `src/ui/widgets/SliderWidget.js` — CSS custom property-based styling
+- `src/editor/components/layout/SettingsSection.vue` — Current editor form (header/tabBar/contentArea)
+- `src/editor/composables/useScreenLayoutEditor.js` — Preview communication, debounced postMessage
+- `src/editor/builtinThemes.js` — 5 themes, settingsScreen config shape (sparse overrides)
+- `src/engine/ConfigManager.js` — User preference storage, defaults object
+- `src/engine/ThemeManager.js` — 9-slice CSS injection pattern, NINE_SLICE_SELECTORS

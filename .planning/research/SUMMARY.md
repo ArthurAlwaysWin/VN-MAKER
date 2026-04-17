@@ -1,87 +1,82 @@
-# Project Research Summary
+# Research Summary: v1.3 Settings Screen Structural Customization
 
-**Project:** Galgame Maker v1.0 — 角色表情/差分場景切換 (Character Expression/Variant Switching)
-**Domain:** Visual novel editor — expression picking, runtime crossfade, state inheritance
-**Researched:** 2025-07-15
+**Domain:** Visual novel engine — settings screen layout parameterization
+**Researched:** 2025-07-27
 **Overall confidence:** HIGH
 
 ## Executive Summary
 
-Galgame Maker v1.0 adds character expression/variant switching to the PPT-style page editor and runtime engine. The central finding is that **the existing codebase already has 80% of the scaffolding in place.** The `script.json` data model already stores per-page character expressions (`page.characters[].expression`), per-dialogue expression changes (`dialogue.expression`), and the character expression registry (`characters[id].expressions`). The editor's `PageInspector.vue` already has a working (but text-only) expression `<select>` dropdown. The engine's `ScriptEngine.js` already emits `show_character` and `set_expression` events with expression data. `CharacterLayer.js` already has a `setExpression()` method.
+The settings screen in Galgame Maker currently operates in three modes: custom absolute-position layout (elements[]), structured auto-layout (header/tabBar/contentArea), and default fallback. The v1.3 goal is to extend the structured mode with configurable tab structure, multi-column content layout, row styling options, and header/footer flexibility — all while maintaining the "Canva level" template+parameters philosophy.
 
-What's missing is surgical: (1) a **visual thumbnail expression picker** replacing the plain `<select>`, (2) a **crossfade transition** in `CharacterLayer.setExpression()` using the dual-image pattern already proven by `BackgroundLayer.js`, (3) **expression state inheritance** tracking in `ScriptEngine` so characters keep their expression across pages without re-specification, and (4) minor **save/restore state extension** to persist expression state through save/load cycles.
+Analysis of commercial VN settings screens reveals five dominant patterns: (A) tab+icon with 2-column grid (Aokana), (B) vertical sidebar tabs with full-width content (Senrenbanka), (C) scroll-based no-tab with section headers, (D) multi-column grouped boxes (CLANNAD), and (E) icon grid navigation. Our structured mode can support patterns A, B, and C through a small set of parameters: tab position (top/left), column count (1/2), and content item styling (dividers/zebra/label position).
 
-**Zero new npm dependencies are needed.** The entire feature uses CSS transitions (established pattern), native `Image()` preloading, and pure JS logic. This is a refinement milestone, not a stack expansion.
+The existing architecture is exceptionally well-suited for this extension. The sparse-merge-onto-defaults pattern used throughout (`deepMergeWidgetStyles`, `applyTheme`, all screen configs) means every new parameter is additive with a sensible default — zero backward compatibility risk. The SETTING_DEFS registry already decouples setting definitions from layout, and the widgetStyles system already handles control appearance. This milestone only needs to handle **structural arrangement** of these existing controls.
+
+The recommended config schema adds `tabBar.tabs[]` with `settingKeys` arrays for user-defined tab-to-setting mapping, `contentArea.columns` (1 or 2), `contentArea.itemStyle` for row visuals, `header.decorations[]` for ornamental images, and a `reset` footer button action. All fields are optional. Total new parameters: ~15, all with defaults matching current output.
 
 ## Key Findings
 
-**Stack:** Zero new dependencies — all capabilities achieved with existing CSS transitions, browser-native Image() API, and vanilla JS. See [STACK.md](./STACK.md).
-**Architecture:** Dual-image crossfade (replicating BackgroundLayer.js pattern), expression state Map in ScriptEngine, new ExpressionDropdown.vue component. See [ARCHITECTURE.md](./ARCHITECTURE.md).
-**Critical pitfall:** Image flash during crossfade if `img.src` is set without waiting for `onload` — must preload before starting CSS transition. See [PITFALLS.md](./PITFALLS.md) P1.
+**Stack:** Zero new dependencies — all features achievable with existing CSS Grid/Flexbox and DOM manipulation in the engine. See [STACK.md](./STACK.md).
+**Architecture:** Extension of existing `_renderStructured()` with config-driven tab grouping, CSS Grid 2-column mode, and itemStyle application. See [ARCHITECTURE.md](./ARCHITECTURE.md) and [structural-params.md](./structural-params.md).
+**Critical pitfall:** Tab-to-setting assignment must handle future SETTING_DEFS additions gracefully — "unassigned keys append to last tab" pattern prevents settings from silently disappearing. See [PITFALLS.md](./PITFALLS.md).
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-1. **CharacterLayer Refactor (Dual-Image Structure)** — Foundation for crossfade
-   - Addresses: DOM structure change from single `<img>` to container + two `<img>` layers
-   - Avoids: Pitfall P3 (positioning breakage) by doing structural refactor BEFORE adding crossfade logic
-   - Rationale: Must validate all 4 positioning modes (`pos-left`, `pos-center`, `pos-right`, `pos-custom`) still work with the new DOM structure before adding any animation
+1. **Tab Structure + Setting Assignment** — Engine foundation
+   - Addresses: Configurable tab count/labels/icons, custom setting-to-tab mapping
+   - Avoids: Breaking existing 3-tab default by keeping `SETTING_GROUP_KEYS` as fallback
+   - Rationale: All other structural features (columns, left tabs) build on configurable tab content
 
-2. **Expression Crossfade Transition** — Smooth visual switching
-   - Addresses: Crossfade between expression images, image preloading, mid-dialogue expression changes
-   - Avoids: Pitfall P1 (blank frame flash) with preload-before-swap pattern
-   - Avoids: Pitfall P7 (rapid page transition glitches) with interruption handling
-   - Depends on: Phase 1 (dual-image structure must be in place)
+2. **Content Layout + Row Styling** — Visual variety
+   - Addresses: 2-column grid, row dividers, zebra stripes, label position, value label toggle
+   - Avoids: Over-engineering by capping at 2 columns (covers 99% of commercial VN patterns)
+   - Depends on: Phase 1 (tab content is the rendering surface for layout changes)
 
-3. **Expression State Inheritance in Engine** — Characters remember their expression
-   - Addresses: `_charExpressionState` Map tracking, 3-tier fallback resolution, save/restore integration
-   - Avoids: Pitfall P4 (save/load expression reset) by extending getState/restoreState
-   - Avoids: Pitfall P8 (unstable first-key order) by documenting behavior
-   - Independent of crossfade — can be built/tested separately
+3. **Header/Footer + Panel Background + Left Tabs** — Complete the chrome
+   - Addresses: Decorative header images, reset-to-defaults action, panel background, sidebar tab position
+   - Avoids: DOM restructure risk by isolating left-tab mode as separate render path
+   - Mostly independent of Phase 2 but logically groups "chrome" changes
 
-4. **Expression Thumbnail Picker Component** — Visual selector replacing text `<select>`
-   - Addresses: ExpressionDropdown.vue component, PageInspector integration (both character-row and dialogue-expression contexts)
-   - Avoids: Pitfall P5 (overflow clipping) with Teleport/fixed positioning
-   - Avoids: Pitfall P10 (click timing) with mousedown.prevent pattern
-   - Reuses: CharacterPicker.vue thumbnail grid pattern (proven CSS)
-   - Depends on: Phase 3 (inheritance display needs resolution logic)
+4. **Editor UI** — Configuration surface
+   - Addresses: Tab editor (add/remove/assign), layout controls, row style controls, decoration list, footer button editor
+   - Depends on: Phases 1-3 (editor must configure what engine supports)
 
-5. **Editor Inheritance Display + Polish** — WYSIWYG accuracy
-   - Addresses: Canvas showing inherited expression, inline thumbnails in inspector rows, edge case handling
-   - Avoids: Pitfall P2 (editor/engine desync) with shared resolution logic
-   - Avoids: Pitfall P6 (dangling references) with graceful fallback chain
+5. **Built-in Theme Updates** — Demonstrate capability
+   - Addresses: Update builtinThemes.js with new structural parameters, create showcase themes
+   - Depends on: Phase 4 (themes should exercise full parameter range)
 
 **Phase ordering rationale:**
-- Phase 1 before Phase 2: DOM structure must be stable before adding animation. Debugging CSS transitions on a broken DOM structure is extremely painful.
-- Phase 3 can parallel Phase 2: Engine state tracking is independent of CharacterLayer rendering. Both modify `ScriptEngine.js` but different methods.
-- Phase 4 after Phase 3: The thumbnail picker needs to display "inherited" expression state, which requires the inheritance resolution logic from Phase 3.
-- Phase 5 last: Polish and edge cases after core functionality works end-to-end.
+- Engine changes before editor changes (engine defines capability surface)
+- Tab structure first because content layout and chrome features all live inside tabs
+- Editor UI after engine because it needs stable config schema to bind to
+- Theme updates last because they're the integration test of everything
 
 **Research flags for phases:**
-- Phase 1: **Needs careful testing** — DOM restructure affects all character rendering. Regression test with demo script.json across all position modes.
-- Phase 2: Standard CSS transition pattern (BackgroundLayer.js is working reference). Low risk.
-- Phase 3: Pure logic. Low risk.
-- Phase 4: Standard Vue SFC. Low risk. CharacterPicker.vue is working reference.
-- Phase 5: Polish pass. No research needed.
+- Phase 3 (Left tabs): Likely needs implementation research — DOM restructure from vertical stack to horizontal flex when `tabBar.position: 'left'`
+- Phase 4 (Editor): Tab editor with setting-assignment checkboxes may need UX prototyping to validate usability
+- Phases 1-2: Standard patterns, low research risk
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | Direct codebase analysis. Zero ambiguity — no new deps needed. |
-| Features | **HIGH** | FEATURES.md based on codebase + VN industry patterns. Table stakes clearly identified. |
-| Architecture | **HIGH** | All integration points verified against source code. BackgroundLayer proves the crossfade pattern. |
-| Pitfalls | **HIGH** | 10 pitfalls catalogued (4 critical, 4 moderate, 2 minor). Each traced to specific code locations. |
+| Stack | HIGH | Zero new deps, all CSS Grid/Flexbox, verified in codebase |
+| Features | HIGH | Based on codebase analysis + commercial VN domain knowledge |
+| Architecture | HIGH | Extends established patterns (sparse merge, config-driven render) |
+| Pitfalls | MEDIUM | Future-proofing for SETTING_DEFS growth is logical but untested |
+| Commercial VN patterns | MEDIUM | Based on domain expertise, not live-verified screenshots |
 
 ## Gaps to Address
 
-- **Expression crossfade timing for Fast Skip mode:** Currently Fast Skip runs at 30ms/page. Need to decide: skip crossfade entirely during skip, or use 0ms instant swap. Recommend instant swap.
-- **`defaultExpression` field:** Not adding for v1.0 (uses first key in expressions object). If users report confusion, add a `defaultExpression: "normal"` field to character definition in v1.1.
-- **Expression change indicator in page thumbnails:** Deferred differentiator. Not needed for MVP but would improve UX of managing multi-page expression flows.
-- **Scene boundary behavior for inheritance:** When entering a new scene, should expression state carry over or reset? Recommend reset per scene (clean slate), but needs explicit design decision.
+- **Tab icon asset format:** Should icons be SVG, PNG, or both? Needs alignment with asset library capabilities
+- **Left-tab DOM structure:** Exact CSS approach needs prototyping in Phase 3
+- **Editor UX for setting assignment:** Checkbox matrix vs. drag-and-drop — needs mock validation
+- **Section headers within tabs:** Deferred from v1.3, may need in future if SETTING_DEFS grows significantly
+- **Per-setting label overrides:** Not in v1.3 scope, but frequently requested in VN makers
 
 ---
-*Research completed: 2025-07-15*
+*Research completed: 2025-07-27*
 *Ready for roadmap: yes*
-*Files synthesized: STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md, SUMMARY.md*
+*Files synthesized: SUMMARY.md, STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md, structural-params.md*

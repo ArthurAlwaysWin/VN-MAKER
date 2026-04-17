@@ -266,7 +266,7 @@ See .planning/milestones/v1.1-ROADMAP.md for full phase details.
 ### Phases
 
 - [x] **Phase 46: 数据持久化 + 编辑器骨架** — Store 读写 widgetStyles/布局 + 控件风格编辑器视图骨架 + iframe 预览区 (completed 2026-04-17)
-- [ ] **Phase 47: 控件编辑器 — Tab/Toggle/Slider** — Tab 形状缩略图网格 + Toggle 样式缩略图网格 + Slider 颜色/形状配置
+- [x] **Phase 47: 控件编辑器 — Tab/Toggle/Slider** — Tab 形状缩略图网格 + Toggle 样式缩略图网格 + Slider 颜色/形状配置 (completed 2026-04-17)
 - [ ] **Phase 48: 控件编辑器 — Panel/Button + 实时预览** — Panel 背景/圆角/边框/模糊/贴图 + Button 三态 + 全控件 iframe 实时预览
 - [ ] **Phase 49: 布局编辑器 — SaveLoad/Backlog** — 存读档/回想界面结构化表单配置
 - [ ] **Phase 50: 布局编辑器 — GameMenu/Settings + 实时预览** — 游戏菜单/设置界面表单配置 + 全布局 iframe 实时预览

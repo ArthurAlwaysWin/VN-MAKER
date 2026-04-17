@@ -126,6 +126,62 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function getWidgetStyles() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.widgetStyles ??= {};
+    return data.value.ui.widgetStyles;
+  }
+
+  function updateWidgetStyles(widgetStyles) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.widgetStyles = widgetStyles;
+    pushState();
+  }
+
+  function getSaveLoadScreen() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.saveLoadScreen ??= {};
+    return data.value.ui.saveLoadScreen;
+  }
+
+  function updateSaveLoadScreen(config) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.saveLoadScreen = config;
+    pushState();
+  }
+
+  function getBacklogScreen() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.backlogScreen ??= {};
+    return data.value.ui.backlogScreen;
+  }
+
+  function updateBacklogScreen(config) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.backlogScreen = config;
+    pushState();
+  }
+
+  function getGameMenu() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.gameMenu ??= {};
+    return data.value.ui.gameMenu;
+  }
+
+  function updateGameMenu(config) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.gameMenu = config;
+    pushState();
+  }
+
   // --- Page CRUD helpers ---
 
   function createDefaultPage() {
@@ -292,6 +348,10 @@ export const useScriptStore = defineStore('script', () => {
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,
     getTheme, updateTheme,
+    getWidgetStyles, updateWidgetStyles,
+    getSaveLoadScreen, updateSaveLoadScreen,
+    getBacklogScreen, updateBacklogScreen,
+    getGameMenu, updateGameMenu,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
     convertPageType, setSceneNext,

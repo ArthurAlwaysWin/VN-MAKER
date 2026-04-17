@@ -967,6 +967,20 @@ function initPreview() {
         applyNineSlice(msg.theme);
         break;
       }
+      case 'update-widget-styles': {
+        settingsScreen.setWidgetStyles(msg.widgetStyles);
+        break;
+      }
+      case 'update-screen-layout': {
+        const cfg = msg.config;
+        switch (msg.screen) {
+          case 'saveLoadScreen': saveLoadScreen.setLayout(cfg); break;
+          case 'backlogScreen': backlogScreen.setLayout(cfg); break;
+          case 'gameMenu': gameMenu.setLayout(cfg); break;
+          case 'settingsScreen': settingsScreen.setLayout(cfg); break;
+        }
+        break;
+      }
     }
   }
 

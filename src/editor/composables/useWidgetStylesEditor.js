@@ -72,6 +72,7 @@ export function createWidgetStylesEditor() {
 
     if (event.data.type === 'ready') {
       isEngineReady.value = true;
+      event.source?.postMessage({ type: 'ack-preview' }, '*');
       startEngine();
       flushPreview();
     }

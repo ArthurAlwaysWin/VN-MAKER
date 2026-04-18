@@ -382,7 +382,10 @@ Plans:
   3. Column count radio (1/2) and row style toggles (dividers, zebra, value labels, label width, label position) update the settings screen
   4. Tab position toggle (top/left) switches between horizontal tabs and sidebar navigation
   5. All changes preview in real-time via iframe postMessage
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 57-01-PLAN.md — Tab CRUD + Setting Matrix components (tabLayoutHelpers.js, TabCrudSection.vue, SettingMatrix.vue)
+- [ ] 57-02-PLAN.md — Layout Controls + Wiring + Tests (LayoutControlsSection.vue, SettingsSection.vue update, unit tests)
 **UI hint**: yes
 
 #### Phase 58: Decoration & Background Editor

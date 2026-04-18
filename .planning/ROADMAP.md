@@ -364,7 +364,10 @@ Plans:
   3. User can select harmony algorithm (complementary/analogous/triadic/split-complementary) to auto-derive accent from primary
   4. Color recipe (primary/accent/mode/algorithm) persists in script.json alongside the full generated token set
   5. Individual token overrides survive when user re-derives from recipe changes (overrides stored separately)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 56-01-PLAN.md — Recipe persistence layer + composable helpers (useThemeEditor recipe/override CRUD + tests)
+- [ ] 56-02-PLAN.md — SmartColorPanel component + ThemeDesigner integration + override indicators
 **UI hint**: yes
 
 #### Phase 57: Tab & Layout Editor

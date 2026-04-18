@@ -437,6 +437,28 @@ export class SettingsScreen {
     this.el.style.backgroundImage = '';
     this.el.style.backgroundColor = '';
 
+    const tabPosition = (layout.tabBar?.position === 'left') ? 'left' : 'top';
+
+    // ── Panel background (DECOR-03) ─────────────────────
+    const ssCfg = layout.settingsScreen || {};
+    if (ssCfg.background) {
+      const safePanelBg = sanitizeCssValue(ssCfg.background);
+      if (safePanelBg) {
+        const bgDiv = document.createElement('div');
+        bgDiv.className = 'settings-panel-bg';
+        bgDiv.style.position = 'absolute';
+        bgDiv.style.inset = '0';
+        bgDiv.style.zIndex = '0';
+        bgDiv.style.backgroundImage = `url("${resolvePath(safePanelBg)}")`;
+        bgDiv.style.backgroundSize = 'cover';
+        bgDiv.style.backgroundPosition = 'center';
+        bgDiv.style.pointerEvents = 'none';
+        const opacity = clampField('scale', ssCfg.backgroundOpacity) ?? 1;
+        bgDiv.style.opacity = String(opacity);
+        this.el.appendChild(bgDiv);
+      }
+    }
+
     // ── Header ──────────────────────────────────────────
     const hdr = layout.header || {};
     const header = document.createElement('div');
@@ -470,7 +492,32 @@ export class SettingsScreen {
     title.style.position = 'absolute';
     if (tx !== undefined) title.style.left = tx + 'px';
     if (ty !== undefined) title.style.top = ty + 'px';
+    title.style.zIndex = '2';
     header.appendChild(title);
+
+    // Header decorations (DECOR-01)
+    if (Array.isArray(hdr.decorations)) {
+      for (const deco of hdr.decorations) {
+        if (!deco.src) continue;
+        const safeSrc = sanitizeCssValue(deco.src);
+        if (!safeSrc) continue;
+        const img = document.createElement('img');
+        img.className = 'settings-decoration';
+        img.src = resolvePath(safeSrc);
+        img.style.position = 'absolute';
+        img.style.zIndex = '1';
+        const dx = clampField('x', deco.x);
+        const dy = clampField('y', deco.y);
+        const dw = clampField('width', deco.width);
+        const dh = clampField('height', deco.height);
+        if (dx !== undefined) img.style.left = dx + 'px';
+        if (dy !== undefined) img.style.top = dy + 'px';
+        if (dw !== undefined) img.style.width = dw + 'px';
+        if (dh !== undefined) img.style.height = dh + 'px';
+        img.style.pointerEvents = 'none';
+        header.appendChild(img);
+      }
+    }
 
     // Close button
     const closeBtn = document.createElement('button');
@@ -485,12 +532,13 @@ export class SettingsScreen {
     closeBtn.style.color = '#fff';
     closeBtn.style.fontSize = '28px';
     closeBtn.style.cursor = 'pointer';
+    closeBtn.style.zIndex = '2';
     closeBtn.addEventListener('click', () => this.hide());
     header.appendChild(closeBtn);
 
     this.el.appendChild(header);
 
-    // ── Tab bar ─────────────────────────────────────────
+    // ── Tab bar / Sidebar ───────────────────────────────
     const tabCfg = layout.tabBar || {};
     const normalized = normalizeTabs(tabCfg.tabs);
     const resolvedTabs = normalized
@@ -498,95 +546,17 @@ export class SettingsScreen {
       : DEFAULT_TAB_LABELS.map((label, i) => ({ label, settingKeys: SETTING_GROUP_KEYS[i] }));
     this._resolvedTabs = resolvedTabs;
 
-    const tabContainer = document.createElement('div');
-    tabContainer.className = 'settings-structured-tab-bar';
-    const tabY = clampField('y', tabCfg.y);
-    const tabH = clampField('height', tabCfg.height) || 56;
-    tabContainer.style.height = tabH + 'px';
-    if (tabY !== undefined) tabContainer.style.marginTop = '0';
-    const safeBg = sanitizeCssValue(tabCfg.background);
-    if (safeBg) tabContainer.style.background = safeBg;
-    tabContainer.style.display = 'flex';
-    tabContainer.style.alignItems = 'center';
-
-    if (this._widgetStyles) {
-      // Widget-based tab bar (supports {label, icon?} objects)
-      const { el: tabEl, setActive } = createTabBar(
-        resolvedTabs,
-        this._widgetStyles.tab,
-        (index) => {
-          this._activeTab = index;
-          this._renderStructuredContent(layout);
-        }
-      );
-      this._tabSetActive = setActive;
-      tabContainer.appendChild(tabEl);
-    } else {
-      // Fallback: simple button-based tabs with optional icon
-      resolvedTabs.forEach((tab, i) => {
-        const btn = document.createElement('button');
-        btn.className = `settings-tab-btn${i === this._activeTab ? ' active' : ''}`;
-
-        if (tab.icon) {
-          btn.style.display = 'flex';
-          btn.style.alignItems = 'center';
-          btn.style.gap = '6px';
-          const img = document.createElement('img');
-          img.src = resolvePath(tab.icon);
-          img.width = 24;
-          img.height = 24;
-          img.style.objectFit = 'contain';
-          img.alt = '';
-          btn.appendChild(img);
-          const span = document.createElement('span');
-          span.textContent = tab.label;
-          btn.appendChild(span);
-        } else {
-          btn.textContent = tab.label;
-        }
-
-        btn.style.background = 'none';
-        btn.style.border = 'none';
-        btn.style.color = i === this._activeTab ? '#fff' : 'rgba(255,255,255,0.5)';
-        btn.style.cursor = 'pointer';
-        btn.style.padding = '8px 20px';
-        btn.style.fontSize = '16px';
-        btn.addEventListener('click', () => {
-          this._activeTab = i;
-          tabContainer.querySelectorAll('.settings-tab-btn').forEach((b, idx) => {
-            b.classList.toggle('active', idx === i);
-            b.style.color = idx === i ? '#fff' : 'rgba(255,255,255,0.5)';
-          });
-          this._renderStructuredContent(layout);
-        });
-        tabContainer.appendChild(btn);
-      });
-    }
-
-    this.el.appendChild(tabContainer);
-
     // ── Content area ────────────────────────────────────
     const areaCfg = layout.contentArea || {};
     const contentWrap = document.createElement('div');
     contentWrap.className = 'settings-structured-content';
-    contentWrap.style.position = 'absolute';
     contentWrap.style.overflowY = 'auto';
-    const cx = clampField('x', areaCfg.x) || 40;
-    const cy = clampField('y', areaCfg.y) || 160;
-    const cw = clampField('width', areaCfg.width) || 1200;
-    const ch = clampField('height', areaCfg.height) || 500;
-    contentWrap.style.left = cx + 'px';
-    contentWrap.style.top = cy + 'px';
-    contentWrap.style.width = cw + 'px';
-    contentWrap.style.height = ch + 'px';
-    this.el.appendChild(contentWrap);
-
-    // Populate first tab content
-    this._renderStructuredContent(layout);
+    contentWrap.style.zIndex = '1';
 
     // ── Footer ──────────────────────────────────────────
+    let footer = null;
     if (layout.footer?.buttons?.length) {
-      const footer = document.createElement('div');
+      footer = document.createElement('div');
       footer.className = 'settings-structured-footer';
       footer.style.position = 'relative';
       footer.style.height = (clampField('height', layout.footer.height) || 60) + 'px';
@@ -607,7 +577,16 @@ export class SettingsScreen {
         btn.style.fontSize = '16px';
 
         btn.addEventListener('click', () => {
-          if (btnCfg.id && btnCfg.id.includes('title') && this.onTitle) {
+          const action = btnCfg.action || '';
+          if (action === 'title' && this.onTitle) {
+            this.onTitle();
+          } else if (action === 'reset') {
+            this.configManager.reset();
+            this._notifyChange();
+            this._renderStructuredContent(layout);
+          } else if (action === 'close') {
+            this.hide();
+          } else if (btnCfg.id && btnCfg.id.includes('title') && this.onTitle) {
             this.onTitle();
           } else {
             this.hide();
@@ -616,8 +595,177 @@ export class SettingsScreen {
 
         footer.appendChild(btn);
       }
-      this.el.appendChild(footer);
     }
+
+    // ── Layout assembly ─────────────────────────────────
+    if (tabPosition === 'left') {
+      // Left-tab sidebar layout (STRUCT-06)
+      const outer = document.createElement('div');
+      outer.className = 'settings-structured-outer';
+      outer.style.display = 'flex';
+      outer.style.flexDirection = 'row';
+      outer.style.height = '100%';
+
+      // Sidebar with tab buttons
+      const sidebar = document.createElement('div');
+      sidebar.className = 'settings-structured-sidebar';
+      const sidebarW = clampField('width', tabCfg.width) || 180;
+      sidebar.style.width = sidebarW + 'px';
+      sidebar.style.flexShrink = '0';
+      sidebar.style.display = 'flex';
+      sidebar.style.flexDirection = 'column';
+      sidebar.style.gap = '4px';
+      sidebar.style.padding = '12px 8px';
+      const safeSideBg = sanitizeCssValue(tabCfg.background);
+      if (safeSideBg) sidebar.style.background = safeSideBg;
+
+      resolvedTabs.forEach((tab, i) => {
+        const btn = document.createElement('button');
+        btn.className = `settings-tab-btn${i === this._activeTab ? ' active' : ''}`;
+        btn.style.width = '100%';
+        btn.style.textAlign = 'left';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '8px';
+        btn.style.padding = '10px 12px';
+        btn.style.border = 'none';
+        btn.style.cursor = 'pointer';
+        btn.style.fontSize = '15px';
+        btn.style.borderRadius = '4px';
+        btn.style.background = i === this._activeTab ? 'rgba(255,255,255,0.12)' : 'none';
+        btn.style.color = i === this._activeTab ? '#fff' : 'rgba(255,255,255,0.5)';
+
+        if (tab.icon) {
+          const img = document.createElement('img');
+          img.src = resolvePath(tab.icon);
+          img.width = 24;
+          img.height = 24;
+          img.style.objectFit = 'contain';
+          img.alt = '';
+          btn.appendChild(img);
+          const span = document.createElement('span');
+          span.textContent = tab.label;
+          btn.appendChild(span);
+        } else {
+          const span = document.createElement('span');
+          span.textContent = tab.label;
+          btn.appendChild(span);
+        }
+
+        btn.addEventListener('click', () => {
+          this._activeTab = i;
+          this._renderStructured(layout);
+        });
+        sidebar.appendChild(btn);
+      });
+
+      // Right column: header + content + footer
+      const right = document.createElement('div');
+      right.className = 'settings-structured-right';
+      right.style.flex = '1';
+      right.style.display = 'flex';
+      right.style.flexDirection = 'column';
+      right.style.overflow = 'hidden';
+      right.style.position = 'relative';
+
+      right.appendChild(header);
+
+      // Content in left-mode uses flow positioning (not absolute)
+      contentWrap.style.position = 'relative';
+      contentWrap.style.flex = '1';
+      right.appendChild(contentWrap);
+
+      if (footer) right.appendChild(footer);
+
+      outer.appendChild(sidebar);
+      outer.appendChild(right);
+      this.el.appendChild(outer);
+    } else {
+      // Top-tab horizontal layout (default)
+      this.el.appendChild(header);
+
+      const tabContainer = document.createElement('div');
+      tabContainer.className = 'settings-structured-tab-bar';
+      const tabY = clampField('y', tabCfg.y);
+      const tabH = clampField('height', tabCfg.height) || 56;
+      tabContainer.style.height = tabH + 'px';
+      if (tabY !== undefined) tabContainer.style.marginTop = '0';
+      const safeBg = sanitizeCssValue(tabCfg.background);
+      if (safeBg) tabContainer.style.background = safeBg;
+      tabContainer.style.display = 'flex';
+      tabContainer.style.alignItems = 'center';
+
+      if (this._widgetStyles) {
+        const { el: tabEl, setActive } = createTabBar(
+          resolvedTabs,
+          this._widgetStyles.tab,
+          (index) => {
+            this._activeTab = index;
+            this._renderStructuredContent(layout);
+          }
+        );
+        this._tabSetActive = setActive;
+        tabContainer.appendChild(tabEl);
+      } else {
+        resolvedTabs.forEach((tab, i) => {
+          const btn = document.createElement('button');
+          btn.className = `settings-tab-btn${i === this._activeTab ? ' active' : ''}`;
+
+          if (tab.icon) {
+            btn.style.display = 'flex';
+            btn.style.alignItems = 'center';
+            btn.style.gap = '6px';
+            const img = document.createElement('img');
+            img.src = resolvePath(tab.icon);
+            img.width = 24;
+            img.height = 24;
+            img.style.objectFit = 'contain';
+            img.alt = '';
+            btn.appendChild(img);
+            const span = document.createElement('span');
+            span.textContent = tab.label;
+            btn.appendChild(span);
+          } else {
+            btn.textContent = tab.label;
+          }
+
+          btn.style.background = 'none';
+          btn.style.border = 'none';
+          btn.style.color = i === this._activeTab ? '#fff' : 'rgba(255,255,255,0.5)';
+          btn.style.cursor = 'pointer';
+          btn.style.padding = '8px 20px';
+          btn.style.fontSize = '16px';
+          btn.addEventListener('click', () => {
+            this._activeTab = i;
+            tabContainer.querySelectorAll('.settings-tab-btn').forEach((b, idx) => {
+              b.classList.toggle('active', idx === i);
+              b.style.color = idx === i ? '#fff' : 'rgba(255,255,255,0.5)';
+            });
+            this._renderStructuredContent(layout);
+          });
+          tabContainer.appendChild(btn);
+        });
+      }
+
+      this.el.appendChild(tabContainer);
+
+      // Content in top-mode uses absolute positioning
+      contentWrap.style.position = 'absolute';
+      const cx = clampField('x', areaCfg.x) || 40;
+      const cy = clampField('y', areaCfg.y) || 160;
+      const cw = clampField('width', areaCfg.width) || 1200;
+      const ch = clampField('height', areaCfg.height) || 500;
+      contentWrap.style.left = cx + 'px';
+      contentWrap.style.top = cy + 'px';
+      contentWrap.style.width = cw + 'px';
+      contentWrap.style.height = ch + 'px';
+      this.el.appendChild(contentWrap);
+
+      if (footer) this.el.appendChild(footer);
+    }
+
+    // Populate tab content
+    this._renderStructuredContent(layout);
   }
 
   /**

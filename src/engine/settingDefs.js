@@ -138,6 +138,24 @@ export const SETTING_DEFS = {
  *     labelWidth: number,           — label min-width in px (default 140, only when labelPosition='left')
  *     showValueLabel: boolean       — show numeric readout on sliders (default true)
  *   }
+ *
+ *   Tab bar position:
+ *   ──────────────────
+ *   tabBar.position: 'top' | 'left' — tab bar orientation (default 'top')
+ *   tabBar.width: number — sidebar width in px when position='left' (default 180)
+ *
+ *   Header decorations:
+ *   ────────────────────
+ *   header.decorations: { src, x, y, width, height }[] — positioned images within header
+ *
+ *   Footer button actions:
+ *   ───────────────────────
+ *   footer.buttons[].action: 'close' | 'title' | 'reset' — button behavior on click
+ *
+ *   Panel background:
+ *   ──────────────────
+ *   settingsScreen.background: string — image path for panel-internal background (e.g., character watermark)
+ *   settingsScreen.backgroundOpacity: number — 0-1 opacity for panel background (default 1)
  */
 
 /** Default style values for setting elements */

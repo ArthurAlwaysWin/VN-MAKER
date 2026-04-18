@@ -46,4 +46,9 @@ export class ConfigManager {
     this.config[key] = value;
     this.save();
   }
+
+  reset() {
+    this.config = { ...this.defaults };
+    this.save();
+  }
 }

@@ -25,17 +25,8 @@
       <input type="text" :value="hdr.backgroundImage || ''" @input="onNested('header', 'backgroundImage', $event.target.value || null)" @change="commit" class="config-text" placeholder="图片路径" />
     </div>
 
-    <!-- Tab Bar -->
-    <h4 class="form-group-title">标签栏</h4>
-    <div class="config-row">
-      <label class="config-label">高度</label>
-      <input type="number" :value="tabBar.height ?? ''" @input="onNestedNum('tabBar', 'height', $event)" @change="commit" min="30" max="100" class="config-num" placeholder="56" />
-      <span class="unit">px</span>
-    </div>
-    <div class="config-row">
-      <label class="config-label">背景色</label>
-      <input type="color" :value="rgbaToHex(tabBar.background)" @input="onNested('tabBar', 'background', $event.target.value)" @change="commit" class="color-picker" />
-    </div>
+    <!-- Tab Bar (sub-component) -->
+    <TabCrudSection />
 
     <!-- Content Area -->
     <h4 class="form-group-title">内容区</h4>
@@ -59,19 +50,27 @@
       <input type="number" :value="area.height ?? ''" @input="onNestedNum('contentArea', 'height', $event)" @change="commit" min="200" max="1080" class="config-num" placeholder="500" />
       <span class="unit">px</span>
     </div>
+
+    <!-- Setting Assignment Matrix -->
+    <SettingMatrix />
+
+    <!-- Layout Controls -->
+    <LayoutControlsSection />
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
+import TabCrudSection from './TabCrudSection.vue';
+import SettingMatrix from './SettingMatrix.vue';
+import LayoutControlsSection from './LayoutControlsSection.vue';
 
 const editor = useScreenLayoutEditor();
 
 const cfg = computed(() => editor.getActiveScreenConfig() || {});
 const hdr = computed(() => cfg.value.header || {});
 const title = computed(() => hdr.value.title || {});
-const tabBar = computed(() => cfg.value.tabBar || {});
 const area = computed(() => cfg.value.contentArea || {});
 
 function rgbaToHex(color) {

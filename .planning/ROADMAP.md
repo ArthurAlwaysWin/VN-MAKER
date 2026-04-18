@@ -350,7 +350,9 @@ Plans:
   2. `header.decorations[]` renders positioned images (corner ornaments, divider lines) within the header area
   3. Footer button with `action: 'reset'` resets all settings to `ConfigManager.defaults`
   4. `settingsScreen.background` displays a background image (e.g., character watermark) behind the settings panel content
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 55-01-PLAN.md — Left-tab sidebar + header decorations + footer reset + panel background (TDD)
 
 #### Phase 56: Smart Color Editor UI
 **Goal**: Users edit theme colors through two color pickers + mode toggle instead of 41 individual token controls

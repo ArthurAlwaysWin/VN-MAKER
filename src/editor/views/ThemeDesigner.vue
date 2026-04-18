@@ -9,6 +9,7 @@
         @open-package="showPackage = true"
       />
       <div class="token-scroll">
+        <SmartColorPanel />
         <TokenAccordion />
       </div>
     </div>
@@ -34,6 +35,7 @@ import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
 import ThemeToolbar from '../components/theme/ThemeToolbar.vue';
 import TokenAccordion from '../components/theme/TokenAccordion.vue';
+import SmartColorPanel from '../components/theme/SmartColorPanel.vue';
 import PaletteModal from '../components/theme/PaletteModal.vue';
 import NineSliceModal from '../components/theme/NineSliceModal.vue';
 import PresetModal from '../components/theme/PresetModal.vue';

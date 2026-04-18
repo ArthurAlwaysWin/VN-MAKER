@@ -1,6 +1,9 @@
 <template>
-  <div class="color-row">
-    <label class="token-label">{{ label || tokenKey }}</label>
+  <div class="color-row" :class="{ 'is-overridden': isOverridden }">
+    <label class="token-label">
+      {{ label || tokenKey }}
+      <span v-if="isOverridden" class="override-badge" title="已覆盖（手动编辑）">✎</span>
+    </label>
     <div class="color-controls">
       <input
         type="color"
@@ -29,6 +32,7 @@
         />
         <span class="alpha-label">{{ alphaValue }}%</span>
       </template>
+      <button v-if="isOverridden" class="reset-derived-btn" @click="resetToDerived" title="恢复派生值">↺</button>
     </div>
     <ContrastBadge v-if="showContrast" :token-key="tokenKey" />
   </div>
@@ -47,6 +51,17 @@ const props = defineProps({
 });
 
 const editor = useThemeEditor();
+
+// ─── Override Detection (D-20, D-21) ─────────────────
+const isOverridden = computed(() => {
+  const overrides = editor.getTokenOverrides();
+  return props.tokenKey in overrides;
+});
+
+function resetToDerived() {
+  editor.removeTokenOverride(props.tokenKey);
+  editor.commitTheme();
+}
 
 // ─── Helpers ─────────────────────────────────────────
 
@@ -175,5 +190,27 @@ function onAlphaChange() {
   font-size: 11px;
   color: #888;
   width: 32px;
+}
+.is-overridden {
+  background: rgba(180, 160, 255, 0.05);
+}
+.override-badge {
+  font-size: 10px;
+  color: #b4a0ff;
+  margin-left: 4px;
+}
+.reset-derived-btn {
+  background: none;
+  border: 1px solid #555;
+  color: #aaa;
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.reset-derived-btn:hover {
+  background: #444;
+  color: #e0e0e0;
 }
 </style>

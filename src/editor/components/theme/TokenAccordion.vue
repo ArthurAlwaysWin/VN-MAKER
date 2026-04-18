@@ -1,5 +1,9 @@
 <template>
   <div class="token-accordion">
+    <div v-if="hasOverrides" class="overrides-bar">
+      <span class="overrides-count">{{ Object.keys(editor.getTokenOverrides()).length }} 个覆盖</span>
+      <button class="clear-overrides-btn" @click="onClearOverrides" title="清除所有覆盖，恢复派生值">清除所有覆盖</button>
+    </div>
     <TokenGroup
       v-for="group in TOKEN_GROUPS"
       :key="group.id"
@@ -42,13 +46,27 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { DEFAULT_TOKENS } from '../../../engine/tokens.js';
 import { HELP_THEME } from '../../helpTexts.js';
+import { useThemeEditor } from '../../composables/useThemeEditor.js';
 import TokenGroup from './TokenGroup.vue';
 import ColorTokenRow from './ColorTokenRow.vue';
 import FontTokenRow from './FontTokenRow.vue';
 import SliderTokenRow from './SliderTokenRow.vue';
 import GradientTokenRow from './GradientTokenRow.vue';
+
+const editor = useThemeEditor();
+
+// ─── Override Management (D-22) ──────────────────────
+const hasOverrides = computed(() => {
+  return Object.keys(editor.getTokenOverrides()).length > 0;
+});
+
+function onClearOverrides() {
+  editor.clearTokenOverrides();
+  editor.commitTheme();
+}
 
 // ─── 10 Token Groups (D-14) ─────────────────────────
 const TOKEN_GROUPS = [
@@ -138,5 +156,30 @@ function needsContrast(key) { return TEXT_KEYS.has(key); }
 .token-accordion {
   display: flex;
   flex-direction: column;
+}
+.overrides-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(180, 160, 255, 0.08);
+  border-bottom: 1px solid #333;
+}
+.overrides-count {
+  font-size: 11px;
+  color: #b4a0ff;
+}
+.clear-overrides-btn {
+  background: #333;
+  color: #ccc;
+  border: 1px solid #555;
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.clear-overrides-btn:hover {
+  background: #444;
+  color: #e0e0e0;
 }
 </style>

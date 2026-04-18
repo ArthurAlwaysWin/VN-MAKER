@@ -10,6 +10,7 @@
 import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { DEFAULT_TOKENS } from '../../engine/tokens.js';
+import { deriveTokens } from '../../engine/oklch.js';
 
 // ─── Symbol Key ────────────────────────────────────────
 const THEME_EDITOR_KEY = Symbol('themeEditor');
@@ -38,6 +39,11 @@ export function createThemeEditor() {
     if (!theme) return;
     theme.tokens ??= {};
     theme.tokens[key] = value;
+    // If a recipe exists, this manual edit is an override (D-07)
+    if (theme.colorRecipe) {
+      theme.tokenOverrides ??= {};
+      theme.tokenOverrides[key] = value;
+    }
     sendThemeToPreview();
   }
 
@@ -59,6 +65,76 @@ export function createThemeEditor() {
 
   function resetTheme() {
     script.updateTheme({ tokens: {} });
+    sendThemeToPreview();
+  }
+
+  // ─── Recipe + Override Helpers (COLOR-05) ────────────
+
+  function getColorRecipe() {
+    const theme = script.getTheme();
+    return theme?.colorRecipe ?? null;
+  }
+
+  function setColorRecipe(recipe) {
+    const theme = script.getTheme();
+    if (!theme) return;
+    theme.colorRecipe = { ...recipe };
+    // Three-layer merge: derive from recipe, then overlay overrides
+    const derived = deriveTokens(recipe.primary, recipe.accent, recipe.mode);
+    const overrides = theme.tokenOverrides ?? {};
+    theme.tokens = { ...derived, ...overrides };
+    sendThemeToPreview();
+  }
+
+  function getTokenOverrides() {
+    const theme = script.getTheme();
+    return theme?.tokenOverrides ?? {};
+  }
+
+  function setTokenOverride(key, value) {
+    const theme = script.getTheme();
+    if (!theme) return;
+    theme.tokenOverrides ??= {};
+    theme.tokenOverrides[key] = value;
+    theme.tokens ??= {};
+    theme.tokens[key] = value;
+    sendThemeToPreview();
+  }
+
+  function removeTokenOverride(key) {
+    const theme = script.getTheme();
+    if (!theme) return;
+    if (theme.tokenOverrides) {
+      delete theme.tokenOverrides[key];
+    }
+    // Re-derive this single token from recipe if recipe exists
+    if (theme.colorRecipe) {
+      const derived = deriveTokens(
+        theme.colorRecipe.primary,
+        theme.colorRecipe.accent,
+        theme.colorRecipe.mode,
+      );
+      if (derived[key] !== undefined) {
+        theme.tokens ??= {};
+        theme.tokens[key] = derived[key];
+      }
+    }
+    sendThemeToPreview();
+  }
+
+  function clearTokenOverrides() {
+    const theme = script.getTheme();
+    if (!theme) return;
+    theme.tokenOverrides = {};
+    // Re-derive all tokens from recipe if recipe exists
+    if (theme.colorRecipe) {
+      const derived = deriveTokens(
+        theme.colorRecipe.primary,
+        theme.colorRecipe.accent,
+        theme.colorRecipe.mode,
+      );
+      theme.tokens = { ...derived };
+    }
     sendThemeToPreview();
   }
 
@@ -168,6 +244,12 @@ export function createThemeEditor() {
     setTokenBatch,
     commitTheme,
     resetTheme,
+    getColorRecipe,
+    setColorRecipe,
+    getTokenOverrides,
+    setTokenOverride,
+    removeTokenOverride,
+    clearTokenOverrides,
     previewPreset,
     applyPreset,
     cancelPreview,

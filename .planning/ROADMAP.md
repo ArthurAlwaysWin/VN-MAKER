@@ -372,7 +372,7 @@ Plans:
 - [x] 56-02-PLAN.md — SmartColorPanel component + ThemeDesigner integration + override indicators
 **UI hint**: yes
 
-#### Phase 57: Tab & Layout Editor
+#### Phase 57: Tab & Layout Editor ✅
 **Goal**: Users visually configure tab structure and content layout without touching JSON
 **Depends on**: Phases 53, 54, 55 (editor configures features that engine already renders)
 **Requirements**: EDITOR-01, EDITOR-02, EDITOR-04
@@ -384,8 +384,8 @@ Plans:
   5. All changes preview in real-time via iframe postMessage
 **Plans**: 2 plans
 Plans:
-- [ ] 57-01-PLAN.md — Tab CRUD + Setting Matrix components (tabLayoutHelpers.js, TabCrudSection.vue, SettingMatrix.vue)
-- [ ] 57-02-PLAN.md — Layout Controls + Wiring + Tests (LayoutControlsSection.vue, SettingsSection.vue update, unit tests)
+- [x] 57-01-PLAN.md — Tab CRUD + Setting Matrix components (tabLayoutHelpers.js, TabCrudSection.vue, SettingMatrix.vue)
+- [x] 57-02-PLAN.md — Layout Controls + Wiring + Tests (LayoutControlsSection.vue, SettingsSection.vue update, unit tests)
 **UI hint**: yes
 
 #### Phase 58: Decoration & Background Editor

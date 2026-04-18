@@ -203,10 +203,11 @@ export class SettingsScreen {
     this.el.appendChild(wrapper);
   }
 
-  _buildSlider(wrapper, def, cfg, style) {
+  _buildSlider(wrapper, def, cfg, style, showValueLabel = true) {
     if (this._widgetStyles) {
       // New widget-based slider
       const sliderConfig = this._widgetStyles.slider;
+      let valueEl = null;
       const { el, setValue } = createSlider(
         sliderConfig,
         cfg.get(def.settingKey),
@@ -215,16 +216,18 @@ export class SettingsScreen {
         def.step,
         (v) => {
           cfg.set(def.settingKey, v);
-          valueEl.textContent = this._formatValue(def, v);
+          if (valueEl) valueEl.textContent = this._formatValue(def, v);
           this._notifyChange();
         }
       );
-      const valueEl = document.createElement('span');
-      valueEl.classList.add('sc-setting-value');
-      this._applyTextStyle(valueEl, style.labelColor, style.fontSize, style.fontFamily);
-      valueEl.textContent = this._formatValue(def, cfg.get(def.settingKey));
+      if (showValueLabel) {
+        valueEl = document.createElement('span');
+        valueEl.classList.add('sc-setting-value');
+        this._applyTextStyle(valueEl, style.labelColor, style.fontSize, style.fontFamily);
+        valueEl.textContent = this._formatValue(def, cfg.get(def.settingKey));
+      }
       wrapper.appendChild(el);
-      wrapper.appendChild(valueEl);
+      if (valueEl) wrapper.appendChild(valueEl);
       return;
     }
     // Legacy slider (COMPAT-01: preserved exactly)
@@ -243,20 +246,23 @@ export class SettingsScreen {
     if (safeTrack) control.style.setProperty('--track-color', safeTrack);
     if (safeThumb) control.style.setProperty('--thumb-color', safeThumb);
 
-    const valueEl = document.createElement('span');
-    valueEl.classList.add('sc-setting-value');
-    this._applyTextStyle(valueEl, style.labelColor, style.fontSize, style.fontFamily);
-    valueEl.textContent = this._formatValue(def, cfg.get(def.settingKey));
+    let valueEl = null;
+    if (showValueLabel) {
+      valueEl = document.createElement('span');
+      valueEl.classList.add('sc-setting-value');
+      this._applyTextStyle(valueEl, style.labelColor, style.fontSize, style.fontFamily);
+      valueEl.textContent = this._formatValue(def, cfg.get(def.settingKey));
+    }
 
     control.addEventListener('input', () => {
       const v = Number(control.value);
       cfg.set(def.settingKey, v);
-      valueEl.textContent = this._formatValue(def, v);
+      if (valueEl) valueEl.textContent = this._formatValue(def, v);
       this._notifyChange();
     });
 
     wrapper.appendChild(control);
-    wrapper.appendChild(valueEl);
+    if (valueEl) wrapper.appendChild(valueEl);
   }
 
   _buildToggle(wrapper, def, cfg, style) {
@@ -632,21 +638,70 @@ export class SettingsScreen {
 
     const cfg = this.configManager;
 
-    for (const key of groupKeys) {
+    // ── Grid + row style config ──────────────────────────
+    const areaCfg = layout.contentArea || {};
+    const columns = areaCfg.columns === 2 ? 2 : 1;
+    const itemStyle = areaCfg.itemStyle || {};
+    const showDividers = itemStyle.showDividers === true;
+    const alternateBackground = itemStyle.alternateBackground === true;
+    const labelPosition = itemStyle.labelPosition === 'top' ? 'top' : 'left';
+    const labelWidth = clampField('width', itemStyle.labelWidth) || 140;
+    const showValueLabel = itemStyle.showValueLabel !== false;
+
+    // ── Container layout ─────────────────────────────────
+    if (columns === 2) {
+      container.style.display = 'grid';
+      container.style.gridTemplateColumns = '1fr 1fr';
+      container.style.gap = '12px 24px';
+    } else {
+      container.style.display = 'block';
+      container.style.gridTemplateColumns = '';
+      container.style.gap = '';
+    }
+
+    // Pre-compute total valid items and last row index
+    const totalItems = groupKeys.filter(k => SETTING_DEFS[k]).length;
+    const lastRowIndex = Math.floor((totalItems - 1) / columns);
+    let itemIndex = 0;
+
+    for (let i = 0; i < groupKeys.length; i++) {
+      const key = groupKeys[i];
       const def = SETTING_DEFS[key];
       if (!def) continue;
+
+      const rowIndex = Math.floor(itemIndex / columns);
 
       const item = document.createElement('div');
       item.className = 'settings-structured-item';
       item.style.display = 'flex';
-      item.style.alignItems = 'center';
-      item.style.padding = '12px 0';
+      item.style.padding = columns === 2 ? '0' : '12px 0';
+
+      // Label position
+      if (labelPosition === 'top') {
+        item.style.flexDirection = 'column';
+        item.style.alignItems = 'stretch';
+      } else {
+        item.style.flexDirection = 'row';
+        item.style.alignItems = 'center';
+      }
+
+      // Zebra row background
+      if (alternateBackground && rowIndex % 2 === 1) {
+        item.style.background = 'rgba(255,255,255,0.04)';
+      }
+
+      // Dividers (not on last row)
+      if (showDividers && rowIndex < lastRowIndex) {
+        item.style.borderBottom = '1px solid rgba(255,255,255,0.15)';
+      }
 
       const label = document.createElement('div');
       label.className = 'settings-structured-label';
       label.textContent = def.label;
-      label.style.minWidth = '140px';
       label.style.color = '#fff';
+      if (labelPosition === 'left') {
+        label.style.minWidth = labelWidth + 'px';
+      }
       item.appendChild(label);
 
       const control = document.createElement('div');
@@ -654,7 +709,7 @@ export class SettingsScreen {
       control.style.flex = '1';
 
       if (def.type === 'slider') {
-        this._buildSlider(control, def, cfg, DEFAULT_SETTING_STYLE);
+        this._buildSlider(control, def, cfg, DEFAULT_SETTING_STYLE, showValueLabel);
       } else if (def.type === 'toggle') {
         this._buildToggle(control, def, cfg, DEFAULT_SETTING_STYLE);
       } else if (def.type === 'select') {
@@ -663,6 +718,7 @@ export class SettingsScreen {
 
       item.appendChild(control);
       container.appendChild(item);
+      itemIndex++;
     }
   }
 

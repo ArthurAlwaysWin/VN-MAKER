@@ -127,6 +127,17 @@ export const SETTING_DEFS = {
  *   ─────────────────────────────────────
  *   { id, type: 'button', action: 'close',
  *     x, y, width, height, label?, style? }
+ *
+ *   Content area layout options:
+ *   ─────────────────────────────
+ *   contentArea.columns: 1 | 2 — grid columns (default 1, block flow)
+ *   contentArea.itemStyle: {
+ *     showDividers: boolean,        — 1px hairline between rows (default false)
+ *     alternateBackground: boolean, — zebra-striped row backgrounds (default false)
+ *     labelPosition: 'left' | 'top', — label placement (default 'left')
+ *     labelWidth: number,           — label min-width in px (default 140, only when labelPosition='left')
+ *     showValueLabel: boolean       — show numeric readout on sliders (default true)
+ *   }
  */
 
 /** Default style values for setting elements */

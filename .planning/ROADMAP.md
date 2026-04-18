@@ -335,7 +335,9 @@ Two tracks: **Smart Color** (OKLCH derivation, 2-input editor) + **Structural Pa
   3. `itemStyle.alternateBackground=true` applies zebra-striped row backgrounds
   4. `itemStyle.labelPosition='top'` stacks label above control instead of beside it
   5. `itemStyle.showValueLabel=false` hides the numeric readout next to sliders
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 54-01-PLAN.md — Grid layout + row styling + value label gating (TDD)
 
 #### Phase 55: Left-Tab Mode + Decorations (Engine)
 **Goal**: Engine supports sidebar tab navigation and decorative elements for commercial VN aesthetics

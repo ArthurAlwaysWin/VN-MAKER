@@ -294,8 +294,8 @@ Two tracks: **Smart Color** (OKLCH derivation, 2-input editor) + **Structural Pa
 - [ ] **Phase 52: Smart Color Foundation** - OKLCH module + rule table + derivation function (pure engine library)
 - [ ] **Phase 53: Configurable Tabs (Engine)** - Tab structure, icons, setting-key assignment, backward compat
 - [x] **Phase 54: Content Layout + Row Styling (Engine)** - Two-column grid, dividers, zebra, label options
-- [ ] **Phase 55: Left-Tab Mode + Decorations (Engine)** - Sidebar navigation, header decorations, footer reset, panel background
-- [ ] **Phase 56: Smart Color Editor UI** - 2-picker panel, recipe storage, live preview
+- [x] **Phase 55: Left-Tab Mode + Decorations (Engine)** - Sidebar navigation, header decorations, footer reset, panel background
+- [x] **Phase 56: Smart Color Editor UI** - 2-picker panel, recipe storage, live preview
 - [ ] **Phase 57: Tab & Layout Editor** - Tab CRUD + setting matrix + layout controls + tab position toggle
 - [ ] **Phase 58: Decoration & Background Editor** - Header decoration manager + footer button config + panel background + live preview
 - [ ] **Phase 59: Title Page Preview** - Iframe engine preview in title page editor
@@ -354,20 +354,22 @@ Plans:
 Plans:
 - [x] 55-01-PLAN.md — Left-tab sidebar + header decorations + footer reset + panel background (TDD)
 
-#### Phase 56: Smart Color Editor UI
+#### Phase 56: Smart Color Editor UI ✅
 **Goal**: Users edit theme colors through two color pickers + mode toggle instead of 41 individual token controls
 **Depends on**: Phase 52 (editor imports OKLCH + deriveTokens from engine)
 **Requirements**: COLOR-04, COLOR-05, COLOR-06
+**Status**: COMPLETE
+**Commits**: `a43d2d2` feat(56-01), `8177007` test(56-01), `dd441e7` feat(56-02), `ff694cd` feat(56-02)
 **Success Criteria** (what must be TRUE):
-  1. SmartColorPanel shows 2 color pickers (primary + accent) and a dark/light mode toggle
-  2. Changing primary color immediately derives and previews all 35 tokens in the iframe
-  3. User can select harmony algorithm (complementary/analogous/triadic/split-complementary) to auto-derive accent from primary
-  4. Color recipe (primary/accent/mode/algorithm) persists in script.json alongside the full generated token set
-  5. Individual token overrides survive when user re-derives from recipe changes (overrides stored separately)
+  1. SmartColorPanel shows 2 color pickers (primary + accent) and a dark/light mode toggle ✅
+  2. Changing primary color immediately derives and previews all 36 tokens in the iframe ✅
+  3. User can select harmony algorithm (complementary/analogous/triadic/split-complementary) to auto-derive accent from primary ✅
+  4. Color recipe (primary/accent/mode/algorithm) persists in script.json alongside the full generated token set ✅
+  5. Individual token overrides survive when user re-derives from recipe changes (overrides stored separately) ✅
 **Plans**: 2 plans
 Plans:
-- [ ] 56-01-PLAN.md — Recipe persistence layer + composable helpers (useThemeEditor recipe/override CRUD + tests)
-- [ ] 56-02-PLAN.md — SmartColorPanel component + ThemeDesigner integration + override indicators
+- [x] 56-01-PLAN.md — Recipe persistence layer + composable helpers (useThemeEditor recipe/override CRUD + tests)
+- [x] 56-02-PLAN.md — SmartColorPanel component + ThemeDesigner integration + override indicators
 **UI hint**: yes
 
 #### Phase 57: Tab & Layout Editor

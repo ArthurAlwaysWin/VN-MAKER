@@ -341,7 +341,7 @@ Two tracks: **Smart Color** (OKLCH derivation, 2-input editor) + **Structural Pa
 Plans:
 - [x] 54-01-PLAN.md — Grid layout + row styling + value label gating (TDD)
 
-#### Phase 55: Left-Tab Mode + Decorations (Engine)
+#### Phase 55: Left-Tab Mode + Decorations (Engine) ✅
 **Goal**: Engine supports sidebar tab navigation and decorative elements for commercial VN aesthetics
 **Depends on**: Phase 53 (left-tab needs tab structure; decorations need structured mode)
 **Requirements**: STRUCT-06, DECOR-01, DECOR-02, DECOR-03
@@ -352,7 +352,7 @@ Plans:
   4. `settingsScreen.background` displays a background image (e.g., character watermark) behind the settings panel content
 **Plans:** 1 plan
 Plans:
-- [ ] 55-01-PLAN.md — Left-tab sidebar + header decorations + footer reset + panel background (TDD)
+- [x] 55-01-PLAN.md — Left-tab sidebar + header decorations + footer reset + panel background (TDD)
 
 #### Phase 56: Smart Color Editor UI
 **Goal**: Users edit theme colors through two color pickers + mode toggle instead of 41 individual token controls

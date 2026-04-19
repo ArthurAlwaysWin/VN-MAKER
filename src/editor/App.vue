@@ -60,12 +60,12 @@ import CreateProjectQuick from './views/CreateProjectQuick.vue';
 import TabBar from './components/TabBar.vue';
 import PageEditor from './views/PageEditor.vue';
 import TitleDesigner from './views/TitleDesigner.vue';
-import SettingsDesigner from './views/SettingsDesigner.vue';
+import SettingsPageEditor from './views/SettingsPageEditor.vue';
+import GameMenuEditor from './views/GameMenuEditor.vue';
+import SaveLoadEditor from './views/SaveLoadEditor.vue';
+import BacklogEditor from './views/BacklogEditor.vue';
 import ResourceLibrary from './views/ResourceLibrary.vue';
 import ProjectSettings from './views/ProjectSettings.vue';
-import ThemeDesigner from './views/ThemeDesigner.vue';
-import WidgetStylesEditor from './views/WidgetStylesEditor.vue';
-import ScreenLayoutEditor from './views/ScreenLayoutEditor.vue';
 
 const script = useScriptStore();
 const project = useProjectStore();
@@ -78,12 +78,12 @@ const showWizard = ref(false);
 const showQuickCreate = ref(false);
 
 const tabs = [
-  { id: 'scenes', icon: '🎬', label: '剧本编辑' },
+  { id: 'scenes', icon: '🎬', label: '游戏内容' },
   { id: 'title', icon: '🖼️', label: '标题页' },
-  { id: 'settings-design', icon: '⚙️', label: '设置页' },
-  { id: 'theme', icon: '🎨', label: '主题' },
-  { id: 'widget-styles', icon: '🎛️', label: '控件风格' },
-  { id: 'screen-layout', icon: '📐', label: '界面布局' },
+  { id: 'settings-page', icon: '⚙️', label: '设置页' },
+  { id: 'game-menu', icon: '🎮', label: '游戏菜单' },
+  { id: 'save-load', icon: '📋', label: '存读档' },
+  { id: 'backlog', icon: '📖', label: '回想' },
   { id: 'resource-library', icon: '📦', label: '资源库' },
   { id: 'project-settings', icon: '⚡', label: '项目设置' },
 ];
@@ -91,12 +91,12 @@ const tabs = [
 const tabComponents = {
   'scenes': markRaw(PageEditor),
   'title': markRaw(TitleDesigner),
-  'settings-design': markRaw(SettingsDesigner),
+  'settings-page': markRaw(SettingsPageEditor),
+  'game-menu': markRaw(GameMenuEditor),
+  'save-load': markRaw(SaveLoadEditor),
+  'backlog': markRaw(BacklogEditor),
   'resource-library': markRaw(ResourceLibrary),
   'project-settings': markRaw(ProjectSettings),
-  'theme': markRaw(ThemeDesigner),
-  'widget-styles': markRaw(WidgetStylesEditor),
-  'screen-layout': markRaw(ScreenLayoutEditor),
 };
 
 // --- Undo/Redo ---

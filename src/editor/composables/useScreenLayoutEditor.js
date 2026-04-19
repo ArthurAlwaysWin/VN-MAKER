@@ -11,7 +11,7 @@ import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 
 // ─── Symbol Key ────────────────────────────────────────
-const SCREEN_LAYOUT_EDITOR_KEY = Symbol('screenLayoutEditor');
+export const SCREEN_LAYOUT_EDITOR_KEY = Symbol('screenLayoutEditor');
 
 // ─── Screen registry ──────────────────────────────────
 const SCREENS = [

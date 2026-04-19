@@ -12,7 +12,7 @@ import { useScriptStore } from '../stores/script.js';
 import { WIDGET_DEFAULTS } from '../../engine/widgetDefaults.js';
 
 // ─── Symbol Key ────────────────────────────────────────
-const WIDGET_STYLES_EDITOR_KEY = Symbol('widgetStylesEditor');
+export const WIDGET_STYLES_EDITOR_KEY = Symbol('widgetStylesEditor');
 
 // ─── Create (called once in WidgetStylesEditor) ───────
 

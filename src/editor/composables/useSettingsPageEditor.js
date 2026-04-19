@@ -11,6 +11,8 @@
 import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { WIDGET_DEFAULTS } from '../../engine/widgetDefaults.js';
+import { WIDGET_STYLES_EDITOR_KEY } from './useWidgetStylesEditor.js';
+import { SCREEN_LAYOUT_EDITOR_KEY } from './useScreenLayoutEditor.js';
 
 const SETTINGS_PAGE_EDITOR_KEY = Symbol('settingsPageEditor');
 
@@ -173,6 +175,38 @@ export function createSettingsPageEditor() {
   };
 
   provide(SETTINGS_PAGE_EDITOR_KEY, editor);
+
+  // Provide widget-styles-compatible interface for TabShapeSection, etc.
+  provide(WIDGET_STYLES_EDITOR_KEY, {
+    iframeRef,
+    isEngineReady,
+    WIDGET_DEFAULTS,
+    setWidgetField,
+    commitWidgetStyles,
+    sendWidgetStylesToPreview: schedulePreview,
+    flushPreview,
+    startEngine,
+    onEngineMessage,
+    cleanup,
+  });
+
+  // Provide screen-layout-compatible interface for TabCrudSection, etc.
+  provide(SCREEN_LAYOUT_EDITOR_KEY, {
+    iframeRef,
+    isEngineReady,
+    activeScreen: ref('settingsScreen'),
+    SCREENS: [{ id: 'settingsScreen', label: '设置' }],
+    getActiveScreenConfig: getScreenConfig,
+    setScreenField,
+    setScreenNestedField,
+    commitScreenLayout,
+    sendScreenLayoutToPreview: schedulePreview,
+    flushPreview,
+    startEngine,
+    onEngineMessage,
+    cleanup,
+  });
+
   return editor;
 }
 

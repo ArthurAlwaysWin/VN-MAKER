@@ -135,12 +135,11 @@ export class GameMenu {
     // Apply panel styles
     const panel = this.el.querySelector('.game-menu-panel');
 
-    // In config mode, transfer overlay background to panel so
-    // borderRadius/blur apply visually to the menu card.
+    // In config mode, give panel its own background so borderRadius/blur
+    // apply visually to the menu card. The overlay keeps its CSS default
+    // (semi-transparent + backdrop-filter) to dim the game content behind.
     const safeBg = cfg.background ? sanitizeCssValue(cfg.background) : null;
     panel.style.backgroundColor = safeBg || 'rgba(0,0,0,0.7)';
-    this.el.style.background = 'transparent';
-    this.el.style.backdropFilter = 'none';
 
     // Position — control horizontal alignment via overlay's justify-content
     if (cfg.position === 'left') {

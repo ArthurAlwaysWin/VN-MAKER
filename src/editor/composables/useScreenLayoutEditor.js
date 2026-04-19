@@ -31,12 +31,12 @@ const SCREEN_UPDATERS = {
 
 // ─── Create (called once in ScreenLayoutEditor) ───────
 
-export function createScreenLayoutEditor() {
+export function createScreenLayoutEditor(fixedScreenId) {
   const script = useScriptStore();
 
   const iframeRef = ref(null);
   const isEngineReady = ref(false);
-  const activeScreen = ref('saveLoadScreen');
+  const activeScreen = ref(fixedScreenId || 'saveLoadScreen');
 
   let debounceTimer = null;
 
@@ -111,6 +111,13 @@ export function createScreenLayoutEditor() {
       event.source?.postMessage({ type: 'ack-preview' }, '*');
       startEngine();
       flushPreview();
+      // Auto-show the target screen in the iframe
+      if (fixedScreenId) {
+        iframeRef.value?.contentWindow?.postMessage({
+          type: 'show-screen',
+          screenId: fixedScreenId,
+        }, '*');
+      }
     }
   }
 
@@ -179,6 +186,6 @@ export function createScreenLayoutEditor() {
 
 export function useScreenLayoutEditor() {
   const editor = inject(SCREEN_LAYOUT_EDITOR_KEY);
-  if (!editor) throw new Error('useScreenLayoutEditor() must be used inside ScreenLayoutEditor');
+  if (!editor) throw new Error('useScreenLayoutEditor() must be used inside a screen layout provider');
   return editor;
 }

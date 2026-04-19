@@ -129,7 +129,9 @@
             <span class="sp-section-label">🎨 装饰与背景</span>
           </button>
           <div v-if="expanded.decor" class="sp-section-body">
-            <p class="sp-placeholder">Phase 58 内容 — 待实现</p>
+            <DecorationSection />
+            <FooterButtonSection />
+            <PanelBackgroundSection />
           </div>
         </div>
       </div>
@@ -160,6 +162,10 @@ import ToggleStyleSection from '../components/widget/ToggleStyleSection.vue';
 import SliderConfigSection from '../components/widget/SliderConfigSection.vue';
 import PanelConfigSection from '../components/widget/PanelConfigSection.vue';
 import ButtonConfigSection from '../components/widget/ButtonConfigSection.vue';
+// Decoration & background sub-components (Phase 58)
+import DecorationSection from '../components/layout/DecorationSection.vue';
+import FooterButtonSection from '../components/layout/FooterButtonSection.vue';
+import PanelBackgroundSection from '../components/layout/PanelBackgroundSection.vue';
 
 const script = useScriptStore();
 const editor = createSettingsPageEditor();

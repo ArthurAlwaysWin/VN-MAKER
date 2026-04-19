@@ -120,14 +120,16 @@ function sendShowScreen() {
   }, '*');
 }
 
+function onMessage(event) {
+  themeEditor.onEngineMessage(event);
+  // After engine ready, show settings screen for preview context
+  if (event.data?.type === 'ready' && themeEditor.iframeRef.value) {
+    setTimeout(sendShowScreen, 100);
+  }
+}
+
 onMounted(() => {
-  window.addEventListener('message', (event) => {
-    themeEditor.onEngineMessage(event);
-    // After engine ready, show settings screen for preview context
-    if (event.data?.type === 'ready' && themeEditor.iframeRef.value) {
-      setTimeout(sendShowScreen, 100);
-    }
-  });
+  window.addEventListener('message', onMessage);
 });
 
 onActivated(() => {
@@ -139,7 +141,7 @@ onActivated(() => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('message', themeEditor.onEngineMessage);
+  window.removeEventListener('message', onMessage);
 });
 </script>
 

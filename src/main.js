@@ -981,6 +981,15 @@ function initPreview() {
         }
         break;
       }
+      case 'show-screen': {
+        switch (msg.screenId) {
+          case 'settingsScreen': settingsScreen.show(); break;
+          case 'gameMenu': gameMenu.show(); break;
+          case 'saveLoadScreen': saveLoadScreen.show('save', 'preview'); break;
+          case 'backlogScreen': backlogScreen.show([], {}); break;
+        }
+        break;
+      }
     }
   }
 

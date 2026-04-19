@@ -215,9 +215,14 @@ export class SaveLoadScreen {
 
     // Use cached data for pagination; fetch only on first load or after invalidation
     if (!this._cachedSlots) {
-      const allSlots = await this.saveManager.getAllSlots();
-      this._cachedSlots = new Map();
-      for (const s of allSlots) this._cachedSlots.set(s.slot, s);
+      if (this.saveManager) {
+        const allSlots = await this.saveManager.getAllSlots();
+        this._cachedSlots = new Map();
+        for (const s of allSlots) this._cachedSlots.set(s.slot, s);
+      } else {
+        // Preview mode — no saveManager, show empty placeholder slots
+        this._cachedSlots = new Map();
+      }
     }
 
     const slotsPerPage = this._getSlotsPerPage();

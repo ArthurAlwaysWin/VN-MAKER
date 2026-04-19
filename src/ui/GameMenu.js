@@ -95,6 +95,10 @@ export class GameMenu {
   _render() {
     if (!this._layoutConfig) {
       // ── Default path (COMPAT-02: unchanged from original) ──────
+      // Reset any config-mode style overrides on the overlay
+      this.el.style.background = '';
+      this.el.style.backdropFilter = '';
+      this.el.style.justifyContent = '';
       this.el.innerHTML = `
       <div class="game-menu-panel">
         <button class="game-menu-button" data-action="save">存 档</button>
@@ -131,24 +135,28 @@ export class GameMenu {
     // Apply panel styles
     const panel = this.el.querySelector('.game-menu-panel');
 
-    // Position
+    // In config mode, transfer overlay background to panel so
+    // borderRadius/blur apply visually to the menu card.
+    const safeBg = cfg.background ? sanitizeCssValue(cfg.background) : null;
+    panel.style.backgroundColor = safeBg || 'rgba(0,0,0,0.7)';
+    this.el.style.background = 'transparent';
+    this.el.style.backdropFilter = 'none';
+
+    // Position — control horizontal alignment via overlay's justify-content
     if (cfg.position === 'left') {
-      panel.style.alignSelf = 'flex-start';
+      this.el.style.justifyContent = 'flex-start';
+      panel.style.marginLeft = '40px';
     } else if (cfg.position === 'right') {
-      panel.style.alignSelf = 'flex-end';
+      this.el.style.justifyContent = 'flex-end';
+      panel.style.marginRight = '40px';
+    } else {
+      this.el.style.justifyContent = 'center';
     }
-    // "center" → no override needed (CSS default)
 
     // Width
     if (cfg.width != null) {
       const w = clampField('width', cfg.width);
       if (w !== undefined) panel.style.width = w + 'px';
-    }
-
-    // Background color
-    if (cfg.background) {
-      const safeBg = sanitizeCssValue(cfg.background);
-      if (safeBg) panel.style.background = safeBg;
     }
 
     // Background image
@@ -169,9 +177,12 @@ export class GameMenu {
 
     // Backdrop blur
     if (cfg.backdropBlur != null) {
-      const blur = clampField('borderRadius', cfg.backdropBlur);
+      const blur = clampField('padding', cfg.backdropBlur);
       if (blur !== undefined) panel.style.backdropFilter = `blur(${blur}px)`;
     }
+
+    // Padding
+    panel.style.padding = '20px';
 
     // Button gap
     if (cfg.buttonGap != null) {

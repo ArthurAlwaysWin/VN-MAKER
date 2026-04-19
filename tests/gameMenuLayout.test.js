@@ -190,22 +190,19 @@ describe('Config-driven panel styles', () => {
     menu = new GameMenu(container);
   });
 
-  it('position "left" → alignSelf flex-start', () => {
+  it('position "left" → justifyContent flex-start', () => {
     menu.setLayout({ position: 'left' });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.alignSelf).toBe('flex-start');
+    expect(menu.el.style.justifyContent).toBe('flex-start');
   });
 
-  it('position "right" → alignSelf flex-end', () => {
+  it('position "right" → justifyContent flex-end', () => {
     menu.setLayout({ position: 'right' });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.alignSelf).toBe('flex-end');
+    expect(menu.el.style.justifyContent).toBe('flex-end');
   });
 
-  it('position "center" → no alignSelf override', () => {
+  it('position "center" → justifyContent center', () => {
     menu.setLayout({ position: 'center' });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.alignSelf).toBe('');
+    expect(menu.el.style.justifyContent).toBe('center');
   });
 
   it('width sets panel width in px', () => {
@@ -217,13 +214,14 @@ describe('Config-driven panel styles', () => {
   it('background sets panel background', () => {
     menu.setLayout({ background: 'rgba(0,0,0,0.75)' });
     const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.background).toContain('rgba(0, 0, 0, 0.75)');
+    expect(panel.style.backgroundColor).toContain('rgba(0, 0, 0, 0.75)');
   });
 
   it('background with injection pattern is rejected', () => {
     menu.setLayout({ background: 'red; position: absolute' });
     const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.background).toBe('');
+    // Injection rejected → falls back to default panel background
+    expect(panel.style.backgroundColor).toBe('rgba(0, 0, 0, 0.7)');
   });
 
   it('backgroundImage uses resolvePath and sets cover/center', () => {
@@ -415,15 +413,12 @@ describe('Full config integration', () => {
     menu.setLayout(fullConfig());
 
     const panel = menu.el.querySelector('.game-menu-panel');
-    // position "center" → no alignSelf
-    expect(panel.style.alignSelf).toBe('');
+    // position "center" → justifyContent center on overlay
+    expect(menu.el.style.justifyContent).toBe('center');
     expect(panel.style.width).toBe('260px');
-    expect(panel.style.background).toContain('rgba(0, 0, 0, 0.75)');
+    expect(panel.style.backgroundColor).toContain('rgba(0, 0, 0, 0.75)');
     expect(panel.style.borderRadius).toBe('8px');
     expect(panel.style.backdropFilter).toBe('blur(12px)');
     expect(panel.style.gap).toBe('8px');
-    // backgroundImage is null in config → not explicitly set,
-    // but 'background' shorthand makes jsdom report 'none'
-    expect(['', 'none']).toContain(panel.style.backgroundImage);
   });
 });

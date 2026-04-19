@@ -1,7 +1,7 @@
 /**
  * GameMenu — In-game pause menu (ESC / right-click)
  */
-import { sanitizeCssValue, clampField } from './sanitize.js';
+import { sanitizeCssValue, clamp, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 
 /** Default button labels matching the hardcoded originals */
@@ -132,16 +132,21 @@ export class GameMenu {
       </div>
     `;
 
-    // Apply panel styles
+    // Apply styles
     const panel = this.el.querySelector('.game-menu-panel');
+    const buttons = panel.querySelectorAll('.game-menu-button');
 
-    // In config mode, give panel its own background so borderRadius/blur
-    // apply visually to the menu card. The overlay keeps its CSS default
-    // (semi-transparent + backdrop-filter) to dim the game content behind.
+    // Background color → overlay (dims game content behind)
     const safeBg = cfg.background ? sanitizeCssValue(cfg.background) : null;
-    panel.style.backgroundColor = safeBg || 'rgba(0,0,0,0.7)';
+    if (safeBg) this.el.style.background = safeBg;
 
-    // Position — control horizontal alignment via overlay's justify-content
+    // Backdrop blur → overlay (blurs game content behind)
+    if (cfg.backdropBlur != null) {
+      const blur = clamp(cfg.backdropBlur, 0, 100);
+      if (blur !== undefined) this.el.style.backdropFilter = `blur(${blur}px)`;
+    }
+
+    // Position — horizontal alignment via overlay's justify-content
     if (cfg.position === 'left') {
       this.el.style.justifyContent = 'flex-start';
       panel.style.marginLeft = '40px';
@@ -158,7 +163,7 @@ export class GameMenu {
       if (w !== undefined) panel.style.width = w + 'px';
     }
 
-    // Background image
+    // Background image → panel (covers panel area)
     if (cfg.backgroundImage) {
       const safeBgImg = sanitizeCssValue(cfg.backgroundImage);
       if (safeBgImg) {
@@ -168,16 +173,12 @@ export class GameMenu {
       }
     }
 
-    // Border radius
+    // Border radius → each button
     if (cfg.borderRadius != null) {
       const br = clampField('borderRadius', cfg.borderRadius);
-      if (br !== undefined) panel.style.borderRadius = br + 'px';
-    }
-
-    // Backdrop blur
-    if (cfg.backdropBlur != null) {
-      const blur = clampField('padding', cfg.backdropBlur);
-      if (blur !== undefined) panel.style.backdropFilter = `blur(${blur}px)`;
+      if (br !== undefined) {
+        buttons.forEach(btn => { btn.style.borderRadius = br + 'px'; });
+      }
     }
 
     // Padding

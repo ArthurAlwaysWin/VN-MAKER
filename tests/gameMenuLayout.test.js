@@ -211,17 +211,15 @@ describe('Config-driven panel styles', () => {
     expect(panel.style.width).toBe('300px');
   });
 
-  it('background sets panel background', () => {
+  it('background sets overlay background', () => {
     menu.setLayout({ background: 'rgba(0,0,0,0.75)' });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.backgroundColor).toContain('rgba(0, 0, 0, 0.75)');
+    expect(menu.el.style.background).toContain('rgba(0, 0, 0, 0.75)');
   });
 
   it('background with injection pattern is rejected', () => {
     menu.setLayout({ background: 'red; position: absolute' });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    // Injection rejected → falls back to default panel background
-    expect(panel.style.backgroundColor).toBe('rgba(0, 0, 0, 0.7)');
+    // Injection rejected → overlay background not changed
+    expect(menu.el.style.background).toBe('');
   });
 
   it('backgroundImage uses resolvePath and sets cover/center', () => {
@@ -239,16 +237,17 @@ describe('Config-driven panel styles', () => {
     expect(panel.style.backgroundImage).toBe('');
   });
 
-  it('borderRadius sets panel border-radius in px', () => {
+  it('borderRadius sets button border-radius in px', () => {
     menu.setLayout({ borderRadius: 12 });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.borderRadius).toBe('12px');
+    const buttons = menu.el.querySelectorAll('.game-menu-button');
+    buttons.forEach(btn => {
+      expect(btn.style.borderRadius).toBe('12px');
+    });
   });
 
-  it('backdropBlur sets backdrop-filter blur', () => {
+  it('backdropBlur sets overlay backdrop-filter blur', () => {
     menu.setLayout({ backdropBlur: 8 });
-    const panel = menu.el.querySelector('.game-menu-panel');
-    expect(panel.style.backdropFilter).toBe('blur(8px)');
+    expect(menu.el.style.backdropFilter).toBe('blur(8px)');
   });
 
   it('buttonGap sets panel gap in px', () => {
@@ -407,18 +406,23 @@ describe('Click delegation after setLayout re-render', () => {
 // ─── Full config integration ──────────────────────────────
 
 describe('Full config integration', () => {
-  it('applies all panel styles from full config', () => {
+  it('applies all styles from full config', () => {
     const container = makeContainer();
     const menu = new GameMenu(container);
     menu.setLayout(fullConfig());
 
     const panel = menu.el.querySelector('.game-menu-panel');
+    const buttons = menu.el.querySelectorAll('.game-menu-button');
     // position "center" → justifyContent center on overlay
     expect(menu.el.style.justifyContent).toBe('center');
     expect(panel.style.width).toBe('260px');
-    expect(panel.style.backgroundColor).toContain('rgba(0, 0, 0, 0.75)');
-    expect(panel.style.borderRadius).toBe('8px');
-    expect(panel.style.backdropFilter).toBe('blur(12px)');
+    // background/blur → overlay
+    expect(menu.el.style.background).toContain('rgba(0, 0, 0, 0.75)');
+    expect(menu.el.style.backdropFilter).toBe('blur(12px)');
+    // borderRadius → each button
+    buttons.forEach(btn => {
+      expect(btn.style.borderRadius).toBe('8px');
+    });
     expect(panel.style.gap).toBe('8px');
   });
 });

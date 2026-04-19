@@ -27,6 +27,9 @@ export class BacklogScreen {
    */
   setLayout(config) {
     this._layoutConfig = config || null;
+    if (this.el.classList.contains('visible')) {
+      this.show(this._lastHistory || [], this._lastCharacters || {});
+    }
   }
 
   /**
@@ -34,6 +37,8 @@ export class BacklogScreen {
    * @param {Object} characters — character definitions (for colors)
    */
   show(history, characters = {}) {
+    this._lastHistory = history;
+    this._lastCharacters = characters;
     const cfg = this._layoutConfig;
 
     // Reset inline styles from any previous config render (COMPAT-02)

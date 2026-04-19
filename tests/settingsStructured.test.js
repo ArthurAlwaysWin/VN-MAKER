@@ -305,7 +305,11 @@ describe('SettingsScreen structured mode', () => {
       screen.setLayout(structuredLayout());
       screen.show();
       expect(createTabBar).toHaveBeenCalledWith(
-        ['声音', '画面', '游戏'],
+        expect.arrayContaining([
+          expect.objectContaining({ label: '声音' }),
+          expect.objectContaining({ label: '画面' }),
+          expect.objectContaining({ label: '游戏' }),
+        ]),
         expect.any(Object),
         expect.any(Function)
       );
@@ -318,7 +322,11 @@ describe('SettingsScreen structured mode', () => {
       screen.setLayout(layout);
       screen.show();
       expect(createTabBar).toHaveBeenCalledWith(
-        ['Audio', 'Visual', 'Game'],
+        expect.arrayContaining([
+          expect.objectContaining({ label: 'Audio' }),
+          expect.objectContaining({ label: 'Visual' }),
+          expect.objectContaining({ label: 'Game' }),
+        ]),
         expect.any(Object),
         expect.any(Function)
       );

@@ -100,6 +100,7 @@ export class SettingsScreen {
   /** Load a custom layout from script.json ui.settingsScreen */
   setLayout(layout) {
     this.customLayout = layout;
+    if (this.isVisible) this.show();
   }
 
   /**
@@ -111,6 +112,7 @@ export class SettingsScreen {
    */
   setWidgetStyles(styles) {
     this._widgetStyles = styles ? deepMergeWidgetStyles(styles) : null;
+    if (this.isVisible) this.show();
   }
 
   show() {

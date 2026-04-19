@@ -62,6 +62,7 @@ export class SaveLoadScreen {
    */
   setLayout(config) {
     this._layoutConfig = config || null;
+    if (this.el.classList.contains('visible')) this._render();
   }
 
   /**

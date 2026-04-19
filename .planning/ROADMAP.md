@@ -397,7 +397,9 @@ Plans:
   2. Footer button editor allows configuring button text and action (close/title/reset) for each button
   3. User can select a panel background image and adjust its opacity
   4. All structural parameter edits from both Phase 57 and Phase 58 preview live in the iframe
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 58-01-PLAN.md — Helper module + 3 Vue sub-components + Section 4 wiring
 **UI hint**: yes
 
 #### Phase 59: Title Page Preview

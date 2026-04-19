@@ -32,6 +32,12 @@ export class TitleScreen {
    */
   setLayout(layout) {
     this.layout = layout;
+    if (this.isVisible) this.show(this.hasSave);
+  }
+
+  /** Whether the title screen is currently showing */
+  get isVisible() {
+    return this.el.classList.contains('visible');
   }
 
   show(hasSave = false) {

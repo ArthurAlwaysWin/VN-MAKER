@@ -34,10 +34,14 @@
           </template>
           <span class="toolbar-sep"></span>
           <button class="toolbar-btn danger" :disabled="!selectedId" @click="deleteSelected" title="删除选中元素">🗑 删除</button>
+          <span class="toolbar-sep"></span>
+          <button class="toolbar-btn" :class="{ active: showPreview }" @click="togglePreview" :title="showPreview ? '返回编辑器' : '引擎预览'">
+            {{ showPreview ? '✏️ 编辑' : '🔍 预览' }}
+          </button>
         </div>
       </div>
 
-      <div class="canvas-wrapper" ref="wrapperRef" @click="deselect" @dragover.prevent @drop="onCanvasDrop">
+      <div v-if="!showPreview" class="canvas-wrapper" ref="wrapperRef" @click="deselect" @dragover.prevent @drop="onCanvasDrop">
         <div class="canvas-artboard" ref="artboardRef" :style="artboardStyle">
           <div class="canvas-bg" :style="bgStyle"></div>
 
@@ -72,6 +76,15 @@
             </div>
           </DraggableElement>
         </div>
+      </div>
+
+      <!-- Engine iframe preview -->
+      <div v-if="showPreview" class="preview-wrapper">
+        <iframe
+          ref="previewIframeEl"
+          class="title-preview-iframe"
+          src="/index.html"
+        ></iframe>
       </div>
     </div>
 
@@ -243,9 +256,22 @@ import DraggableElement from '../components/canvas/DraggableElement.vue';
 import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
 import HelpTip from '../components/HelpTip.vue';
 import { HELP_DESIGNER } from '../helpTexts.js';
+import { useTitlePreview } from '../composables/useTitlePreview.js';
 
 const scriptStore = useScriptStore();
 const assetStore = useAssetStore();
+const { iframeRef, sendTitleLayoutToPreview } = useTitlePreview();
+
+// ─── Preview toggle ─────────────────────────────────────
+const showPreview = ref(false);
+const previewIframeEl = ref(null);
+
+function togglePreview() {
+  showPreview.value = !showPreview.value;
+  if (showPreview.value) {
+    nextTick(() => { iframeRef.value = previewIframeEl.value; });
+  }
+}
 
 // ─── Preset Button Definitions ──────────────────────────
 const PRESET_BUTTONS = [
@@ -596,6 +622,11 @@ function saveLayout() {
   });
   nextTick(() => { _syncing = false; });
 }
+
+// ─── Auto-sync layout changes to iframe preview ─────────
+watch(layout, () => {
+  if (showPreview.value) sendTitleLayoutToPreview();
+}, { deep: true });
 
 // ─── Preview Helpers ────────────────────────────────────
 function resolveAsset(path) {
@@ -1046,5 +1077,25 @@ function rgbaToHex(rgba) {
 .layer-btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* ─── Preview toggle ─── */
+.toolbar-btn.active {
+  background: #007acc;
+  border-color: #007acc;
+  color: #fff;
+}
+
+.preview-wrapper {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.title-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #000;
 }
 </style>

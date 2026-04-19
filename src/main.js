@@ -978,6 +978,7 @@ function initPreview() {
           case 'backlogScreen': backlogScreen.setLayout(cfg); break;
           case 'gameMenu': gameMenu.setLayout(cfg); break;
           case 'settingsScreen': settingsScreen.setLayout(cfg); break;
+          case 'titleScreen': titleScreen.setLayout(cfg); break;
         }
         break;
       }
@@ -987,6 +988,7 @@ function initPreview() {
           case 'gameMenu': gameMenu.show(); break;
           case 'saveLoadScreen': saveLoadScreen.show('save', 'preview'); break;
           case 'backlogScreen': backlogScreen.show([], {}); break;
+          case 'titleScreen': titleScreen.show(false); break;
         }
         break;
       }

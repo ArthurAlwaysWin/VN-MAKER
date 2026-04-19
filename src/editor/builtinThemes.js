@@ -26,8 +26,9 @@ export const BUILTIN_THEMES = [
   {
     id: 'wafuu',
     name: '和风',
-    description: '日式温暖色调，含九宫格贴图',
+    description: '日式温暖色调，侧边栏导航，含九宫格贴图',
     primaryColor: '#C8A882',
+    colorRecipe: { primary: '#C98683', accent: '#C19D71', mode: 'dark' },
     tokens: {
       'primary': 'rgba(201, 134, 131, 0.90)',
       'primary-subtle': 'rgba(50, 28, 27, 0.08)',
@@ -99,16 +100,39 @@ export const BUILTIN_THEMES = [
         backdropBlur: 8,
       },
       settingsScreen: {
-        header: { title: { text: '系统设定', color: 'rgba(244, 235, 226, 0.9)' } },
-        tabBar: { background: 'rgba(38, 24, 18, 0.5)' },
+        header: {
+          title: { text: '系統設定', color: 'rgba(244, 235, 226, 0.9)' },
+          decorations: [
+            { src: '', x: 0, y: 10, width: 60, height: 60 },
+            { src: '', x: 1220, y: 10, width: 60, height: 60 },
+          ],
+        },
+        tabBar: {
+          position: 'left',
+          width: 180,
+          background: 'rgba(38, 24, 18, 0.5)',
+          tabs: [
+            { label: '音声', icon: '🔊' },
+            { label: '画面', icon: '🖥️' },
+            { label: '文字', icon: '📝' },
+          ],
+        },
+        footer: {
+          height: 60,
+          buttons: [
+            { text: '关闭', action: 'close', x: 0, y: 0 },
+            { text: '恢复默认', action: 'reset', x: 0, y: 0 },
+          ],
+        },
       },
     },
   },
   {
     id: 'modern-sky',
     name: '现代天蓝',
-    description: '清新蓝色调，适合现代都市题材',
+    description: '清新蓝色调，双栏布局，适合现代都市题材',
     primaryColor: '#4A90D9',
+    colorRecipe: { primary: '#4A90D9', accent: '#DB9B57', mode: 'dark' },
     tokens: {
       'primary': 'rgba(74, 143, 217, 0.90)',
       'accent': 'rgba(219, 155, 87, 0.25)',
@@ -126,13 +150,31 @@ export const BUILTIN_THEMES = [
       panel: { background: 'rgba(12, 15, 18, 0.85)' },
       button: { background: 'rgba(38, 63, 89, 0.6)', hoverBackground: 'rgba(40, 88, 138, 0.7)' },
     },
-    screens: {},
+    screens: {
+      settingsScreen: {
+        tabBar: {
+          tabs: [
+            { label: '音频', icon: '🔊' },
+            { label: '显示', icon: '🖥️' },
+            { label: '文字', icon: '📝' },
+          ],
+        },
+        contentArea: {
+          columns: 2,
+          itemStyle: {
+            showDividers: true,
+            alternateBackground: true,
+          },
+        },
+      },
+    },
   },
   {
     id: 'fantasy-dark',
     name: '暗黑幻想',
-    description: '深紫金色调，适合奇幻冒险题材',
+    description: '深紫金色调，含装饰图案，适合奇幻冒险题材',
     primaryColor: '#9B6EC8',
+    colorRecipe: { primary: '#9B6EC8', accent: '#D7AF5F', mode: 'dark' },
     tokens: {
       'primary': 'rgba(155, 110, 200, 0.90)',
       'accent': 'rgba(215, 175, 95, 0.25)',
@@ -150,13 +192,31 @@ export const BUILTIN_THEMES = [
       panel: { background: 'rgba(14, 10, 20, 0.85)' },
       button: { background: 'rgba(60, 40, 80, 0.6)', hoverBackground: 'rgba(80, 55, 110, 0.7)' },
     },
-    screens: {},
+    screens: {
+      settingsScreen: {
+        header: {
+          title: { text: '系统设定' },
+          decorations: [
+            { src: '', x: 0, y: 5, width: 50, height: 50 },
+            { src: '', x: 1230, y: 5, width: 50, height: 50 },
+          ],
+        },
+        tabBar: {
+          tabs: [
+            { label: '声音', icon: '🔉' },
+            { label: '画面', icon: '🎨' },
+            { label: '文字', icon: '✒️' },
+          ],
+        },
+      },
+    },
   },
   {
     id: 'minimal-white',
     name: '极简白',
     description: '浅色简洁风格，适合轻松日常题材',
     primaryColor: '#5BA87E',
+    colorRecipe: { primary: '#5BA87E', accent: '#5BA87E', mode: 'light' },
     tokens: {
       'primary': 'rgba(91, 168, 126, 0.90)',
       'accent': 'rgba(91, 168, 126, 0.15)',

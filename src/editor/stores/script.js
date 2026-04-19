@@ -348,8 +348,11 @@ export const useScriptStore = defineStore('script', () => {
     if (!data.value) return;
     data.value.ui ??= {};
 
-    // tokens → theme.tokens
+    // tokens → theme.tokens (+ colorRecipe if present)
     data.value.ui.theme = { tokens: { ...(theme.tokens ?? {}) } };
+    if (theme.colorRecipe) {
+      data.value.ui.theme.colorRecipe = { ...theme.colorRecipe };
+    }
 
     // widgetStyles → flat merge per category
     const ws = {};

@@ -297,7 +297,7 @@ Two tracks: **Smart Color** (OKLCH derivation, 2-input editor) + **Structural Pa
 - [x] **Phase 55: Left-Tab Mode + Decorations (Engine)** - Sidebar navigation, header decorations, footer reset, panel background
 - [x] **Phase 56: Smart Color Editor UI** - 2-picker panel, recipe storage, live preview
 - [ ] **Phase 57: Tab & Layout Editor** - Tab CRUD + setting matrix + layout controls + tab position toggle
-- [ ] **Phase 58: Decoration & Background Editor** - Header decoration manager + footer button config + panel background + live preview
+- [x] **Phase 58: Decoration & Background Editor** - Header decoration manager + footer button config + panel background + live preview
 - [ ] **Phase 59: Title Page Preview** - Iframe engine preview in title page editor
 - [ ] **Phase 60: Built-in Theme Upgrade** - 5 themes with colorRecipe + structural params + commercial VN aesthetics
 

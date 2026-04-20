@@ -1,5 +1,27 @@
 # Milestones
 
+## v1.3 主题系统表达力升级 (Shipped: 2026-04-20)
+
+**Phases completed:** 9 phases (52-60), 21 plans, 27 requirements
+**Git range:** v1.2..HEAD (~81 commits)
+**Files:** 108 changed, +17292/-2808 lines
+**Timeline:** 2026-04-18 → 2026-04-20
+
+**Key accomplishments:**
+
+- 智能配色系统 — OKLCH 纯 JS 模块 + 规则表 + deriveTokens()，2 色输入 → 36 token 自动派生
+- SmartColorPanel 编辑器 — 2 色选择器 + 4 种和谐算法 + dark/light 模式 + 三层合并（派生 → 覆盖 → 持久化）
+- 设置页结构参数（引擎）— 可配置 Tab 数量/图标 + 双列 Grid 布局 + 行样式 + 左侧 Tab 模式 + 页头装饰 + 页脚重置
+- 设置页结构编辑器 — Tab CRUD + 设置项矩阵 + 布局控制 + 装饰管理 + 面板背景，全部 iframe 实时预览
+- 标题页引擎预览 — TitleDesigner 内嵌 iframe + 编辑/预览切换
+- 内置主题升级 — 5 套主题使用 colorRecipe 格式 + 结构参数（左侧 Tab/双列/装饰图/Tab 图标）
+
+**Milestone audit:** 27/27 requirements passed (tech_debt: documentation gaps only) — see v1.3-MILESTONE-AUDIT.md
+
+**Archives:** milestones/v1.3-ROADMAP.md, milestones/v1.3-REQUIREMENTS.md
+
+---
+
 ## v1.2 编辑器主题配置 + 示范主题 (Shipped: 2026-04-17)
 
 **Phases completed:** 6 phases (46-51), 8 plans, 17 requirements

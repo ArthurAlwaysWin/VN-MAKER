@@ -158,6 +158,55 @@
 
 ---
 
+## v1.1 — UI Theme System v2 引擎配置化
+
+*(Shipped 2026-04-17 — retrospective deferred, covered by milestone audit)*
+
+---
+
+## v1.2 — 编辑器主题配置 + 示范主题
+
+*(Shipped 2026-04-17 — retrospective deferred, covered by milestone audit)*
+
+---
+
+## v1.3 — 主题系统表达力升级
+
+**Duration:** 3 days (2026-04-18 → 2026-04-20)
+**Scope:** 9 phases (52-60), 21 plans, 27 requirements, 81 commits, 108 files, +17292/-2808 lines
+
+### What Worked Well
+
+- **双轨并行设计**：Smart Color（52, 56）和 Structural Params（53-55, 57-58）两条独立轨道，引擎先行 → 编辑器跟进，依赖清晰
+- **OKLCH 零依赖**：60 行纯 JS 模块 + 规则表，2 色输入 → 36 token，无 npm 依赖
+- **三层合并架构**：colorRecipe → deriveTokens → overrides，用户可自动派生也可手动微调，互不冲突
+- **provide/inject + postMessage**：3 个编辑器 composable 共享架构，5 种消息类型统一 iframe 实时预览
+- **内联执行模式**：多数 phase 跳过 discuss → plan 直接 inline 执行，大幅缩短开发周期
+- **集成检查器**：28/28 exports 全部消费，7/7 E2E flows 端到端验证通过
+
+### What Could Be Better
+
+- **VERIFICATION.md 全部缺失**：9 个 phase 中 0 个有正式验证报告 — inline 执行模式跳过了验证步骤
+- **Phase 57 缺 SUMMARY**：唯一没有总结的 phase，虽有 commits + 25 tests 证明完成
+- **Nyquist 全部 non-compliant**：4 个 VALIDATION.md 均为 `nyquist_compliant: false`，5 个完全缺失
+- **REQUIREMENTS.md 复选框未勾**：27 个需求全部 `[ ]`，虽然实际全部满足但文档不同步
+- **gsd-tools roadmap analyze 仍然坏**：返回 v0.1 + 0 phases，已是多个版本的已知问题
+
+### Patterns Established
+
+- **colorRecipe 三层合并模式**：recipe → tokens → overrides，适用于任何"自动生成 + 手动覆盖"场景
+- **编辑器 composable + Section SFC 模式**：useXxxEditor composable 管状态 + XxxSection.vue 管 UI，可复用于新编辑器
+- **iframe postMessage 协议**：start → update-* → show-screen 消息链，标准化编辑器预览通信
+- **TDD 引擎层 → inline UI 层**：引擎 phase 用 TDD（先写测试），编辑器 phase 用 inline（直接实现 + 目视验证）
+
+### Key Lessons
+
+- inline 执行效率极高但牺牲了文档完整性 — 适合成熟项目中的增量功能，不适合需要审计追溯的场景
+- 双轨设计让 Title Page Preview（Phase 59）可以独立并行，不阻塞主线
+- 5 套主题升级（Phase 60）作为最终集成测试效果很好 — 同时验证所有新功能的端到端可用性
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | +Lines | Reqs |
@@ -168,8 +217,12 @@
 | v0.8 | 3 | 4 | 2 | 45 | 8585 | 15 |
 | v0.9 | 2 | 4 | 1 | 54 | 3368 | 15 |
 | v1.0 | 5 | 7 | 3 | 60 | 9533 | 10 |
+| v1.1 | 4 | 9 | — | — | — | 17 |
+| v1.2 | 6 | 8 | 1 | 21 | 2453 | 17 |
+| v1.3 | 9 | 21 | 3 | 108 | 17292 | 27 |
 
 **趨勢觀察：**
-- v1.0 是代碼量最大的里程碑（+9533 行），反映引擎級重構的複雜度
-- 里程碑粒度穩定在 2-5 phases，避免過大或過小
-- VERIFICATION.md 補充機制在 v1.0 首次啟用，應納入標準流程
+- v1.3 是代码量和需求量最大的里程碑（+17292 行，27 需求），反映主题系统全面升级的广度
+- 9 phases + 21 plans 是迄今最大 scope，但 3 天完成得益于 inline 执行模式
+- 里程碑粒度穩定在 2-9 phases，避免過大或過小
+- VERIFICATION.md 補充機制在 v1.0 首次啟用，v1.3 因 inline 模式回退 — 应纳入标准流程

@@ -83,18 +83,24 @@
 
 ### Active
 
-<!-- v1.3 目标需求 — 通过 /gsd-new-milestone 定义 -->
+<!-- 下一个里程碑需求将在 /gsd-new-milestone 中定义 -->
 
-- 智能配色系统：用户选 2-3 个基础色，引擎自动派生全部 41 个 token
-- 设置页结构参数：Tab 数量/名称/图标自定义、设置项自由分组、多列布局
-- 行/条目样式控制：条纹背景、分隔线、间距等视觉细节
-- 页头/页脚灵活化：装饰图、多按钮配置
-- 标题页引擎预览：iframe 中预览标题页实际效果
-- 内置主题升级：利用新结构参数做出商业 VN 水准模板
+(待 v1.4 里程碑规划时填充)
 
-## Current Milestone: v1.3 主题系统表达力升级
+## Previous Milestone: ✅ v1.3 主题系统表达力升级 (Shipped 2026-04-20)
 
-**Goal:** 让用户通过内置模板 + 关键结构参数，能做出从 Aokana 到千恋万花跨度的 UI 美术风格。继续 Canva 路线（模板 + 参数），不做 Figma 化自由画布。重点补"结构参数"（Tab 数量、布局方式等），同时用智能配色简化颜色编辑复杂度。
+**Delivered:** OKLCH 智能配色（2 色 → 36 token）+ 设置页结构参数（Tab/布局/装饰）+ 编辑器完整配置 UI + 标题页预览 + 5 套商业级主题升级。27/27 需求，9 phases，~170 测试。
+
+<details>
+<summary>v1.3 target features (delivered)</summary>
+
+- ✅ 智能配色系统（OKLCH 纯 JS + 规则表 + deriveTokens + SmartColorPanel + 三层合并）
+- ✅ 设置页结构参数引擎（可配置 Tab + 双列 Grid + 行样式 + 左侧 Tab + 装饰 + 重置按钮）
+- ✅ 设置页结构编辑器（Tab CRUD + 设置矩阵 + 布局控制 + 装饰管理 + 面板背景）
+- ✅ 标题页 iframe 引擎预览（编辑/预览切换）
+- ✅ 内置主题升级（colorRecipe + 结构参数 + 商业 VN 美学）
+
+</details>
 
 ## Previous Milestone: ✅ v1.2 编辑器主题配置 + 示范主题 (Shipped 2026-04-17)
 
@@ -255,13 +261,16 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v1.0** — 角色表情/差分場景切換 (Phases 37-41)
 - ✅ **v1.1** — UI Theme System v2 引擎配置化 (Phases 42-45)
 
+- ✅ **v1.2** — 编辑器主题配置 + 示范主题 (Phases 46-51)
+- ✅ **v1.3** — 主题系统表达力升级 (Phases 52-60)
+
 ## Current State
 
-**已交付：** v0.1 ~ v1.1（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換 → UI Theme System v2 引擎配置化）
+**已交付：** v0.1 ~ v1.3（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換 → UI Theme v2 引擎 → 主題配置編輯器 → 智能配色 + 結構參數 + 主題升級）
 
-**v1.1 已完成：** widgetStyles 控件风格系统 + 三界面 setLayout 配置 + SettingsScreen 结构化模式 + 名牌三样式 + main.js 配置统一路由 + 编辑器预览同步。17/17 需求全部验证通过，219 测试。
+**v1.3 已完成：** OKLCH 智能配色系统 + 设置页结构参数引擎 + 完整编辑器 UI + 标题页预览 + 5 套商业级主题升级。27/27 需求验证通过，~170 测试。
 
-**下一步：** 规划 v1.2 里程碑
+**下一步：** 规划 v1.4 里程碑
 
 ---
-*Last updated: 2026-04-17 after v1.1 milestone complete*
+*Last updated: 2026-04-20 after v1.3 milestone complete*

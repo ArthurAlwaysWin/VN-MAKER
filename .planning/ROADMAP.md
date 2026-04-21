@@ -405,7 +405,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Players do not see leftover animation classes, camera transforms, or flash overlays after skip, auto, load, or return-to-title flows.
   2. Stopping preview or rapidly replaying effects returns the stage to a clean state before the next effect runs.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 67-01-PLAN.md — Add the PREV-05 regression matrix and extend focused cinematic cleanup suites before runtime edits
+- [ ] 67-02-PLAN.md — Apply the smallest main.js cleanup-orchestration fixes needed to make the PREV-05 gate pass
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -413,6 +417,6 @@ Plans:
 | 62. Character Preset Runtime Foundation | 2/2 | Complete | 2026-04-21 |
 | 63. Camera Runtime & Shared Cleanup | 2/2 | Complete | 2026-04-21 |
 | 64. Background Transition Expansion | 2/2 | Complete | 2026-04-21 |
-| 65. Iframe Effect Preview API | 0/2 | Not started | - |
+| 65. Iframe Effect Preview API | 2/2 | Complete   | 2026-04-21 |
 | 66. Editor Controls & Compatibility UX | 2/2 | Complete   | 2026-04-21 |
 | 67. Integration & Regression Gate | 0/0 | Not started | - |

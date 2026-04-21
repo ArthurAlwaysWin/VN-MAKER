@@ -338,7 +338,10 @@ Plans:
   1. Creators can assign one preset animation to each character on a page.
   2. Available character presets include at least `fade-in`, `slide-in-left`, `slide-in-right`, `shake`, `nod`, and `breathe`.
   3. Players see one-shot character animations finish automatically, while looping animations continue only on the current page and clear when leaving it.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 62-01-PLAN.md — Freeze preset contract/defaults and emit page-entry animation through ScriptEngine only
+- [ ] 62-02-PLAN.md — Implement CharacterLayer preset playback, motion-only CSS, and cleanup lifecycle
 
 ### Phase 63: Camera Runtime & Shared Cleanup
 **Goal**: Creators can configure one bounded camera effect per page and players see it trigger reliably on page entry without stacking.

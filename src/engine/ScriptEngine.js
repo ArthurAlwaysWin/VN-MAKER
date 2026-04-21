@@ -26,6 +26,7 @@
  */
 
 import { EventEmitter } from './EventEmitter.js';
+import { getRuntimeTransitionType } from '../shared/cinematicContract.js';
 
 export class ScriptEngine extends EventEmitter {
   constructor() {
@@ -296,8 +297,8 @@ export class ScriptEngine extends EventEmitter {
       page,
     });
 
-    const transition = page.transition?.type || 'fade';
-    const duration = page.transition?.duration || 800;
+    const transition = getRuntimeTransitionType(page.transition?.type);
+    const duration = page.transition?.duration ?? 800;
 
     // ─── Background (only emit if changed) ───
     if (page.background && page.background !== this._currentBg) {

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, nextTick } from 'vue';
+import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 
 export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
@@ -190,6 +191,7 @@ export const useScriptStore = defineStore('script', () => {
       name: '',
       type: 'normal',
       background: null,
+      camera: DEFAULT_PAGE_CAMERA,
       characters: [],
       bgm: null,
       se: null,
@@ -231,6 +233,7 @@ export const useScriptStore = defineStore('script', () => {
       newPage.characters = JSON.parse(JSON.stringify(prevPage.characters || []));
       newPage.background = prevPage.background || null;
       newPage.bgm = prevPage.bgm ? JSON.parse(JSON.stringify(prevPage.bgm)) : null;
+      copyPageCinematicFields(prevPage, newPage);
     }
 
     scene.pages.splice(insertAt, 0, newPage);

@@ -62,9 +62,9 @@ describe('cinematic contract compatibility', () => {
     const store = useScriptStore();
     store.loadFromData(makeScriptData());
 
-    const result = store.addPage('start');
+    store.addScene('fresh-scene', 'Fresh Scene');
 
-    expect(result.page.camera).toBe(DEFAULT_PAGE_CAMERA);
+    expect(store.data.scenes['fresh-scene'].pages[0].camera).toBe(DEFAULT_PAGE_CAMERA);
   });
 
   it('surfaces unsupported transition values as explicit unknown UI options', () => {

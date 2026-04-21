@@ -21,12 +21,11 @@
         <div class="form-row">
           <div class="form-group half">
             <label>过渡 <HelpTip :text="HELP_SCRIPT.transition" /></label>
-            <select :value="page.transition?.type || 'fade'"
+            <select :value="selectedTransitionType"
               @change="setTransitionType($event.target.value)" class="field-input">
-              <option value="fade">淡入淡出</option>
-              <option value="slide-left">左滑入</option>
-              <option value="slide-right">右滑入</option>
-              <option value="none">无</option>
+              <option v-for="option in transitionOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
             </select>
           </div>
           <div class="form-group half">
@@ -366,6 +365,7 @@ import AudioPicker from './AudioPicker.vue';
 import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
+import { getTransitionUiOptions } from '../../../shared/cinematicContract.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -383,6 +383,8 @@ const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
 const characterEntries = computed(() => Object.entries(script.data?.characters || {}));
 const allScenes = computed(() => Object.entries(script.data?.scenes || {}));
+const transitionOptions = computed(() => getTransitionUiOptions(page.value?.transition?.type));
+const selectedTransitionType = computed(() => page.value?.transition?.type || 'fade');
 
 // Page-scoped character list for speaker combobox
 const pageCharOptions = computed(() => {

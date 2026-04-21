@@ -1,392 +1,632 @@
-# Architecture Patterns — Settings Screen Structural Customization
+# Architecture Research — v1.4 演出力升级
 
-**Domain:** Settings screen layout parameterization in Galgame Maker (visual novel engine + editor)
-**Researched:** 2025-07-27
-**Confidence:** HIGH — based entirely on direct codebase inspection of SettingsScreen.js, settingDefs.js, widgetDefaults.js, TabWidget.js, SettingsSection.vue, builtinThemes.js
+**Scope:** Existing Electron/Vue VN maker, milestone-only architecture guidance for preset character animation, page camera, richer background transitions, and editor preview wiring  
+**Researched:** 2026-04-21  
+**Confidence:** HIGH — based on direct codebase inspection plus milestone plan/spec in:
+- `.planning/PROJECT.md`
+- `docs/gap-analysis-vs-mature-engines.md`
+- `docs/superpowers/plans/2026-04-21-v1.4-cinematic-upgrade.md`
+- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md`
 
-## Executive Summary
+## Executive Recommendation
 
-The settings screen structural customization integrates into an established config-driven architecture where the editor (Vue 3 + Pinia) writes layout config to `script.json → ui.settingsScreen`, and the engine (pure JS) renders from it. The existing code already has a 3-mode rendering system (custom/structured/default) with sparse config merging. The new work extends the **structured mode** with user-configurable tab structure, multi-column content layout, row styling, and header/footer flexibility — all as optional config parameters with backward-compatible defaults.
+Integrate v1.4 as an **additive runtime-effects layer**, not as a new animation system. Keep the current page-based engine contract intact and only add:
 
-## Recommended Architecture
+1. `page.characters[].animation`
+2. `page.camera`
+3. expanded `page.transition.type`
 
-### Integration Map — What Changes Where
+The safest architecture is:
 
-```
-┌─────────────── EDITOR (Vue 3 + Pinia) ───────────────┐
-│                                                        │
-│  script.js store          — No changes (getters exist) │
-│  useScreenLayoutEditor.js — No changes (wiring exists) │
-│                                                        │
-│  SettingsSection.vue      — MAJOR EXTEND: add tab      │
-│    ├─ Tab list editor        editor, layout controls,  │
-│    ├─ Layout controls        row style, header deco,   │
-│    ├─ Row style              footer buttons editor     │
-│    └─ Header/Footer                                    │
-│                                                        │
-│  builtinThemes.js         — UPDATE: add structural     │
-│                             params to existing themes   │
-│                                                        │
-├─────────────── DATA MODEL (script.json) ──────────────┤
-│                                                        │
-│  ui.settingsScreen        — EXTEND (all new fields     │
-│    ├─ background             optional with defaults):  │
-│    ├─ backgroundOpacity      - tabBar.tabs[].settingKeys│
-│    ├─ header.decorations[]   - tabBar.position          │
-│    ├─ tabBar.tabs[]          - contentArea.columns      │
-│    ├─ tabBar.position        - contentArea.itemStyle    │
-│    ├─ contentArea.columns    - header.decorations[]     │
-│    ├─ contentArea.itemStyle  - footer.buttons[].action  │
-│    └─ footer.buttons[]                                 │
-│                                                        │
-│  settingDefs.js           — No changes (registry       │
-│    SETTING_DEFS              stays as-is, tabs now     │
-│                              reference keys from it)   │
-│                                                        │
-├─────────────── ENGINE (Pure JS) ──────────────────────┤
-│                                                        │
-│  SettingsScreen.js        — MAJOR EXTEND:              │
-│    _renderStructured()       config-driven tabs,       │
-│    _renderStructuredContent  2-col grid, item styling, │
-│    NEW: _renderLeftTabs()    left-tab mode, header     │
-│    NEW: _renderHeaderDeco()  decorations, reset action │
-│    NEW: _renderFooterBtn()                             │
-│                                                        │
-│  ConfigManager.js         — ADD: resetToDefaults()     │
-│                                                        │
-│  widgetDefaults.js        — No changes                 │
-│  TabWidget.js             — Minor: icon support        │
-│  style.css                — Minor: grid/zebra rules    │
-│                                                        │
-└────────────────────────────────────────────────────────┘
-```
+- **ScriptEngine emits contracts**
+- **CharacterLayer owns character motion**
+- **CameraController owns stage camera**
+- **BackgroundLayer owns transition rendering**
+- **PageInspector/usePageEditor only write data + trigger iframe preview**
 
-### Component Boundaries
+Two structural changes are worth doing early because they prevent most future bugs:
 
-| Component | Responsibility | Action | Communicates With |
-|-----------|---------------|--------|-------------------|
-| **SettingsScreen.js** (major extend) | Render settings UI from config | Extend `_renderStructured()` for new params | ConfigManager, TabWidget, widgetStyles |
-| **ConfigManager.js** (minor extend) | User preference storage + reset | Add `resetToDefaults()` method | SettingsScreen (via reset action) |
-| **TabWidget.js** (minor extend) | Tab button rendering | Add icon image support | SettingsScreen |
-| **SettingsSection.vue** (major extend) | Editor form for settings layout | Add tab editor, layout controls, row style | useScreenLayoutEditor, script store |
-| **builtinThemes.js** (update) | Built-in theme presets | Add structural params to themes | Theme application system |
+1. **Add a stage wrapper (`#stage-layer`) and bind camera there, not `#game-container`**  
+   Current `#game-container` also hosts dialogue/menu/title/settings overlays (`index.html`, `src/main.js`). If camera binds to it directly, UI will shake/zoom too.
 
-### Data Flow
+2. **Add a per-character motion wrapper inside `CharacterLayer`**  
+   Current character container already uses `transform` for position/scale and enter transitions (`src/ui/CharacterLayer.js`, `src/style.css`). Preset animation transforms on that same element will conflict. Motion should live on an inner wrapper, not the positioned container.
 
-#### A. Config Loading → Engine Rendering
+---
 
-```
-script.json → ui.settingsScreen
-  │
-  ├─ main.js → settingsScreen.setLayout(config)
-  │
-  └─ SettingsScreen.show()
-      │
-      ├─ Has elements[]? → _renderCustom (absolute positioning mode)
-      │                     NO CHANGES — backward compat
-      │
-      ├─ Has header/tabBar/contentArea? → _renderStructured
-      │   │
-      │   ├─ Read tabBar.tabs[] (NEW) or fall back to defaults
-      │   │
-      │   ├─ tabBar.position === 'left'?
-      │   │   ├─ YES → _renderLeftTabStructured (NEW render path)
-      │   │   └─ NO  → _renderTopTabStructured (existing, extended)
-      │   │
-      │   ├─ Render header (with decorations[] if present)
-      │   ├─ Render tab bar (with icons if present)
-      │   ├─ Render content area
-      │   │   ├─ columns === 2? → CSS Grid 1fr 1fr
-      │   │   └─ columns === 1 → Flex column (default)
-      │   │
-      │   ├─ Render items with itemStyle
-      │   │   ├─ showDividers → border-top on items
-      │   │   ├─ alternateBackground → background on odd items
-      │   │   ├─ labelPosition === 'top' → flex-direction: column
-      │   │   └─ showValueLabel → skip/show value span
-      │   │
-      │   └─ Render footer (with reset action if present)
-      │
-      └─ No config? → _renderDefault (fallback mode)
-                       NO CHANGES — backward compat
-```
+## Architecture Decision Summary
 
-#### B. Tab Content Resolution
+### Keep
 
-```
-Tab rendering:
-  │
-  ├─ tabs[] exists in config?
-  │   │
-  │   ├─ YES → For each tab, use tab.settingKeys to determine items
-  │   │         │
-  │   │         └─ Collect all assigned keys across tabs
-  │   │            Unassigned SETTING_DEFS keys → append to last tab
-  │   │
-  │   └─ NO → Fall back to DEFAULT_TAB_LABELS + SETTING_GROUP_KEYS
-  │
-  └─ On tab switch:
-      ├─ _activeTab = index
-      ├─ Read tabs[_activeTab].settingKeys
-      └─ _renderStructuredContent() with those keys
-```
+- Page-based script model
+- `ScriptEngine -> main.js -> UI layer` event flow
+- Existing iframe + postMessage preview path
+- Existing `CharacterLayer` expression crossfade model
+- Existing `BackgroundLayer` dual-layer transition model
 
-#### C. Editor → Engine Preview
+### Add
 
-```
-SettingsSection.vue
-  │
-  ├─ User edits config in form controls
-  ├─ editor.setScreenNestedField(group, field, value)
-  ├─ editor.sendScreenLayoutToPreview()
-  │
-  └─ postMessage to iframe → engine receives layout config
-      └─ settingsScreen.setLayout(newConfig)
-         settingsScreen.show() → re-renders with new params
-```
+- One dedicated camera controller
+- One shared visual reset helper
+- One canonical preset registry for character animation
+- One stage wrapper DOM layer
+- Targeted iframe preview commands for cinematic effects
 
-## Detailed Integration Points
+### Do Not Add
 
-### 1. Tab Structure (settingDefs.js ↔ SettingsScreen.js)
+- No ATL/timeline/freeform animation language
+- No second editor-only animation renderer
+- No camera logic inside `BackgroundLayer`, `DialogueBox`, or editor canvas
+- No generic “page compositor” rewrite
 
-**Current state:**
+---
+
+## New Files to Add
+
+## 1. `src/ui/CameraController.js`
+
+**Responsibility:** Own all page-level camera effects on the runtime stage.
+
+**Why new file:** Camera logic does not belong in `main.js` or `BackgroundLayer`. It needs its own lifecycle, cleanup, timers, and flash overlay handling.
+
+**Public surface should stay small:**
+
 ```js
-// Hardcoded in SettingsScreen.js
-const SETTING_GROUP_KEYS = [
-  ['master-volume', 'bgm-volume', 'se-volume', 'voice-volume'],   // Tab 0
-  ['dialogue-opacity', 'window-mode'],                              // Tab 1
-  ['text-speed', 'auto-speed', 'skip-mode'],                       // Tab 2
-];
-const DEFAULT_TAB_LABELS = ['声音', '画面', '游戏'];
+play(cameraConfig)
+clear()
+preview(cameraConfig)
 ```
 
-**New approach:**
-```js
-// In _renderStructured():
-const tabCfg = layout.tabBar || {};
-const tabs = tabCfg.tabs?.map(t => ({
-  label: t.label,
-  icon: t.icon || null,
-  settingKeys: t.settingKeys || [],
-}));
+**Owns:**
+- stage transform / filter classes
+- duration clamp
+- intensity/direction mapping
+- single-active-effect replacement
+- flash overlay creation/removal
 
-// Fallback when tabs not configured:
-if (!tabs) {
-  const tabs = DEFAULT_TAB_LABELS.map((label, i) => ({
-    label,
-    icon: null,
-    settingKeys: SETTING_GROUP_KEYS[i] || [],
-  }));
+**Must not own:**
+- page parsing
+- editor UI logic
+- background transition logic
+
+## 2. `src/ui/resetRuntimeVisualState.js`
+
+**Responsibility:** One shared cleanup path for replay/preview-stop/title-return/load/fast navigation.
+
+**Why new file:** `src/main.js` currently duplicates visual resets in multiple places (`replayCurrentPage()`, preview `stop`, game end, title return). v1.4 adds more temporary runtime state, so duplicated cleanup will drift.
+
+**This helper should clear:**
+- CharacterLayer animations / temporary classes
+- CameraController state
+- BackgroundLayer temporary transition classes/timers
+- dialogue/choice transient display only if caller asks
+
+## 3. `src/ui/characterAnimationPresets.js`
+
+**Responsibility:** Canonical registry of supported character animation presets.
+
+**Why new file:** Runtime and editor must share the same stable enum list. One registry prevents `PageInspector` and `CharacterLayer` from diverging.
+
+**Should contain:**
+- preset key
+- label
+- CSS class name
+- loop vs one-shot
+- previewability flag if needed
+
+---
+
+## Existing Files to Modify
+
+## Runtime / Engine
+
+### `index.html`
+**Modify:** add `#stage-layer` wrapper.
+
+**Recommended shape:**
+
+```html
+<div id="game-container">
+  <div id="stage-layer">
+    <div id="background-layer"></div>
+    <div id="character-layer"></div>
+  </div>
+  <div id="dialogue-layer"></div>
+  <div id="ui-overlay"></div>
+</div>
+```
+
+**Reason:** camera should affect scene visuals, not dialogue/menu/title/settings overlays.
+
+### `src/style.css`
+**Modify:** add:
+- `#stage-layer` layout styles
+- camera keyframes/classes
+- flash overlay styles
+- richer background transition classes
+- character motion wrapper animation classes
+
+**Important:** keep transforms separated by layer:
+- `#stage-layer` = camera
+- `.character-sprite` = position/scale/enter
+- `.character-motion` = preset animation
+- `.char-img-a/.char-img-b` = expression crossfade
+
+### `src/engine/ScriptEngine.js`
+**Modify:** additive contract emission only.
+
+**Should do:**
+- pass `animation` through on `show_character`
+- emit new `page_camera` event when `page.camera` exists
+- keep old page flow valid when fields are absent
+
+**Should not do:**
+- preset validation
+- CSS mapping
+- effect timing logic beyond event ordering
+
+### `src/ui/CharacterLayer.js`
+**Modify heavily:** keep current expression crossfade, add motion wrapper and animation lifecycle.
+
+**Recommended DOM per character:**
+
+```html
+<div class="character-sprite" data-character-id="hero">
+  <div class="character-motion">
+    <img class="char-img-a active">
+    <img class="char-img-b">
+  </div>
+</div>
+```
+
+**Boundary:**
+- outer container = layout
+- inner motion wrapper = animation classes
+- imgs = expression swap only
+
+### `src/ui/BackgroundLayer.js`
+**Modify moderately:** expand transition registry in-place.
+
+**Recommendation:** keep transition ownership here; do **not** build a second page transition subsystem.
+
+**Additive transitions:**
+- `dissolve`
+- `wipe`
+- `scale`
+- `blur`
+
+**Fallback:** unknown transition => warn in dev + downgrade to `fade`.
+
+### `src/main.js`
+**Modify:** orchestration only.
+
+**Add:**
+- instantiate `CameraController`
+- bind `page_camera`
+- call shared visual reset helper everywhere a hard reset happens
+- add preview message handlers for cinematic preview requests
+
+**Do not move business logic here.** `main.js` should remain a wire-up layer.
+
+## Editor
+
+### `src/editor/stores/script.js`
+**Modify lightly:**
+- `createDefaultPage()` => include `camera: null`
+- keep old pages valid when `camera` missing
+
+**Do not add migration code.** Old projects should load as-is.
+
+### `src/editor/components/page-editor/CharacterPicker.vue`
+**Modify lightly:** new characters should initialize with `animation: 'none'`.
+
+### `src/editor/components/page-editor/PageInspector.vue`
+**Modify heavily:**
+- character animation select + replay button
+- page camera section
+- expanded transition options
+- unknown-value preservation UI
+- disabled-state messaging for preview buttons
+
+### `src/editor/composables/usePageEditor.js`
+**Modify heavily:** add targeted iframe preview commands.
+
+**Important existing constraint:** `PageEditor.vue` makes inspector/sidebar `pointer-events: none` when `isPreviewMode` is true. So inspector replay buttons cannot depend on full “试玩” mode.
+
+**Recommendation:** reuse the same iframe, but split:
+- **full play preview** (`start` / `stop`)  
+- **targeted effect preview** while editor stays interactive
+
+That means cinematic preview commands should work when the iframe is loaded and ready, even if `isPreviewMode === false`.
+
+---
+
+## Canonical Data Contracts
+
+## 1. Page JSON contract
+
+### Character animation
+
+```json
+{
+  "id": "hero",
+  "expression": "smile",
+  "position": "custom",
+  "x": 640,
+  "y": 200,
+  "scale": 1,
+  "animation": "breathe"
 }
-
-// Handle unassigned SETTING_DEFS keys:
-const allAssigned = new Set(tabs.flatMap(t => t.settingKeys));
-const unassigned = Object.keys(SETTING_DEFS).filter(k => !allAssigned.has(k));
-if (unassigned.length > 0 && tabs.length > 0) {
-  tabs[tabs.length - 1].settingKeys.push(...unassigned);
-}
 ```
 
-**Backward compat:** `SETTING_GROUP_KEYS` and `DEFAULT_TAB_LABELS` remain as fallback constants. Only used when `tabBar.tabs` is absent.
+**Rules:**
+- optional field
+- absence == `none`
+- store raw string for forward compatibility
 
-### 2. Content Layout (CSS Grid)
+### Page camera
 
-**Current state:**
-```js
-// In _renderStructuredContent() — items rendered as flex column
-item.style.display = 'flex';
-item.style.alignItems = 'center';
-item.style.padding = '12px 0';
-```
-
-**New approach:**
-```js
-// Content container layout
-const columns = areaCfg.columns || 1;
-const gap = areaCfg.gap || 16;
-
-if (columns === 2) {
-  container.style.display = 'grid';
-  container.style.gridTemplateColumns = '1fr 1fr';
-  container.style.gap = `${gap}px`;
-} else {
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = `${gap}px`;
-}
-```
-
-### 3. Left-Tab Sidebar Mode
-
-**Current DOM structure (top tabs):**
-```
-#settings-screen.settings-structured
-  ├── .settings-structured-header
-  ├── .settings-structured-tab-bar (horizontal flex)
-  ├── .settings-structured-content (absolute positioned)
-  └── .settings-structured-footer
-```
-
-**New DOM structure (left tabs):**
-```
-#settings-screen.settings-structured.settings-left-tabs
-  ├── .settings-tab-sidebar (vertical flex, fixed width)
-  │   └── tab buttons (stacked vertically)
-  └── .settings-main-area (flex: 1)
-      ├── .settings-structured-header
-      ├── .settings-structured-content
-      └── .settings-structured-footer
-```
-
-**Implementation:** Separate render path `_renderLeftTabStructured()` rather than trying to reconfigure the existing top-tab structure. This is cleaner because the DOM hierarchy is fundamentally different (tabs are a sibling of the main area, not a child).
-
-### 4. ConfigManager.resetToDefaults()
-
-**New method:**
-```js
-resetToDefaults() {
-  this.config = { ...this.defaults };
-  this.save();
-}
-```
-
-**Footer button handler in SettingsScreen:**
-```js
-if (btnCfg.action === 'reset') {
-  this.configManager.resetToDefaults();
-  // Re-render to update all controls
-  this._renderStructuredContent(layout);
-}
-```
-
-### 5. Header Decorations
-
-**Rendering pattern (reuses `_renderImageElem` approach):**
-```js
-if (hdr.decorations?.length) {
-  for (const deco of hdr.decorations) {
-    if (!deco.src) continue;
-    const img = document.createElement('img');
-    img.src = resolvePath(sanitizeCssValue(deco.src));
-    img.style.position = 'absolute';
-    img.style.left = clampField('x', deco.x) + 'px';
-    img.style.top = clampField('y', deco.y) + 'px';
-    img.style.width = clampField('width', deco.width) + 'px';
-    img.style.height = clampField('height', deco.height) + 'px';
-    img.style.pointerEvents = 'none';
-    img.draggable = false;
-    header.appendChild(img);
+```json
+{
+  "camera": {
+    "effect": "shake",
+    "durationMs": 300,
+    "intensity": "medium",
+    "direction": "horizontal",
+    "trigger": "onEnter"
   }
 }
 ```
 
-## Patterns to Follow
+**Rules:**
+- `camera` is optional / nullable
+- v1.4 editor only writes `trigger: "onEnter"`
+- preserve unknown enum values when loading/saving unless user explicitly changes them
 
-### Pattern 1: Sparse Config Merge (Established)
+### Transition
 
-**What:** All new config parameters have defaults. Missing fields use defaults, not errors.
+```json
+{
+  "transition": {
+    "type": "dissolve",
+    "duration": 800
+  }
+}
+```
 
-**When:** ALWAYS — this is THE architectural pattern of the project.
+**Expanded enum:** `none | fade | slide-left | slide-right | dissolve | wipe | scale | blur`
 
-**Why:** Proven across widgetDefaults.js (`deepMergeWidgetStyles`), all theme configs, all screen layout configs. Zero breaking changes for existing projects.
+> Keep existing `slide-left` / `slide-right` naming for backward compatibility with current editor data, even if UI copy says “slide”.
 
-### Pattern 2: Fallback Chain (Established)
+## 2. Runtime event contract
 
-**What:** When new config field is missing, fall back to previous behavior.
+### Existing event extended
 
 ```js
-const tabs = tabCfg.tabs || DEFAULT_TAB_LABELS.map((label, i) => ({
-  label, settingKeys: SETTING_GROUP_KEYS[i]
-}));
+show_character: {
+  id,
+  expression,
+  position,
+  x,
+  y,
+  scale,
+  animation,
+  transition,
+  duration,
+  image
+}
 ```
 
-**When:** For every new structural parameter.
+### New event
 
-**Why:** Ensures existing `settingsScreen` configs in saved projects and built-in themes continue working without migration.
-
-### Pattern 3: Isolated Render Paths (New for Left Tabs)
-
-**What:** `tabBar.position === 'left'` uses a separate `_renderLeftTabStructured()` method instead of conditionals throughout existing render code.
-
-**When:** A structural variant requires fundamentally different DOM hierarchy.
-
-**Why:** Avoids spaghetti conditionals in `_renderStructured()`. Each mode is readable and testable in isolation.
-
-### Pattern 4: Engine Config + Editor Form (Established)
-
-**What:** Engine reads config and renders. Editor writes config through form controls. Communication via `setLayout()` + `postMessage` preview.
-
-**When:** ALWAYS — established by `SettingsSection.vue` ↔ `useScreenLayoutEditor.js` ↔ `SettingsScreen.js`.
-
-**Why:** Clean separation of concerns. Editor doesn't know about rendering, engine doesn't know about Vue.
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Mixing Structured and Custom Layout
-**What:** Allowing elements[] AND structural params in the same config.
-**Why bad:** Two layout systems fighting over the same DOM. The existing mode detection (line 84-89) is clean: elements[] → custom mode, header/tabBar → structured mode. Don't blur this boundary.
-**Instead:** Structured mode only. For pixel-perfect control, use custom layout mode.
-
-### Anti-Pattern 2: Runtime Config Validation with Errors
-**What:** Throwing errors when config is malformed.
-**Why bad:** Crashes the settings screen. Users can't fix it from the game.
-**Instead:** `console.warn()` + skip invalid items + fall back to defaults. The settings screen must always render.
-
-### Anti-Pattern 3: Deep Config Nesting (> 3 Levels)
-**What:** `settingsScreen.contentArea.itemStyle.label.font.family`.
-**Why bad:** Hard to merge, hard to edit in forms, easy to get path wrong.
-**Instead:** Maximum 3 levels: `settingsScreen.contentArea.itemStyle.labelFontSize`. Flatten where possible.
-
-### Anti-Pattern 4: Per-Setting Style Overrides in Layout Config
-**What:** `settingKeys: [{ key: 'bgm-volume', labelColor: '#ff0', trackColor: '#0f0' }]`.
-**Why bad:** Duplicates widgetStyles system. Creates per-item style explosion. Editor UI becomes impossibly complex.
-**Instead:** widgetStyles controls ALL setting appearance globally. Layout config controls only structural arrangement.
-
-## Build Order
-
+```js
+page_camera: {
+  sceneId,
+  pageIndex,
+  camera
+}
 ```
-Phase 1: Tab Structure + Setting Assignment (Engine)
-  ├─ Replace SETTING_GROUP_KEYS lookup with config-driven tabs
-  ├─ Unassigned-keys-to-last-tab fallback
-  ├─ Tab icon rendering
-  └─ Testable: manually set tabBar.tabs in script.json
 
-Phase 2: Content Layout + Row Styling (Engine)
-  ├─ contentArea.columns (1 or 2) → CSS Grid
-  ├─ contentArea.gap → spacing
-  ├─ itemStyle (dividers, zebra, labelPosition, labelWidth, showValueLabel)
-  └─ Testable: manually set contentArea in script.json
+**Recommendation:** emit raw `camera` object rather than a heavily normalized payload. Validation/no-op belongs in `CameraController`, not `ScriptEngine`.
 
-Phase 3: Chrome Features (Engine)
-  ├─ header.decorations[] rendering
-  ├─ header.showCloseButton toggle
-  ├─ footer reset action + ConfigManager.resetToDefaults()
-  ├─ Panel background image
-  ├─ tabBar.position: 'left' (separate render path)
-  └─ Testable: manually set full config
+## 3. Preview message contract
 
-Phase 4: Editor UI (Vue)
-  ├─ Tab list editor (add/remove/reorder, label, icon, setting assignment)
-  ├─ Content layout controls (columns, gap, labelPosition)
-  ├─ Row style controls (dividers, zebra)
-  ├─ Header decoration editor
-  ├─ Footer button editor
-  └─ All connected via useScreenLayoutEditor composable
+Use the existing iframe, but add targeted commands:
 
-Phase 5: Built-in Theme Updates
-  ├─ Update existing themes with structural params
-  └─ Create showcase configs demonstrating different layouts
+```js
+{ type: 'preview-character-animation', script, sceneId, pageIndex, charId }
+{ type: 'preview-camera', script, sceneId, pageIndex }
+{ type: 'preview-transition', script, sceneId, pageIndex }
 ```
+
+**Why include `script` every time:** lowest-risk path. Each preview request can boot from a clean snapshot, so previews do not depend on hidden iframe state staying perfectly synced.
+
+**Expected iframe replies:**
+
+```js
+{ type: 'preview-ok', previewType }
+{ type: 'preview-error', previewType, reason }
+```
+
+---
+
+## Recommended Runtime Flow
+
+## Page enter order
+
+For minimum disruption, keep current `ScriptEngine` sequencing but make the order explicit:
+
+1. `page_enter`
+2. `set_background`
+3. `hide_character` diffs
+4. `show_character` diffs/updates
+5. `page_camera`
+6. `dialogue` or `choice`
+
+This is compatible with current engine structure and keeps dialogue behavior unchanged.
+
+## Visual ownership by layer
+
+| Layer | Owns | Must not own |
+|---|---|---|
+| `BackgroundLayer` | background image swaps + transition classes | camera, dialogue, character motion |
+| `CharacterLayer` | sprite DOM, expression crossfade, preset animation classes | page camera, background transition |
+| `CameraController` | stage shake/zoom/pan/flash | character animation, page parsing |
+| `main.js` | event wiring + lifecycle resets | effect implementation details |
+
+---
+
+## Recommended Editor / Preview Flow
+
+## Principle
+
+**Iframe runtime is the authority. Canvas stays mostly static.**
+
+Current canvas preview is good for placement, not for lifecycle-accurate cinematic behavior.
+
+## Flow for inspector replay buttons
+
+```text
+PageInspector button
+  -> usePageEditor.previewX()
+  -> deep-copy current script snapshot
+  -> postMessage to iframe
+  -> iframe resets visual state
+  -> iframe restoreState(scene/page)
+  -> engine.renderCurrentPage()
+  -> replay requested effect
+  -> iframe sends ok/error
+  -> editor shows failure reason if needed
+```
+
+## Canvas mode recommendation
+
+Do not simulate runtime camera/animation in canvas mode.
+
+At most, add static hints:
+- character chip: `动画: breathe`
+- page chip: `镜头: shake`
+- transition label: `dissolve`
+
+That keeps parity clean and avoids two effect engines.
+
+---
+
+## Backward Compatibility Rules
+
+## Old projects/pages
+
+- missing `page.camera` => no-op
+- missing `character.animation` => runtime treats as `none`
+- existing `transition.type` values keep working unchanged
+- no migration step required
+
+## Unknown values
+
+Editor must preserve:
+- unknown character animation enum
+- unknown camera enum
+- unknown transition enum
+
+UI behavior:
+- show placeholder option like `未知效果：legacy-spin`
+- do not silently rewrite to `none`
+
+Runtime behavior:
+- unknown character animation => no-op + dev warning
+- unknown camera effect => no-op + dev warning
+- unknown transition => fallback `fade` + dev warning
+
+---
+
+## Critical Integration Risks
+
+## Risk 1: Transform collisions
+
+**Where it comes from:**  
+Current `CharacterLayer` already uses `transform` for center positioning, custom scale, and enter-slide. Camera will also use transform. New preset animations also want transform.
+
+**Prevention:** strict transform ownership:
+- stage transform only in `CameraController`
+- character layout transform only on `.character-sprite`
+- character motion transform only on `.character-motion`
+
+## Risk 2: Camera affecting UI overlays
+
+**Where it comes from:**  
+Current DOM places all layers under `#game-container`.
+
+**Prevention:** add `#stage-layer`; keep dialogue/UI/title/settings as siblings outside the camera target.
+
+## Risk 3: Preview and runtime drift
+
+**Where it comes from:**  
+Current full preview mode disables inspector interaction; phase 63 needs inspector-triggered replay.
+
+**Prevention:** targeted preview commands using the same iframe runtime, not a second preview implementation.
+
+## Risk 4: Reset leakage
+
+**Where it comes from:**  
+`main.js` already has multiple manual reset paths. v1.4 adds more temporary classes/timers/overlay state.
+
+**Prevention:** one `resetRuntimeVisualState()` helper reused everywhere.
+
+---
+
+## Implementation Order That Minimizes Risk
+
+## Step 1 — Freeze contracts and layer ownership
+
+Do first:
+- page data contract
+- runtime event contract
+- `#stage-layer` DOM wrapper decision
+- `.character-motion` wrapper decision
+
+**Reason:** these choices affect all later code and avoid transform rewrites.
+
+## Step 2 — Character runtime foundation
+
+Build:
+- preset registry
+- `CharacterLayer` motion wrapper
+- animation apply/cleanup lifecycle
+
+**Reason:** isolated from editor; easiest first runtime win.
+
+## Step 3 — Camera runtime foundation
+
+Build:
+- `CameraController`
+- `page_camera` event wiring
+- shared reset helper
+
+**Reason:** preview, replay, skip, and title-return all need cleanup semantics before editor exposure.
+
+## Step 4 — Expanded background transitions
+
+Build in `BackgroundLayer`.
+
+**Reason:** independent of animation/camera UI, but should align with final cleanup order before preview work.
+
+## Step 5 — Iframe targeted preview API
+
+Build:
+- preview message types
+- iframe handlers
+- reply/error contract
+- `usePageEditor` helpers
+
+**Reason:** editor UI should consume stable runtime behavior, not define it.
+
+## Step 6 — Editor controls
+
+Build:
+- `PageInspector` controls
+- `CharacterPicker` default animation
+- unknown-value preservation
+- disabled-state reasons
+
+**Reason:** now the UI only writes existing contracts and calls existing preview APIs.
+
+---
+
+## Test Plan by Layer
+
+## 1. Contract / engine tests
+
+**Files:** `ScriptEngine.js`, script store
+
+Must verify:
+- old pages still render without new fields
+- `show_character.animation` is emitted
+- `page_camera` emits after character visual events and before dialogue/choice
+- unknown raw enum values pass through engine untouched
+
+## 2. Runtime DOM tests
+
+### CharacterLayer
+Must verify:
+- one-shot animation class applied then cleaned
+- loop animation persists until clear/hide/replacement
+- expression crossfade still works while animation is active
+- custom scale/position remains correct
+
+### CameraController
+Must verify:
+- only one camera effect active at a time
+- `clear()` removes transforms/flash overlay
+- stage only is affected, not sibling UI layers
+- quick replay replaces previous effect cleanly
+
+### BackgroundLayer
+Must verify:
+- new transition class assignment
+- timer/class cleanup after transition
+- unknown transition falls back safely
+
+## 3. Preview integration tests
+
+**Files:** `usePageEditor.js`, iframe message handlers in `main.js`
+
+Must verify:
+- preview buttons disable when iframe not ready
+- each preview command sends a fresh script snapshot
+- new preview request cancels/overrides old one
+- preview failure returns explicit reason
+- preview cleanup restores steady state
+
+## 4. Editor form tests
+
+**Files:** `PageInspector.vue`, `CharacterPicker.vue`
+
+Must verify:
+- animation select writes `character.animation`
+- camera field visibility changes by effect type
+- transition list includes new values
+- unknown enums display but are preserved on save
+
+## 5. Regression smoke tests
+
+Must verify:
+- old project opens with no migration
+- play mode / skip mode / auto mode still behave
+- load/save/replay/title return clear all cinematic state
+- editor preview and exported runtime behave the same for one sample page per effect
+
+---
+
+## Roadmap Implications
+
+Recommended milestone build order:
+
+1. **Runtime contracts + DOM ownership refactor**
+2. **Character animation runtime**
+3. **Camera runtime + shared cleanup**
+4. **Background transition expansion**
+5. **Iframe effect preview API**
+6. **Editor controls + preservation UX**
+7. **Full regression pass across preview/runtime/export**
+
+This order is safest because the editor is a consumer here, not the source of truth.
+
+---
 
 ## Sources
 
-- `src/ui/SettingsScreen.js` — 3-mode rendering, structured mode implementation (lines 376-603)
-- `src/engine/settingDefs.js` — SETTING_DEFS registry (9 settings, 3 types), config schema documentation
-- `src/engine/widgetDefaults.js` — WIDGET_DEFAULTS, deepMergeWidgetStyles sparse merge pattern
-- `src/ui/widgets/TabWidget.js` — createTabBar(), 5 shape variants, style application
-- `src/ui/widgets/SliderWidget.js` — CSS custom property-based styling
-- `src/editor/components/layout/SettingsSection.vue` — Current editor form (header/tabBar/contentArea)
-- `src/editor/composables/useScreenLayoutEditor.js` — Preview communication, debounced postMessage
-- `src/editor/builtinThemes.js` — 5 themes, settingsScreen config shape (sparse overrides)
-- `src/engine/ConfigManager.js` — User preference storage, defaults object
-- `src/engine/ThemeManager.js` — 9-slice CSS injection pattern, NINE_SLICE_SELECTORS
+- `.planning/PROJECT.md` — milestone scope, engine/editor constraints
+- `docs/gap-analysis-vs-mature-engines.md` — confirms animation/camera/transition gap is real and priority-worthy
+- `docs/superpowers/plans/2026-04-21-v1.4-cinematic-upgrade.md` — intended file touch points and phase breakdown
+- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md` — target contract and preview principles
+- `index.html` — current layer DOM structure
+- `src/main.js` — current runtime wiring, preview message handling, duplicated reset points
+- `src/engine/ScriptEngine.js` — current page render ordering and emitted events
+- `src/ui/CharacterLayer.js` — current transform/crossfade behavior
+- `src/ui/BackgroundLayer.js` — current transition ownership
+- `src/style.css` — current transform responsibilities
+- `src/editor/stores/script.js` — default page schema
+- `src/editor/components/page-editor/PageInspector.vue` — current page-level editing surface
+- `src/editor/components/page-editor/CharacterPicker.vue` — current character insert contract
+- `src/editor/composables/usePageEditor.js` — current iframe preview API
+- `src/editor/views/PageEditor.vue` — current preview/read-only behavior

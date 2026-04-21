@@ -1,164 +1,260 @@
-# Domain Pitfalls — Settings Screen Structural Customization
+# Domain Pitfalls — v1.4 演出力升级
 
-**Domain:** Settings screen layout parameterization in Galgame Maker (visual novel engine + editor)
-**Researched:** 2025-07-27
-**Overall confidence:** HIGH — based on direct codebase analysis of SettingsScreen.js, settingDefs.js, ConfigManager.js, TabWidget.js, SettingsSection.vue, builtinThemes.js
+**Domain:** Existing VN maker cinematic presentation upgrade (preset character animation + page camera + expanded transitions + editor preview)
+**Researched:** 2026-04-21
+**Overall confidence:** HIGH — based on direct review of milestone docs plus current runtime/editor code (`ScriptEngine`, `CharacterLayer`, `BackgroundLayer`, `main.js`, `usePageEditor`, `PageInspector`, script store)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause settings screen to break, settings to silently disappear, or backward compatibility failures.
+Mistakes here will cause visible unreliability, preview/runtime mismatch, or schema damage.
 
 ---
 
-### Pitfall 1: Future SETTING_DEFS Keys Silently Disappear
+### Pitfall 1: Transform Ownership Collisions Make Effects Fight Each Other
 
-**What goes wrong:** When users define custom `tabBar.tabs[].settingKeys` arrays, they explicitly list which settings appear in each tab. If a future engine version adds a new SETTING_DEFS key (e.g., `'language'`), it won't appear in any tab. The user's saved config has no mention of it, so the setting is invisible and unconfigurable in-game.
+**What goes wrong:** Character enter transitions, custom positioning, scale, preset animation, camera, and background transitions all compete for `transform`. In the current code, `.character-sprite` already uses `transform` for center positioning and custom scale, and enter states overwrite it with `!important`. Adding shake/nod/breathe on the same node will break positioning or silently cancel animation.
 
-**Why it happens:** Explicit tab assignment is closed — it only shows what you list. New engine capabilities are invisible to old configs.
+**Why it happens:** The current runtime was built around one transform owner per layer. v1.4 introduces three new transform-heavy systems on top of that.
 
-**Consequences:** Players can't access new settings. Feature appears broken. Users don't know the setting exists.
+**Consequences:**  
+- centered characters jump off-center  
+- custom-scale characters lose scale during animation  
+- camera effect cancels page transition feel  
+- “works in one preset, breaks in another” bugs
 
-**Prevention:** "Unassigned keys append to last tab" fallback. At render time, collect all keys assigned across all tabs. Any SETTING_DEFS key not in this set gets appended to the last tab's content. This ensures all settings are always accessible, even if placement isn't ideal.
+**Prevention:**  
+1. **Phase 61:** split character layout and motion ownership. Keep position/scale on an outer container, animation class on an inner motion wrapper or compose via CSS variables.  
+2. **Phase 62:** camera owns only the stage container.  
+3. **Phase 64:** transitions own only background/page transition layers, not character nodes.  
+4. Freeze one explicit order: **cleanup old effects → transition → mount new page → character animation → camera**.
 
-```js
-const allAssigned = new Set(tabs.flatMap(t => t.settingKeys));
-const unassigned = Object.keys(SETTING_DEFS).filter(k => !allAssigned.has(k));
-if (unassigned.length > 0 && tabs.length > 0) {
-  tabs[tabs.length - 1].settingKeys.push(...unassigned);
-}
-```
+**Warning signs:**  
+- new animation classes added directly to `.character-sprite` without wrapper/transform composition  
+- more `!important` added to transform rules  
+- bug reports like “breathe breaks scale” or “shake moves the sprite to wrong place”
 
-**Detection:** Unit test that adds a fake key to SETTING_DEFS and verifies it appears in rendered output when not in any tab config.
-
----
-
-### Pitfall 2: Same Setting Key in Multiple Tabs
-
-**What goes wrong:** User accidentally assigns `'bgm-volume'` to both Tab 1 and Tab 2. The slider appears in both tabs, and changes in one tab don't visually update the other until re-render. Worse: if the engine creates two slider controls for the same ConfigManager key, they can fight (one writes, the other shows stale value).
-
-**Why it happens:** No validation on `settingKeys` uniqueness across tabs. Editor UI doesn't prevent it.
-
-**Consequences:** Duplicate sliders with conflicting state. Confusing UX. Potential stale values.
-
-**Prevention:** 
-1. **Engine:** Deduplicate at render time — first occurrence wins. `console.warn` about duplicates.
-2. **Editor:** Gray out already-assigned keys in other tab checkboxes. Prevent the same key from being checked in multiple tabs.
-
-**Detection:** Engine `console.warn` on duplicate detection. Editor UI visual feedback.
+**Phase to absorb risk:** **Phase 61 first**, then re-validated in **62** and **64**
 
 ---
 
-### Pitfall 3: Backward Compatibility Break — Empty `tabs` Array
+### Pitfall 2: Cleanup Gaps Leave the Runtime in a “Dirty Stage” State
 
-**What goes wrong:** User creates a `tabBar.tabs: []` (empty array, e.g., by removing all tabs in editor). Current fallback logic checks `tabCfg.tabs || DEFAULT_TAB_LABELS` — if `tabs` is `[]` (truthy), the fallback doesn't trigger. Result: no tabs render, no settings visible.
+**What goes wrong:** Effects survive past the page that created them. Current code already has multiple manual reset paths (`replayCurrentPage()`, preview `stop`, end flow, title return, load flow). Adding camera classes, flash overlays, loop animations, preview-only temporary states, and transition timers will make “forgot one reset path” the most likely failure mode.
 
-**Why it happens:** Empty array `[]` is truthy in JavaScript. Fallback only triggers for `null`/`undefined`.
+**Why it happens:** Reset logic is duplicated today. v1.4 increases the number of transient visual states dramatically.
 
-**Consequences:** Settings screen renders empty. User can't access any settings.
+**Consequences:**  
+- flash overlay stays visible after stop/load/title return  
+- `breathe` keeps running on wrong page  
+- preview ends but iframe stays transformed  
+- first page after load inherits old camera or animation state
 
-**Prevention:** Check `tabs?.length > 0` not just `tabs`:
-```js
-const tabs = (tabCfg.tabs?.length > 0) ? tabCfg.tabs : DEFAULT_TAB_LABELS.map(...);
-```
+**Prevention:**  
+1. **Phase 62** must introduce one shared runtime visual reset helper and use it everywhere.  
+2. `clear()` for each visual subsystem must remove classes, timers, inline styles, and overlays — not just DOM nodes.  
+3. Preview cancel and runtime page leave must use the same cleanup primitives.  
+4. Add integration tests for: replay, preview stop, title return, end-of-game return, load, and rapid page skip.
 
-**Detection:** Unit test with empty `tabs: []` verifying fallback renders.
+**Warning signs:**  
+- any new reset path manually calling only some of `characters.clear() / background.clear() / engine.resetRenderState()`  
+- camera controller has `play()` but no fully tested `clear()`  
+- preview button can be clicked repeatedly and leaves stage altered afterward
+
+**Phase to absorb risk:** **Phase 62** (foundation), regression-owned again in **64/final verification**
 
 ---
 
-### Pitfall 4: Reset Action Without Confirmation
+### Pitfall 3: Preview Parity Breaks if Editor Reimplements Runtime Behavior
 
-**What goes wrong:** User clicks "恢复默认" footer button and all their carefully tuned volume/speed settings are instantly wiped. No confirmation dialog. No undo.
+**What goes wrong:** Editor preview becomes “close enough” instead of authoritative. `usePageEditor` currently only knows start/stop/mute; if PageInspector adds local fake previews, duplicated preset mapping, or canvas-only animation behavior, runtime and preview will drift immediately.
 
-**Why it happens:** Direct `ConfigManager.resetToDefaults()` call on button click. No gating mechanism.
+**Why it happens:** It is tempting to preview simple effects directly in Vue/editor code for speed.
 
-**Consequences:** Accidental data loss of user preferences. Frustrating UX.
+**Consequences:**  
+- dropdown says one thing, exported game does another  
+- preview supports effects runtime ignores  
+- bug fixes must be applied twice  
+- trust in the editor drops fast
 
-**Prevention:** Inline confirmation before reset. Options:
-1. Double-click-to-confirm: first click shows "确认?" label, second click within 3s executes reset
-2. `confirm()` dialog: simple but breaks immersion
-3. Undo buffer: store previous config, allow Ctrl+Z — too complex for runtime
+**Prevention:**  
+1. **Phase 63** must only send targeted preview commands into the iframe runtime.  
+2. No preview-only preset registry, no second timing model, no fake canvas animation logic.  
+3. If iframe is not ready, disable preview with an explicit reason instead of silent fallback.  
+4. “Canvas mode = static editing only” should stay true.
 
-**Recommendation:** Option 1 (double-click). Simple, no dialog, no undo system needed. Same pattern as save slot delete confirmation in SaveLoadScreen.
+**Warning signs:**  
+- animation names/options duplicated separately in editor and runtime code  
+- preview buttons mutate local canvas DOM instead of postMessage to iframe  
+- “works in inspector replay, not in game” bugs
 
-**Detection:** Manual testing — click reset, verify confirmation appears before execution.
+**Phase to absorb risk:** **Phase 63**
+
+---
+
+### Pitfall 4: Unknown Enum Values Get Silently Destroyed on Open/Save
+
+**What goes wrong:** Old or future project data containing unknown `animation`, `camera.effect`, or transition values gets rewritten to `none`, `fade`, or some current default as soon as the editor opens and saves.
+
+**Why it happens:** The current editor uses direct `<select>` controls with fixed options. Without explicit unknown-value preservation, unsupported values are lost.
+
+**Consequences:**  
+- forward compatibility breaks  
+- user data gets corrupted by merely opening a project  
+- legacy transition aliases (`slide-left`, `slide-right`) disappear unpredictably  
+- future versions become harder to evolve safely
+
+**Prevention:**  
+1. **Phase 63** must preserve unknown enum values in UI with disabled fallback options like `未知效果：xxx`.  
+2. Runtime must safe-no-op unknown values and warn in dev mode.  
+3. **Phase 64** must normalize old transition aliases on read, not by destructive writeback.  
+4. Save should preserve untouched unknown values exactly.
+
+**Warning signs:**  
+- setters coercing unknown values directly to `'none'` or `'fade'`  
+- open-save-open cycle changes JSON without user edits  
+- legacy project loses transition names after first save
+
+**Phase to absorb risk:** **Phase 63** for UI preservation, **Phase 64** for transition normalization
+
+---
+
+### Pitfall 5: Skip/Auto/Fast Navigation Reveal Timer and Ordering Bugs
+
+**What goes wrong:** Effects that feel fine in manual play break in skip, auto mode, quick replay, or rapid preview clicks. Current runtime already special-cases skip for character show/hide, background changes, voice, and BGM. New animation/camera systems are easy to forget in those branches.
+
+**Why it happens:** v1.4 adds more timers, more async, and more “on enter” semantics, but fast navigation is already a first-class mode in this engine.
+
+**Consequences:**  
+- old page camera fires after user already advanced  
+- one-shot animation finishes on next page  
+- skip mode becomes visually noisy or inconsistent  
+- preview replays queue on top of each other
+
+**Prevention:**  
+1. **Phase 61/62**: every timed effect needs cancellation token/generation semantics, not bare timers only.  
+2. Skip mode should clamp new visual effects to instant/no-op policy consistently.  
+3. Re-triggering the same preview must cancel the previous instance first.  
+4. Add explicit tests for manual, auto, skip, and repeated replay clicks.
+
+**Warning signs:**  
+- `setTimeout()` added without token/generation ownership  
+- no skip-specific behavior for camera  
+- repeated replay clicks produce stacked effects
+
+**Phase to absorb risk:** **Phase 61 and 62**, verified from editor side in **63**
+
+---
+
+### Pitfall 6: Camera Effects Leak Into Non-Gameplay UI Because the Root Container Is Shared
+
+**What goes wrong:** Camera and flash are applied to `#game-container`, but that same root also contains dialogue, menus, save/load, settings, backlog, and title screen. If cleanup is late or overlays open mid-effect, UI screens can shake/zoom/flash unintentionally.
+
+**Why it happens:** The engine does not currently have a separate dedicated “stage only” subtree; most runtime UI sits in the same root stacking context.
+
+**Consequences:**  
+- save/load opens while screen is still shaking  
+- flash overlays cover menu/title flows  
+- preview stop leaves title screen visually offset  
+- user perceives the system as flashy but unreliable
+
+**Prevention:**  
+1. **Phase 62** must explicitly decide camera scope and document it.  
+2. If camera remains on `#game-container`, then cleanup before showing non-gameplay UI is mandatory.  
+3. Flash overlay must be owned by the camera controller, not globally appended ad hoc.  
+4. Add regression tests around title return, menu open, preview stop, and save/load after camera playback.
+
+**Warning signs:**  
+- overlay DOM appended outside the controller lifecycle  
+- menu/title bugs only after pages with camera effects  
+- UI screenshots show shifted/zoomed menus
+
+**Phase to absorb risk:** **Phase 62**
+
+---
+
+### Pitfall 7: Scope Creep Turns Presets Into a Hidden Animation Language
+
+**What goes wrong:** The milestone starts with simple presets, then accumulates per-effect parameters, chaining, custom curves, trigger variants, multi-camera stacks, or timeline semantics. That pulls the product away from GUI-first authoring and creates a half-built ATL.
+
+**Why it happens:** Cinematic features naturally invite “just one more parameter.”
+
+**Consequences:**  
+- editor complexity explodes  
+- schema becomes unstable before users benefit  
+- more states to preview/test than the current product can safely support  
+- milestone misses “reliable basic presentation” and ships an unreliable mini-platform
+
+**Prevention:**  
+1. Keep contracts hard-limited: named animation presets, one optional `page.camera`, one trigger (`onEnter`), fixed intensity enums, no composition language.  
+2. Reject requests to add curves/timelines/chained effects inside v1.4.  
+3. Put any “advanced animation language” ideas into a later milestone, not incremental scope inside 61-64.
+
+**Warning signs:**  
+- PRs adding freeform JSON blobs or arrays of effects  
+- editor asks for custom keyframes, percentages, or arbitrary easing strings  
+- camera becomes `effects[]` during the same milestone
+
+**Phase to absorb risk:** **Milestone-level gating before 61**, reinforced in **63 requirements/UI**
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 5: Left-Tab DOM Restructure Breaks Content Positioning
+### Pitfall 8: New Transitions Fork Into a Second Background System
 
-**What goes wrong:** When `tabBar.position === 'left'`, the content area needs different absolute positioning calculations. Current content area uses `position: absolute; left: 40px; top: 160px` — these values assume top-tab layout where header+tabbar consume vertical space. With left tabs, the header is shorter and the content needs to account for the sidebar width, not tab bar height.
+**What goes wrong:** Expanded transitions are added as special preview logic or separate code paths instead of extending `BackgroundLayer`. The runtime then has one mechanism for `fade`, another for `wipe/blur/scale`, and a third for preview.
 
-**Prevention:** 
-- Left-tab mode uses a completely separate render path (`_renderLeftTabStructured()`)
-- Content area positioning is recalculated based on sidebar width
-- Don't try to toggle between modes with conditionals — two clean paths
+**Prevention:**  
+- **Phase 64** must keep one transition normalization function and one cleanup path in `BackgroundLayer`  
+- preview transition should be a dedicated helper on `BackgroundLayer`, not a separate editor implementation  
+- keep legacy `fade/slide/none` behavior working through the same normalization layer
 
-### Pitfall 6: Two-Column Grid with Odd Item Count
+### Pitfall 9: Transition Preview Corrupts the Real Page State
 
-**What goes wrong:** With `columns: 2` and 3 items in a tab, the third item sits alone in the left column. With 1 item, it takes half the width, looking awkward.
+**What goes wrong:** Previewing a transition mutates the iframe into a temporary fake page and fails to restore the true current page state after completion or cancellation.
 
-**Prevention:** 
-- 1 item: span full width with `grid-column: 1 / -1`
-- Odd last item: let it sit in left column (natural grid behavior, acceptable)
-- Alternative: detect single-item tabs and force `columns: 1` automatically
+**Prevention:**  
+- **Phase 64** needs explicit snapshot/restore ownership, preview token cancellation, and restoration after every exit path  
+- repeated clicks must cancel old preview, restore, then start new preview
 
-### Pitfall 7: Tab Icon Image Loading Failures
+### Pitfall 10: Expression Crossfade and Animation Replay Race Each Other
 
-**What goes wrong:** User sets a tab icon path that doesn't exist (deleted asset, wrong path). Tab renders with a broken image icon, looking worse than no icon.
+**What goes wrong:** `CharacterLayer` already uses async `decode()` plus generation counters for expression crossfade. Adding animation replay without similar generation ownership can attach the new animation to an outdated DOM/image state.
 
-**Prevention:** 
-- `img.onerror` handler that hides the icon element and shows text-only fallback
-- In editor: validate icon path against asset library on assignment
+**Prevention:**  
+- **Phase 61** should extend the existing per-character bookkeeping instead of bolting on independent timers  
+- animation apply/clear must cooperate with crossfade generation and hide/clear flows
 
-### Pitfall 8: Label Position 'top' Breaks Two-Column Layout
+### Pitfall 11: Editor Field Visibility Creates Impossible Runtime States
 
-**What goes wrong:** With `labelPosition: 'top'` + `columns: 2`, each setting item becomes taller (label above control). But the grid items may have different heights — a slider with value label is taller than a toggle. Grid rows misalign.
+**What goes wrong:** UI exposes direction/intensity/duration in invalid combinations or leaves stale fields in saved JSON after effect type changes.
 
-**Prevention:** CSS Grid handles this naturally with `grid-auto-rows: auto`. Each row adjusts to its tallest item. No special handling needed, but test visually with mixed slider/toggle/select combinations.
-
-### Pitfall 9: Header Decoration Images Overflow
-
-**What goes wrong:** User positions a decoration image at x: 1200 in a 1280-wide header. The image overflows, causing horizontal scrollbar or visual glitch.
-
-**Prevention:** 
-- Header container has `overflow: hidden`
-- `clampField()` already clamps positional values — extend to decoration positions
-
-### Pitfall 10: Editor Checkbox Matrix for Setting Assignment Gets Unwieldy
-
-**What goes wrong:** With 9+ SETTING_DEFS and 4-5 tabs, the checkbox matrix in the editor becomes a wall of checkboxes. Users lose track of which settings are assigned where.
-
-**Prevention:**
-- Show assignment status per setting: "BGM 音量 → Tab: 声音 ✓"
-- Highlight unassigned settings prominently
-- Consider a drag-to-tab or dropdown-per-setting approach instead of checkbox matrix
-- Start simple (checkbox matrix), iterate based on user feedback
+**Prevention:**  
+- **Phase 63** should hide `direction` except for valid effects and clamp duration in setters  
+- when switching effect type, preserve only compatible fields or tolerate extras safely at runtime
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 11: Config Size Growth in script.json
+### Pitfall 12: Defaulting Every Page to a Full `camera` Object Creates Noisy Saves
 
-**What goes wrong:** Full structural config with decorations, per-tab icons, and footer buttons adds ~500 bytes to script.json per project. Not a real problem, but sloppy empty fields waste space.
+**What goes wrong:** Adding eager default camera payloads to every page bloats diffs and makes unknown-value preservation harder.
 
-**Prevention:** Editor should only write non-default values to config (sparse output). `null` fields should be omitted, not written as `null`. The engine merge pattern handles missing fields.
+**Prevention:**  
+- store `camera: null` by default  
+- only materialize nested camera config when the user actually enables an effect
 
-### Pitfall 12: Divider Color Not Visible on Dark Backgrounds
+### Pitfall 13: Naming Drift Between Product, Schema, and CSS Causes Hidden Bugs
 
-**What goes wrong:** Default divider color `rgba(255,255,255,0.1)` is invisible against some custom panel backgrounds.
+**What goes wrong:** Product copy says `zoom`, transition schema says `scale`, old data still says `slide-left`, CSS classes say something else, and preview messages use a fourth name.
 
-**Prevention:** Make divider color configurable (already in schema: `itemStyle.dividerColor`). Provide sensible defaults per theme in builtinThemes.js.
-
-### Pitfall 13: Value Label Width Inconsistency
-
-**What goes wrong:** In 2-column mode, the value label (e.g., "80%", "3.0s") has different widths for different settings, causing sliders to have inconsistent widths between columns.
-
-**Prevention:** Apply `min-width: 48px; text-align: right` to value labels for consistent alignment. Already partially handled by the existing `sc-setting-value` class.
+**Prevention:**  
+- freeze canonical names once per surface  
+- document alias normalization only at the boundary  
+- do not let UI labels leak into schema names
 
 ---
 
@@ -166,27 +262,68 @@ const tabs = (tabCfg.tabs?.length > 0) ? tabCfg.tabs : DEFAULT_TAB_LABELS.map(..
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| Tab structure | P1 (disappearing settings), P2 (duplicate keys), P3 (empty tabs) | Unassigned fallback + dedup + empty array check |
-| Content layout | P6 (odd items in 2-col), P8 (label-top + 2-col) | CSS Grid auto-rows, visual testing |
-| Header/footer | P4 (no reset confirmation), P9 (decoration overflow) | Double-click confirm, overflow:hidden |
-| Left tabs | P5 (positioning break) | Separate render path |
-| Editor UI | P10 (checkbox matrix UX) | Start simple, iterate |
-| Theme updates | P12 (divider visibility) | Per-theme divider colors |
+| Phase 61 — Character preset animations | Transform collision with position/scale; loop classes survive page change; animation replay races with expression crossfade | Introduce clear transform ownership, extend per-character bookkeeping, add deterministic `_clearAnimation()` on hide/clear/replay |
+| Phase 62 — Camera runtime | Shared root causes UI contamination; missing reset paths; multiple camera effects stack unpredictably | Build `CameraController` + shared reset helper first; one active effect at a time; explicit `clear()` used by replay/stop/title/load/end |
+| Phase 63 — Editor config + preview | Preview/runtime divergence; unknown enum loss; silent preview failure when iframe not ready | Preview only via iframe runtime commands; preserve unknown values in selects; expose disabled reason instead of fallback preview |
+| Phase 64 — Expanded transitions | Second transition system appears; legacy values break; transition preview leaves iframe in fake state | Extend `BackgroundLayer` only; normalize aliases at read boundary; snapshot/restore preview state with cancel tokens |
+| Final regression | Milestone looks feature-complete but integration flows are still dirty | Run a fixed matrix: manual play, auto, skip, replay, preview stop, load, title return, end-of-game, legacy project open/save |
+
+---
+
+## Milestone Structure Implications
+
+### Required ordering
+
+1. **Phase 61 must solve character-layer ownership before adding more effects.**  
+   If transform ownership is still fuzzy, every later phase compounds the problem.
+
+2. **Phase 62 must land reset infrastructure, not just camera visuals.**  
+   Camera without shared cleanup will create the most visible reliability bugs in the milestone.
+
+3. **Phase 63 must consume frozen runtime contracts, never define them.**  
+   If editor work starts before runtime contracts stabilize, unknown-enum handling and preview commands will churn.
+
+4. **Phase 64 must integrate into the same page-enter lifecycle.**  
+   Do not treat transitions as a side quest; they share cleanup/order guarantees with animation and camera.
+
+### Recommended milestone gates
+
+- **Gate after Phase 61:** prove character animation does not break center/custom positioning, scale, or expression crossfade
+- **Gate after Phase 62:** prove replay/stop/title/load/end all fully clear stage state
+- **Gate after Phase 63:** prove inspector preview uses runtime path and preserves unknown values on save
+- **Gate after Phase 64:** prove legacy transitions still work and new transitions restore preview state correctly
+
+### Integration test matrix this milestone must absorb
+
+- open legacy project with unknown `animation` / `camera` / transition values  
+- manual next-page flow with one-shot animation + camera  
+- skip mode across pages with camera and loop animation  
+- replay current page after a loop animation and flash  
+- preview start → replay animation/camera/transition → stop preview  
+- load save from a page that previously had active loop/camera  
+- return to title immediately after a camera page  
+- end-of-game return after cinematic page
 
 ---
 
 ## Compound Risks
 
-- **P1 + P3:** Both involve invisible settings. Combined: if tabs[] is empty AND unassigned fallback doesn't trigger, ALL settings disappear. Fix both with the `tabs?.length > 0` check.
-- **P4 + reset action:** If reset happens without confirmation AND the settings screen auto-closes after reset, user loses preferences with no way to verify what happened. Ensure settings screen stays open after reset so user can see the effect.
-- **P5 + P8:** Left-tab + label-top + 2-column is the most complex visual combination. Test this specific combo explicitly.
+- **Transform collision + weak cleanup:** hardest class of bug; even if effects look good once, they fail after replay/load/skip.
+- **Unknown enum loss + GUI-first product:** users lose trust quickly if simply opening a project rewrites unsupported values.
+- **Preview divergence + scope creep:** once preview is separate and feature surface keeps growing, v1.4 stops being a milestone and becomes platform debt.
 
 ## Sources
 
+- Provided milestone context and requirements
+- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md`
+- `docs/superpowers/plans/2026-04-21-v1.4-cinematic-upgrade.md`
+- `docs/gap-analysis-vs-mature-engines.md`
+- `.planning/PROJECT.md`
 - Direct codebase analysis:
-  - `src/ui/SettingsScreen.js` — rendering modes, tab construction, content rendering
-  - `src/engine/settingDefs.js` — SETTING_DEFS keys, types, defaults
-  - `src/engine/ConfigManager.js` — defaults, get/set, save methods
-  - `src/ui/widgets/TabWidget.js` — tab button creation, shape application
-  - `src/editor/components/layout/SettingsSection.vue` — current editor form fields
-  - `src/editor/builtinThemes.js` — existing theme config shape for settings screen
+  - `src/ui/CharacterLayer.js`
+  - `src/ui/BackgroundLayer.js`
+  - `src/engine/ScriptEngine.js`
+  - `src/main.js`
+  - `src/editor/composables/usePageEditor.js`
+  - `src/editor/components/page-editor/PageInspector.vue`
+  - `src/editor/stores/script.js`

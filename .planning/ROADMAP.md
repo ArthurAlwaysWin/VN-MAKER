@@ -309,7 +309,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 ## Phases
 
 - [x] **Phase 61: Contract Freeze & Visual Ownership** - Freeze compatibility rules and isolate camera effects to stage-owned visuals only (completed 2026-04-21)
-- [ ] **Phase 62: Character Preset Runtime Foundation** - Deliver per-character preset animation selection and runtime lifecycle rules
+- [x] **Phase 62: Character Preset Runtime Foundation** - Deliver per-character preset animation selection and runtime lifecycle rules (completed 2026-04-21)
 - [ ] **Phase 63: Camera Runtime & Shared Cleanup** - Deliver single-effect page camera playback with bounded controls and reliable reset behavior
 - [ ] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering
 - [ ] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews
@@ -340,8 +340,8 @@ Plans:
   3. Players see one-shot character animations finish automatically, while looping animations continue only on the current page and clear when leaving it.
 **Plans**: 2 plans
 Plans:
-- [ ] 62-01-PLAN.md — Freeze preset contract/defaults and emit page-entry animation through ScriptEngine only
-- [ ] 62-02-PLAN.md — Implement CharacterLayer preset playback, motion-only CSS, and cleanup lifecycle
+- [x] 62-01-PLAN.md — Freeze preset contract/defaults and emit page-entry animation through ScriptEngine only
+- [x] 62-02-PLAN.md — Implement CharacterLayer preset playback, motion-only CSS, and cleanup lifecycle
 
 ### Phase 63: Camera Runtime & Shared Cleanup
 **Goal**: Creators can configure one bounded camera effect per page and players see it trigger reliably on page entry without stacking.
@@ -351,7 +351,10 @@ Plans:
   1. Creators can assign one camera effect to a page.
   2. Available camera effects include `shake`, `zoom`, `pan`, and `flash`, with duration, intensity, and direction controls when relevant.
   3. Players see the configured camera effect trigger when the page enters, and only one page-level camera effect is active at a time.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 63-01-PLAN.md — Freeze page camera contract/defaults and emit camera metadata through page_enter only
+- [ ] 63-02-PLAN.md — Implement CameraController playback, stage-local flash, and shared cleanup wiring in main.js
 
 ### Phase 64: Background Transition Expansion
 **Goal**: Page transitions become more expressive without breaking legacy transition behavior or page-enter sequencing.
@@ -398,8 +401,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 61. Contract Freeze & Visual Ownership | 2/2 | Complete   | 2026-04-21 |
-| 62. Character Preset Runtime Foundation | 0/0 | Not started | - |
-| 63. Camera Runtime & Shared Cleanup | 0/0 | Not started | - |
+| 62. Character Preset Runtime Foundation | 2/2 | Complete | 2026-04-21 |
+| 63. Camera Runtime & Shared Cleanup | 0/2 | Not started | - |
 | 64. Background Transition Expansion | 0/0 | Not started | - |
 | 65. Iframe Effect Preview API | 0/0 | Not started | - |
 | 66. Editor Controls & Compatibility UX | 0/0 | Not started | - |

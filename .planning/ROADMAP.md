@@ -311,7 +311,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 - [x] **Phase 61: Contract Freeze & Visual Ownership** - Freeze compatibility rules and isolate camera effects to stage-owned visuals only (completed 2026-04-21)
 - [x] **Phase 62: Character Preset Runtime Foundation** - Deliver per-character preset animation selection and runtime lifecycle rules (completed 2026-04-21)
 - [x] **Phase 63: Camera Runtime & Shared Cleanup** - Deliver single-effect page camera playback with bounded controls and reliable reset behavior (completed 2026-04-21)
-- [ ] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering
+- [x] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering (completed 2026-04-21)
 - [ ] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews
 - [ ] **Phase 66: Editor Controls & Compatibility UX** - Add in-flow PageInspector controls for cinematic settings without a new editing mode
 - [ ] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows
@@ -366,8 +366,8 @@ Plans:
   3. Players see a stable sequence where the old page exits and the background transition finishes before character animation and camera effects begin.
 **Plans**: 2 plans
 Plans:
-- [ ] 64-01-PLAN.md — Expand the shared transition contract and BackgroundLayer owner for expressive CSS-only transitions
-- [ ] 64-02-PLAN.md — Gate page-enter fan-out behind background transition completion and reset-safe cleanup
+- [x] 64-01-PLAN.md — Expand the shared transition contract and BackgroundLayer owner for expressive CSS-only transitions
+- [x] 64-02-PLAN.md — Gate page-enter fan-out behind background transition completion and reset-safe cleanup
 
 ### Phase 65: Iframe Effect Preview API
 **Goal**: Creators can replay cinematic effects through the runtime-backed iframe preview interface and return to their editing state afterward.
@@ -378,7 +378,10 @@ Plans:
   2. Creators can preview a single transition effect without actually switching to another page.
   3. Creators can replay character animation, camera effect, and transition through the iframe runtime and receive clear disabled or failure feedback when preview is unavailable.
   4. After any effect preview ends or is canceled, the editor returns to the pre-preview page state.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 65-01-PLAN.md — Add editor-side effect preview session state, reason-coded preflight, and shared request plumbing without expanding PageInspector UX
+- [ ] 65-02-PLAN.md — Implement runtime preview-effect protocol, restore-safe owner replay, and same-page transition preview wiring
 **UI hint**: yes
 
 ### Phase 66: Editor Controls & Compatibility UX
@@ -406,7 +409,7 @@ Plans:
 | 61. Contract Freeze & Visual Ownership | 2/2 | Complete   | 2026-04-21 |
 | 62. Character Preset Runtime Foundation | 2/2 | Complete | 2026-04-21 |
 | 63. Camera Runtime & Shared Cleanup | 2/2 | Complete | 2026-04-21 |
-| 64. Background Transition Expansion | 0/2 | Not started | - |
-| 65. Iframe Effect Preview API | 0/0 | Not started | - |
+| 64. Background Transition Expansion | 2/2 | Complete | 2026-04-21 |
+| 65. Iframe Effect Preview API | 0/2 | Not started | - |
 | 66. Editor Controls & Compatibility UX | 0/0 | Not started | - |
 | 67. Integration & Regression Gate | 0/0 | Not started | - |

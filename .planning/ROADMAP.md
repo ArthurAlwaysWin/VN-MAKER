@@ -312,7 +312,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 - [x] **Phase 62: Character Preset Runtime Foundation** - Deliver per-character preset animation selection and runtime lifecycle rules (completed 2026-04-21)
 - [x] **Phase 63: Camera Runtime & Shared Cleanup** - Deliver single-effect page camera playback with bounded controls and reliable reset behavior (completed 2026-04-21)
 - [x] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering (completed 2026-04-21)
-- [ ] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews
+- [x] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews (completed 2026-04-21)
 - [ ] **Phase 66: Editor Controls & Compatibility UX** - Add in-flow PageInspector controls for cinematic settings without a new editing mode
 - [ ] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows
 
@@ -380,8 +380,8 @@ Plans:
   4. After any effect preview ends or is canceled, the editor returns to the pre-preview page state.
 **Plans**: 2 plans
 Plans:
-- [ ] 65-01-PLAN.md — Add editor-side effect preview session state, reason-coded preflight, and shared request plumbing without expanding PageInspector UX
-- [ ] 65-02-PLAN.md — Implement runtime preview-effect protocol, restore-safe owner replay, and same-page transition preview wiring
+- [x] 65-01-PLAN.md — Add editor-side effect preview session state, reason-coded preflight, and shared request plumbing without expanding PageInspector UX
+- [x] 65-02-PLAN.md — Implement runtime preview-effect protocol, restore-safe owner replay, and same-page transition preview wiring
 **UI hint**: yes
 
 ### Phase 66: Editor Controls & Compatibility UX
@@ -392,7 +392,10 @@ Plans:
   1. In the existing PageInspector flow, creators can choose a character animation without entering a separate mode or screen.
   2. In the existing PageInspector flow, creators can configure page camera effect type and parameters without leaving normal page editing.
   3. In the existing PageInspector flow, creators can choose page transition settings from the same editing interface.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 66-01-PLAN.md — Add shared unknown-safe cinematic option helpers and scoped preview-state contracts for PageInspector
+- [ ] 66-02-PLAN.md — Wire character, camera, and transition controls plus inline preview UX into PageInspector
 **UI hint**: yes
 
 ### Phase 67: Integration & Regression Gate
@@ -411,5 +414,5 @@ Plans:
 | 63. Camera Runtime & Shared Cleanup | 2/2 | Complete | 2026-04-21 |
 | 64. Background Transition Expansion | 2/2 | Complete | 2026-04-21 |
 | 65. Iframe Effect Preview API | 0/2 | Not started | - |
-| 66. Editor Controls & Compatibility UX | 0/0 | Not started | - |
+| 66. Editor Controls & Compatibility UX | 0/2 | Not started | - |
 | 67. Integration & Regression Gate | 0/0 | Not started | - |

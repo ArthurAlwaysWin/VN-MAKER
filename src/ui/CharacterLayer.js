@@ -13,7 +13,7 @@ export class CharacterLayer {
     this.container = container;
     this.basePath = basePath;
 
-    /** @type {Map<string, {container: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B', currentImage: string|null, _crossfadeGen: number, _crossfadeTimer: number|null}>} */
+    /** @type {Map<string, {container: HTMLDivElement, motion: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B', currentImage: string|null, _crossfadeGen: number, _crossfadeTimer: number|null}>} */
     this.characters = new Map();
   }
 
@@ -30,6 +30,9 @@ export class CharacterLayer {
       container.classList.add('character-sprite');
       container.dataset.characterId = data.id;
 
+      const motion = document.createElement('div');
+      motion.className = 'character-motion';
+
       const imgA = document.createElement('img');
       imgA.className = 'char-img-a active';
       imgA.draggable = false;
@@ -38,11 +41,12 @@ export class CharacterLayer {
       imgB.className = 'char-img-b';
       imgB.draggable = false;
 
-      container.appendChild(imgA);
-      container.appendChild(imgB);
+      motion.appendChild(imgA);
+      motion.appendChild(imgB);
+      container.appendChild(motion);
       this.container.appendChild(container);
 
-      entry = { container, imgA, imgB, activeImg: 'A', currentImage: null, _crossfadeGen: 0, _crossfadeTimer: null };
+      entry = { container, motion, imgA, imgB, activeImg: 'A', currentImage: null, _crossfadeGen: 0, _crossfadeTimer: null };
       this.characters.set(data.id, entry);
     }
 

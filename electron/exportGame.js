@@ -55,8 +55,10 @@ export function generateHtml(gameTitle, faviconFilename) {
 </head>
 <body>
   <div id="game-container">
-    <div id="background-layer"></div>
-    <div id="character-layer"></div>
+    <div id="stage-layer">
+      <div id="background-layer"></div>
+      <div id="character-layer"></div>
+    </div>
     <div id="dialogue-layer"></div>
     <div id="ui-overlay"></div>
   </div>

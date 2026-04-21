@@ -29,6 +29,7 @@ import { loadAllFonts } from './engine/fontLoader.js';
 
 // ─── DOM references ─────────────────────────────────────
 const gameContainer = document.getElementById('game-container');
+const stageLayer = document.getElementById('stage-layer');
 const bgLayer = document.getElementById('background-layer');
 const charLayer = document.getElementById('character-layer');
 const dialogueLayer = document.getElementById('dialogue-layer');

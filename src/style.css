@@ -64,6 +64,13 @@ body {
 }
 
 /* --- Layers (stacking order) --- */
+#stage-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
 #background-layer {
   position: absolute;
   inset: 0;
@@ -122,6 +129,11 @@ body {
   opacity: 0;
   transition-property: opacity, transform;
   transition-timing-function: ease-out;
+}
+
+.character-motion {
+  position: absolute;
+  inset: 0;
 }
 
 /* Dual-layer child images */

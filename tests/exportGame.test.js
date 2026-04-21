@@ -1,22 +1,18 @@
 /**
  * exportGame — Integration tests for the export pipeline.
  *
- * Covers all PIPE requirements (01-05, 07) across 7 describe blocks:
- *   generateHtml output, output structure, asset filtering,
- *   missing assets (D-01), favicon (PIPE-04), ZIP (PIPE-05),
- *   progress callbacks (PIPE-07).
+ * Covers all PIPE requirements (01-05, 07) plus the Phase 61 stage-layer
+ * ownership shell contract used by exported builds.
  *
- * Uses Node.js built-in test runner (node:test + node:assert/strict).
- * Run with: node --test tests/exportGame.test.js
+ * Run with: npx vitest run tests/exportGame.test.js
  */
 
-import { describe, it, before, after } from 'node:test';
-import { strictEqual, deepStrictEqual, ok, match } from 'node:assert/strict';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { unzipSync, strFromU8 } from 'fflate';
+import { unzipSync } from 'fflate';
 import { exportGame, generateHtml } from '../electron/exportGame.js';
 
 // ─── Test Fixture Helpers ────────────────────────────────
@@ -88,7 +84,7 @@ let tempRoot;
 let mockProjectDir;
 let mockAppRoot;
 
-before(async () => {
+beforeAll(async () => {
   tempRoot = await fs.mkdtemp(path.join(tmpdir(), 'export-test-'));
   mockProjectDir = path.join(tempRoot, 'project');
   mockAppRoot = path.join(tempRoot, 'approot');
@@ -96,7 +92,7 @@ before(async () => {
   await createMockAppRoot(mockAppRoot);
 });
 
-after(async () => {
+afterAll(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
@@ -104,28 +100,27 @@ after(async () => {
 
 describe('generateHtml', () => {
   it('includes game title in <title> tag', () => {
-    match(generateHtml('My Game', null), /<title>My Game<\/title>/);
+    expect(generateHtml('My Game', null)).toMatch(/<title>My Game<\/title>/);
   });
 
   it('includes favicon link when provided', () => {
-    match(generateHtml('X', 'favicon.ico'), /href="\.\/favicon\.ico"/);
+    expect(generateHtml('X', 'favicon.ico')).toMatch(/href="\.\/favicon\.ico"/);
   });
 
   it('omits favicon link when null', () => {
-    ok(!generateHtml('X', null).includes('rel="icon"'));
+    expect(generateHtml('X', null).includes('rel="icon"')).toBe(false);
   });
 
   it('escapes HTML special characters in title', () => {
-    match(generateHtml('A <B> "C"', null), /A &lt;B&gt; &quot;C&quot;/);
+    expect(generateHtml('A <B> "C"', null)).toMatch(/A &lt;B&gt; &quot;C&quot;/);
   });
 
-  it('includes game-container with 4 layer divs', () => {
+  it('wraps only stage visuals in #stage-layer', () => {
     const html = generateHtml('Test', null);
-    ok(html.includes('id="game-container"'));
-    ok(html.includes('id="background-layer"'));
-    ok(html.includes('id="character-layer"'));
-    ok(html.includes('id="dialogue-layer"'));
-    ok(html.includes('id="ui-overlay"'));
+    expect(html).toContain('id="game-container"');
+    expect(html).toContain('id="stage-layer"');
+    expect(html).toMatch(/<div id="stage-layer">[\s\S]*<div id="background-layer"><\/div>[\s\S]*<div id="character-layer"><\/div>[\s\S]*<\/div>/);
+    expect(html).toMatch(/<div id="game-container">[\s\S]*<div id="dialogue-layer"><\/div>[\s\S]*<div id="ui-overlay"><\/div>[\s\S]*<\/div>/);
   });
 });
 
@@ -135,7 +130,7 @@ describe('exportGame — output structure', () => {
   let outputDir;
   let result;
 
-  before(async () => {
+  beforeEach(async () => {
     outputDir = path.join(tempRoot, 'output-structure');
     const noop = () => {};
     result = await exportGame({
@@ -150,27 +145,34 @@ describe('exportGame — output structure', () => {
   });
 
   it('creates index.html, engine.js, engine.css, script.json', () => {
-    ok(existsSync(path.join(outputDir, 'index.html')));
-    ok(existsSync(path.join(outputDir, 'engine.js')));
-    ok(existsSync(path.join(outputDir, 'engine.css')));
-    ok(existsSync(path.join(outputDir, 'script.json')));
+    expect(existsSync(path.join(outputDir, 'index.html'))).toBe(true);
+    expect(existsSync(path.join(outputDir, 'engine.js'))).toBe(true);
+    expect(existsSync(path.join(outputDir, 'engine.css'))).toBe(true);
+    expect(existsSync(path.join(outputDir, 'script.json'))).toBe(true);
   });
 
   it('engine.js matches dist-web source', async () => {
     const src = await fs.readFile(path.join(mockAppRoot, 'dist-web', 'engine.js'), 'utf-8');
     const dst = await fs.readFile(path.join(outputDir, 'engine.js'), 'utf-8');
-    strictEqual(dst, src);
+    expect(dst).toBe(src);
   });
 
   it('script.json is verbatim copy (per D-03)', async () => {
     const src = await fs.readFile(path.join(mockProjectDir, 'script.json'), 'utf-8');
     const dst = await fs.readFile(path.join(outputDir, 'script.json'), 'utf-8');
-    strictEqual(dst, src);
+    expect(dst).toBe(src);
   });
 
   it('index.html contains game title', async () => {
     const html = await fs.readFile(path.join(outputDir, 'index.html'), 'utf-8');
-    match(html, /<title>Test Game<\/title>/);
+    expect(html).toMatch(/<title>Test Game<\/title>/);
+  });
+
+  it('index.html keeps dialogue and overlay outside #stage-layer', async () => {
+    const html = await fs.readFile(path.join(outputDir, 'index.html'), 'utf-8');
+    expect(html).toContain('id="stage-layer"');
+    expect(html).toMatch(/<div id="stage-layer">[\s\S]*<div id="background-layer"><\/div>[\s\S]*<div id="character-layer"><\/div>[\s\S]*<\/div>/);
+    expect(html).toMatch(/<div id="game-container">[\s\S]*<div id="dialogue-layer"><\/div>[\s\S]*<div id="ui-overlay"><\/div>[\s\S]*<\/div>/);
   });
 });
 
@@ -179,7 +181,7 @@ describe('exportGame — output structure', () => {
 describe('exportGame — asset filtering', () => {
   let outputDir;
 
-  before(async () => {
+  beforeAll(async () => {
     outputDir = path.join(tempRoot, 'output-filtering');
     const noop = () => {};
     await exportGame({
@@ -194,15 +196,15 @@ describe('exportGame — asset filtering', () => {
   });
 
   it('copies referenced background', () => {
-    ok(existsSync(path.join(outputDir, 'assets', 'backgrounds', 'city.png')));
+    expect(existsSync(path.join(outputDir, 'assets', 'backgrounds', 'city.png'))).toBe(true);
   });
 
   it('copies referenced character', () => {
-    ok(existsSync(path.join(outputDir, 'assets', 'characters', 'hero_normal.png')));
+    expect(existsSync(path.join(outputDir, 'assets', 'characters', 'hero_normal.png'))).toBe(true);
   });
 
   it('does NOT copy unreferenced audio', () => {
-    ok(!existsSync(path.join(outputDir, 'assets', 'audio', 'unreferenced.mp3')));
+    expect(existsSync(path.join(outputDir, 'assets', 'audio', 'unreferenced.mp3'))).toBe(false);
   });
 });
 
@@ -238,8 +240,8 @@ describe('exportGame — missing assets', () => {
       _appRoot: mockAppRoot,
     }, noop);
 
-    ok(result.success);
-    ok(result.warnings.includes('backgrounds/missing.png'));
+    expect(result.success).toBe(true);
+    expect(result.warnings.includes('backgrounds/missing.png')).toBe(true);
   });
 });
 
@@ -260,9 +262,9 @@ describe('exportGame — favicon', () => {
       _appRoot: mockAppRoot,
     }, noop);
 
-    ok(existsSync(path.join(outputDir, 'favicon.ico')));
+    expect(existsSync(path.join(outputDir, 'favicon.ico'))).toBe(true);
     const html = await fs.readFile(path.join(outputDir, 'index.html'), 'utf-8');
-    ok(html.includes('rel="icon"'));
+    expect(html.includes('rel="icon"')).toBe(true);
   });
 
   it('no favicon in output when path is null', async () => {
@@ -278,9 +280,9 @@ describe('exportGame — favicon', () => {
       _appRoot: mockAppRoot,
     }, noop);
 
-    ok(!existsSync(path.join(outputDir, 'favicon.ico')));
+    expect(existsSync(path.join(outputDir, 'favicon.ico'))).toBe(false);
     const html = await fs.readFile(path.join(outputDir, 'index.html'), 'utf-8');
-    ok(!html.includes('rel="icon"'));
+    expect(html.includes('rel="icon"')).toBe(false);
   });
 });
 
@@ -301,7 +303,7 @@ describe('exportGame — ZIP', () => {
     }, noop);
 
     const zipPath = path.join(tempRoot, 'ZIP Test.zip');
-    ok(existsSync(zipPath));
+    expect(existsSync(zipPath)).toBe(true);
   });
 
   it('ZIP contains expected files', async () => {
@@ -322,11 +324,11 @@ describe('exportGame — ZIP', () => {
     const entries = unzipSync(zipData);
     const keys = Object.keys(entries);
 
-    ok(keys.includes('index.html'), 'ZIP should contain index.html');
-    ok(keys.includes('engine.js'), 'ZIP should contain engine.js');
-    ok(keys.includes('engine.css'), 'ZIP should contain engine.css');
-    ok(keys.includes('script.json'), 'ZIP should contain script.json');
-    ok(keys.includes('assets/backgrounds/city.png'), 'ZIP should contain assets/backgrounds/city.png');
+    expect(keys.includes('index.html')).toBe(true);
+    expect(keys.includes('engine.js')).toBe(true);
+    expect(keys.includes('engine.css')).toBe(true);
+    expect(keys.includes('script.json')).toBe(true);
+    expect(keys.includes('assets/backgrounds/city.png')).toBe(true);
   });
 
   it('no ZIP when zip=false', async () => {
@@ -343,7 +345,7 @@ describe('exportGame — ZIP', () => {
     }, noop);
 
     const zipPath = path.join(tempRoot, 'NoZIP.zip');
-    ok(!existsSync(zipPath));
+    expect(existsSync(zipPath)).toBe(false);
   });
 });
 
@@ -365,11 +367,11 @@ describe('exportGame — progress', () => {
       _appRoot: mockAppRoot,
     }, sendProgress);
 
-    strictEqual(calls.length, 7);
-    deepStrictEqual(calls.map(c => c.step), [
+    expect(calls).toHaveLength(7);
+    expect(calls.map(c => c.step)).toEqual([
       '构建引擎', '扫描资源', '复制引擎产物', '复制资源文件', '生成 HTML', '打包 ZIP', '完成',
     ]);
-    deepStrictEqual(calls.map(c => c.percent), [0, 17, 33, 50, 67, 83, 100]);
+    expect(calls.map(c => c.percent)).toEqual([0, 17, 33, 50, 67, 83, 100]);
   });
 
   it('returns success with outputPath and warnings', async () => {
@@ -385,8 +387,8 @@ describe('exportGame — progress', () => {
       _appRoot: mockAppRoot,
     }, noop);
 
-    strictEqual(result.success, true);
-    strictEqual(result.outputPath, outputDir);
-    ok(Array.isArray(result.warnings));
+    expect(result.success).toBe(true);
+    expect(result.outputPath).toBe(outputDir);
+    expect(Array.isArray(result.warnings)).toBe(true);
   });
 });

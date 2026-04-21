@@ -287,6 +287,62 @@ describe('condition pages', () => {
   });
 });
 
+describe('unknown cinematic compatibility', () => {
+  it('renders pages with unknown cinematic enums without throwing and falls back safely', () => {
+    const engine = new ScriptEngine();
+    engine.script = {
+      meta: { title: 'Unknown Enum Test' },
+      characters: {
+        hero: {
+          name: 'Hero',
+          color: '#fff',
+          expressions: { normal: 'hero_normal.png' },
+        },
+      },
+      scenes: {
+        start: {
+          name: 'Opening',
+          pages: [
+            {
+              type: 'normal',
+              background: 'bg.png',
+              camera: { effect: 'legacy-zoom', duration: 333 },
+              transition: { type: 'legacy-wipe', duration: 650 },
+              characters: [
+                {
+                  id: 'hero',
+                  expression: 'normal',
+                  animation: 'legacy-bounce',
+                  position: 'center',
+                },
+              ],
+              dialogues: [{ speaker: 'hero', text: 'Still works', expression: null, voice: null }],
+            },
+          ],
+        },
+      },
+    };
+
+    const pageEnterEvents = [];
+    const bgEvents = [];
+    const charEvents = [];
+    engine.on('page_enter', data => pageEnterEvents.push(data));
+    engine.on('set_background', data => bgEvents.push(data));
+    engine.on('show_character', data => charEvents.push(data));
+
+    engine.startGame('start');
+
+    strictEqual(pageEnterEvents.length, 1);
+    strictEqual(pageEnterEvents[0].page.camera.effect, 'legacy-zoom');
+    strictEqual(pageEnterEvents[0].page.characters[0].animation, 'legacy-bounce');
+    strictEqual(bgEvents.length, 1);
+    strictEqual(bgEvents[0].transition, 'fade', 'unknown transition should fall back safely');
+    strictEqual(bgEvents[0].duration, 650);
+    strictEqual(charEvents.length, 1);
+    strictEqual(charEvents[0].transition, 'fade');
+  });
+});
+
 // ─── getState / restoreState ────────────────────────────────
 
 describe('getState / restoreState', () => {

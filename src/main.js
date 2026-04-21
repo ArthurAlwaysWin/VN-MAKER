@@ -18,6 +18,7 @@ import { WebSaveManager } from './engine/WebSaveManager.js';
 import { DialogueBox } from './ui/DialogueBox.js';
 import { CharacterLayer } from './ui/CharacterLayer.js';
 import { BackgroundLayer } from './ui/BackgroundLayer.js';
+import { CameraController } from './ui/CameraController.js';
 import { ChoiceMenu } from './ui/ChoiceMenu.js';
 import { SaveLoadScreen } from './ui/SaveLoadScreen.js';
 import { BacklogScreen } from './ui/BacklogScreen.js';
@@ -26,6 +27,11 @@ import { TitleScreen } from './ui/TitleScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
 import { loadAllFonts } from './engine/fontLoader.js';
+import {
+  isKnownCameraEffect,
+  isKnownCharacterAnimation,
+  isKnownTransitionType,
+} from './shared/cinematicContract.js';
 
 // ─── DOM references ─────────────────────────────────────
 const gameContainer = document.getElementById('game-container');
@@ -44,6 +50,7 @@ const config = new ConfigManager();
 // ─── UI instances ───────────────────────────────────────
 const background = new BackgroundLayer(bgLayer, '');
 const characters = new CharacterLayer(charLayer, '');
+const camera = new CameraController(stageLayer);
 const dialogueBox = new DialogueBox(dialogueLayer);
 const choiceMenu = new ChoiceMenu(uiOverlay);
 // Settings, save/load, and backlog use gameContainer directly (not uiOverlay)
@@ -78,6 +85,14 @@ let currentVoicePromise = null;
 const VOICE_END_DELAY = 300;
 let isPlaying = false; // whether the game is actively playing (not on title)
 let _autoCallbackId = 0; // incremented on every startAutoTimer/clearAutoTimer to cancel stale callbacks
+let pendingPageEnter = null;
+let pendingCharacterEvents = [];
+let pendingUiEvent = null;
+let pageTransitionGateOpen = false;
+let pageTransitionToken = 0;
+let backgroundTransitionPending = false;
+let activeEffectPreview = null;
+let previewRestorePending = false;
 
 // ─── Toast notifications (D-11, D-12) ──────────────────
 function showToast(message, duration = 3000) {
@@ -105,6 +120,247 @@ function buildPreviewText() {
     ? engine.history[engine.history.length - 1].text
     : '';
   return lastDialogue.substring(0, 60);
+}
+
+function applyPreviewScriptSnapshot(request) {
+  engine.script = request.script;
+  engine._previewMode = request.previewMode ?? true;
+
+  if (engine.script.assets?.fonts?.length) {
+    loadAllFonts(engine.script.assets.fonts, BASE_PATH).catch(() => {});
+  }
+
+  applyTheme(gameContainer, engine.script.ui?.theme);
+  applyNineSlice(engine.script.ui?.theme);
+
+  if (engine.script.ui?.dialogueBox) {
+    dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
+  }
+
+  titleScreen.setLayout(engine.script.ui?.titleScreen);
+  settingsScreen.setLayout(engine.script.ui?.settingsScreen);
+  settingsScreen.setWidgetStyles(engine.script.ui?.widgetStyles);
+  saveLoadScreen.setLayout(engine.script.ui?.saveLoadScreen);
+  backlogScreen.setLayout(engine.script.ui?.backlogScreen);
+  gameMenu.setLayout(engine.script.ui?.gameMenu);
+
+  if (engine.script.ui?.dialogueBox?.nameplateStyle) {
+    dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
+  }
+}
+
+function establishPreviewPageBaseline(request) {
+  engine.restoreState({
+    currentScene: request.sceneId || 'start',
+    pageIndex: request.pageIndex || 0,
+    dialogueIndex: 0,
+    variables: {},
+    history: [],
+  });
+
+  titleScreen.hide();
+  isPlaying = true;
+
+  cancelPageTransitionGate();
+  camera.clear();
+  characters.clear();
+  background.clear();
+  engine.resetRenderState();
+  engine.renderCurrentPage();
+}
+
+function postEffectPreviewResult(result) {
+  window.parent.postMessage({
+    type: 'preview-effect-result',
+    ...result,
+  }, '*');
+}
+
+function waitForPreviewDuration(durationMs) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(durationMs) || 0)));
+}
+
+async function restorePreviewSnapshot(snapshot) {
+  previewRestorePending = true;
+  cancelPageTransitionGate();
+  stopAuto();
+  stopSkip();
+  dialogueBox.hide();
+  choiceMenu.hide();
+  camera.clear();
+  audio.stopVoice();
+  characters.clear();
+  background.clear();
+  try {
+    engine.restoreState(snapshot);
+    engine.resetRenderState();
+    engine.renderCurrentPage();
+  } finally {
+    previewRestorePending = false;
+  }
+}
+
+async function cancelActiveEffectPreview(status = 'cancelled', reason = null, cancelDetail = 'superseded') {
+  const preview = activeEffectPreview;
+  if (!preview) return;
+
+  activeEffectPreview = null;
+
+  try {
+    await restorePreviewSnapshot(preview.snapshot);
+    postEffectPreviewResult({
+      requestId: preview.requestId,
+      effectKind: preview.effectKind,
+      status,
+      reason,
+      cancelDetail: cancelDetail,
+    });
+  } catch (error) {
+    postEffectPreviewResult({
+      requestId: preview.requestId,
+      effectKind: preview.effectKind,
+      status: 'failed',
+      reason: 'restore-failed',
+      cancelDetail: cancelDetail,
+      error: error.message,
+    });
+  }
+}
+
+async function runEffectPreview(request) {
+  const snapshot = engine.getState();
+  activeEffectPreview = {
+    requestId: request.requestId,
+    effectKind: request.effectKind,
+    snapshot,
+  };
+
+  postEffectPreviewResult({
+    requestId: request.requestId,
+    effectKind: request.effectKind,
+    status: 'accepted',
+    reason: null,
+  });
+
+  try {
+    if (request.effectKind === 'character') {
+      if (!isKnownCharacterAnimation(request.payload?.animation)) {
+        activeEffectPreview = null;
+        await restorePreviewSnapshot(snapshot);
+        postEffectPreviewResult({
+          requestId: request.requestId,
+          effectKind: request.effectKind,
+          status: 'rejected',
+          reason: 'unsupported-effect',
+        });
+        return;
+      }
+
+      characters.show({
+        ...request.payload,
+        transition: 'none',
+        duration: 0,
+        skip: true,
+      });
+      await waitForPreviewDuration(request.payload?.durationMs ?? 450);
+    }
+
+    if (request.effectKind === 'camera') {
+      if (!isKnownCameraEffect(request.payload?.effect)) {
+        activeEffectPreview = null;
+        await restorePreviewSnapshot(snapshot);
+        postEffectPreviewResult({
+          requestId: request.requestId,
+          effectKind: request.effectKind,
+          status: 'rejected',
+          reason: 'unsupported-effect',
+        });
+        return;
+      }
+
+      camera.play(request.payload);
+      await waitForPreviewDuration(request.payload?.durationMs ?? 450);
+    }
+
+    if (request.effectKind === 'transition') {
+      if (!isKnownTransitionType(request.payload?.type)) {
+        activeEffectPreview = null;
+        await restorePreviewSnapshot(snapshot);
+        postEffectPreviewResult({
+          requestId: request.requestId,
+          effectKind: request.effectKind,
+          status: 'rejected',
+          reason: 'unsupported-effect',
+        });
+        return;
+      }
+
+      const page = engine._currentPage();
+      await background.setBackground({
+        image: request.payload?.image || page?.background || '',
+        transition: request.payload.type,
+        duration: request.payload.duration ?? 800,
+        previewVariant: 'same-page',
+      });
+    }
+
+    if (!['character', 'camera', 'transition'].includes(request.effectKind)) {
+      activeEffectPreview = null;
+      await restorePreviewSnapshot(snapshot);
+      postEffectPreviewResult({
+        requestId: request.requestId,
+        effectKind: request.effectKind,
+        status: 'rejected',
+        reason: 'unsupported-effect',
+      });
+      return;
+    }
+
+    if (!activeEffectPreview || activeEffectPreview.requestId !== request.requestId) {
+      return;
+    }
+
+    activeEffectPreview = null;
+    await restorePreviewSnapshot(snapshot);
+    postEffectPreviewResult({
+      requestId: request.requestId,
+      effectKind: request.effectKind,
+      status: 'completed',
+      reason: null,
+    });
+  } catch (error) {
+    const wasActiveRequest = activeEffectPreview?.requestId === request.requestId;
+    activeEffectPreview = null;
+
+    try {
+      await restorePreviewSnapshot(snapshot);
+      if (wasActiveRequest) {
+        postEffectPreviewResult({
+          requestId: request.requestId,
+          effectKind: request.effectKind,
+          status: 'failed',
+          reason: 'runtime-error',
+          error: error.message,
+        });
+      } else {
+        postEffectPreviewResult({
+          requestId: request.requestId,
+          effectKind: request.effectKind,
+          status: 'failed',
+          reason: 'restore-failed',
+          error: error.message,
+        });
+      }
+    } catch (restoreError) {
+      postEffectPreviewResult({
+        requestId: request.requestId,
+        effectKind: request.effectKind,
+        status: 'failed',
+        reason: 'restore-failed',
+        error: restoreError.message,
+      });
+    }
+  }
 }
 
 // ─── Screenshot capture (D-01, D-02, D-03) ─────────────
@@ -162,7 +418,7 @@ function applyConfig() {
 applyConfig();
 
 // ─── Engine event handlers ──────────────────────────────
-engine.on('dialogue', (data) => {
+function showDialogueEvent(data) {
   choiceMenu.hide();
 
   // Inject per-page font override into dialogue data
@@ -190,15 +446,103 @@ engine.on('dialogue', (data) => {
   if (autoMode) {
     startAutoTimer();
   }
+}
+
+function showChoiceEvent(data) {
+  dialogueBox.hide();
+  stopAuto();
+  stopSkip();
+  choiceMenu.show(data);
+}
+
+function playCharacterEvent(type, data) {
+  if (type === 'show_character') {
+    if (skipMode) {
+      characters.show({ ...data, duration: 0, transition: 'none', skip: true });
+      return;
+    }
+    characters.show(data);
+    return;
+  }
+
+  if (skipMode) {
+    characters.setExpression({ ...data, skip: true });
+    return;
+  }
+  characters.setExpression(data);
+}
+
+function handlePageEnterEffects(data) {
+  if (skipMode) {
+    camera.clear();
+  } else {
+    camera.play(data.camera);
+  }
+
+  if (!readHistory) return; // Guard for preview mode
+  const wasRead = readHistory.isRead(data.sceneId, data.pageIndex);
+  readHistory.markRead(data.sceneId, data.pageIndex);
+
+  if (skipMode && !wasRead && config.get('skipMode') === 'readOnly') {
+    stopSkip();
+  }
+}
+
+function flushPageTransitionGate(token = pageTransitionToken) {
+  if (!pageTransitionGateOpen) return;
+  if (token !== pageTransitionToken) return;
+
+  const pageEnterData = pendingPageEnter;
+  const characterEvents = pendingCharacterEvents;
+  const uiEvent = pendingUiEvent;
+
+  pendingPageEnter = null;
+  pendingCharacterEvents = [];
+  pendingUiEvent = null;
+  pageTransitionGateOpen = false;
+  backgroundTransitionPending = false;
+
+  for (const event of characterEvents) {
+    playCharacterEvent(event.type, event.data);
+  }
+
+  if (pageEnterData) {
+    handlePageEnterEffects(pageEnterData);
+  }
+
+  if (uiEvent?.type === 'dialogue') {
+    showDialogueEvent(uiEvent.data);
+  } else if (uiEvent?.type === 'choice') {
+    showChoiceEvent(uiEvent.data);
+  }
+}
+
+function cancelPageTransitionGate() {
+  pageTransitionToken += 1;
+  pendingPageEnter = null;
+  pendingCharacterEvents = [];
+  pendingUiEvent = null;
+  pageTransitionGateOpen = false;
+  backgroundTransitionPending = false;
+}
+
+engine.on('dialogue', (data) => {
+  if (pageTransitionGateOpen) {
+    pendingUiEvent = { type: 'dialogue', data };
+    return;
+  }
+
+  showDialogueEvent(data);
 });
 
 // ─── Visual events (skip-aware transitions D-08) ─────────
 engine.on('show_character', (data) => {
-  if (skipMode) {
-    characters.show({ ...data, duration: 0, transition: 'none', skip: true });
+  if (pageTransitionGateOpen) {
+    pendingCharacterEvents.push({ type: 'show_character', data });
     return;
   }
-  characters.show(data);
+
+  playCharacterEvent('show_character', data);
 });
 
 engine.on('hide_character', (data) => {
@@ -210,19 +554,26 @@ engine.on('hide_character', (data) => {
 });
 
 engine.on('set_expression', (data) => {
-  if (skipMode) {
-    characters.setExpression({ ...data, skip: true });
+  if (pageTransitionGateOpen) {
+    pendingCharacterEvents.push({ type: 'set_expression', data });
     return;
   }
-  characters.setExpression(data);
+
+  playCharacterEvent('set_expression', data);
 });
 
-engine.on('set_background', (data) => {
+engine.on('set_background', async (data) => {
+  const token = pageTransitionToken;
+  backgroundTransitionPending = true;
+
   if (skipMode) {
-    background.setBackground({ ...data, duration: 0, transition: 'cut' });
+    await background.setBackground({ ...data, duration: 0, transition: 'cut' });
+    flushPageTransitionGate(token);
     return;
   }
-  background.setBackground(data);
+
+  await background.setBackground(data);
+  flushPageTransitionGate(token);
 });
 
 // ─── Audio events (skip-aware D-07) ──────────────────────
@@ -248,10 +599,12 @@ engine.on('play_se', (data) => {
 });
 
 engine.on('choice', (data) => {
-  dialogueBox.hide();
-  stopAuto();
-  stopSkip();
-  choiceMenu.show(data);
+  if (pageTransitionGateOpen) {
+    pendingUiEvent = { type: 'choice', data };
+    return;
+  }
+
+  showChoiceEvent(data);
 });
 
 engine.on('end', () => {
@@ -261,6 +614,9 @@ engine.on('end', () => {
     stopAuto();
     stopSkip();
     dialogueBox.hide();
+    cancelPageTransitionGate();
+    camera.clear();
+    background.clear();
     audio.stopVoice();
     window.parent.postMessage({ type: 'ended' }, '*');
     return;
@@ -275,6 +631,8 @@ engine.on('end', () => {
 
   // Show ending for a moment, then return to title
   setTimeout(() => {
+    cancelPageTransitionGate();
+    camera.clear();
     engine.resetRenderState();
     characters.clear();
     background.clear();
@@ -287,17 +645,19 @@ engine.on('scene_enter', (data) => {
 });
 
 engine.on('page_enter', (data) => {
-  if (!readHistory) return; // Guard for preview mode
-  // Check read status BEFORE marking — critical ordering for SKIP-03
-  const wasRead = readHistory.isRead(data.sceneId, data.pageIndex);
+  pageTransitionToken += 1;
+  pendingPageEnter = data;
+  pendingCharacterEvents = [];
+  pendingUiEvent = null;
+  pageTransitionGateOpen = true;
+  backgroundTransitionPending = false;
 
-  // Always mark as read on page_enter (D-04)
-  readHistory.markRead(data.sceneId, data.pageIndex);
-
-  // Stop skip at unread pages in read-only mode (SKIP-03)
-  if (skipMode && !wasRead && config.get('skipMode') === 'readOnly') {
-    stopSkip();
-  }
+  const token = pageTransitionToken;
+  queueMicrotask(() => {
+    if (!pageTransitionGateOpen) return;
+    if (backgroundTransitionPending) return;
+    flushPageTransitionGate(token);
+  });
 });
 
 // ─── Dialogue advancement ───────────────────────────────
@@ -327,6 +687,9 @@ saveLoadScreen.onLoad = async (slot) => {
   const data = await saveManager.load(slot);
   if (!data) return;
 
+  stopAuto();
+  stopSkip();
+
   // Hide title screen if it's still showing (loading from "继续游戏")
   titleScreen.hide();
 
@@ -354,6 +717,8 @@ saveLoadScreen.onClose = (source) => {
 };
 
 function replayCurrentPage() {
+  cancelPageTransitionGate();
+  camera.clear();
   characters.clear();
   background.clear();
   engine.resetRenderState();
@@ -390,6 +755,8 @@ gameMenu.onTitle = async () => {
   stopSkip();
   dialogueBox.hide();
   choiceMenu.hide();
+  cancelPageTransitionGate();
+  camera.clear();
   audio.stopBgm({ fadeOut: 500 });
   audio.stopVoice();
   engine.resetRenderState();
@@ -867,7 +1234,7 @@ async function init() {
 function initPreview() {
   console.log('[GalgameMaker] Preview mode — waiting for start command');
 
-  function handlePreviewMessage(e) {
+  async function handlePreviewMessage(e) {
     // Only accept messages from same origin (preview iframe)
     if (e.origin !== 'null' && e.origin !== window.location.origin) return;
     const msg = e.data;
@@ -875,64 +1242,8 @@ function initPreview() {
 
     switch (msg.type) {
       case 'start': {
-        engine.script = msg.script;
-        engine._previewMode = msg.previewMode ?? true;
-
-        // Apply custom fonts if present
-        if (engine.script.assets?.fonts?.length) {
-          loadAllFonts(engine.script.assets.fonts, BASE_PATH).catch(() => {});
-        }
-
-        // Apply theme token overrides for preview (D-09)
-        applyTheme(gameContainer, engine.script.ui?.theme);
-        applyNineSlice(engine.script.ui?.theme);
-
-        // Apply global dialogue box font settings for preview
-        if (engine.script.ui?.dialogueBox) {
-          dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
-        }
-
-        // Apply screen layouts for preview (v1.1)
-        if (engine.script.ui?.titleScreen) {
-          titleScreen.setLayout(engine.script.ui.titleScreen);
-        }
-        if (engine.script.ui?.settingsScreen) {
-          settingsScreen.setLayout(engine.script.ui.settingsScreen);
-        }
-        if (engine.script.ui?.widgetStyles) {
-          settingsScreen.setWidgetStyles(engine.script.ui.widgetStyles);
-        }
-        if (engine.script.ui?.saveLoadScreen) {
-          saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen);
-        }
-        if (engine.script.ui?.backlogScreen) {
-          backlogScreen.setLayout(engine.script.ui.backlogScreen);
-        }
-        if (engine.script.ui?.gameMenu) {
-          gameMenu.setLayout(engine.script.ui.gameMenu);
-        }
-
-        // Apply nameplate style for preview
-        if (engine.script.ui?.dialogueBox?.nameplateStyle) {
-          dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
-        }
-
-        // Start from specified position (per D-05, D-06)
-        engine.restoreState({
-          currentScene: msg.sceneId || 'start',
-          pageIndex: msg.pageIndex || 0,
-          dialogueIndex: 0,
-          variables: {},
-          history: [],
-        });
-
-        titleScreen.hide();
-        isPlaying = true;
-
-        characters.clear();
-        background.clear();
-        engine.resetRenderState();
-        engine.renderCurrentPage();
+        applyPreviewScriptSnapshot(msg);
+        establishPreviewPageBaseline(msg);
         break;
       }
       case 'stop': {
@@ -943,6 +1254,8 @@ function initPreview() {
         stopSkip();
         dialogueBox.hide();
         choiceMenu.hide();
+        cancelPageTransitionGate();
+        camera.clear();
         audio.stopBgm({ fadeOut: 0 });
         audio.stopVoice();
         engine.resetRenderState();
@@ -991,6 +1304,32 @@ function initPreview() {
           case 'backlogScreen': backlogScreen.show([], {}); break;
           case 'titleScreen': titleScreen.show(false); break;
         }
+        break;
+      }
+      case 'preview-effect': {
+        if (previewRestorePending) {
+          postEffectPreviewResult({
+            requestId: msg.requestId,
+            effectKind: msg.effectKind,
+            status: 'rejected',
+            reason: 'preview-busy',
+          });
+          break;
+        }
+
+        if (activeEffectPreview) {
+          await cancelActiveEffectPreview('cancelled', null, 'superseded');
+        }
+
+        applyPreviewScriptSnapshot(msg);
+        establishPreviewPageBaseline(msg);
+        await runEffectPreview(msg);
+        break;
+      }
+      case 'preview-effect-stop': {
+        if (!activeEffectPreview) break;
+        if (msg.requestId && msg.requestId !== activeEffectPreview.requestId) break;
+        await cancelActiveEffectPreview('cancelled', null, 'stop');
         break;
       }
     }

@@ -5,6 +5,8 @@ const PAGE_EDITOR_KEY = Symbol('pageEditor');
 
 export function createPageEditor() {
   const script = useScriptStore();
+  let previewRequestCounter = 0;
+  const effectPreviewProvenanceByRequestId = new Map();
 
   const selectedSceneId = ref(null);
   const selectedPageIndex = ref(0);
@@ -16,12 +18,26 @@ export function createPageEditor() {
   const audioPickerTab = ref('bgm');
 
   // ─── Preview mode state ─────────────────────────────────
-  const isPreviewMode = ref(false);
+  const previewSessionType = ref(null);
+  const isPreviewMode = computed(() => previewSessionType.value !== null);
   const isMuted = ref(false);
   const isEngineReady = ref(false);
   const previewIframeRef = ref(null);
+  const isEffectPreviewBusy = ref(false);
+  const activeEffectPreviewRequestId = ref(null);
+  const activeEffectPreviewRequest = ref(null);
+  const lastEffectPreviewResult = ref(null);
+  const previewDisabledReason = ref(null);
+  const lastEffectPreviewAttempt = ref(null);
 
-  const currentScene= computed(() => {
+  const previewModeLabel = computed(() => (
+    previewSessionType.value === 'effect' ? '效果预览中' : '试玩中'
+  ));
+  const stopPreviewLabel = computed(() => (
+    previewSessionType.value === 'effect' ? '停止预览' : '停止试玩'
+  ));
+
+  const currentScene = computed(() => {
     if (!script.data || !selectedSceneId.value) return null;
     return script.data.scenes[selectedSceneId.value] || null;
   });
@@ -60,12 +76,132 @@ export function createPageEditor() {
   }
 
   // ─── Preview mode methods ───────────────────────────────
+  function buildScriptSnapshot() {
+    if (!script.data) return null;
+    return JSON.parse(JSON.stringify(script.data));
+  }
+
+  function getPreviewDisabledReason(effectKind, payload = {}) {
+    if (!previewIframeRef.value?.contentWindow || !isEngineReady.value) {
+      return 'engine-not-ready';
+    }
+    if (!currentPage.value || !selectedSceneId.value) {
+      return 'no-page-selected';
+    }
+    if (effectKind === 'character' && !payload.animation) {
+      return 'missing-character-animation';
+    }
+    if (effectKind === 'camera' && !payload.effect) {
+      return 'missing-camera-config';
+    }
+    if (effectKind === 'transition' && !payload.type) {
+      return 'missing-transition-config';
+    }
+    return null;
+  }
+
+  function nextPreviewRequestId() {
+    previewRequestCounter += 1;
+    return `preview-effect-${previewRequestCounter}`;
+  }
+
+  function getDefaultCharacterProvenance(payload = {}) {
+    const charIndex = selectedCharIndex.value;
+    const currentCharacter = currentPage.value?.characters?.[charIndex] || null;
+
+    return {
+      charIndex,
+      characterId: payload.characterId ?? currentCharacter?.id ?? null,
+    };
+  }
+
+  function buildEffectPreviewProvenance(effectKind, payload = {}, provenance = {}) {
+    const baseProvenance = {
+      sceneId: provenance.sceneId ?? selectedSceneId.value,
+      pageIndex: provenance.pageIndex ?? selectedPageIndex.value,
+    };
+
+    if (effectKind === 'character') {
+      const defaultCharacterProvenance = getDefaultCharacterProvenance(payload);
+      return {
+        ...baseProvenance,
+        charIndex: provenance.charIndex ?? defaultCharacterProvenance.charIndex,
+        characterId: provenance.characterId ?? defaultCharacterProvenance.characterId,
+      };
+    }
+
+    return baseProvenance;
+  }
+
+  function isSameEffectPreviewProvenance(effectKind, left, right) {
+    if (!left || !right) {
+      return false;
+    }
+
+    if (left.sceneId !== right.sceneId || left.pageIndex !== right.pageIndex) {
+      return false;
+    }
+
+    if (effectKind !== 'character') {
+      return true;
+    }
+
+    return left.charIndex === right.charIndex
+      && left.characterId === right.characterId;
+  }
+
+  function getTerminalEffectPreviewResult(effectKind, provenance) {
+    const result = lastEffectPreviewResult.value;
+    if (!result || result.effectKind !== effectKind) {
+      return null;
+    }
+
+    if (!['completed', 'cancelled', 'rejected', 'failed'].includes(result.status)) {
+      return null;
+    }
+
+    const resultProvenance = effectPreviewProvenanceByRequestId.get(result.requestId);
+    if (!isSameEffectPreviewProvenance(effectKind, resultProvenance, provenance)) {
+      return null;
+    }
+
+    return result;
+  }
+
+  function getEffectPreviewUiState(effectKind, provenance = {}) {
+    const resolvedProvenance = buildEffectPreviewProvenance(effectKind, {}, provenance);
+    const activeRequest = activeEffectPreviewRequest.value;
+    const activeProvenance = activeEffectPreviewRequestId.value
+      ? effectPreviewProvenanceByRequestId.get(activeEffectPreviewRequestId.value)
+      : null;
+    const isBusy = Boolean(
+      isEffectPreviewBusy.value
+      && activeRequest?.effectKind === effectKind
+      && isSameEffectPreviewProvenance(effectKind, activeProvenance, resolvedProvenance),
+    );
+    const showDisabledReason = Boolean(
+      previewDisabledReason.value
+      && lastEffectPreviewAttempt.value?.effectKind === effectKind
+      && isSameEffectPreviewProvenance(
+        effectKind,
+        lastEffectPreviewAttempt.value?.provenance,
+        resolvedProvenance,
+      ),
+    );
+
+    return {
+      isBusy,
+      isDisabled: showDisabledReason,
+      disabledReason: showDisabledReason ? previewDisabledReason.value : null,
+      result: isBusy ? null : getTerminalEffectPreviewResult(effectKind, resolvedProvenance),
+    };
+  }
+
   function startPreview() {
     if (!previewIframeRef.value || !isEngineReady.value) return;
     if (!script.data || !selectedSceneId.value) return;
 
-    // Deep-copy script data to strip Vue Proxy (per D-08)
-    const snapshot = JSON.parse(JSON.stringify(script.data));
+    const snapshot = buildScriptSnapshot();
 
     previewIframeRef.value.contentWindow.postMessage({
       type: 'start',
@@ -75,15 +211,82 @@ export function createPageEditor() {
       previewMode: true,
     }, '*');
 
-    isPreviewMode.value = true;
+    previewSessionType.value = 'play';
     isMuted.value = false;
   }
 
+  function previewEffect(request) {
+    const effectKind = request?.effectKind;
+    const payload = request?.payload || {};
+    const provenance = buildEffectPreviewProvenance(effectKind, payload);
+    const reason = getPreviewDisabledReason(effectKind, payload);
+    if (reason) {
+      previewDisabledReason.value = reason;
+      lastEffectPreviewAttempt.value = {
+        effectKind,
+        provenance,
+        requestId: null,
+      };
+      return { ok: false, reason };
+    }
+
+    const requestId = nextPreviewRequestId();
+    const message = {
+      type: 'preview-effect',
+      requestId,
+      effectKind,
+      sceneId: selectedSceneId.value,
+      pageIndex: selectedPageIndex.value,
+      script: buildScriptSnapshot(),
+      payload,
+    };
+
+    previewIframeRef.value.contentWindow.postMessage(message, '*');
+
+    effectPreviewProvenanceByRequestId.set(requestId, provenance);
+    previewDisabledReason.value = null;
+    lastEffectPreviewAttempt.value = {
+      effectKind,
+      provenance,
+      requestId,
+    };
+    previewSessionType.value = 'effect';
+    isEffectPreviewBusy.value = true;
+    activeEffectPreviewRequestId.value = requestId;
+    activeEffectPreviewRequest.value = message;
+
+    return { ok: true, requestId };
+  }
+
+  function previewCharacterEffect(payload) {
+    return previewEffect({ effectKind: 'character', payload });
+  }
+
+  function previewCameraEffect(payload) {
+    return previewEffect({ effectKind: 'camera', payload });
+  }
+
+  function previewTransitionEffect(payload) {
+    return previewEffect({ effectKind: 'transition', payload });
+  }
+
+  function stopActiveEffectPreview() {
+    if (!previewIframeRef.value?.contentWindow || !activeEffectPreviewRequestId.value) return;
+    previewIframeRef.value.contentWindow.postMessage({
+      type: 'preview-effect-stop',
+      requestId: activeEffectPreviewRequestId.value,
+    }, '*');
+  }
+
   function stopPreview() {
+    if (previewSessionType.value === 'effect') {
+      stopActiveEffectPreview();
+      return;
+    }
     if (previewIframeRef.value?.contentWindow) {
       previewIframeRef.value.contentWindow.postMessage({ type: 'stop' }, '*');
     }
-    isPreviewMode.value = false;
+    previewSessionType.value = null;
   }
 
   function toggleMute() {
@@ -108,7 +311,25 @@ export function createPageEditor() {
         event.source?.postMessage({ type: 'ack-preview' }, '*');
         break;
       case 'ended':
-        stopPreview();
+        if (previewSessionType.value === 'play') {
+          stopPreview();
+        }
+        break;
+      case 'preview-effect-result':
+        lastEffectPreviewResult.value = msg;
+        if (msg.status === 'accepted') {
+          isEffectPreviewBusy.value = true;
+          break;
+        }
+        if (['completed', 'cancelled', 'rejected', 'failed'].includes(msg.status)) {
+          isEffectPreviewBusy.value = false;
+          activeEffectPreviewRequestId.value = null;
+          activeEffectPreviewRequest.value = null;
+          if (previewSessionType.value === 'effect') {
+            previewSessionType.value = null;
+            isMuted.value = false;
+          }
+        }
         break;
     }
   }
@@ -129,12 +350,26 @@ export function createPageEditor() {
     selectDialogue,
     selectCharacter,
     initSelection,
+    previewSessionType,
     isPreviewMode,
     isMuted,
     isEngineReady,
     previewIframeRef,
+    isEffectPreviewBusy,
+    activeEffectPreviewRequestId,
+    activeEffectPreviewRequest,
+    lastEffectPreviewResult,
+    previewDisabledReason,
+    getEffectPreviewUiState,
+    previewModeLabel,
+    stopPreviewLabel,
     startPreview,
+    previewEffect,
+    previewCharacterEffect,
+    previewCameraEffect,
+    previewTransitionEffect,
     stopPreview,
+    stopActiveEffectPreview,
     toggleMute,
     onEngineMessage,
   };

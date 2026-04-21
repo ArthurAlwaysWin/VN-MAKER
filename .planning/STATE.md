@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: —
-milestone_name: (awaiting v1.4 planning)
-status: idle — v1.3 archived
-stopped_at: v1.3 milestone archived
-last_updated: "2026-04-20T02:00:00.000Z"
-last_activity: 2026-04-20
+milestone: v1.4
+milestone_name: 演出力升级
+status: defining requirements
+stopped_at: milestone v1.4 started
+last_updated: "2026-04-21T14:38:48.156+10:00"
+last_activity: 2026-04-21
 progress:
   total_phases: 0
   completed_phases: 0
@@ -17,22 +17,22 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-20)
+See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v1.3 archived — ready for v1.4 planning
+**Current focus:** v1.4 演出力升级 — defining requirements
 
 ## Current Position
 
-Phase: — (between milestones)
+Phase: Not started (defining requirements)
 Plan: —
 Plans: —
-Next: /gsd-new-milestone to start v1.4
-Last activity: 2026-04-20
+Next: Decide whether to research before requirements
+Last activity: 2026-04-21 — Milestone v1.4 started
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ (archived)
-v1.4 ░░░░░░░░░░░░░░░░░░░░ awaiting planning
+v1.4 ░░░░░░░░░░░░░░░░░░░░ defining requirements
 ```
 
 ## Performance Metrics
@@ -67,7 +67,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-20T02:00:00.000Z
-Stopped at: v1.3 milestone archived
-Resume hint: Run `/gsd-new-milestone` to start v1.4
-Next action: v1.4 milestone planning
+Last session: 2026-04-21T14:38:48.156+10:00
+Stopped at: Milestone v1.4 started, awaiting research decision
+Resume hint: Continue v1.4 new-milestone workflow from research decision
+Next action: Choose research-first vs skip-research for v1.4

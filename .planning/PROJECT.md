@@ -83,9 +83,20 @@
 
 ### Active
 
-<!-- 下一个里程碑需求将在 /gsd-new-milestone 中定义 -->
+- [ ] v1.4 演出力升级：立绘预设动画（shake / bounce / slide-in / fade-in / nod / breathe）
+- [ ] v1.4 演出力升级：页面级镜头效果（shake / zoom / pan / flash）
+- [ ] v1.4 演出力升级：编辑器动画与镜头配置 + iframe 预览
+- [ ] v1.4 演出力升级：补充背景转场（dissolve / wipe / zoom / blur）
 
-(待 v1.4 里程碑规划时填充)
+## Current Milestone: v1.4 演出力升级
+
+**Goal:** 先补齐最影响“游戏感”的演出能力地基，用较低实现成本快速提升 VN 成片表现力。
+
+**Target features:**
+- 立绘预设动画（shake / bounce / slide-in / fade-in / nod / breathe）
+- 页面级镜头效果（shake / zoom / pan / flash）
+- 编辑器动画与镜头配置（PageInspector + iframe 预览）
+- 更多背景转场（dissolve / wipe / zoom / blur）
 
 ## Previous Milestone: ✅ v1.3 主题系统表达力升级 (Shipped 2026-04-20)
 
@@ -270,7 +281,7 @@ This document evolves at phase transitions and milestone boundaries.
 
 **v1.3 已完成：** OKLCH 智能配色系统 + 设置页结构参数引擎 + 完整编辑器 UI + 标题页预览 + 5 套商业级主题升级。27/27 需求验证通过，~170 测试。
 
-**下一步：** 规划 v1.4 里程碑
+**下一步：** 定义 v1.4 需求并拆解路线图
 
 ---
-*Last updated: 2026-04-20 after v1.3 milestone complete*
+*Last updated: 2026-04-21 after v1.4 milestone start*

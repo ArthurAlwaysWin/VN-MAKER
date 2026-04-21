@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
 status: Phase complete — ready for verification
-stopped_at: Completed 66-01-PLAN.md
-last_updated: "2026-04-21T14:25:23.017Z"
+stopped_at: Completed 66-02-PLAN.md
+last_updated: "2026-04-21T14:34:41.225Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 12
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -58,6 +58,7 @@ v1.4 ██████████████░░░░░░ 5/7 phases com
 | Phase 61 P02 | 156 | 2 tasks | 6 files |
 | Phase 61 P01 | 1 min | 2 tasks | 8 files |
 | Phase 66 P01 | 9 min | 2 tasks | 4 files |
+| Phase 66 P02 | 6 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ v1.4 ██████████████░░░░░░ 5/7 phases com
 - [Phase 65]: Added same-page transition preview support in BackgroundLayer so transition replay stays on the current page while still producing a visible runtime-backed effect.
 - [Phase 66]: Character and camera editor options now come from shared helpers that append explicit unknown current values instead of coercing saved data.
 - [Phase 66]: Effect preview UI consumption stays on the Phase 65 refs and protocol, with local provenance matching to hide cross-surface and stale same-kind status.
+- [Phase 66]: Kept all three cinematic preview entrypoints inside PageInspector so controls stay adjacent to their owning fields.
+- [Phase 66]: Rendered inspector preview feedback from getEffectPreviewUiState() plus current preflight checks instead of adding a second preview state machine.
 
 ### Blockers/Concerns
 
@@ -96,7 +99,7 @@ v1.4 ██████████████░░░░░░ 5/7 phases com
 
 ## Session Continuity
 
-Last session: 2026-04-21T14:25:23.011Z
-Stopped at: Completed 66-01-PLAN.md
+Last session: 2026-04-21T14:34:41.220Z
+Stopped at: Completed 66-02-PLAN.md
 Resume hint: Plan Phase 66 around PageInspector-native controls, inline effect preview entrypoints, and unknown-value-safe compatibility UX.
 Next action: Plan Phase 66

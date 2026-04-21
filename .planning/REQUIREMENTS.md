@@ -9,29 +9,29 @@ Requirements for milestone v1.4 演出力升级.
 
 ### Character Animation
 
-- [ ] **ANIM-01**: 创作者可以为页面中的每个角色选择一个预设动画。
-- [ ] **ANIM-02**: 创作者可选的内置角色动画至少包含 `fade-in`、`slide-in-left`、`slide-in-right`、`shake`、`nod`、`breathe`。
-- [ ] **ANIM-03**: 播放者看到的一次性动画会自动结束，循环动画会在当前页面保持运行并在离开页面时自动清理。
+- [x] **ANIM-01**: 创作者可以为页面中的每个角色选择一个预设动画。
+- [x] **ANIM-02**: 创作者可选的内置角色动画至少包含 `fade-in`、`slide-in-left`、`slide-in-right`、`shake`、`nod`、`breathe`。
+- [x] **ANIM-03**: 播放者看到的一次性动画会自动结束，循环动画会在当前页面保持运行并在离开页面时自动清理。
 - [ ] **ANIM-04**: 创作者可以在编辑器中单独重播角色动画预览，而无需启动完整试玩流程。
 
 ### Camera Effects
 
-- [ ] **CAM-01**: 创作者可以为一个页面配置一个镜头效果。
-- [ ] **CAM-02**: 创作者可选的页面镜头效果至少包含 `shake`、`zoom`、`pan`、`flash`。
-- [ ] **CAM-03**: 创作者可以为镜头效果配置时长、强度，以及效果适用时的方向参数。
-- [ ] **CAM-04**: 播放者看到的镜头效果会在页面进入时触发，且同一时间只存在一个页面级镜头效果。
+- [x] **CAM-01**: 创作者可以为一个页面配置一个镜头效果。
+- [x] **CAM-02**: 创作者可选的页面镜头效果至少包含 `shake`、`zoom`、`pan`、`flash`。
+- [x] **CAM-03**: 创作者可以为镜头效果配置时长、强度，以及效果适用时的方向参数。
+- [x] **CAM-04**: 播放者看到的镜头效果会在页面进入时触发，且同一时间只存在一个页面级镜头效果。
 - [x] **CAM-05**: 播放者看到的镜头效果只作用于舞台画面，不影响对话框和叠加界面的可读性。
 
 ### Transitions
 
-- [ ] **TRAN-01**: 创作者可以为页面选择至少 7 种可区分的转场类型。
-- [ ] **TRAN-02**: 新增转场能力至少覆盖 `dissolve`、`wipe`、`zoom`、`blur`，并保留现有 `none`、`fade`、`slide-*` 兼容行为。
+- [x] **TRAN-01**: 创作者可以为页面选择至少 7 种可区分的转场类型。
+- [x] **TRAN-02**: 新增转场能力至少覆盖 `dissolve`、`wipe`、`scale`（缩放）、`blur`，并保留现有 `none`、`fade`、`slide-*` 兼容行为。
 - [ ] **TRAN-03**: 创作者可以在编辑器中预览单次转场效果，而不需要真正切换到其他页面。
-- [ ] **TRAN-04**: 播放者看到的页面切换顺序保持稳定：旧页面退出与背景转场完成后，再进入角色动画和镜头效果。
+- [x] **TRAN-04**: 播放者看到的页面切换顺序保持稳定：旧页面退出与背景转场完成后，再进入角色动画和镜头效果。
 
 ### Preview and Compatibility
 
-- [ ] **PREV-01**: 创作者可以在现有页面编辑流程内配置角色动画、镜头效果和转场，不需要进入额外模式。
+- [x] **PREV-01**: 创作者可以在现有页面编辑流程内配置角色动画、镜头效果和转场，不需要进入额外模式。
 - [ ] **PREV-02**: 创作者可以通过 iframe 运行时预览分别重播角色动画、镜头效果和转场，且预览支持明确的失败/禁用提示。
 - [ ] **PREV-03**: 创作者在执行预览后，编辑器会恢复到预览前的页面编辑状态。
 - [x] **PREV-04**: 旧项目和未来项目中的未知动画值、镜头值、转场值在编辑器打开和保存后不会被静默清除。
@@ -64,22 +64,22 @@ Deferred to future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANIM-01 | Phase 62 | Pending |
-| ANIM-02 | Phase 62 | Pending |
-| ANIM-03 | Phase 62 | Pending |
-| ANIM-04 | Phase 65 | Pending |
-| CAM-01 | Phase 63 | Pending |
-| CAM-02 | Phase 63 | Pending |
-| CAM-03 | Phase 63 | Pending |
-| CAM-04 | Phase 63 | Pending |
+| ANIM-01 | Phase 62 | Complete |
+| ANIM-02 | Phase 62 | Complete |
+| ANIM-03 | Phase 62 | Complete |
+| ANIM-04 | Phase 65 | Complete |
+| CAM-01 | Phase 63 | Complete |
+| CAM-02 | Phase 63 | Complete |
+| CAM-03 | Phase 63 | Complete |
+| CAM-04 | Phase 63 | Complete |
 | CAM-05 | Phase 61 | Complete |
-| TRAN-01 | Phase 64 | Pending |
-| TRAN-02 | Phase 64 | Pending |
-| TRAN-03 | Phase 65 | Pending |
-| TRAN-04 | Phase 64 | Pending |
-| PREV-01 | Phase 66 | Pending |
-| PREV-02 | Phase 65 | Pending |
-| PREV-03 | Phase 65 | Pending |
+| TRAN-01 | Phase 64 | Complete |
+| TRAN-02 | Phase 64 | Complete |
+| TRAN-03 | Phase 65 | Complete |
+| TRAN-04 | Phase 64 | Complete |
+| PREV-01 | Phase 66 | Complete |
+| PREV-02 | Phase 65 | Complete |
+| PREV-03 | Phase 65 | Complete |
 | PREV-04 | Phase 61 | Complete |
 | PREV-05 | Phase 67 | Pending |
 

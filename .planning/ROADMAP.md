@@ -394,7 +394,7 @@ Plans:
   3. In the existing PageInspector flow, creators can choose page transition settings from the same editing interface.
 **Plans**: 2 plans
 Plans:
-- [ ] 66-01-PLAN.md — Add shared unknown-safe cinematic option helpers and scoped preview-state contracts for PageInspector
+- [x] 66-01-PLAN.md — Add shared unknown-safe cinematic option helpers and scoped preview-state contracts for PageInspector
 - [ ] 66-02-PLAN.md — Wire character, camera, and transition controls plus inline preview UX into PageInspector
 **UI hint**: yes
 
@@ -414,5 +414,5 @@ Plans:
 | 63. Camera Runtime & Shared Cleanup | 2/2 | Complete | 2026-04-21 |
 | 64. Background Transition Expansion | 2/2 | Complete | 2026-04-21 |
 | 65. Iframe Effect Preview API | 0/2 | Not started | - |
-| 66. Editor Controls & Compatibility UX | 0/2 | Not started | - |
+| 66. Editor Controls & Compatibility UX | 1/2 | In Progress|  |
 | 67. Integration & Regression Gate | 0/0 | Not started | - |

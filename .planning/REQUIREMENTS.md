@@ -20,7 +20,7 @@ Requirements for milestone v1.4 演出力升级.
 - [ ] **CAM-02**: 创作者可选的页面镜头效果至少包含 `shake`、`zoom`、`pan`、`flash`。
 - [ ] **CAM-03**: 创作者可以为镜头效果配置时长、强度，以及效果适用时的方向参数。
 - [ ] **CAM-04**: 播放者看到的镜头效果会在页面进入时触发，且同一时间只存在一个页面级镜头效果。
-- [ ] **CAM-05**: 播放者看到的镜头效果只作用于舞台画面，不影响对话框和叠加界面的可读性。
+- [x] **CAM-05**: 播放者看到的镜头效果只作用于舞台画面，不影响对话框和叠加界面的可读性。
 
 ### Transitions
 
@@ -72,7 +72,7 @@ Deferred to future milestones.
 | CAM-02 | Phase 63 | Pending |
 | CAM-03 | Phase 63 | Pending |
 | CAM-04 | Phase 63 | Pending |
-| CAM-05 | Phase 61 | Pending |
+| CAM-05 | Phase 61 | Complete |
 | TRAN-01 | Phase 64 | Pending |
 | TRAN-02 | Phase 64 | Pending |
 | TRAN-03 | Phase 65 | Pending |

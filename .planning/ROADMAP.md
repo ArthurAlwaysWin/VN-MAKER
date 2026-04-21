@@ -308,7 +308,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 
 ## Phases
 
-- [ ] **Phase 61: Contract Freeze & Visual Ownership** - Freeze compatibility rules and isolate camera effects to stage-owned visuals only
+- [x] **Phase 61: Contract Freeze & Visual Ownership** - Freeze compatibility rules and isolate camera effects to stage-owned visuals only (completed 2026-04-21)
 - [ ] **Phase 62: Character Preset Runtime Foundation** - Deliver per-character preset animation selection and runtime lifecycle rules
 - [ ] **Phase 63: Camera Runtime & Shared Cleanup** - Deliver single-effect page camera playback with bounded controls and reliable reset behavior
 - [ ] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering
@@ -327,7 +327,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
   2. During a page camera effect, players can still read the dialogue box and overlay screens because only the stage visuals move or flash.
 **Plans**: 2 plans
 Plans:
-- [ ] 61-01-PLAN.md — Stage-layer DOM ownership, character motion wrapper scaffolding, and export shell parity
+- [x] 61-01-PLAN.md — Stage-layer DOM ownership, character motion wrapper scaffolding, and export shell parity
 - [x] 61-02-PLAN.md — Unknown enum preservation, compatibility helpers, and runtime safe fallbacks
 
 ### Phase 62: Character Preset Runtime Foundation
@@ -394,7 +394,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 61. Contract Freeze & Visual Ownership | 1/2 | In Progress|  |
+| 61. Contract Freeze & Visual Ownership | 2/2 | Complete   | 2026-04-21 |
 | 62. Character Preset Runtime Foundation | 0/0 | Not started | - |
 | 63. Camera Runtime & Shared Cleanup | 0/0 | Not started | - |
 | 64. Background Transition Expansion | 0/0 | Not started | - |

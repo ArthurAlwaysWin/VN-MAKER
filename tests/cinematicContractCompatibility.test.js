@@ -1,7 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useScriptStore } from '../src/editor/stores/script.js';
-import { DEFAULT_PAGE_CAMERA, getTransitionUiOption } from '../src/shared/cinematicContract.js';
+import {
+  CAMERA_INTENSITY_UI_OPTIONS,
+  DEFAULT_PAGE_CAMERA,
+  KNOWN_CAMERA_EFFECTS,
+  KNOWN_CHARACTER_ANIMATIONS,
+  getCameraDirectionUiOptions,
+  getCameraEffectUiOptions,
+  getCharacterAnimationUiOptions,
+  getRuntimeTransitionType,
+  getTransitionUiOption,
+  getTransitionUiOptions,
+} from '../src/shared/cinematicContract.js';
 
 function makeScriptData() {
   return {
@@ -24,7 +35,7 @@ function makeScriptData() {
             characters: [
               { id: 'hero', expression: 'normal', animation: 'legacy-bounce', position: 'center' },
             ],
-            camera: { effect: 'legacy-zoom', duration: 450 },
+            camera: { effect: 'legacy-zoom', duration: 450, direction: 'legacy-dir' },
             bgm: null,
             se: null,
             dialogues: [{ speaker: 'hero', text: 'Hello', expression: null, voice: null }],
@@ -54,11 +65,15 @@ describe('cinematic contract compatibility', () => {
     const result = store.addPage('start', 0);
 
     expect(result.page.characters[0].animation).toBe('legacy-bounce');
-    expect(result.page.camera).toEqual({ effect: 'legacy-zoom', duration: 450 });
+    expect(result.page.camera).toEqual({
+      effect: 'legacy-zoom',
+      duration: 450,
+      direction: 'legacy-dir',
+    });
     expect(result.page.transition).toEqual({ type: 'legacy-wipe', duration: 1200 });
   });
 
-  it('creates new pages with camera defaulted to null', () => {
+  it('creates new pages with camera defaulted to null instead of a fake no-camera enum', () => {
     const store = useScriptStore();
     store.loadFromData(makeScriptData());
 
@@ -67,17 +82,109 @@ describe('cinematic contract compatibility', () => {
     expect(store.data.scenes['fresh-scene'].pages[0].camera).toBe(DEFAULT_PAGE_CAMERA);
   });
 
-  it('surfaces unsupported transition values as explicit unknown UI options', () => {
+  it('exposes character animation UI options with none plus the locked preset list', () => {
+    const options = getCharacterAnimationUiOptions();
+
+    expect(options.map(option => option.value)).toEqual([
+      'none',
+      ...KNOWN_CHARACTER_ANIMATIONS,
+    ]);
+    expect(options[0]).toEqual({
+      value: 'none',
+      label: '无',
+      known: true,
+    });
+    expect(getCharacterAnimationUiOptions('legacy-bounce').at(-1)).toEqual({
+      value: 'legacy-bounce',
+      label: '未知动画：legacy-bounce',
+      known: false,
+    });
+    expect(getCharacterAnimationUiOptions('  ').map(option => option.value)).toEqual([
+      'none',
+      ...KNOWN_CHARACTER_ANIMATIONS,
+    ]);
+  });
+
+  it('exposes camera UI options with an explicit empty choice, fixed intensity options, and unknown-safe directions', () => {
+    const effectOptions = getCameraEffectUiOptions();
+
+    expect(effectOptions.map(option => option.value)).toEqual([
+      '',
+      ...KNOWN_CAMERA_EFFECTS,
+    ]);
+    expect(effectOptions[0]).toEqual({
+      value: '',
+      label: '无',
+      known: true,
+    });
+    expect(getCameraEffectUiOptions('legacy-zoom').at(-1)).toEqual({
+      value: 'legacy-zoom',
+      label: '未知镜头：legacy-zoom',
+      known: false,
+    });
+
+    expect(CAMERA_INTENSITY_UI_OPTIONS).toEqual([
+      { value: 'low', label: '低' },
+      { value: 'medium', label: '中' },
+      { value: 'high', label: '高' },
+    ]);
+
+    expect(getCameraDirectionUiOptions('shake').map(option => option.value)).toEqual([
+      'horizontal',
+      'vertical',
+      'both',
+    ]);
+    expect(getCameraDirectionUiOptions('pan').map(option => option.value)).toEqual([
+      'left',
+      'right',
+      'up',
+      'down',
+    ]);
+    expect(getCameraDirectionUiOptions('pan', 'legacy-dir').at(-1)).toEqual({
+      value: 'legacy-dir',
+      label: '未知方向：legacy-dir',
+      known: false,
+    });
+    expect(getCameraDirectionUiOptions('zoom')).toEqual([]);
+    expect(getCameraDirectionUiOptions('flash', 'legacy-dir')).toEqual([]);
+  });
+
+  it('keeps transition compatibility intact while animation and camera helpers follow the same unknown-safe pattern', () => {
     expect(getTransitionUiOption('fade')).toEqual({
       value: 'fade',
       label: '淡入淡出',
       known: true,
     });
-
     expect(getTransitionUiOption('legacy-wipe')).toEqual({
       value: 'legacy-wipe',
       label: '未知转场：legacy-wipe',
       known: false,
     });
+
+    expect(getTransitionUiOptions('scale').map(option => option.value)).toEqual([
+      'fade',
+      'slide-left',
+      'slide-right',
+      'none',
+      'dissolve',
+      'wipe',
+      'scale',
+      'blur',
+    ]);
+    expect(getCharacterAnimationUiOptions('legacy-bounce').at(-1)).toMatchObject({
+      value: 'legacy-bounce',
+      known: false,
+    });
+    expect(getCameraEffectUiOptions('legacy-zoom').at(-1)).toMatchObject({
+      value: 'legacy-zoom',
+      known: false,
+    });
+  });
+
+  it('falls back unknown transitions to fade only at runtime consumption, not in editor helpers', () => {
+    expect(getRuntimeTransitionType('scale')).toBe('scale');
+    expect(getRuntimeTransitionType('legacy-wipe')).toBe('fade');
+    expect(getCharacterAnimationUiOptions('legacy-bounce').some(option => option.value === 'legacy-bounce')).toBe(true);
+    expect(getCameraEffectUiOptions('legacy-zoom').some(option => option.value === 'legacy-zoom')).toBe(true);
   });
 });

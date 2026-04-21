@@ -64,29 +64,29 @@ Deferred to future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANIM-01 | Unmapped | Pending |
-| ANIM-02 | Unmapped | Pending |
-| ANIM-03 | Unmapped | Pending |
-| ANIM-04 | Unmapped | Pending |
-| CAM-01 | Unmapped | Pending |
-| CAM-02 | Unmapped | Pending |
-| CAM-03 | Unmapped | Pending |
-| CAM-04 | Unmapped | Pending |
-| CAM-05 | Unmapped | Pending |
-| TRAN-01 | Unmapped | Pending |
-| TRAN-02 | Unmapped | Pending |
-| TRAN-03 | Unmapped | Pending |
-| TRAN-04 | Unmapped | Pending |
-| PREV-01 | Unmapped | Pending |
-| PREV-02 | Unmapped | Pending |
-| PREV-03 | Unmapped | Pending |
-| PREV-04 | Unmapped | Pending |
-| PREV-05 | Unmapped | Pending |
+| ANIM-01 | Phase 62 | Pending |
+| ANIM-02 | Phase 62 | Pending |
+| ANIM-03 | Phase 62 | Pending |
+| ANIM-04 | Phase 65 | Pending |
+| CAM-01 | Phase 63 | Pending |
+| CAM-02 | Phase 63 | Pending |
+| CAM-03 | Phase 63 | Pending |
+| CAM-04 | Phase 63 | Pending |
+| CAM-05 | Phase 61 | Pending |
+| TRAN-01 | Phase 64 | Pending |
+| TRAN-02 | Phase 64 | Pending |
+| TRAN-03 | Phase 65 | Pending |
+| TRAN-04 | Phase 64 | Pending |
+| PREV-01 | Phase 66 | Pending |
+| PREV-02 | Phase 65 | Pending |
+| PREV-03 | Phase 65 | Pending |
+| PREV-04 | Phase 61 | Pending |
+| PREV-05 | Phase 67 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-21*

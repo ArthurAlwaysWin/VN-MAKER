@@ -291,3 +291,110 @@ OKLCH 智能配色 + 设置页结构参数 + 编辑器完整配置 UI + 标题�
 See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 
 </details>
+
+---
+
+## v1.4 — 演出力升级
+
+**Milestone focus:** 受限范围的演出升级：预设化立绘动画、单页单镜头、扩展转场、运行时真预览；不引入新的动画/渲染依赖。
+
+**Guardrails:**
+- Runtime / editor preview parity is mandatory
+- No new animation or rendering dependencies
+- Unknown enum preservation and legacy compatibility are mandatory
+- Scope stays preset-based, not a freeform animation platform
+
+**Coverage:** 18/18 v1 requirements mapped
+
+## Phases
+
+- [ ] **Phase 61: Contract Freeze & Visual Ownership** - Freeze compatibility rules and isolate camera effects to stage-owned visuals only
+- [ ] **Phase 62: Character Preset Runtime Foundation** - Deliver per-character preset animation selection and runtime lifecycle rules
+- [ ] **Phase 63: Camera Runtime & Shared Cleanup** - Deliver single-effect page camera playback with bounded controls and reliable reset behavior
+- [ ] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering
+- [ ] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews
+- [ ] **Phase 66: Editor Controls & Compatibility UX** - Add in-flow PageInspector controls for cinematic settings without a new editing mode
+- [ ] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows
+
+## Phase Details
+
+### Phase 61: Contract Freeze & Visual Ownership
+**Goal**: Legacy and future project data remain intact while page camera effects are isolated to the stage visuals instead of the dialogue UI.
+**Depends on**: Nothing (starts after Phase 60)
+**Requirements**: PREV-04, CAM-05
+**Success Criteria** (what must be TRUE):
+  1. Opening and saving a project with unknown animation, camera, or transition values preserves those values instead of silently clearing them.
+  2. During a page camera effect, players can still read the dialogue box and overlay screens because only the stage visuals move or flash.
+**Plans**: TBD
+
+### Phase 62: Character Preset Runtime Foundation
+**Goal**: Creators can assign stable preset animations to page characters and players see the correct one-shot or loop lifecycle.
+**Depends on**: Phase 61
+**Requirements**: ANIM-01, ANIM-02, ANIM-03
+**Success Criteria** (what must be TRUE):
+  1. Creators can assign one preset animation to each character on a page.
+  2. Available character presets include at least `fade-in`, `slide-in-left`, `slide-in-right`, `shake`, `nod`, and `breathe`.
+  3. Players see one-shot character animations finish automatically, while looping animations continue only on the current page and clear when leaving it.
+**Plans**: TBD
+
+### Phase 63: Camera Runtime & Shared Cleanup
+**Goal**: Creators can configure one bounded camera effect per page and players see it trigger reliably on page entry without stacking.
+**Depends on**: Phase 61, Phase 62
+**Requirements**: CAM-01, CAM-02, CAM-03, CAM-04
+**Success Criteria** (what must be TRUE):
+  1. Creators can assign one camera effect to a page.
+  2. Available camera effects include `shake`, `zoom`, `pan`, and `flash`, with duration, intensity, and direction controls when relevant.
+  3. Players see the configured camera effect trigger when the page enters, and only one page-level camera effect is active at a time.
+**Plans**: TBD
+
+### Phase 64: Background Transition Expansion
+**Goal**: Page transitions become more expressive without breaking legacy transition behavior or page-enter sequencing.
+**Depends on**: Phase 61, Phase 62, Phase 63
+**Requirements**: TRAN-01, TRAN-02, TRAN-04
+**Success Criteria** (what must be TRUE):
+  1. Creators can choose at least 7 visually distinct transition types for a page.
+  2. The transition list includes `dissolve`, `wipe`, `zoom`, and `blur`, while existing `none`, `fade`, and `slide-*` behaviors remain compatible.
+  3. Players see a stable sequence where the old page exits and the background transition finishes before character animation and camera effects begin.
+**Plans**: TBD
+
+### Phase 65: Iframe Effect Preview API
+**Goal**: Creators can replay cinematic effects through the runtime-backed iframe preview interface and return to their editing state afterward.
+**Depends on**: Phase 62, Phase 63, Phase 64
+**Requirements**: ANIM-04, TRAN-03, PREV-02, PREV-03
+**Success Criteria** (what must be TRUE):
+  1. Creators can replay a single character animation in the iframe runtime without launching full test play.
+  2. Creators can preview a single transition effect without actually switching to another page.
+  3. Creators can replay character animation, camera effect, and transition through the iframe runtime and receive clear disabled or failure feedback when preview is unavailable.
+  4. After any effect preview ends or is canceled, the editor returns to the pre-preview page state.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 66: Editor Controls & Compatibility UX
+**Goal**: Creators can configure animations, camera, and transitions directly in the existing page editing interface.
+**Depends on**: Phase 65
+**Requirements**: PREV-01
+**Success Criteria** (what must be TRUE):
+  1. In the existing PageInspector flow, creators can choose a character animation without entering a separate mode or screen.
+  2. In the existing PageInspector flow, creators can configure page camera effect type and parameters without leaving normal page editing.
+  3. In the existing PageInspector flow, creators can choose page transition settings from the same editing interface.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 67: Integration & Regression Gate
+**Goal**: Runtime play and editor preview remain visually clean across the high-risk flows that make cinematic features feel trustworthy.
+**Depends on**: Phase 62, Phase 63, Phase 64, Phase 65, Phase 66
+**Requirements**: PREV-05
+**Success Criteria** (what must be TRUE):
+  1. Players do not see leftover animation classes, camera transforms, or flash overlays after skip, auto, load, or return-to-title flows.
+  2. Stopping preview or rapidly replaying effects returns the stage to a clean state before the next effect runs.
+**Plans**: TBD
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 61. Contract Freeze & Visual Ownership | 0/0 | Not started | - |
+| 62. Character Preset Runtime Foundation | 0/0 | Not started | - |
+| 63. Camera Runtime & Shared Cleanup | 0/0 | Not started | - |
+| 64. Background Transition Expansion | 0/0 | Not started | - |
+| 65. Iframe Effect Preview API | 0/0 | Not started | - |
+| 66. Editor Controls & Compatibility UX | 0/0 | Not started | - |
+| 67. Integration & Regression Gate | 0/0 | Not started | - |

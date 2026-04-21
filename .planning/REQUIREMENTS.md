@@ -34,7 +34,7 @@ Requirements for milestone v1.4 演出力升级.
 - [ ] **PREV-01**: 创作者可以在现有页面编辑流程内配置角色动画、镜头效果和转场，不需要进入额外模式。
 - [ ] **PREV-02**: 创作者可以通过 iframe 运行时预览分别重播角色动画、镜头效果和转场，且预览支持明确的失败/禁用提示。
 - [ ] **PREV-03**: 创作者在执行预览后，编辑器会恢复到预览前的页面编辑状态。
-- [ ] **PREV-04**: 旧项目和未来项目中的未知动画值、镜头值、转场值在编辑器打开和保存后不会被静默清除。
+- [x] **PREV-04**: 旧项目和未来项目中的未知动画值、镜头值、转场值在编辑器打开和保存后不会被静默清除。
 - [ ] **PREV-05**: 播放者在跳过、自动、读档、返回标题和停止预览等流程中，不会看到残留的动画类、镜头状态或闪屏覆盖层。
 
 ## v2 Requirements
@@ -80,7 +80,7 @@ Deferred to future milestones.
 | PREV-01 | Phase 66 | Pending |
 | PREV-02 | Phase 65 | Pending |
 | PREV-03 | Phase 65 | Pending |
-| PREV-04 | Phase 61 | Pending |
+| PREV-04 | Phase 61 | Complete |
 | PREV-05 | Phase 67 | Pending |
 
 **Coverage:**

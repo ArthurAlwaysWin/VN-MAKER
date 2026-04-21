@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: 演出力升级
-status: roadmap created
-stopped_at: roadmap ready for phase planning
-last_updated: "2026-04-21T23:59:00Z"
-last_activity: 2026-04-21
+status: phase in progress
+stopped_at: Completed 61-02-PLAN.md
+last_updated: "2026-04-21T05:28:24.526Z"
+last_activity: 2026-04-21 — completed Phase 61 Plan 02 cinematic compatibility contract freeze
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -20,19 +20,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v1.4 演出力升级 — roadmap completed, ready to plan Phase 61
+**Current focus:** v1.4 演出力升级 — Phase 61 execution in progress
 
 ## Current Position
 
 Phase: 61 — Contract Freeze & Visual Ownership
-Plan: —
-Plans: 0 planned
-Next: /gsd-plan-phase 61
-Last activity: 2026-04-21 — v1.4 roadmap created
+Plan: 02 completed (1/2 plans complete)
+Plans: 2 planned
+Next: Execute remaining Phase 61 plan 01 or continue phase completion workflow
+Last activity: 2026-04-21 — completed 61-02 cinematic compatibility contract freeze
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ (archived)
-v1.4 ░░░░░░░░░░░░░░░░░░░░ 0/7 phases planned
+v1.4 ▓▓▓░░░░░░░░░░░░░░░░░ 1/2 planned tasks in Phase 61 complete
 ```
 
 ## Performance Metrics
@@ -55,6 +55,7 @@ v1.4 ░░░░░░░░░░░░░░░░░░░░ 0/7 phases pla
 | v1.2 | 6 | 8 | 17 ✅ |
 | v1.3 | 9 | 21 | 27 ✅ |
 | v1.4 | 7 | 0 | 18 |
+| Phase 61 P02 | 156 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ v1.4 ░░░░░░░░░░░░░░░░░░░░ 0/7 phases pla
 - No new animation or rendering dependencies are allowed in this milestone.
 - Unknown animation/camera/transition enums must survive open/save cycles unchanged.
 - Planned phase sequence: 61 contract freeze, 62 character runtime, 63 camera runtime, 64 transition expansion, 65 iframe preview API, 66 editor controls, 67 regression gate.
+- [Phase 61]: Centralized transition compatibility helpers in src/shared/cinematicContract.js for editor/runtime parity.
+- [Phase 61]: Page creation and previous-page copy now preserve camera and transition data instead of rewriting future values.
+- [Phase 61]: ScriptEngine only normalizes unknown background transitions at emit time and keeps raw page payload ownership untouched.
 
 ### Blockers/Concerns
 
@@ -74,7 +78,7 @@ v1.4 ░░░░░░░░░░░░░░░░░░░░ 0/7 phases pla
 
 ## Session Continuity
 
-Last session: 2026-04-21T23:59:00Z
-Stopped at: Roadmap approved and written for v1.4
-Resume hint: Start planning with the contract and compatibility boundary in Phase 61
-Next action: /gsd-plan-phase 61
+Last session: 2026-04-21T05:28:24.523Z
+Stopped at: Completed 61-02-PLAN.md
+Resume hint: Phase 61 still has one remaining plan; preserve the new cinematic contract helpers when finishing the phase.
+Next action: Execute the remaining Phase 61 plan

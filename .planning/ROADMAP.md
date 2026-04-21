@@ -328,7 +328,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 **Plans**: 2 plans
 Plans:
 - [ ] 61-01-PLAN.md — Stage-layer DOM ownership, character motion wrapper scaffolding, and export shell parity
-- [ ] 61-02-PLAN.md — Unknown enum preservation, compatibility helpers, and runtime safe fallbacks
+- [x] 61-02-PLAN.md — Unknown enum preservation, compatibility helpers, and runtime safe fallbacks
 
 ### Phase 62: Character Preset Runtime Foundation
 **Goal**: Creators can assign stable preset animations to page characters and players see the correct one-shot or loop lifecycle.
@@ -394,7 +394,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 61. Contract Freeze & Visual Ownership | 0/2 | Not started | - |
+| 61. Contract Freeze & Visual Ownership | 1/2 | In Progress|  |
 | 62. Character Preset Runtime Foundation | 0/0 | Not started | - |
 | 63. Camera Runtime & Shared Cleanup | 0/0 | Not started | - |
 | 64. Background Transition Expansion | 0/0 | Not started | - |

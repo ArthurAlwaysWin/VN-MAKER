@@ -415,4 +415,32 @@ describe('page editor effect preview state', () => {
       result: null,
     });
   });
+
+  it('keeps effect-session stop on preview-effect-stop while full-play stop still posts stop', () => {
+    const { editor, postMessage } = harness;
+    editor.isEngineReady.value = true;
+
+    const request = editor.previewCameraEffect({
+      effect: 'zoom',
+      durationMs: 450,
+      intensity: 'medium',
+    });
+    postMessage.mockClear();
+
+    editor.stopPreview();
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'preview-effect-stop',
+      requestId: request.requestId,
+    }, '*');
+    expect(editor.previewSessionType.value).toBe('effect');
+
+    editor.previewSessionType.value = 'play';
+    postMessage.mockClear();
+
+    editor.stopPreview();
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith({ type: 'stop' }, '*');
+    expect(editor.previewSessionType.value).toBe(null);
+  });
 });

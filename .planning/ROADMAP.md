@@ -325,7 +325,10 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 **Success Criteria** (what must be TRUE):
   1. Opening and saving a project with unknown animation, camera, or transition values preserves those values instead of silently clearing them.
   2. During a page camera effect, players can still read the dialogue box and overlay screens because only the stage visuals move or flash.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 61-01-PLAN.md — Stage-layer DOM ownership, character motion wrapper scaffolding, and export shell parity
+- [ ] 61-02-PLAN.md — Unknown enum preservation, compatibility helpers, and runtime safe fallbacks
 
 ### Phase 62: Character Preset Runtime Foundation
 **Goal**: Creators can assign stable preset animations to page characters and players see the correct one-shot or loop lifecycle.
@@ -391,7 +394,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 61. Contract Freeze & Visual Ownership | 0/0 | Not started | - |
+| 61. Contract Freeze & Visual Ownership | 0/2 | Not started | - |
 | 62. Character Preset Runtime Foundation | 0/0 | Not started | - |
 | 63. Camera Runtime & Shared Cleanup | 0/0 | Not started | - |
 | 64. Background Transition Expansion | 0/0 | Not started | - |

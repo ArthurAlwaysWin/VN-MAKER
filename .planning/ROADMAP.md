@@ -314,7 +314,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 - [x] **Phase 64: Background Transition Expansion** - Expand transition variety while preserving legacy behavior and stable page-enter ordering (completed 2026-04-21)
 - [x] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews (completed 2026-04-21)
 - [x] **Phase 66: Editor Controls & Compatibility UX** - Add in-flow PageInspector controls for cinematic settings without a new editing mode (completed 2026-04-21)
-- [ ] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows
+- [x] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows (completed 2026-04-21)
 
 ## Phase Details
 
@@ -409,7 +409,7 @@ Plans:
 
 Plans:
 - [x] 67-01-PLAN.md — Add the PREV-05 regression matrix and extend focused cinematic cleanup suites before runtime edits
-- [ ] 67-02-PLAN.md — Apply the smallest main.js cleanup-orchestration fixes needed to make the PREV-05 gate pass
+- [x] 67-02-PLAN.md — Apply the smallest main.js cleanup-orchestration fixes needed to make the PREV-05 gate pass
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -419,4 +419,4 @@ Plans:
 | 64. Background Transition Expansion | 2/2 | Complete | 2026-04-21 |
 | 65. Iframe Effect Preview API | 2/2 | Complete   | 2026-04-21 |
 | 66. Editor Controls & Compatibility UX | 2/2 | Complete   | 2026-04-21 |
-| 67. Integration & Regression Gate | 1/2 | In Progress|  |
+| 67. Integration & Regression Gate | 2/2 | Complete   | 2026-04-21 |

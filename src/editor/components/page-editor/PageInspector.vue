@@ -34,6 +34,100 @@
               @change="setTransitionDuration($event.target.value)" class="field-input" />
           </div>
         </div>
+        <div class="transition-toolbar transition-preview">
+          <button class="preview-btn"
+            :disabled="transitionPreviewUiState.isBusy || !!getCurrentPreviewDisabledReason('transition', buildTransitionPreviewPayload())"
+            @click="editor.previewTransitionEffect({
+              type: selectedTransitionType,
+              duration: page.transition?.duration || 800,
+            })">
+            {{ transitionPreviewUiState.isBusy ? '预览中…' : '▶ 预览转场' }}
+          </button>
+          <span class="preview-status"
+            :class="previewStatusClass(
+              transitionPreviewUiState,
+              getCurrentPreviewDisabledReason('transition', buildTransitionPreviewPayload()),
+            )">
+            {{
+              previewStatusText(
+                transitionPreviewUiState,
+                getCurrentPreviewDisabledReason('transition', buildTransitionPreviewPayload()),
+              )
+            }}
+          </span>
+          <HelpTip :text="HELP_SCRIPT.cinematicPreview" />
+        </div>
+        <div class="camera-settings">
+          <div class="camera-header">
+            <label>页面镜头 <HelpTip :text="HELP_SCRIPT.pageCamera" /></label>
+          </div>
+          <div class="form-group">
+            <label>效果</label>
+            <select :value="selectedCameraEffect"
+              @change="setCameraEffect($event.target.value)"
+              class="field-input">
+              <option v-for="option in cameraEffectOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+          <div class="camera-grid">
+            <div class="form-group">
+              <label>时长(ms)</label>
+              <input type="number"
+                :value="selectedCameraDurationMs"
+                min="100"
+                max="2000"
+                @change="setCameraDurationMs($event.target.value)"
+                class="field-input" />
+            </div>
+            <div class="form-group">
+              <label>强度</label>
+              <select :value="selectedCameraIntensity"
+                @change="setCameraIntensity($event.target.value)"
+                class="field-input">
+                <option v-for="option in cameraIntensityOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div v-if="selectedCameraEffect === 'shake' || selectedCameraEffect === 'pan'" class="form-group">
+            <label>方向</label>
+            <select :value="selectedCameraDirection"
+              @change="setCameraDirection($event.target.value)"
+              class="field-input">
+              <option v-for="option in cameraDirectionOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+          <div class="transition-toolbar camera-preview">
+            <button class="preview-btn"
+              :disabled="cameraPreviewUiState.isBusy || !!getCurrentPreviewDisabledReason('camera', buildCameraPreviewPayload())"
+              @click="editor.previewCameraEffect({
+                effect: buildCameraPreviewPayload().effect,
+                durationMs: buildCameraPreviewPayload().durationMs,
+                intensity: buildCameraPreviewPayload().intensity,
+                direction: buildCameraPreviewPayload().direction,
+              })">
+              {{ cameraPreviewUiState.isBusy ? '预览中…' : '▶ 预览镜头' }}
+            </button>
+            <span class="preview-status"
+              :class="previewStatusClass(
+                cameraPreviewUiState,
+                getCurrentPreviewDisabledReason('camera', buildCameraPreviewPayload()),
+              )">
+              {{
+                previewStatusText(
+                  cameraPreviewUiState,
+                  getCurrentPreviewDisabledReason('camera', buildCameraPreviewPayload()),
+                )
+              }}
+            </span>
+            <HelpTip :text="HELP_SCRIPT.cinematicPreview" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -55,13 +149,53 @@
           />
           <HelpTip :text="HELP_SCRIPT.charExpression" />
           <button class="delete-x" @click.stop="removeCharacter(idx)" title="移除角色">✕</button>
-          <div v-if="editor.selectedCharIndex.value === idx" class="char-scale-row" @click.stop>
-            <label class="scale-label">缩放</label>
-            <input type="range" min="0.2" max="3" step="0.1"
-              :value="char.scale || 1"
-              @input="setCharScale(idx, parseFloat($event.target.value))"
-              class="scale-slider" />
-            <span class="scale-val">{{ (char.scale || 1).toFixed(1) }}</span>
+          <div v-if="editor.selectedCharIndex.value === idx" class="char-detail-stack" @click.stop>
+            <div class="char-animation-row">
+              <label class="detail-label">角色动画 <HelpTip :text="HELP_SCRIPT.charAnimation" /></label>
+              <div class="inline-actions">
+                <select :value="char.animation || 'none'"
+                  @change="setCharAnimation(idx, $event.target.value)"
+                  class="field-input mini-field-input">
+                  <option v-for="option in characterAnimationOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <button class="preview-btn character-preview"
+                  :disabled="getCharacterPreviewUiState(char, idx).isBusy || !!getCurrentPreviewDisabledReason('character', {
+                    characterId: char.id,
+                    animation: char.animation,
+                  })"
+                  @click="editor.previewCharacterEffect({ characterId: char.id, animation: char.animation })">
+                  {{ getCharacterPreviewUiState(char, idx).isBusy ? '预览中…' : '▶ 预览' }}
+                </button>
+              </div>
+              <span class="preview-status"
+                :class="previewStatusClass(
+                  getCharacterPreviewUiState(char, idx),
+                  getCurrentPreviewDisabledReason('character', {
+                    characterId: char.id,
+                    animation: char.animation,
+                  }),
+                )">
+                {{
+                  previewStatusText(
+                    getCharacterPreviewUiState(char, idx),
+                    getCurrentPreviewDisabledReason('character', {
+                      characterId: char.id,
+                      animation: char.animation,
+                    }),
+                  )
+                }}
+              </span>
+            </div>
+            <div class="char-scale-row">
+              <label class="scale-label">缩放</label>
+              <input type="range" min="0.2" max="3" step="0.1"
+                :value="char.scale || 1"
+                @input="setCharScale(idx, parseFloat($event.target.value))"
+                class="scale-slider" />
+              <span class="scale-val">{{ (char.scale || 1).toFixed(1) }}</span>
+            </div>
           </div>
         </div>
         <div v-if="page.characters.length === 0" class="empty-hint">当前页面无角色</div>
@@ -365,7 +499,13 @@ import AudioPicker from './AudioPicker.vue';
 import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
-import { getTransitionUiOptions } from '../../../shared/cinematicContract.js';
+import {
+  CAMERA_INTENSITY_UI_OPTIONS,
+  getCameraDirectionUiOptions,
+  getCameraEffectUiOptions,
+  getCharacterAnimationUiOptions,
+  getTransitionUiOptions,
+} from '../../../shared/cinematicContract.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -383,8 +523,24 @@ const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
 const characterEntries = computed(() => Object.entries(script.data?.characters || {}));
 const allScenes = computed(() => Object.entries(script.data?.scenes || {}));
+const characterAnimationOptions = computed(() => {
+  const idx = editor.selectedCharIndex.value;
+  const currentAnimation = idx >= 0 ? page.value?.characters?.[idx]?.animation : undefined;
+  return getCharacterAnimationUiOptions(currentAnimation);
+});
+const cameraEffectOptions = computed(() => getCameraEffectUiOptions(page.value?.camera?.effect));
+const cameraIntensityOptions = CAMERA_INTENSITY_UI_OPTIONS;
+const selectedCameraEffect = computed(() => page.value?.camera?.effect || '');
+const selectedCameraDurationMs = computed(() => page.value?.camera?.durationMs || 800);
+const selectedCameraIntensity = computed(() => page.value?.camera?.intensity || 'medium');
+const selectedCameraDirection = computed(() => page.value?.camera?.direction || '');
+const cameraDirectionOptions = computed(() => (
+  getCameraDirectionUiOptions(selectedCameraEffect.value, selectedCameraDirection.value)
+));
 const transitionOptions = computed(() => getTransitionUiOptions(page.value?.transition?.type));
 const selectedTransitionType = computed(() => page.value?.transition?.type || 'fade');
+const cameraPreviewUiState = computed(() => editor.getEffectPreviewUiState('camera'));
+const transitionPreviewUiState = computed(() => editor.getEffectPreviewUiState('transition'));
 
 // Page-scoped character list for speaker combobox
 const pageCharOptions = computed(() => {
@@ -478,6 +634,127 @@ function clearSe() {
   script.pushState();
 }
 
+function getCurrentPreviewDisabledReason(effectKind, payload = {}) {
+  if (!editor.previewIframeRef.value?.contentWindow || !editor.isEngineReady.value) {
+    return 'engine-not-ready';
+  }
+  if (!page.value || !editor.selectedSceneId.value) {
+    return 'no-page-selected';
+  }
+  if (effectKind === 'character' && !payload.animation) {
+    return 'missing-character-animation';
+  }
+  if (effectKind === 'camera' && !payload.effect) {
+    return 'missing-camera-config';
+  }
+  if (effectKind === 'transition' && !payload.type) {
+    return 'missing-transition-config';
+  }
+  return null;
+}
+
+function getCharacterPreviewUiState(char, idx) {
+  return editor.getEffectPreviewUiState('character', {
+    charIndex: idx,
+    characterId: char?.id ?? null,
+  });
+}
+
+function previewReasonText(reason) {
+  switch (reason) {
+    case 'engine-not-ready':
+      return '预览运行时尚未就绪';
+    case 'no-page-selected':
+      return '请先选择一个页面';
+    case 'missing-character-animation':
+      return '请选择角色动画后再预览';
+    case 'missing-camera-config':
+      return '请选择镜头效果后再预览';
+    case 'missing-transition-config':
+      return '请选择转场后再预览';
+    case 'preview-busy':
+      return '已有其他效果预览正在进行';
+    case 'unsupported-effect':
+      return '当前值暂不支持运行时预览';
+    case 'runtime-error':
+      return '运行时预览失败';
+    case 'restore-failed':
+      return '预览结束，但恢复编辑状态失败';
+    default:
+      return reason ? `预览异常：${reason}` : '';
+  }
+}
+
+function previewStatusText(uiState, fallbackReason = null) {
+  if (uiState?.isBusy) {
+    return '预览中…';
+  }
+  if (fallbackReason) {
+    return previewReasonText(fallbackReason);
+  }
+  if (uiState?.isDisabled && uiState.disabledReason) {
+    return previewReasonText(uiState.disabledReason);
+  }
+
+  switch (uiState?.result?.status) {
+    case 'completed':
+      return '预览完成';
+    case 'cancelled':
+      return '预览已取消';
+    case 'rejected':
+      return previewReasonText(uiState.result.reason) || '预览请求已拒绝';
+    case 'failed':
+      return previewReasonText(uiState.result.reason) || '预览失败';
+    default:
+      return '';
+  }
+}
+
+function previewStatusClass(uiState, fallbackReason = null) {
+  if (uiState?.isBusy) {
+    return 'is-busy';
+  }
+  if (fallbackReason || uiState?.isDisabled) {
+    return 'is-warning';
+  }
+  if (uiState?.result?.status === 'failed' || uiState?.result?.status === 'rejected') {
+    return 'is-error';
+  }
+  if (uiState?.result?.status === 'completed' || uiState?.result?.status === 'cancelled') {
+    return 'is-success';
+  }
+  return '';
+}
+
+function buildTransitionPreviewPayload() {
+  return {
+    type: selectedTransitionType.value,
+    duration: page.value?.transition?.duration || 800,
+  };
+}
+
+function ensurePageCameraState() {
+  if (!page.value) return null;
+  page.value.camera ??= { effect: '', durationMs: 800, intensity: 'medium', trigger: 'onEnter' };
+  page.value.camera.durationMs = page.value.camera.durationMs || 800;
+  page.value.camera.intensity = page.value.camera.intensity || 'medium';
+  page.value.camera.trigger = 'onEnter';
+  return page.value.camera;
+}
+
+function buildCameraPreviewPayload() {
+  const camera = page.value?.camera;
+  const payload = {
+    effect: camera?.effect || '',
+    durationMs: camera?.durationMs || 800,
+    intensity: camera?.intensity || 'medium',
+  };
+  if (payload.effect === 'shake' || payload.effect === 'pan') {
+    payload.direction = camera?.direction || (payload.effect === 'shake' ? 'both' : 'left');
+  }
+  return payload;
+}
+
 // Page property setters
 function setTransitionType(type) {
   if (!page.value) return;
@@ -493,7 +770,57 @@ function setTransitionDuration(val) {
   script.pushState();
 }
 
+function setCameraEffect(value) {
+  if (!page.value) return;
+  if (!value) {
+    page.value.camera = null;
+    script.pushState();
+    return;
+  }
+
+  const camera = ensurePageCameraState();
+  if (!camera) return;
+  camera.effect = value;
+  if (value === 'shake' && !camera.direction) {
+    camera.direction = 'both';
+  }
+  if (value === 'pan' && !camera.direction) {
+    camera.direction = 'left';
+  }
+  if (value !== 'shake' && value !== 'pan') {
+    delete camera.direction;
+  }
+  script.pushState();
+}
+
+function setCameraDurationMs(val) {
+  const camera = ensurePageCameraState();
+  if (!camera) return;
+  camera.durationMs = Math.min(2000, Math.max(100, parseInt(val, 10) || 800));
+  script.pushState();
+}
+
+function setCameraIntensity(value) {
+  const camera = ensurePageCameraState();
+  if (!camera) return;
+  camera.intensity = value || 'medium';
+  script.pushState();
+}
+
+function setCameraDirection(value) {
+  const camera = ensurePageCameraState();
+  if (!camera) return;
+  camera.direction = value || null;
+  script.pushState();
+}
+
 // Character management
+function setCharAnimation(idx, animation) {
+  if (!page.value?.characters?.[idx]) return;
+  page.value.characters[idx].animation = animation;
+  script.pushState();
+}
+
 function setCharExpression(idx, expr) {
   if (!page.value?.characters?.[idx]) return;
   page.value.characters[idx].expression = expr;
@@ -814,6 +1141,10 @@ function onOptDragEnd() {
   color: #888;
 }
 
+.mini-field-input {
+  flex: 1;
+}
+
 .field-textarea {
   resize: vertical;
   font-family: inherit;
@@ -949,6 +1280,74 @@ function onOptDragEnd() {
   color: #aaa;
   font-size: 12px;
   min-width: 24px;
+}
+
+.transition-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.camera-settings {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.camera-header {
+  margin-bottom: 8px;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.preview-btn {
+  background: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.preview-btn:hover:not(:disabled) {
+  border-color: #007acc;
+  color: #fff;
+  background: #094771;
+}
+
+.preview-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-status {
+  min-height: 18px;
+  color: #777;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.preview-status.is-busy {
+  color: #4ec9b0;
+}
+
+.preview-status.is-warning {
+  color: #d7ba7d;
+}
+
+.preview-status.is-error {
+  color: #f48771;
+}
+
+.preview-status.is-success {
+  color: #89d185;
 }
 
 .field-with-clear {
@@ -1090,6 +1489,36 @@ function onOptDragEnd() {
 }
 
 /* ─── Character Scale ─── */
+.char-detail-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.char-animation-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 11px;
+}
+
+.inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
 .char-scale-row {
   display: flex;
   align-items: center;

@@ -8,6 +8,7 @@
  * @module ThemeManager
  */
 import { DEFAULT_TOKENS } from './tokens.js';
+import { resolvePath } from './assetPath.js';
 
 /**
  * Apply theme token overrides onto a container element.
@@ -72,6 +73,7 @@ function buildNineSliceCSS(nineSlice) {
   for (const [key, selector] of Object.entries(NINE_SLICE_SELECTORS)) {
     const config = nineSlice[key];
     if (!config?.src) continue;
+    const resolvedSrc = resolvePath(config.src);
 
     // Parent setup: overflow:hidden clips ::before to border-radius (D-01),
     // isolation:isolate creates stacking context for z-index:-1 (Pitfall 1)
@@ -97,7 +99,7 @@ function buildNineSliceCSS(nineSlice) {
       `  position: absolute;\n` +
       `  inset: 0;\n` +
       `  z-index: -1;\n` +
-      `  border-image: url("${config.src}") ${slice} / ${width} / ${outset} ${repeat};\n` +
+      `  border-image: url("${resolvedSrc}") ${slice} / ${width} / ${outset} ${repeat};\n` +
       `  pointer-events: none;\n` +
       `}`
     );
@@ -105,16 +107,18 @@ function buildNineSliceCSS(nineSlice) {
     // Button 3-state rules (D-06) — CSS pseudo-classes only, no JS listeners
     if (BUTTON_KEYS.has(key) && config.states) {
       if (config.states.hover?.src) {
+        const resolvedHoverSrc = resolvePath(config.states.hover.src);
         rules.push(
           `${selector}:hover::before {\n` +
-          `  border-image-source: url("${config.states.hover.src}");\n` +
+          `  border-image-source: url("${resolvedHoverSrc}");\n` +
           `}`
         );
       }
       if (config.states.active?.src) {
+        const resolvedActiveSrc = resolvePath(config.states.active.src);
         rules.push(
           `${selector}:active::before {\n` +
-          `  border-image-source: url("${config.states.active.src}");\n` +
+          `  border-image-source: url("${resolvedActiveSrc}");\n` +
           `}`
         );
       }

@@ -4,6 +4,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from 'vue';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createPinia, setActivePinia } from 'pinia';
 import { useScriptStore } from '../src/editor/stores/script.js';
 import { createThemeEditor } from '../src/editor/composables/useThemeEditor.js';
@@ -164,5 +166,17 @@ describe('uiImageField helper flow', () => {
 
     expect(store.getTheme().nineSlice.dialogueBox.src).toBeNull();
     expect(getUiImageDisplayValue(store.getTheme().nineSlice.dialogueBox.src)).toBe('');
+  });
+
+  it('rewires NineSliceModal to the shared picker helpers and removes FileReader persistence', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'theme', 'NineSliceModal.vue'),
+      'utf8',
+    );
+
+    expect(source).toContain('pickUiImage');
+    expect(source).toContain('clearUiImage');
+    expect(source).not.toContain('FileReader');
+    expect(source).not.toContain('readAsDataURL');
   });
 });

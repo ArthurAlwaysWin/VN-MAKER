@@ -26,17 +26,14 @@
                 <label class="section-label">背景图片</label>
                 <div class="upload-area">
                   <div class="ns-preview" v-if="getElementConfig(elem.key).src">
-                    <img :src="getElementConfig(elem.key).src" class="ns-thumb" />
+                    <img :src="getPreviewSrc(getElementConfig(elem.key).src)" class="ns-thumb" />
                     <div class="ns-line ns-line-top" :style="{ top: slicePcts(getElementConfig(elem.key)).top + '%' }"></div>
                     <div class="ns-line ns-line-bottom" :style="{ bottom: slicePcts(getElementConfig(elem.key)).bottom + '%' }"></div>
                     <div class="ns-line ns-line-left" :style="{ left: slicePcts(getElementConfig(elem.key)).left + '%' }"></div>
                     <div class="ns-line ns-line-right" :style="{ right: slicePcts(getElementConfig(elem.key)).right + '%' }"></div>
                   </div>
                   <div class="upload-actions">
-                    <label class="upload-btn">
-                      选择图片
-                      <input type="file" accept="image/*" hidden @change="onImageUpload($event, elem.key)" />
-                    </label>
+                    <button class="upload-btn" type="button" @click="pickElementImage(elem.key)">选择图片</button>
                     <button v-if="getElementConfig(elem.key).src" class="clear-btn" @click="clearImage(elem.key)" title="清除背景图片">清除</button>
                   </div>
                 </div>
@@ -65,13 +62,10 @@
                   <label class="section-label">{{ state === 'hover' ? '悬停状态' : '按下状态' }} 图片</label>
                   <div class="upload-area">
                     <div class="ns-preview-sm" v-if="getElementConfig(elem.key).states?.[state]?.src">
-                      <img :src="getElementConfig(elem.key).states[state].src" class="ns-thumb" />
+                      <img :src="getPreviewSrc(getElementConfig(elem.key).states[state].src)" class="ns-thumb" />
                     </div>
                     <div class="upload-actions">
-                      <label class="upload-btn">
-                        选择图片
-                        <input type="file" accept="image/*" hidden @change="onImageUpload($event, elem.key, state)" />
-                      </label>
+                      <button class="upload-btn" type="button" @click="pickElementImage(elem.key, state)">选择图片</button>
                       <button v-if="getElementConfig(elem.key).states?.[state]?.src" class="clear-btn" @click="clearImage(elem.key, state)" title="清除背景图片">清除</button>
                     </div>
                   </div>
@@ -89,6 +83,7 @@
 import { ref } from 'vue';
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import { clearUiImage, pickUiImage } from '../../utils/uiImageField.js';
 import HelpTip from '../HelpTip.vue';
 import { HELP_THEME } from '../../helpTexts.js';
 
@@ -125,36 +120,32 @@ function getElementConfig(key) {
   return theme.nineSlice[key];
 }
 
-// ─── Image Upload (base64 Data URL) ─────────────────
+function setImageValue(elementKey, state, value) {
+  const config = getElementConfig(elementKey);
+  if (state) {
+    config.states ??= {};
+    config.states[state] ??= {};
+    config.states[state].src = value;
+    return;
+  }
 
-function onImageUpload(event, elementKey, state = null) {
-  const file = event.target.files?.[0];
-  if (!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const config = getElementConfig(elementKey);
-    if (state) {
-      config.states ??= {};
-      config.states[state] ??= {};
-      config.states[state].src = reader.result;
-    } else {
-      config.src = reader.result;
-    }
-    editor.sendThemeToPreview();
-  };
-  reader.readAsDataURL(file);
+  config.src = value;
+}
+
+async function pickElementImage(elementKey, state = null) {
+  await pickUiImage({
+    setValue: (value) => setImageValue(elementKey, state, value),
+    preview: () => editor.sendThemeToPreview(),
+  });
 }
 
 // ─── Clear Image ────────────────────────────────────
 
 function clearImage(elementKey, state = null) {
-  const config = getElementConfig(elementKey);
-  if (state) {
-    if (config.states?.[state]) config.states[state].src = null;
-  } else {
-    config.src = null;
-  }
-  editor.sendThemeToPreview();
+  clearUiImage({
+    setValue: (value) => setImageValue(elementKey, state, value),
+    preview: () => editor.sendThemeToPreview(),
+  });
 }
 
 // ─── Slice Value Change ─────────────────────────────
@@ -175,6 +166,20 @@ function slicePcts(config) {
     bottom: Math.min((s[2] / 200) * 100, 50),
     left: Math.min((s[3] / 200) * 100, 50),
   };
+}
+
+function getPreviewSrc(value) {
+  if (!value) return '';
+  if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('asset://')) {
+    return value;
+  }
+  if (value.startsWith('/game/')) {
+    return `asset://${value.slice(6)}`;
+  }
+  if (value.startsWith('assets/')) {
+    return `asset://${value.slice(7)}`;
+  }
+  return `asset://${value}`;
 }
 
 // ─── Commit on Close ────────────────────────────────

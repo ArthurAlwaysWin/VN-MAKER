@@ -1,306 +1,118 @@
-# Roadmap: Galgame Maker
+# Milestone v1.5: UI 图片驱动体系
+
+**Status:** Drafted  
+**Phases:** 71-75  
+**Total Requirements:** 17  
+**Granularity:** standard
 
 ## Overview
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
----
-
-## v0.1 — 设置页设计器 ✅
-
-<details>
-<summary>Phases 1-5 (all completed 2025-03-28)</summary>
-
-- [x] **Phase 1: Bug Fixes** - Fix file dialog and hot reload blockers before feature work
-- [x] **Phase 2: Data Schema & Component Registry** - Define the JSON contract and extensible architecture
-- [x] **Phase 3: Runtime Settings Renderer** - Engine renders interactive settings page from JSON layout data
-- [x] **Phase 4: Editor Canvas & Component Palette** - Visual designer for placing and positioning settings components
-- [x] **Phase 5: Property Panel & Integration** - Property editing, auto-save, undo/redo, end-to-end workflow
-
-**Post-milestone polish (2025-03-29):**
-- ✅ 创建项目 reactive Proxy bug 修复
-- ✅ 设置页设计器 5 项 bug 修复（样式预览/撤销重做/自动调高等）
-- ✅ 关闭按钮移至设置组件区 + icon/text 双模式
-- ✅ 全屏开关 → 窗口模式三选一（radio 按钮样式）
-- ✅ 保存按钮 💾 添加到工具栏
-
-</details>
-
----
-
-## v0.2 — 资源库 & 标题页 & 设置叠加层 ✅
-
-<details>
-<summary>Phases 6-9 (shipped 2026-03-31)</summary>
-
-- [x] **Phase 6: Asset Library Foundation** — IPC handlers, file validation, auto-naming, font loading (2026-03-29)
-- [x] **Phase 7: Asset Library UI** — Unified asset view with thumbnails, audio, expression editor, batch import (2026-03-29)
-- [x] **Phase 8: Title Page Designer** — 3-panel canvas designer with preset buttons, schema migration (2026-03-31)
-- [x] **Phase 9: Settings Overlay** — Slide-in overlay with dual-mode backdrop and ESC priority (2026-03-31)
-
-**Key deliverables:**
-- ✅ 12 格式魔数验证 + 自动命名冲突解决 + 双窗口字体加载
-- ✅ 统一资源库（背景/角色/音频/字体一体化，tab 6→5）
-- ✅ 标题页 3 面板设计器 + 预设按钮 + 引擎格式迁移
-- ✅ 设置页右侧滑入覆盖层 + ESC 优先级链
-
-See \.planning/milestones/v0.2-ROADMAP.md\ for full phase details.
-
-</details>
-
----
-
-## v0.3 — PPT 式游戏内容编辑器 ✅
-
-<details>
-<summary>Phases 10-14 + 13.1 (shipped 2026-04-01)</summary>
-
-- [x] **Phase 10: Page Data Schema & Engine Adaptation** — Page-based data format + engine rewrite (2026-03-31)
-- [x] **Phase 11: PPT Page Editor** — Scene tree sidebar + WYSIWYG canvas + inspector (2026-04-01)
-- [x] **Phase 12: Resource Pickers** — Character/expression/background/audio pickers (2026-03-31)
-- [x] **Phase 13: Transitions & Branching** — Fade/slide transitions + choice pages + scene linking (2026-04-01)
-- [x] **Phase 13.1: UI Polish** — Speaker combobox + choice preview + character scale (INSERTED)
-- [x] **Phase 14: Editor Test Play** — Inline iframe preview with postMessage protocol (2026-04-01)
-
-**Key deliverables:**
-- ✅ 页面式数据架构替代命令时间线 + 引擎完全重写
-- ✅ PPT 风格所见即所得编辑器（场景树 + 1280×720 画布 + 检查器）
-- ✅ 视觉资源选择器（角色表情网格、背景预览、音频播放器）
-- ✅ 转场效果 + 选择分支页 + 场景跳转
-- ✅ 编辑器内联试玩（iframe + postMessage + 只读覆盖层）
-
-See .planning/milestones/v0.3-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-
-## v0.4 — 语音 & 全局字体设置 ✅
-
-<details>
-<summary>Phases 15-18 (shipped 2026-04-03)</summary>
-
-- [x] **Phase 15: Voice Engine Foundation** — Data model, audio channel, engine playback, volume control (2026-04-02)
-- [x] **Phase 16: Voice Editor Integration** — Inspector voice picker, preview, batch naming (2026-04-02)
-- [x] **Phase 17: Global Font Settings** — Data schema, engine consumption, editor UI, live preview (2026-04-03)
-- [x] **Phase 18: Voice Polish** — Backlog replay, auto-mode voice wait (2026-04-03)
-
-**Key deliverables:**
-- ✅ 语音引擎（独立通道 + 音量控制 + D-01 停止语义）
-- ✅ 编辑器语音集成（AudioPicker + 批量命名匹配 + 试听）
-- ✅ 全局字体设置（数据模型 + 引擎消费 + 编辑器 UI + 画布实时预览）
-- ✅ 回想屏语音重放（▶/■ 按钮 + 高亮反馈）
-- ✅ 自动模式语音感知（Promise.all 等待 + 300ms 微延迟）
-
-See .planning/milestones/v0.4-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v0.5 — 游戏 UI 补全 ✅
-
-<details>
-<summary>Phases 19-22 (shipped 2026-04-05)</summary>
-
-- [x] **Phase 19: Save System Upgrade** — File system saves with 108-slot capacity, IPC handlers, screenshots, migration (2026-04-04)
-- [x] **Phase 20: Quick Action Bar** — 8-button dialogue bar with quicksave/quickload, F5/F9, auto/skip indicators (2026-04-05)
-- [x] **Phase 21: Save/Load UI** — Full-screen 3×3×12 grid (108 slots), thumbnails, pagination, ESC stack, source-routed close (2026-04-05)
-- [x] **Phase 22: Skip Mode** — Read history tracking, skip-all/skip-read-only, audio suppression, settings toggle (2026-04-05)
-
-**Key deliverables:**
-- ✅ 文件系统存档管线：SaveManager → IPC → atomicWrite + capturePage 截图
-- ✅ 快捷按钮栏 8 按钮 + 快存快读(F5/F9) + 激活状态紫色高亮
-- ✅ 全屏存读档界面 108 槽位 + 分页 + 内联确认 + 来源路由返回
-- ✅ 快进模式 30ms 循环 + ReadHistory + BGM 影子追踪 + 6 种停止触发器
-
-See .planning/milestones/v0.5-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v0.6 — 主题包系统 ✅
-
-<details>
-<summary>Phases 23-27 (shipped 2026-04-07)</summary>
-
-- [x] **Phase 23: Token Foundation** — 41 --gm-* CSS custom properties migration, zero visual regression (2026-04-06)
-- [x] **Phase 24: ThemeManager Engine** — ThemeManager.js reads ui.theme, injects CSS vars, postMessage preview (2026-04-06)
-- [x] **Phase 25: 9-Slice + Color Harmony** — 9-slice border-image via ::before, 3-state buttons, HSL harmony, WCAG contrast (2026-04-06)
-- [x] **Phase 26: Visual Theme Editor** — ThemeDesigner.vue with color pickers, 9-slice config, live preview iframe, palette generator (2026-04-06)
-- [x] **Phase 27: Theme Presets + Export/Import** — 4 built-in presets, .theme ZIP via fflate, formatVersion (2026-04-07)
-
-**Key deliverables:**
-- ✅ 41 个 Design Token（--gm-*）+ CSS 变量迁移，零视觉回归
-- ✅ ThemeManager 引擎模块（applyTheme/applyNineSlice + postMessage 实时预览）
-- ✅ 九宫格图片系统（对话框/面板/按钮 ::before 伪元素 + 三态按钮）
-- ✅ 配色和谐算法（4 种 HSL 算法 + WCAG 对比度自动修复）
-- ✅ 可视化主题编辑器（41 token 控件 + 调色盘生成器 + 九宫格配置）
-- ✅ 4 套内置预设（Modern/和風/Fantasy/Minimal）+ .theme ZIP 导出/导入
-
-See .planning/milestones/v0.6-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v0.7 — 游戏导出（Web 静态包）✅
-
-<details>
-<summary>Phases 28-31 (shipped 2026-04-08)</summary>
-
-- [x] **Phase 28: Engine Web Adaptation** — WebSaveManager + basePath parameterization + 3-way env detection (2026-04-07)
-- [x] **Phase 29: Asset Scanner + Build Config** — scanAssets() 5-category scanner + vite.web.config.js deterministic build (2026-04-07)
-- [x] **Phase 30: Export Pipeline** — 6-step pipeline: build → scan → copy engine → copy assets → generate HTML → ZIP (2026-04-08)
-- [x] **Phase 31: Export UI** — ExportModal 3-state modal + IPC handlers + ProjectSettings integration (2026-04-08)
-
-**Key deliverables:**
-- ✅ 引擎 Web 适配（WebSaveManager IndexedDB + basePath 参数化 + 环境自动检测）
-- ✅ 智能资源扫描器（11 路径位置 + 5 类资源 + 去重排序 + 40 测试）
-- ✅ 导出管线（6 步流水线 + 缺失资源跳过+警告 + 可选 ZIP + 20 测试）
-- ✅ 导出 UI（3 态 Modal：配置→进度→完成 + 原生目录对话框 + 打开文件夹）
-
-See .planning/milestones/v0.7-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v0.8 — 游戏导出 Electron 桌面版 ✅
-
-<details>
-<summary>Phases 32-34 (shipped 2026-04-10)</summary>
-
-- [x] **Phase 32: Desktop Game Runtime** — Engine desktop detection + game process templates + saves + window management (2026-04-09)
-- [x] **Phase 33: Export Pipeline Core** — exportDesktop.js 9-step pipeline + @electron/packager + icon/title + ZIP (2026-04-09)
-- [x] **Phase 34: Export UI Integration** — ExportModal Web/桌面 toggle + icon picker + format-aware dispatch (2026-04-10)
-
-**Key deliverables:**
-- ✅ 桌面游戏运行时（game-main.js + game-preload.js 模板 + 4-way 环境检测 + 8 通道 IPC）
-- ✅ 9 步导出流水线（@electron/packager 打包 + PNG→ICO + Electron 缓存 + 可选 ZIP）
-- ✅ ExportModal 格式切换（Web/桌面版 Segment Toggle + 图标选择器 + 分辨率透传）
-
-See .planning/milestones/v0.8-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v0.9 — 编辑器本地化与帮助系统 ✅
-
-<details>
-<summary>Phases 35-36 (completed 2026-04-12)</summary>
-
-- [x] **Phase 35: 中文本地化** — TOKEN_LABELS 41 条映射 + 字体/转场/音频/导出/坐标全部中文化
-- [x] **Phase 36: Tooltip 帮助系统** — HelpTip.vue 组件 + helpTexts.js 35 keys + 26 实例 × 16 文件 + 80+ 按钮 title
-
-**Key accomplishments:**
-- ✅ TOKEN_LABELS 41 条中文映射 + label prop 透传至 5 个 row 组件
-- ✅ 编辑器残留英文全部翻译（字体选择器、转场、AudioPicker、ExportModal、坐标、占位符）
-- ✅ HelpTip.vue 组件（Teleport + fixed 定位 + 150ms fade + viewport flip）
-- ✅ 全编辑器 HelpTip 覆盖 + 按钮 title 扫描（80+ 按钮 × 28 文件）
-
-See .planning/milestones/v0.9-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v1.0 — 角色表情/差分場景切換 ✅
-
-<details>
-<summary>Phases 37-41 (shipped 2026-04-15)</summary>
-
-- [x] **Phase 37: CharacterLayer DOM 重構** — 雙圖層容器結構（div+imgA/imgB），4 種定位模式保留 (2026-04-13)
-- [x] **Phase 38: 表情交叉漸變** — 300ms CSS opacity crossfade + img.decode() 預加載 + skipMode 即時替換 (2026-04-13)
-- [x] **Phase 39: 表情狀態管理** — 引擎 Map + 頁面繼承 + 存讀檔持久化 + 場景重置 (2026-04-13)
-- [x] **Phase 40: 表情選擇器 UI** — ExpressionDropdown 縮略圖網格 + PageInspector 雙處集成 (2026-04-15)
-- [x] **Phase 41: 編輯器狀態展示與容錯** — 畫布繼承預覽 + 安全刪除（全場景掃描+批量替換）(2026-04-15)
-
-**Key deliverables:**
-- ✅ CharacterLayer 雙圖層重構（A/B img + 容器分離動畫）
-- ✅ 表情交叉漸變（300ms crossfade + img.decode() 預加載 + skipMode 即時替換）
-- ✅ 表情狀態管理（引擎 Map 繼承 + 存讀檔 + 場景重置 + 36 單元測試）
-- ✅ ExpressionDropdown 視覺選擇器（Teleport 縮略圖網格 + 角色行/對話行集成）
-- ✅ 畫布繼承預覽 + 安全刪除（反向頁面查找 + 全場景引用掃描 + 批量替換 + 單步撤銷）
-
-See .planning/milestones/v1.0-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v1.1 — UI Theme System v2 引擎配置化 ✅
-
-<details>
-<summary>Phases 42-45 (shipped 2026-04-16)</summary>
-
-- [x] **Phase 42: widgetStyles 控件风格基础** — WIDGET_DEFAULTS + deepMerge + Tab(5)/Toggle(4)/Slider/Panel/Button 数据驱动渲染 (2026-04-16)
-- [x] **Phase 43: 界面布局配置** — SaveLoadScreen/BacklogScreen/GameMenu setLayout(config) 全部可配置 (2026-04-16)
-- [x] **Phase 44: SettingsScreen 结构化模式** — elements 空时自动 SETTING_DEFS 分组渲染 header/tabBar/contentArea (2026-04-16)
-- [x] **Phase 45: 名牌样式 + 配置统一 + 编辑器预览** — nameplateStyle 三样式 + main.js ui.* 统一路由 + iframe 预览同步 (2026-04-16)
-
-**Key deliverables:**
-- ✅ widgetStyles 控件风格系统（5 类控件 × 多种形状/样式，全部数据驱动）
-- ✅ 三界面配置化（SaveLoad/Backlog/GameMenu 各 setLayout）
-- ✅ SettingsScreen 结构化模式（自动分组 + widgetStyles 联动）
-- ✅ 名牌三样式 (inline/floating/banner) + 配置统一路由
-- ✅ 全部向后兼容（null config = 零视觉变化，219 测试验证）
-
-See .planning/milestones/v1.1-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-## v1.2 — 编辑器主题配置 + 示范主题 ✅
-
-<details>
-<summary>Phases 46-51 (shipped 2026-04-17)</summary>
-
-- [x] **Phase 46: 数据持久化 + 编辑器骨架** — Store 读写 widgetStyles/布局 + 控件风格编辑器视图骨架 + iframe 预览区 (2026-04-17)
-- [x] **Phase 47: 控件编辑器 — Tab/Toggle/Slider** — Tab 形状缩略图网格 + Toggle 样式缩略图网格 + Slider 颜色/形状配置 (2026-04-17)
-- [x] **Phase 48: 控件编辑器 — Panel/Button + 实时预览** — Panel 背景/圆角/边框/模糊/贴图 + Button 三态 + 全控件 iframe 实时预览 (2026-04-17)
-- [x] **Phase 49: 布局编辑器 — SaveLoad/Backlog** — 存读档/回想界面结构化表单配置 (2026-04-17)
-- [x] **Phase 50: 布局编辑器 — GameMenu/Settings + 实时预览** — 游戏菜单/设置界面表单配置 + 全布局 iframe 实时预览 (2026-04-17)
-- [x] **Phase 51: 内置主题 + 主题选择器** — 5 套内置主题数据包 + ThemePackageModal 一键应用 (2026-04-17)
-
-**Key deliverables:**
-- ✅ 数据持久化（8 对 store 方法 + provide/inject composable + postMessage 预览协议）
-- ✅ 控件风格编辑器（5 类手风琴 + 缩略图网格选择 + 颜色选择器 + iframe 实时预览）
-- ✅ 界面布局编辑器（4 界面全覆盖 + 结构化表单 + iframe 预览联动）
-- ✅ 内置主题系统（5 套主题包一键应用 + Ctrl+Z 撤销 + 范围徽章）
-
-See .planning/milestones/v1.2-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-<details>
-<summary>✅ v1.3 — 主题系统表达力升级 (9 phases, 27 requirements, shipped 2026-04-20)</summary>
-
-OKLCH 智能配色 + 设置页结构参数 + 编辑器完整配置 UI + 标题页预览 + 5 套商业级主题升级。81 commits, 108 files, +17292/-2808 lines.
-
-See .planning/milestones/v1.3-ROADMAP.md for full phase details.
-
-</details>
-
----
-
-<details>
-<summary>✅ v1.4 — 演出力升级 (10 phases, 18 requirements, shipped 2026-04-22)</summary>
-
-预设角色动画 + 单页镜头效果 + 扩展背景转场 + runtime-backed iframe 真预览 + PageInspector 内联演出配置全部交付，并通过 Phase 68-70 docs-only verification backfill 关闭了全部 18/18 requirement 的审计证据链。
-
-See `.planning/milestones/v1.4-ROADMAP.md` for full phase details.  
-See `.planning/milestones/v1.4-REQUIREMENTS.md` for archived requirements.  
-See `.planning/milestones/v1.4-MILESTONE-AUDIT.md` for the passing milestone audit.
-
-</details>
+v1.5 聚焦把 **UI 图片资产** 从“能配置一点点”补成“可配置、可预览、可运行、可导出、可回退”的完整闭环。  
+本里程碑保持现有 Electron + Vue + Pinia + DOM/CSS runtime 架构，**不新增依赖、不重写渲染栈**；同时继续以 **runtime-backed iframe preview** 作为预览唯一事实来源。
+
+为避免 brownfield 代码库里出现 schema 漂移、导出漏图、预览/运行时分叉，本 roadmap 先冻结共享 contract 与资产通路，再按 **对话框 → 按钮族 → 主要界面 → 光标/图标与全链路收口** 的顺序推进。
+
+## Phases
+
+- [ ] **Phase 71: 共享契约与资产通路基线** - 统一 UI 图片路径、旧字段兼容与扫描/导出前置门
+- [ ] **Phase 72: 对话框图片化闭环** - 先交付最显眼的对话框图片层与真实运行时预览
+- [ ] **Phase 73: 按钮族图片态扩面** - 按覆盖矩阵把主要按钮族图片状态一次性铺开
+- [ ] **Phase 74: 主要界面图片化** - 为四个 major screen 补齐背景图、装饰层与逐屏真预览
+- [ ] **Phase 75: 光标图标与全链路收口** - 完成 cursor/icon slots，并把预览、运行时、导出与回退行为统一收口
+
+## Phase Details
+
+### Phase 71: 共享契约与资产通路基线
+**Goal**: 用户可以用统一的项目相对路径管理 UI 图片资产，并让旧项目字段在不损坏项目的前提下继续可读、可改写。  
+**Depends on**: Nothing (starts after Phase 70)  
+**Requirements**: AST-01, AST-02, AST-05, AST-06  
+**Success Criteria** (what must be TRUE):
+  1. 用户通过标准选图流程导入 PNG / WebP / JPEG 作为 UI 图片时，文件会复制到 `assets/ui/`，项目配置中只记录项目相对路径。
+  2. 用户打开带有旧路径或旧 base64 UI 图片字段的旧项目时，相关配置仍可被读取并正常运行，不会导致项目损坏或运行时崩溃。
+  3. 用户对旧字段重新执行一次标准选图后，新图片会按 v1.5 规则写入 `assets/ui/`，对应配置会改写为项目相对路径。
+  4. 用户保存并重新打开项目后，已选 UI 图片引用仍保持稳定，不会回写成绝对路径、临时路径或不可复用格式。
+**Plans**: TBD  
+**UI hint**: yes
+
+### Phase 72: 对话框图片化闭环
+**Goal**: 用户可以把对话框作为图片化主题主视觉来配置，并在真实运行时预览中确认文本层依然可读。  
+**Depends on**: Phase 71  
+**Requirements**: DLG-01, DLG-02, DLG-03  
+**Success Criteria** (what must be TRUE):
+  1. 用户可以为对话框配置主框图片、名牌背景图片与至少一层装饰图片，并在游戏中看到实际效果。
+  2. 用户启用对话框图片皮肤后，名牌、正文与继续指示在真实运行时中仍保持可见，不会被图片遮挡。
+  3. 用户在编辑器里触发对话框预览时，看到的是 runtime-backed 真实效果，而不是本地静态模拟。
+  4. 用户在切换或清空对话框图片配置后，新的对话框视觉结果会立即反映到预览与运行时结果中。
+**Plans**: TBD  
+**UI hint**: yes
+
+### Phase 73: 按钮族图片态扩面
+**Goal**: 用户可以为主要游戏界面按钮族应用成组图片状态，同时保持文字、图标与点击行为稳定。  
+**Depends on**: Phase 72  
+**Requirements**: BTN-01, BTN-02, BTN-03  
+**Success Criteria** (what must be TRUE):
+  1. 用户可以为 `game-menu-button`、`QAB`、`close-button family` 分别配置 `normal / hover / pressed` 图片态，并在对应界面看到状态切换。
+  2. 用户可以为 `page-tab / pager`、`settings-tab` 配置 `normal / hover / pressed / selected` 图片态，并能清楚区分当前选中项。
+  3. 用户应用按钮图片皮肤后，这 5 个按钮族上的文字或图标仍保持可读、对齐稳定且可点击。
+  4. 用户在真实运行时里操作 hover、pressed、selected 等状态时，看到的按钮图片反馈与实际交互状态一致。
+**Plans**: TBD  
+**UI hint**: yes
+
+### Phase 74: 主要界面图片化
+**Goal**: 用户可以让 SaveLoad、Backlog、GameMenu、Settings 四个 major screen 拥有独立背景图与装饰层，并逐屏做真实预览。  
+**Depends on**: Phase 73  
+**Requirements**: SCR-01, SCR-02, SCR-03  
+**Success Criteria** (what must be TRUE):
+  1. 用户可以为 SaveLoad、Backlog、GameMenu、Settings 分别配置全屏背景图，并在对应界面看到完整应用结果。
+  2. 用户可以为这 4 个界面配置装饰层图片，启用后主要交互元素仍可点击和触发。
+  3. 用户可以在编辑器中逐个预览这 4 个界面的 runtime-backed 真实图片效果，而不是只看编辑器侧静态占位。
+  4. 用户在同一主题下切换这 4 个界面时，每个界面的背景图与装饰层都会按各自配置生效，不会串用到错误界面。
+**Plans**: TBD  
+**UI hint**: yes
+
+### Phase 75: 光标图标与全链路收口
+**Goal**: 用户可以完成主题级 cursor / icon 皮肤，并确认所有 v1.5 UI 图片在预览、运行时、导出和缺图回退中表现一致。  
+**Depends on**: Phase 74  
+**Requirements**: CUR-01, ICO-01, AST-03, AST-04  
+**Success Criteria** (what must be TRUE):
+  1. 用户可以为主题配置 `default / pointer` 两种光标图片；缺图或路径失效时会自动回退到系统 cursor。
+  2. 用户可以为 `game menu`、`QAB`、`close`、`voice-replay` 这些核心 action slots 配置主题图标；缺图时会回退到默认图标。
+  3. 用户在编辑器预览、运行时试玩和导出成品中查看已配置的 v1.5 UI 图片时，看到的是同一套资源，不会出现“编辑器可见、导出丢图”。
+  4. 用户删除、移走或留空 UI 图片资源后，界面仍会回退到现有 CSS 外观 / 默认图标 / 系统光标，并保持可正常使用。
+**Plans**: TBD  
+**UI hint**: yes
+
+## Coverage Map
+
+| Requirement | Phase |
+|-------------|-------|
+| AST-01 | Phase 71 |
+| AST-02 | Phase 71 |
+| AST-05 | Phase 71 |
+| AST-06 | Phase 71 |
+| DLG-01 | Phase 72 |
+| DLG-02 | Phase 72 |
+| DLG-03 | Phase 72 |
+| BTN-01 | Phase 73 |
+| BTN-02 | Phase 73 |
+| BTN-03 | Phase 73 |
+| SCR-01 | Phase 74 |
+| SCR-02 | Phase 74 |
+| SCR-03 | Phase 74 |
+| CUR-01 | Phase 75 |
+| ICO-01 | Phase 75 |
+| AST-03 | Phase 75 |
+| AST-04 | Phase 75 |
+
+**Coverage:** 17/17 requirements mapped ✓  
+**Orphans:** 0
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 71. 共享契约与资产通路基线 | 0/TBD | Not started | - |
+| 72. 对话框图片化闭环 | 0/TBD | Not started | - |
+| 73. 按钮族图片态扩面 | 0/TBD | Not started | - |
+| 74. 主要界面图片化 | 0/TBD | Not started | - |
+| 75. 光标图标与全链路收口 | 0/TBD | Not started | - |

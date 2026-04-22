@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: UI 图片驱动体系
-status: Defining requirements
-stopped_at: Started /gsd-new-milestone v1.5
-last_updated: "2026-04-22T22:19:04.249+10:00"
+status: Roadmap drafted
+stopped_at: v1.5 roadmap created
+last_updated: "2026-04-22T23:00:00+10:00"
 last_activity: 2026-04-22
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -19,21 +19,21 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-22)
 
-**Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Defining v1.5 requirements
+**Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
+**Current focus:** 规划并准备执行 v1.5「UI 图片驱动体系」
 
 ## Current Position
 
-Phase: Not started
-Plan: —
-Status: Defining requirements
-Next: Define v1.5 requirements
-Last activity: 2026-04-22 — Milestone v1.5 started
+Phase: 71  
+Plan: —  
+Status: Roadmap drafted  
+Next: /gsd-plan-phase 71  
+Last activity: 2026-04-22 — 已完成 v1.5 roadmap 与 requirement traceability
 
 ```
-v1.3 ████████████████████ 9/9 phases ✅ (archived)
-v1.4 ████████████████████ 10/10 phases complete ✅ archived
-v1.5 ░░░░░░░░░░░░░░░░░░░░ 0/0 phases ○ requirements
+v1.3 ████████████████████ 9/9 phases ✅ archived
+v1.4 ████████████████████ 10/10 phases ✅ archived
+v1.5 ░░░░░░░░░░░░░░░░░░░░ 0/5 phases ○ roadmap ready
 ```
 
 ## Performance Metrics
@@ -56,52 +56,29 @@ v1.5 ░░░░░░░░░░░░░░░░░░░░ 0/0 phases ○
 | v1.2 | 6 | 8 | 17 ✅ |
 | v1.3 | 9 | 21 | 27 ✅ |
 | v1.4 | 10 | 20 | 18 ✅ |
+| v1.5 | 5 | 0 | 17 |
 
 ## Accumulated Context
 
 ### Decisions
 
-- v1.4 is a bounded cinematic upgrade, not a freeform animation platform.
-- Runtime-backed iframe preview is the single source of truth for preview parity.
-- No new animation or rendering dependencies are allowed in this milestone.
-- Unknown animation/camera/transition enums must survive open/save cycles unchanged.
-- Planned phase sequence: 61 contract freeze, 62 character runtime, 63 camera runtime, 64 transition expansion, 65 iframe preview API, 66 editor controls, 67 regression gate.
-- [Phase 61]: Centralized transition compatibility helpers in src/shared/cinematicContract.js for editor/runtime parity.
-- [Phase 61]: Page creation and previous-page copy now preserve camera and transition data instead of rewriting future values.
-- [Phase 61]: ScriptEngine only normalizes unknown background transitions at emit time and keeps raw page payload ownership untouched.
-- [Phase 61]: Reserved #stage-layer as the only future page-camera scope while keeping dialogue and overlay UI as direct game-container children.
-- [Phase 61]: Inserted .character-motion between .character-sprite and imgA/imgB so future motion transforms stay separate from layout and crossfade ownership.
-- [Phase 62]: Exported the locked seven character presets from src/shared/cinematicContract.js and emitted per-character animation metadata only on show_character page-entry contracts.
-- [Phase 62]: CharacterLayer now owns motion playback and cleanup on .character-motion, with one-shot self-clean and breathe loop cleanup on replace/clear paths.
-- [Phase 62]: Unknown non-empty animation enums still survive runtime contract emission unchanged, while unsupported playback values safely no-op in CharacterLayer.
-- [Phase 63]: Added shared camera contract exports and emitted normalized camera metadata only on page_enter while preserving raw page.camera ownership.
-- [Phase 63]: Introduced CameraController as the sole page-camera owner bound to #stage-layer, with stage-local flash and single-active cleanup.
-- [Phase 63]: Wired camera.clear() into replay, title, preview start/stop, and end flows so stage transforms and flash state reset deterministically.
-- [Phase 64]: Expanded the shared transition registry to `none`, `fade`, `slide-left`, `slide-right`, `dissolve`, `wipe`, `scale`, and `blur` while preserving unknown transition values until runtime consumption.
-- [Phase 64]: Reworked BackgroundLayer into a completion-aware sole owner for CSS-only transition playback and cleanup on the existing dual-layer DOM.
-- [Phase 64]: Added a background transition gate in main.js so character entry, camera playback, dialogue, and choice UI release only after background completion or safe-cut.
-- [Phase 65]: Added editor-owned `preview-effect` session state and reason-coded preflight so effect replay no longer piggybacks on full test-play assumptions.
-- [Phase 65]: Added runtime `preview-effect` / `preview-effect-stop` orchestration with snapshot restore, single-instance preview cancellation, and explicit accepted/completed/cancelled/rejected/failed result semantics.
-- [Phase 65]: Added same-page transition preview support in BackgroundLayer so transition replay stays on the current page while still producing a visible runtime-backed effect.
-- [Phase 66]: Character and camera editor options now come from shared helpers that append explicit unknown current values instead of coercing saved data.
-- [Phase 66]: Effect preview UI consumption stays on the Phase 65 refs and protocol, with local provenance matching to hide cross-surface and stale same-kind status.
-- [Phase 66]: Kept all three cinematic preview entrypoints inside PageInspector so controls stay adjacent to their owning fields.
-- [Phase 66]: Rendered inspector preview feedback from getEffectPreviewUiState() plus current preflight checks instead of adding a second preview state machine.
-- [Phase 67]: Kept Phase 67-01 in pure RED mode so runtime cleanup fixes remain isolated to 67-02.
-- [Phase 67]: Bounded PREV-05 failures to saveLoadScreen.onLoad missing stopAuto/stopSkip symmetry by slicing exact handlers in the regression suites.
-- [Phase 67]: Kept the PREV-05 repair in src/main.js only because the 67-01 matrix proved orchestration was sufficient.
-- [Phase 67]: Preserved the Phase 65/66 preview protocol and left CharacterLayer, CameraController, and BackgroundLayer untouched.
-- [Phase 70]: Kept the re-audit handoff scoped to PREV-05, the new Phase 67 evidence chain, and the already-closed Phase 68/69 verification context.
-- [Phase 70]: Added a minimal 70-VERIFICATION.md because Phase 70 becomes the final owner in REQUIREMENTS.md, and leaving it without a verification file would likely recreate the orphan pattern on the next audit run.
-- [Milestone Audit]: v1.4 now passes with 18/18 requirements covered, 10/10 phases verified, and no blocking cross-phase disconnects.
+- v1.5 保持现有 Electron + Vue + Pinia + DOM/CSS runtime，不引入新依赖，也不做渲染栈重写。
+- runtime-backed iframe preview 继续作为预览唯一事实来源；禁止 editor-only 假预览。
+- `assets/ui/` + 项目相对路径是 v1.5 的标准 UI 图片写法；旧路径与旧 base64 只做兼容读入，并在重新选图后改写为新格式。
+- 先冻结 shared contract、slot coverage 与 scan/export gate，再推进对话框、按钮族和 major screens 的 editor/runtime surface。
+- v1.5 phase order 已固定为：71 共享契约与资产通路基线 → 72 对话框图片化闭环 → 73 按钮族图片态扩面 → 74 主要界面图片化 → 75 光标图标与全链路收口。
+- 按钮族 coverage 冻结为 5 族：`game-menu-button`、`QAB`、`close-button family`、`page-tab / pager`、`settings-tab`。
+- major screen coverage 冻结为 4 屏：SaveLoad、Backlog、GameMenu、Settings。
+- AST-03 / AST-04 收口到最终 Phase 75，作为 preview/runtime/export parity 与 fallback gate 的最终 owner。
 
 ### Blockers/Concerns
 
-- Repo-wide `npx vitest run` still has unrelated deferred failures outside PREV-05 scope (`tests/mainConfigRouting.test.js` plus legacy Node-style test files collected by Vitest).
+- Repo-wide `npx vitest run` 仍有与 v1.5 无关的历史失败；本里程碑应继续优先使用 focused gate，而不是把无关存量债务混进 phase closure。
+- brownfield 风险主要在 schema 漂移、导出漏图、预览与运行时分叉；Phase 71 必须先把合同与扫描边界冻结。
 
 ## Session Continuity
 
-Last session: 2026-04-22T22:19:04.249+10:00
-Stopped at: Milestone v1.5 started, preparing requirements
-Resume hint: continue with v1.5 requirement scoping.
-Next action: Decide whether to run research before requirements
+Last session: 2026-04-22T23:00:00+10:00  
+Stopped at: v1.5 roadmap created and files updated  
+Resume hint: 从 Phase 71 开始规划 shared contract、兼容读写与 scan/export gate。  
+Next action: /gsd-plan-phase 71

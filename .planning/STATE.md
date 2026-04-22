@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: 演出力升级
-status: Milestone archived
-stopped_at: Completed /gsd-complete-milestone v1.4
-last_updated: "2026-04-22T21:55:00+10:00"
+milestone: v1.5
+milestone_name: UI 图片驱动体系
+status: Defining requirements
+stopped_at: Started /gsd-new-milestone v1.5
+last_updated: "2026-04-22T22:19:04.249+10:00"
 last_activity: 2026-04-22
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 20
-  completed_plans: 20
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,19 +20,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** Planning next milestone
+**Current focus:** Defining v1.5 requirements
 
 ## Current Position
 
-Phase: none — milestone archived
-Plan: none
-Plans: v1.4 archived
-Next: /gsd-new-milestone
-Last activity: 2026-04-22
+Phase: Not started
+Plan: —
+Status: Defining requirements
+Next: Define v1.5 requirements
+Last activity: 2026-04-22 — Milestone v1.5 started
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ (archived)
 v1.4 ████████████████████ 10/10 phases complete ✅ archived
+v1.5 ░░░░░░░░░░░░░░░░░░░░ 0/0 phases ○ requirements
 ```
 
 ## Performance Metrics
@@ -100,7 +101,7 @@ v1.4 ████████████████████ 10/10 phases c
 
 ## Session Continuity
 
-Last session: 2026-04-22T21:55:00+10:00
-Stopped at: Completed /gsd-complete-milestone v1.4
-Resume hint: start the next milestone with `/gsd-new-milestone`.
-Next action: Plan next milestone
+Last session: 2026-04-22T22:19:04.249+10:00
+Stopped at: Milestone v1.5 started, preparing requirements
+Resume hint: continue with v1.5 requirement scoping.
+Next action: Decide whether to run research before requirements

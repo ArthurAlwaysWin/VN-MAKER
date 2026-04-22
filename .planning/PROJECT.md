@@ -88,11 +88,22 @@
 
 ### Active
 
-- [ ] **CINE-01**: 组合多个角色动画预设形成宏效果
-- [ ] **CINE-02**: 为一个页面编排多个镜头效果或镜头链
-- [ ] **CINE-03**: 使用时间轴、关键帧或曲线编辑动画
-- [ ] **CINE-04**: 添加粒子、天气、视频等更重型演出系统
-- [ ] **CINE-05**: 配置跨页面持续存在的连续演出状态
+- [ ] **UIIMG-01**: 对话框支持名牌背景图、装饰层与整体图片替换
+- [ ] **UIIMG-02**: 按钮图片三态扩展到 choice/title 之外的主要游戏界面按钮
+- [ ] **UIIMG-03**: SaveLoad / Backlog / GameMenu / SettingsScreen 支持全屏背景插画与装饰层
+- [ ] **UIIMG-04**: 主题支持自定义光标与可替换图标集
+- [ ] **UIIMG-05**: 主题编辑器支持可视化管理图片 UI 素材并即时预览
+
+## Current Milestone: v1.5 UI 图片驱动体系
+
+**Goal:** 打通图片素材作为 UI 视觉主体的完整通路，让游戏界面从“软件级参数化样式”升级到“游戏级主题皮肤”。
+
+**Target features:**
+- 对话框图片化：名牌背景、装饰层、多层图片替换
+- 按钮图片三态扩面：覆盖 game-menu、save-load、backlog、QAB、分页 tab 等主要按钮
+- 全屏界面背景图：SaveLoad / Backlog / GameMenu / Settings 统一支持背景插画与装饰层
+- 自定义光标与主题图标集
+- 主题编辑器中的图片 UI 配置与即时预览
 
 ## Current State
 
@@ -100,7 +111,9 @@
 
 **v1.4 已完成：** 预设角色动画、页面级镜头效果、扩展背景转场、runtime-backed iframe 演出预览、PageInspector 内联演出配置全部交付；18/18 requirements 与 milestone audit 全部通过。
 
-**下一步：** 运行 `/gsd-new-milestone`，为下一轮“高级演出 / Advanced Cinematics”重新定义 requirements 与 roadmap。
+**当前进行中：** v1.5「UI 图片驱动体系」已启动，正在定义 requirements 与 roadmap。
+
+**下一步：** 收敛 v1.5 requirements，然后拆解为连续 phase roadmap。
 
 ## Previous Milestone: ✅ v1.4 演出力升级 (Shipped 2026-04-22)
 
@@ -306,4 +319,4 @@ This document evolves at phase transitions and milestone boundaries.
 - ⚠ repo-wide `npx vitest run` 仍包含与 v1.4 无关的 legacy test collection / `tests/mainConfigRouting.test.js` 债务
 
 ---
-*Last updated: 2026-04-22 after v1.4 milestone completion*
+*Last updated: 2026-04-22 after starting v1.5 milestone*

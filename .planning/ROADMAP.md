@@ -47,7 +47,11 @@ Plans:
   2. 用户启用对话框图片皮肤后，名牌、正文与继续指示在真实运行时中仍保持可见，不会被图片遮挡。
   3. 用户在编辑器里触发对话框预览时，看到的是 runtime-backed 真实效果，而不是本地静态模拟。
   4. 用户在切换或清空对话框图片配置后，新的对话框视觉结果会立即反映到预览与运行时结果中。
-**Plans**: TBD  
+**Plans**: 3 plans  
+Plans:
+- [ ] 72-01-PLAN.md — 冻结 `ui.dialogueBox` 图片 schema 与 scan/export collector 基线
+- [ ] 72-02-PLAN.md — 实现 dialogue runtime underlay、层级保护与 floating nameplate overflow 修复
+- [ ] 72-03-PLAN.md — 打通 DialogueBoxSettings canonical 写入口与 runtime-backed iframe 对话预览
 **UI hint**: yes
 
 ### Phase 73: 按钮族图片态扩面

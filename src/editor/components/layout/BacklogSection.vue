@@ -8,7 +8,9 @@
     </div>
     <div class="config-row">
       <label class="config-label">背景图</label>
-      <input type="text" :value="cfg.backgroundImage || ''" @input="onField('backgroundImage', $event.target.value || null)" @change="commit" class="config-text" placeholder="图片路径" />
+      <input type="text" :value="getUiImageDisplayValue(cfg.backgroundImage)" readonly class="config-text" placeholder="未选择" />
+      <button class="config-btn" @click="pickBackgroundImage">选择图片</button>
+      <button v-if="cfg.backgroundImage" class="config-btn secondary" @click="clearBackgroundImage">清除</button>
     </div>
 
     <!-- Header -->
@@ -19,7 +21,9 @@
     </div>
     <div class="config-row">
       <label class="config-label">标题背景图</label>
-      <input type="text" :value="hdr.backgroundImage || ''" @input="onNested('header', 'backgroundImage', $event.target.value || null)" @change="commit" class="config-text" placeholder="图片路径" />
+      <input type="text" :value="getUiImageDisplayValue(hdr.backgroundImage)" readonly class="config-text" placeholder="未选择" />
+      <button class="config-btn" @click="pickHeaderBackgroundImage">选择图片</button>
+      <button v-if="hdr.backgroundImage" class="config-btn secondary" @click="clearHeaderBackgroundImage">清除</button>
     </div>
     <div class="config-row">
       <label class="config-label">标题栏高度</label>
@@ -61,6 +65,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
+import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
 
 const editor = useScreenLayoutEditor();
 
@@ -79,6 +84,30 @@ function rgbaToHex(color) {
 function onField(field, value) { editor.setScreenField(field, value); }
 function onNested(group, field, value) { editor.setScreenNestedField(group, field, value); }
 function onNestedNum(group, field, e) { editor.setScreenNestedField(group, field, e.target.value === '' ? null : Number(e.target.value)); }
+async function pickBackgroundImage() {
+  await pickUiImage({
+    setValue: (value) => onField('backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+function clearBackgroundImage() {
+  clearUiImage({
+    setValue: (value) => onField('backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+async function pickHeaderBackgroundImage() {
+  await pickUiImage({
+    setValue: (value) => onNested('header', 'backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+function clearHeaderBackgroundImage() {
+  clearUiImage({
+    setValue: (value) => onNested('header', 'backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
 function commit() { editor.commitScreenLayout(); }
 </script>
 
@@ -131,6 +160,22 @@ function commit() { editor.commitScreenLayout(); }
   padding: 4px 8px;
   border-radius: 3px;
   font-size: 12px;
+}
+.config-btn {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #ddd;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.config-btn:hover {
+  border-color: #6a6a6a;
+}
+.config-btn.secondary {
+  color: #bbb;
 }
 .unit {
   font-size: 11px;

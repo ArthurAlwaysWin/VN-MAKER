@@ -40,6 +40,11 @@ async function createMockProject(baseDir) {
         }],
       },
     },
+    ui: {
+      saveLoadScreen: {
+        background: 'ui/save_bg.png',
+      },
+    },
   };
   await fs.mkdir(baseDir, { recursive: true });
   await fs.writeFile(path.join(baseDir, 'script.json'), JSON.stringify(script), 'utf-8');
@@ -48,10 +53,12 @@ async function createMockProject(baseDir) {
   await fs.mkdir(path.join(baseDir, 'assets', 'backgrounds'), { recursive: true });
   await fs.mkdir(path.join(baseDir, 'assets', 'characters'), { recursive: true });
   await fs.mkdir(path.join(baseDir, 'assets', 'audio'), { recursive: true });
+  await fs.mkdir(path.join(baseDir, 'assets', 'ui'), { recursive: true });
 
   await fs.writeFile(path.join(baseDir, 'assets', 'backgrounds', 'city.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'characters', 'hero_normal.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'audio', 'bgm1.mp3'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'ui', 'save_bg.png'), Buffer.from('FAKE'));
 
   // Unreferenced file (should NOT be copied)
   await fs.writeFile(path.join(baseDir, 'assets', 'audio', 'unreferenced.mp3'), Buffer.from('NOPE'));
@@ -205,6 +212,10 @@ describe('exportGame — asset filtering', () => {
 
   it('does NOT copy unreferenced audio', () => {
     expect(existsSync(path.join(outputDir, 'assets', 'audio', 'unreferenced.mp3'))).toBe(false);
+  });
+
+  it('copies referenced ui assets from the ui bucket', () => {
+    expect(existsSync(path.join(outputDir, 'assets', 'ui', 'save_bg.png'))).toBe(true);
   });
 });
 

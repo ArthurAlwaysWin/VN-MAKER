@@ -3,7 +3,9 @@
     <h4 class="form-group-title">面板背景</h4>
     <div class="config-row">
       <label class="config-label">背景图片</label>
-      <input type="text" :value="bgImage || ''" @input="onBgImage($event.target.value)" @change="commit" class="config-text" placeholder="assets/ui/watermark.png" />
+      <input type="text" :value="getUiImageDisplayValue(bgImage)" readonly class="config-text" placeholder="未选择" />
+      <button class="config-btn" @click="pickBackgroundImage">选择图片</button>
+      <button v-if="bgImage" class="config-btn secondary" @click="clearBackgroundImage">清除</button>
     </div>
     <div class="config-row">
       <label class="config-label">透明度</label>
@@ -16,26 +18,33 @@
 <script setup>
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
+import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
 
 const editor = useScreenLayoutEditor();
 const cfg = computed(() => editor.getActiveScreenConfig() || {});
-const bgImage = computed(() => cfg.value.settingsScreen?.background || '');
-const bgOpacity = computed(() => cfg.value.settingsScreen?.backgroundOpacity ?? 1);
+const bgImage = computed(() => cfg.value.background || '');
+const bgOpacity = computed(() => cfg.value.backgroundOpacity ?? 1);
 
 function onBgImage(value) {
-  const raw = editor.getActiveScreenConfig();
-  if (!raw) return;
-  raw.settingsScreen ??= {};
-  raw.settingsScreen.background = value || null;
-  editor.sendScreenLayoutToPreview();
+  editor.setScreenField('background', value);
+}
+
+async function pickBackgroundImage() {
+  await pickUiImage({
+    setValue: (value) => onBgImage(value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+
+function clearBackgroundImage() {
+  clearUiImage({
+    setValue: (value) => onBgImage(value),
+    commit: () => editor.commitScreenLayout(),
+  });
 }
 
 function onOpacityInput(e) {
-  const raw = editor.getActiveScreenConfig();
-  if (!raw) return;
-  raw.settingsScreen ??= {};
-  raw.settingsScreen.backgroundOpacity = Number(e.target.value);
-  editor.sendScreenLayoutToPreview();
+  editor.setScreenField('backgroundOpacity', Number(e.target.value));
 }
 
 function commit() { editor.commitScreenLayout(); }
@@ -72,6 +81,22 @@ function commit() { editor.commitScreenLayout(); }
   padding: 4px 8px;
   border-radius: 3px;
   font-size: 12px;
+}
+.config-btn {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #ddd;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.config-btn:hover {
+  border-color: #6a6a6a;
+}
+.config-btn.secondary {
+  color: #bbb;
 }
 .config-range {
   flex: 1;

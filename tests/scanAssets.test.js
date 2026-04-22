@@ -66,6 +66,27 @@ const fullScript = {
     ],
   },
   ui: {
+    saveLoadScreen: {
+      background: 'ui/save-bg.png',
+      header: {
+        backgroundImage: 'ui/save-header.png',
+      },
+      slot: {
+        backgroundImage: 'ui/save-slot.png',
+      },
+    },
+    backlogScreen: {
+      backgroundImage: 'ui/backlog-bg.png',
+      header: {
+        backgroundImage: 'ui/backlog-header.png',
+      },
+    },
+    gameMenu: {
+      backgroundImage: 'ui/game-menu-bg.png',
+      buttons: {
+        save: { icon: 'ui/icons/save.png' },
+      },
+    },
     titleScreen: {
       background: 'backgrounds/title.png',
       bgm: 'audio/title_bgm.mp3',
@@ -76,6 +97,15 @@ const fullScript = {
     },
     settingsScreen: {
       background: 'backgrounds/settings_bg.png',
+      header: {
+        backgroundImage: 'ui/settings-header.png',
+        decorations: [
+          { src: 'ui/decor-star.png' },
+        ],
+      },
+      tabBar: {
+        tabs: [{ label: '音量', icon: 'ui/icons/tab-audio.png' }],
+      },
       elements: [
         { type: 'slider', label: 'Volume' },
         { type: 'image', src: 'backgrounds/deco.png' },
@@ -84,6 +114,29 @@ const fullScript = {
     theme: {
       nineSlice: {
         dialogueBox: { src: 'data:image/png;base64,abc123' },
+        choiceButton: {
+          src: 'ui/nine-choice.png',
+          states: {
+            hover: { src: 'ui/nine-choice-hover.png' },
+            active: { src: 'ui/nine-choice-active.png' },
+          },
+        },
+      },
+    },
+    widgetStyles: {
+      tab: {
+        activeBackgroundImage: 'ui/tab-active.png',
+        nineSlice: { src: 'ui/tab-ribbon.png' },
+      },
+      slider: {
+        thumbImage: 'ui/slider-thumb.png',
+        trackImage: 'ui/slider-track.png',
+      },
+      panel: {
+        backgroundImage: 'ui/panel-bg.png',
+      },
+      button: {
+        nineSlice: { src: 'ui/button-nine.png' },
       },
     },
   },
@@ -118,27 +171,48 @@ const expectedFull = {
     'audio/voice01.ogg',
     'audio/voice02.ogg',
   ],
+  ui: [
+    'ui/backlog-bg.png',
+    'ui/backlog-header.png',
+    'ui/button-nine.png',
+    'ui/decor-star.png',
+    'ui/game-menu-bg.png',
+    'ui/icons/save.png',
+    'ui/icons/tab-audio.png',
+    'ui/nine-choice-active.png',
+    'ui/nine-choice-hover.png',
+    'ui/nine-choice.png',
+    'ui/panel-bg.png',
+    'ui/save-bg.png',
+    'ui/save-header.png',
+    'ui/save-slot.png',
+    'ui/settings-header.png',
+    'ui/slider-thumb.png',
+    'ui/slider-track.png',
+    'ui/tab-active.png',
+    'ui/tab-ribbon.png',
+  ],
 };
 
 // ─── Tests ───────────────────────────────────────────────
 
 describe('return shape', () => {
-  it('returns an object with exactly 5 keys', () => {
+  it('returns an object with exactly 6 keys', () => {
     const result = scanAssets(fullScript);
     const keys = Object.keys(result).sort();
-    deepStrictEqual(keys, ['audio', 'backgrounds', 'characters', 'fonts', 'voices']);
+    deepStrictEqual(keys, ['audio', 'backgrounds', 'characters', 'fonts', 'ui', 'voices']);
   });
 
   it('each value is an array', () => {
     const result = scanAssets(fullScript);
-    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices']) {
+    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui']) {
       ok(Array.isArray(result[key]), `${key} should be an array`);
     }
   });
 
   it('each array contains only strings', () => {
     const result = scanAssets(fullScript);
-    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices']) {
+    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui']) {
       for (const item of result[key]) {
         ok(typeof item === 'string', `${key} item "${item}" should be a string`);
       }
@@ -315,6 +389,16 @@ describe('UI screens', () => {
     const result = scanAssets(script);
     deepStrictEqual(result.audio, []);
   });
+
+  it('collects runtime-supported UI image fields into the ui bucket', () => {
+    const result = scanAssets(fullScript);
+    ok(result.ui.includes('ui/save-bg.png'));
+    ok(result.ui.includes('ui/save-header.png'));
+    ok(result.ui.includes('ui/settings-header.png'));
+    ok(result.ui.includes('ui/icons/tab-audio.png'));
+    ok(result.ui.includes('ui/slider-thumb.png'));
+    ok(result.ui.includes('ui/button-nine.png'));
+  });
 });
 
 describe('filtering', () => {
@@ -480,6 +564,7 @@ describe('graceful handling', () => {
       audio: [],
       fonts: [],
       characters: [],
+      ui: [],
       voices: [],
     });
   });
@@ -491,6 +576,7 @@ describe('graceful handling', () => {
       audio: [],
       fonts: [],
       characters: [],
+      ui: [],
       voices: [],
     });
   });
@@ -502,6 +588,7 @@ describe('graceful handling', () => {
       audio: [],
       fonts: [],
       characters: [],
+      ui: [],
       voices: [],
     });
   });
@@ -518,6 +605,7 @@ describe('graceful handling', () => {
       audio: [],
       fonts: [],
       characters: [],
+      ui: [],
       voices: [],
     });
   });

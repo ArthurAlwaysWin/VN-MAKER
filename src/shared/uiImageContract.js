@@ -10,8 +10,6 @@ export const UI_SCREEN_CHROME_ROOTS = Object.freeze({
   settingsScreen: 'ui.settingsScreen.chrome',
 });
 
-export const UI_IMAGE_SCAN_REGISTRY = [];
-
 function trimUiImageValue(value) {
   if (typeof value !== 'string') return '';
   return value.trim();
@@ -67,6 +65,74 @@ export function normalizeUiImageSelection(value) {
 export function getUiScreenChromeRoot(screenId) {
   return UI_SCREEN_CHROME_ROOTS[screenId] ?? null;
 }
+
+function addCanonicalUiImage(add, value) {
+  const normalized = normalizeUiImageSelection(value);
+  if (normalized) {
+    add(normalized);
+  }
+}
+
+function collectThemeUiImages(script, add) {
+  const definitions = script?.ui?.theme?.nineSlice;
+  if (!definitions || typeof definitions !== 'object') {
+    return;
+  }
+
+  for (const config of Object.values(definitions)) {
+    if (!config || typeof config !== 'object') {
+      continue;
+    }
+
+    addCanonicalUiImage(add, config.src);
+    addCanonicalUiImage(add, config.states?.hover?.src);
+    addCanonicalUiImage(add, config.states?.active?.src);
+  }
+}
+
+function collectScreenChromeUiImages(script, add) {
+  const saveLoad = script?.ui?.saveLoadScreen;
+  addCanonicalUiImage(add, saveLoad?.background);
+  addCanonicalUiImage(add, saveLoad?.header?.backgroundImage);
+  addCanonicalUiImage(add, saveLoad?.slot?.backgroundImage);
+
+  const backlog = script?.ui?.backlogScreen;
+  addCanonicalUiImage(add, backlog?.backgroundImage);
+  addCanonicalUiImage(add, backlog?.header?.backgroundImage);
+
+  const gameMenu = script?.ui?.gameMenu;
+  addCanonicalUiImage(add, gameMenu?.backgroundImage);
+  for (const button of Object.values(gameMenu?.buttons || {})) {
+    addCanonicalUiImage(add, button?.icon);
+  }
+
+  const settings = script?.ui?.settingsScreen;
+  addCanonicalUiImage(add, settings?.background);
+  addCanonicalUiImage(add, settings?.header?.backgroundImage);
+  for (const decoration of settings?.header?.decorations || []) {
+    addCanonicalUiImage(add, decoration?.src);
+  }
+  for (const tab of settings?.tabBar?.tabs || []) {
+    addCanonicalUiImage(add, tab?.icon);
+  }
+}
+
+function collectWidgetStyleUiImages(script, add) {
+  const widgetStyles = script?.ui?.widgetStyles;
+  addCanonicalUiImage(add, widgetStyles?.tab?.activeBackgroundImage);
+  addCanonicalUiImage(add, widgetStyles?.tab?.nineSlice?.src);
+  addCanonicalUiImage(add, widgetStyles?.panel?.backgroundImage);
+  addCanonicalUiImage(add, widgetStyles?.panel?.nineSlice?.src);
+  addCanonicalUiImage(add, widgetStyles?.slider?.thumbImage);
+  addCanonicalUiImage(add, widgetStyles?.slider?.trackImage);
+  addCanonicalUiImage(add, widgetStyles?.button?.nineSlice?.src);
+}
+
+export const UI_IMAGE_SCAN_REGISTRY = [
+  collectThemeUiImages,
+  collectScreenChromeUiImages,
+  collectWidgetStyleUiImages,
+];
 
 export function registerUiImageCollector(collector) {
   if (typeof collector !== 'function') {

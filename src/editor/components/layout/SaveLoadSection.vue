@@ -4,7 +4,9 @@
     <h4 class="form-group-title">背景</h4>
     <div class="config-row">
       <label class="config-label">背景图</label>
-      <input type="text" :value="cfg.background || ''" @input="onField('background', $event.target.value || null)" @change="commit" class="config-text" placeholder="图片路径" />
+      <input type="text" :value="getUiImageDisplayValue(cfg.background)" readonly class="config-text" placeholder="未选择" />
+      <button class="config-btn" @click="pickBackgroundImage">选择图片</button>
+      <button v-if="cfg.background" class="config-btn secondary" @click="clearBackgroundImage">清除</button>
     </div>
     <div class="config-row">
       <label class="config-label">模糊</label>
@@ -37,7 +39,9 @@
     </div>
     <div class="config-row">
       <label class="config-label">标题背景图</label>
-      <input type="text" :value="hdr.backgroundImage || ''" @input="onNested('header', 'backgroundImage', $event.target.value || null)" @change="commit" class="config-text" placeholder="图片路径" />
+      <input type="text" :value="getUiImageDisplayValue(hdr.backgroundImage)" readonly class="config-text" placeholder="未选择" />
+      <button class="config-btn" @click="pickHeaderBackgroundImage">选择图片</button>
+      <button v-if="hdr.backgroundImage" class="config-btn secondary" @click="clearHeaderBackgroundImage">清除</button>
     </div>
 
     <!-- Slot Grid -->
@@ -61,6 +65,12 @@
     <div class="config-row">
       <label class="config-label">背景色</label>
       <input type="color" :value="rgbaToHex(slot.background)" @input="onNested('slot', 'background', $event.target.value)" @change="commit" class="color-picker" />
+    </div>
+    <div class="config-row">
+      <label class="config-label">槽位背景图</label>
+      <input type="text" :value="getUiImageDisplayValue(slot.backgroundImage)" readonly class="config-text" placeholder="未选择" />
+      <button class="config-btn" @click="pickSlotBackgroundImage">选择图片</button>
+      <button v-if="slot.backgroundImage" class="config-btn secondary" @click="clearSlotBackgroundImage">清除</button>
     </div>
     <div class="config-row">
       <label class="config-label">圆角</label>
@@ -104,6 +114,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
+import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
 
 const editor = useScreenLayoutEditor();
 
@@ -125,6 +136,42 @@ function onField(field, value) { editor.setScreenField(field, value); }
 function onNum(field, e) { editor.setScreenField(field, e.target.value === '' ? null : Number(e.target.value)); }
 function onNested(group, field, value) { editor.setScreenNestedField(group, field, value); }
 function onNestedNum(group, field, e) { editor.setScreenNestedField(group, field, e.target.value === '' ? null : Number(e.target.value)); }
+async function pickBackgroundImage() {
+  await pickUiImage({
+    setValue: (value) => onField('background', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+function clearBackgroundImage() {
+  clearUiImage({
+    setValue: (value) => onField('background', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+async function pickHeaderBackgroundImage() {
+  await pickUiImage({
+    setValue: (value) => onNested('header', 'backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+function clearHeaderBackgroundImage() {
+  clearUiImage({
+    setValue: (value) => onNested('header', 'backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+async function pickSlotBackgroundImage() {
+  await pickUiImage({
+    setValue: (value) => onNested('slot', 'backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+function clearSlotBackgroundImage() {
+  clearUiImage({
+    setValue: (value) => onNested('slot', 'backgroundImage', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
 function commit() { editor.commitScreenLayout(); }
 </script>
 
@@ -177,6 +224,22 @@ function commit() { editor.commitScreenLayout(); }
   padding: 4px 8px;
   border-radius: 3px;
   font-size: 12px;
+}
+.config-btn {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #ddd;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.config-btn:hover {
+  border-color: #6a6a6a;
+}
+.config-btn.secondary {
+  color: #bbb;
 }
 .config-select {
   flex: 1;

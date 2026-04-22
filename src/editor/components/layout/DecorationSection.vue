@@ -5,7 +5,9 @@
       <div v-for="(deco, idx) in decorations" :key="idx" class="decor-card">
         <div class="config-row">
           <label class="config-label">图片路径</label>
-          <input type="text" :value="deco.src || ''" @input="onFieldInput(idx, 'src', $event.target.value || '')" @change="commit" class="config-text" placeholder="assets/ui/ornament.png" />
+          <input type="text" :value="getUiImageDisplayValue(deco.src)" readonly class="config-text" placeholder="未选择" />
+          <button class="config-btn" @click="pickDecorationImage(idx)">选择图片</button>
+          <button v-if="deco.src" class="config-btn secondary" @click="clearDecorationImage(idx)">清除</button>
           <button class="btn-delete" @click="onDelete(idx)" title="删除装饰">×</button>
         </div>
         <div class="decor-grid">
@@ -40,6 +42,7 @@
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
 import { addDecoration, deleteDecoration, setDecorationField } from './decorLayoutHelpers.js';
+import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
 
 const editor = useScreenLayoutEditor();
 const cfg = computed(() => editor.getActiveScreenConfig() || {});
@@ -59,7 +62,7 @@ function onDelete(idx) {
   editor.commitScreenLayout();
 }
 
-function onFieldInput(idx, field, value) {
+function setDecorationValue(idx, field, value) {
   const raw = editor.getActiveScreenConfig();
   setDecorationField(raw, idx, field, value);
   editor.sendScreenLayoutToPreview();
@@ -67,9 +70,21 @@ function onFieldInput(idx, field, value) {
 
 function onNumInput(idx, field, e) {
   const val = e.target.value === '' ? null : Number(e.target.value);
-  const raw = editor.getActiveScreenConfig();
-  setDecorationField(raw, idx, field, val);
-  editor.sendScreenLayoutToPreview();
+  setDecorationValue(idx, field, val);
+}
+
+async function pickDecorationImage(idx) {
+  await pickUiImage({
+    setValue: (value) => setDecorationValue(idx, 'src', value),
+    commit: () => editor.commitScreenLayout(),
+  });
+}
+
+function clearDecorationImage(idx) {
+  clearUiImage({
+    setValue: (value) => setDecorationValue(idx, 'src', value),
+    commit: () => editor.commitScreenLayout(),
+  });
 }
 
 function commit() { editor.commitScreenLayout(); }
@@ -115,6 +130,22 @@ function commit() { editor.commitScreenLayout(); }
   padding: 4px 8px;
   border-radius: 3px;
   font-size: 12px;
+}
+.config-btn {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #ddd;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.config-btn:hover {
+  border-color: #6a6a6a;
+}
+.config-btn.secondary {
+  color: #bbb;
 }
 .unit {
   font-size: 11px;

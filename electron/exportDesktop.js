@@ -96,6 +96,7 @@ export async function exportDesktop(options, sendProgress) {
       ...assetDict.characters,
       ...assetDict.audio,
       ...assetDict.fonts,
+      ...assetDict.ui,
       ...assetDict.voices,
     ];
     for (const relPath of allPaths) {

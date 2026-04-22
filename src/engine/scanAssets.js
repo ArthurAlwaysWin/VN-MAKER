@@ -5,15 +5,18 @@
  * data object and returns a categorized dictionary of deduplicated,
  * sorted relative paths suitable for export.
  *
- * Covers 11 path locations across 5 categories (per D-01):
+ * Covers script-referenced assets across 6 categories (per D-01 + Phase 71 UI baseline):
  *   backgrounds — page backgrounds, UI screen backgrounds, UI image elements
  *   audio       — page BGM, page SE, title screen BGM
  *   fonts       — assets.fonts[].file
  *   characters  — characters[id].expressions values
+ *   ui          — canonical ui/... chrome/theme/widget image paths
  *   voices      — page dialogues[].voice
  *
  * @module scanAssets
  */
+
+import { collectUiImagePaths } from '../shared/uiImageContract.js';
 
 // ─── Path Filter ─────────────────────────────────────────
 
@@ -39,13 +42,14 @@ function _add(set, path) {
  * Scan a script object and extract all referenced asset paths.
  *
  * @param {Object} script - The full script.json data object
- * @returns {{ backgrounds: string[], audio: string[], fonts: string[], characters: string[], voices: string[] }}
+ * @returns {{ backgrounds: string[], audio: string[], fonts: string[], characters: string[], ui: string[], voices: string[] }}
  */
 export function scanAssets(script) {
   const bg = new Set();
   const audio = new Set();
   const fonts = new Set();
   const chars = new Set();
+  const ui = new Set();
   const voices = new Set();
 
   // 1. Character expression images
@@ -88,12 +92,15 @@ export function scanAssets(script) {
     }
   }
 
+  collectUiImagePaths(script, (value) => _add(ui, value));
+
   // Convert Sets → sorted arrays for deterministic output
   return {
     backgrounds: [...bg].sort(),
     audio: [...audio].sort(),
     fonts: [...fonts].sort(),
     characters: [...chars].sort(),
+    ui: [...ui].sort(),
     voices: [...voices].sort(),
   };
 }

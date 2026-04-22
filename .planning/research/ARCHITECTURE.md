@@ -1,632 +1,370 @@
-# Architecture Research — v1.4 演出力升级
+# Architecture: v1.5「UI 图片驱动体系」
 
-**Scope:** Existing Electron/Vue VN maker, milestone-only architecture guidance for preset character animation, page camera, richer background transitions, and editor preview wiring  
-**Researched:** 2026-04-21  
-**Confidence:** HIGH — based on direct codebase inspection plus milestone plan/spec in:
-- `.planning/PROJECT.md`
-- `docs/gap-analysis-vs-mature-engines.md`
-- `docs/superpowers/plans/2026-04-21-v1.4-cinematic-upgrade.md`
-- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md`
+**Milestone:** v1.5 UI 图片驱动体系  
+**Repository:** `VN-MAKER`  
+**Researched:** 2026-04-22  
+**Confidence:** HIGH
 
-## Executive Recommendation
+## Executive Summary
 
-Integrate v1.4 as an **additive runtime-effects layer**, not as a new animation system. Keep the current page-based engine contract intact and only add:
+这次里程碑不需要重做 UI 架构。现有工程已经有三条可复用主线：
 
-1. `page.characters[].animation`
-2. `page.camera`
-3. expanded `page.transition.type`
+1. **主题主线**：`ui.theme` + `ThemeManager.applyTheme()` / `applyNineSlice()`
+2. **屏幕主线**：`ui.saveLoadScreen` / `ui.backlogScreen` / `ui.gameMenu` / `ui.settingsScreen` + `setLayout()`
+3. **编辑器预览主线**：iframe runtime + `update-theme` / `update-screen-layout` / `show-screen`
 
-The safest architecture is:
+最安全的做法是：
 
-- **ScriptEngine emits contracts**
-- **CharacterLayer owns character motion**
-- **CameraController owns stage camera**
-- **BackgroundLayer owns transition rendering**
-- **PageInspector/usePageEditor only write data + trigger iframe preview**
+- 把“跨界面共用的皮肤资产”继续放在 `ui.theme`
+- 把“某个界面的背景/装饰层摆放”继续放在对应 screen config
+- 对话框继续走 `ui.dialogueBox`，但新增 `chrome` 子对象承载图片层
 
-Two structural changes are worth doing early because they prevent most future bugs:
+这样可以最大化复用现有 `ThemeManager.js`、`main.js`、各 screen 的 `setLayout()`、`ProjectSettings.vue`、`useThemeEditor.js`、`useScreenLayoutEditor.js`、theme package/builtin theme 与 export pipeline。
 
-1. **Add a stage wrapper (`#stage-layer`) and bind camera there, not `#game-container`**  
-   Current `#game-container` also hosts dialogue/menu/title/settings overlays (`index.html`, `src/main.js`). If camera binds to it directly, UI will shake/zoom too.
+## Current Integration Points
 
-2. **Add a per-character motion wrapper inside `CharacterLayer`**  
-   Current character container already uses `transform` for position/scale and enter transitions (`src/ui/CharacterLayer.js`, `src/style.css`). Preset animation transforms on that same element will conflict. Motion should live on an inner wrapper, not the positioned container.
-
----
-
-## Architecture Decision Summary
-
-### Keep
-
-- Page-based script model
-- `ScriptEngine -> main.js -> UI layer` event flow
-- Existing iframe + postMessage preview path
-- Existing `CharacterLayer` expression crossfade model
-- Existing `BackgroundLayer` dual-layer transition model
-
-### Add
-
-- One dedicated camera controller
-- One shared visual reset helper
-- One canonical preset registry for character animation
-- One stage wrapper DOM layer
-- Targeted iframe preview commands for cinematic effects
-
-### Do Not Add
-
-- No ATL/timeline/freeform animation language
-- No second editor-only animation renderer
-- No camera logic inside `BackgroundLayer`, `DialogueBox`, or editor canvas
-- No generic “page compositor” rewrite
-
----
-
-## New Files to Add
-
-## 1. `src/ui/CameraController.js`
-
-**Responsibility:** Own all page-level camera effects on the runtime stage.
-
-**Why new file:** Camera logic does not belong in `main.js` or `BackgroundLayer`. It needs its own lifecycle, cleanup, timers, and flash overlay handling.
-
-**Public surface should stay small:**
-
-```js
-play(cameraConfig)
-clear()
-preview(cameraConfig)
-```
-
-**Owns:**
-- stage transform / filter classes
-- duration clamp
-- intensity/direction mapping
-- single-active-effect replacement
-- flash overlay creation/removal
-
-**Must not own:**
-- page parsing
-- editor UI logic
-- background transition logic
-
-## 2. `src/ui/resetRuntimeVisualState.js`
-
-**Responsibility:** One shared cleanup path for replay/preview-stop/title-return/load/fast navigation.
-
-**Why new file:** `src/main.js` currently duplicates visual resets in multiple places (`replayCurrentPage()`, preview `stop`, game end, title return). v1.4 adds more temporary runtime state, so duplicated cleanup will drift.
-
-**This helper should clear:**
-- CharacterLayer animations / temporary classes
-- CameraController state
-- BackgroundLayer temporary transition classes/timers
-- dialogue/choice transient display only if caller asks
-
-## 3. `src/ui/characterAnimationPresets.js`
-
-**Responsibility:** Canonical registry of supported character animation presets.
-
-**Why new file:** Runtime and editor must share the same stable enum list. One registry prevents `PageInspector` and `CharacterLayer` from diverging.
-
-**Should contain:**
-- preset key
-- label
-- CSS class name
-- loop vs one-shot
-- previewability flag if needed
-
----
-
-## Existing Files to Modify
-
-## Runtime / Engine
-
-### `index.html`
-**Modify:** add `#stage-layer` wrapper.
-
-**Recommended shape:**
-
-```html
-<div id="game-container">
-  <div id="stage-layer">
-    <div id="background-layer"></div>
-    <div id="character-layer"></div>
-  </div>
-  <div id="dialogue-layer"></div>
-  <div id="ui-overlay"></div>
-</div>
-```
-
-**Reason:** camera should affect scene visuals, not dialogue/menu/title/settings overlays.
-
-### `src/style.css`
-**Modify:** add:
-- `#stage-layer` layout styles
-- camera keyframes/classes
-- flash overlay styles
-- richer background transition classes
-- character motion wrapper animation classes
-
-**Important:** keep transforms separated by layer:
-- `#stage-layer` = camera
-- `.character-sprite` = position/scale/enter
-- `.character-motion` = preset animation
-- `.char-img-a/.char-img-b` = expression crossfade
-
-### `src/engine/ScriptEngine.js`
-**Modify:** additive contract emission only.
-
-**Should do:**
-- pass `animation` through on `show_character`
-- emit new `page_camera` event when `page.camera` exists
-- keep old page flow valid when fields are absent
-
-**Should not do:**
-- preset validation
-- CSS mapping
-- effect timing logic beyond event ordering
-
-### `src/ui/CharacterLayer.js`
-**Modify heavily:** keep current expression crossfade, add motion wrapper and animation lifecycle.
-
-**Recommended DOM per character:**
-
-```html
-<div class="character-sprite" data-character-id="hero">
-  <div class="character-motion">
-    <img class="char-img-a active">
-    <img class="char-img-b">
-  </div>
-</div>
-```
-
-**Boundary:**
-- outer container = layout
-- inner motion wrapper = animation classes
-- imgs = expression swap only
-
-### `src/ui/BackgroundLayer.js`
-**Modify moderately:** expand transition registry in-place.
-
-**Recommendation:** keep transition ownership here; do **not** build a second page transition subsystem.
-
-**Additive transitions:**
-- `dissolve`
-- `wipe`
-- `scale`
-- `blur`
-
-**Fallback:** unknown transition => warn in dev + downgrade to `fade`.
-
-### `src/main.js`
-**Modify:** orchestration only.
-
-**Add:**
-- instantiate `CameraController`
-- bind `page_camera`
-- call shared visual reset helper everywhere a hard reset happens
-- add preview message handlers for cinematic preview requests
-
-**Do not move business logic here.** `main.js` should remain a wire-up layer.
-
-## Editor
-
-### `src/editor/stores/script.js`
-**Modify lightly:**
-- `createDefaultPage()` => include `camera: null`
-- keep old pages valid when `camera` missing
-
-**Do not add migration code.** Old projects should load as-is.
-
-### `src/editor/components/page-editor/CharacterPicker.vue`
-**Modify lightly:** new characters should initialize with `animation: 'none'`.
-
-### `src/editor/components/page-editor/PageInspector.vue`
-**Modify heavily:**
-- character animation select + replay button
-- page camera section
-- expanded transition options
-- unknown-value preservation UI
-- disabled-state messaging for preview buttons
-
-### `src/editor/composables/usePageEditor.js`
-**Modify heavily:** add targeted iframe preview commands.
-
-**Important existing constraint:** `PageEditor.vue` makes inspector/sidebar `pointer-events: none` when `isPreviewMode` is true. So inspector replay buttons cannot depend on full “试玩” mode.
-
-**Recommendation:** reuse the same iframe, but split:
-- **full play preview** (`start` / `stop`)  
-- **targeted effect preview** while editor stays interactive
-
-That means cinematic preview commands should work when the iframe is loaded and ready, even if `isPreviewMode === false`.
-
----
-
-## Canonical Data Contracts
-
-## 1. Page JSON contract
-
-### Character animation
-
-```json
-{
-  "id": "hero",
-  "expression": "smile",
-  "position": "custom",
-  "x": 640,
-  "y": 200,
-  "scale": 1,
-  "animation": "breathe"
-}
-```
-
-**Rules:**
-- optional field
-- absence == `none`
-- store raw string for forward compatibility
-
-### Page camera
-
-```json
-{
-  "camera": {
-    "effect": "shake",
-    "durationMs": 300,
-    "intensity": "medium",
-    "direction": "horizontal",
-    "trigger": "onEnter"
-  }
-}
-```
-
-**Rules:**
-- `camera` is optional / nullable
-- v1.4 editor only writes `trigger: "onEnter"`
-- preserve unknown enum values when loading/saving unless user explicitly changes them
-
-### Transition
-
-```json
-{
-  "transition": {
-    "type": "dissolve",
-    "duration": 800
-  }
-}
-```
-
-**Expanded enum:** `none | fade | slide-left | slide-right | dissolve | wipe | scale | blur`
-
-> Keep existing `slide-left` / `slide-right` naming for backward compatibility with current editor data, even if UI copy says “slide”.
-
-## 2. Runtime event contract
-
-### Existing event extended
-
-```js
-show_character: {
-  id,
-  expression,
-  position,
-  x,
-  y,
-  scale,
-  animation,
-  transition,
-  duration,
-  image
-}
-```
-
-### New event
-
-```js
-page_camera: {
-  sceneId,
-  pageIndex,
-  camera
-}
-```
-
-**Recommendation:** emit raw `camera` object rather than a heavily normalized payload. Validation/no-op belongs in `CameraController`, not `ScriptEngine`.
-
-## 3. Preview message contract
-
-Use the existing iframe, but add targeted commands:
-
-```js
-{ type: 'preview-character-animation', script, sceneId, pageIndex, charId }
-{ type: 'preview-camera', script, sceneId, pageIndex }
-{ type: 'preview-transition', script, sceneId, pageIndex }
-```
-
-**Why include `script` every time:** lowest-risk path. Each preview request can boot from a clean snapshot, so previews do not depend on hidden iframe state staying perfectly synced.
-
-**Expected iframe replies:**
-
-```js
-{ type: 'preview-ok', previewType }
-{ type: 'preview-error', previewType, reason }
-```
-
----
-
-## Recommended Runtime Flow
-
-## Page enter order
-
-For minimum disruption, keep current `ScriptEngine` sequencing but make the order explicit:
-
-1. `page_enter`
-2. `set_background`
-3. `hide_character` diffs
-4. `show_character` diffs/updates
-5. `page_camera`
-6. `dialogue` or `choice`
-
-This is compatible with current engine structure and keeps dialogue behavior unchanged.
-
-## Visual ownership by layer
-
-| Layer | Owns | Must not own |
+| Area | Existing integration point | Why it matters for v1.5 |
 |---|---|---|
-| `BackgroundLayer` | background image swaps + transition classes | camera, dialogue, character motion |
-| `CharacterLayer` | sprite DOM, expression crossfade, preset animation classes | page camera, background transition |
-| `CameraController` | stage shake/zoom/pan/flash | character animation, page parsing |
-| `main.js` | event wiring + lifecycle resets | effect implementation details |
+| Theme tokens / skin CSS | `src/engine/ThemeManager.js` | 现有图片皮肤入口，最适合扩展按钮态 / cursor |
+| Dialogue runtime | `src/ui/DialogueBox.js` | 需要新增名牌底图、装饰层、框体层 |
+| Screen runtime | `src/ui/GameMenu.js`, `SaveLoadScreen.js`, `BacklogScreen.js`, `SettingsScreen.js` | 已有 layout/config 化能力，适合加 full-screen bg / decor |
+| Preview runtime boot | `src/main.js` | `start/update-theme/update-screen-layout/show-screen` 都在这里收口 |
+| Project settings preview | `src/editor/views/ProjectSettings.vue`, `useThemeEditor.js` | 主题/对话框图片编辑应复用这里 |
+| Screen editors | `useScreenLayoutEditor.js` + 各 Section 组件 | major screen 的背景 / 装饰层沿这条线扩展 |
+| Theme packaging | `src/utils/themePackager.js`, `src/editor/builtinThemes.js`, `script.applyBuiltinTheme()` | v1.5 产物最终要能进 theme package / builtin theme |
+| Export asset discovery | `src/engine/scanAssets.js` | 当前几乎没扫到 v1.5 新增 UI 图片路径，必须补 |
 
----
+## Recommended Data Contracts
 
-## Recommended Editor / Preview Flow
+## 1) Theme-level shared skin assets
 
-## Principle
+继续扩展 `ui.theme`，不要新开平行根对象。
 
-**Iframe runtime is the authority. Canvas stays mostly static.**
-
-Current canvas preview is good for placement, not for lifecycle-accurate cinematic behavior.
-
-## Flow for inspector replay buttons
-
-```text
-PageInspector button
-  -> usePageEditor.previewX()
-  -> deep-copy current script snapshot
-  -> postMessage to iframe
-  -> iframe resets visual state
-  -> iframe restoreState(scene/page)
-  -> engine.renderCurrentPage()
-  -> replay requested effect
-  -> iframe sends ok/error
-  -> editor shows failure reason if needed
+```js
+ui.theme = {
+  tokens: {},
+  colorRecipe: {},
+  tokenOverrides: {},
+  nineSlice: {
+    dialogueBox: SkinConfig,
+    menuPanel: SkinConfig,
+    saveSlot: SkinConfig,
+    choiceButton: SkinConfig,
+    titleButton: SkinConfig,
+    settingsPanel: SkinConfig,
+    gameMenuButton: SkinConfig,
+    saveLoadClose: SkinConfig,
+    backlogClose: SkinConfig,
+    qabButton: SkinConfig,
+    pageTab: SkinConfig,
+    settingsTab: SkinConfig,
+    settingsClose: SkinConfig
+  },
+  cursor: {
+    default: null,
+    pointer: null,
+    text: null
+  },
+  icons: {
+    gameMenu: {
+      save: null, load: null, backlog: null,
+      settings: null, title: null, close: null
+    },
+    quickActionBar: {
+      auto: null, skip: null, backlog: null,
+      save: null, load: null, quicksave: null,
+      quickload: null, settings: null
+    },
+    common: {
+      close: null,
+      voiceReplay: null
+    }
+  }
+}
 ```
 
-## Canvas mode recommendation
+### Recommendation
+
+- 按钮态继续沿用 `nineSlice` contract，不要另起第二套 button-skin schema
+- `SkinConfig.states` 从 `hover/active` 扩成 `hover/active/selected/disabled`
 
-Do not simulate runtime camera/animation in canvas mode.
+## 2) Dialogue box chrome
 
-At most, add static hints:
-- character chip: `动画: breathe`
-- page chip: `镜头: shake`
-- transition label: `dissolve`
+继续放在 `ui.dialogueBox`，但新增 `chrome` 子对象：
 
-That keeps parity clean and avoids two effect engines.
+```js
+ui.dialogueBox = {
+  fontSize: 18,
+  fontFamily: null,
+  textColor: null,
+  nameplateFontSize: 20,
+  nameplateFontFamily: null,
+  nameplateColor: null,
+  nameplateStyle: 'inline',
+  chrome: {
+    fillImage: null,
+    nameplateBackgroundImage: null,
+    decorations: []
+  }
+}
+```
 
----
+`DialogueBox.js` 已通过 `applyGlobalStyle()` 消费 `ui.dialogueBox`，把图片 chrome 放在同一个对象里最少破坏。
 
-## Backward Compatibility Rules
+## 3) Screen-level background / decor contract
 
-## Old projects/pages
+不要把 major screen 的背景 / 装饰塞回 `ui.theme`。继续挂在各 screen config 下，但统一加一个 `chrome` 子对象：
 
-- missing `page.camera` => no-op
-- missing `character.animation` => runtime treats as `none`
-- existing `transition.type` values keep working unchanged
-- no migration step required
+```js
+ui.saveLoadScreen.chrome = { backgroundImage: null, decorations: [] }
+ui.backlogScreen.chrome = { backgroundImage: null, decorations: [] }
+ui.gameMenu.chrome = { backgroundImage: null, decorations: [] }
+ui.settingsScreen.chrome = { backgroundImage: null, decorations: [] }
+```
 
-## Unknown values
+运行时建议：
 
-Editor must preserve:
-- unknown character animation enum
-- unknown camera enum
-- unknown transition enum
+- `SaveLoadScreen`: `cfg.chrome?.backgroundImage ?? cfg.background`
+- `BacklogScreen`: `cfg.chrome?.backgroundImage ?? cfg.backgroundImage`
+- `GameMenu`: `cfg.chrome?.backgroundImage`
+- `SettingsScreen`: `cfg.chrome?.backgroundImage`
 
-UI behavior:
-- show placeholder option like `未知效果：legacy-spin`
-- do not silently rewrite to `none`
+`chrome.*` 是最安全的新字段，不会和旧项目字段语义冲突。
 
-Runtime behavior:
-- unknown character animation => no-op + dev warning
-- unknown camera effect => no-op + dev warning
-- unknown transition => fallback `fade` + dev warning
+## New Shared Runtime Pieces
 
----
+## 1) `src/shared/uiImageContract.js` (new)
 
-## Critical Integration Risks
+职责：
 
-## Risk 1: Transform collisions
+- 定义 skin key registry
+- 定义 decoration item shape
+- 导出默认值 / normalizer
+- 给 editor / runtime / builtinThemes / themePackager / scanAssets 共用
 
-**Where it comes from:**  
-Current `CharacterLayer` already uses `transform` for center positioning, custom scale, and enter-slide. Camera will also use transform. New preset animations also want transform.
+## 2) `src/ui/helpers/renderDecorations.js` (new)
 
-**Prevention:** strict transform ownership:
-- stage transform only in `CameraController`
-- character layout transform only on `.character-sprite`
-- character motion transform only on `.character-motion`
+职责：
 
-## Risk 2: Camera affecting UI overlays
+- 根据 `decorations[]` 创建 / 销毁绝对定位图片层
+- 统一 `resolvePath()`、`sanitizeCssValue()`
+- 支持 z-index / opacity / `pointer-events: none`
 
-**Where it comes from:**  
-Current DOM places all layers under `#game-container`.
+## 3) Theme skin CSS injector
 
-**Prevention:** add `#stage-layer`; keep dialogue/UI/title/settings as siblings outside the camera target.
+继续在 `ThemeManager.js` 内扩展：
 
-## Risk 3: Preview and runtime drift
+- `applyTheme(container, themeData)` — token
+- `applyUiSkins(themeData)` — nine-slice + multi-state selectors + cursor
+- `resetUiSkins()`
 
-**Where it comes from:**  
-Current full preview mode disables inspector interaction; phase 63 needs inspector-triggered replay.
+不要改成一堆运行时 JS 切图；继续让 CSS pseudo-class 和 class state 驱动。
 
-**Prevention:** targeted preview commands using the same iframe runtime, not a second preview implementation.
+## Existing Modules to Modify
 
-## Risk 4: Reset leakage
+| Module | Change |
+|---|---|
+| `src/engine/ThemeManager.js` | 扩展 selector registry；支持更多 target key；支持 `selected/disabled` state；应用 cursor CSS |
+| `src/main.js` | preview bootstrap 时应用新增 theme/dialogue chrome；新增 `update-dialogue-box` message；`update-theme` 时重新应用 cursor / icons / skins |
+| `src/ui/DialogueBox.js` | 增加 nameplate bg 节点、decoration layer、fill layer；新增 `setChrome()` 或扩展 `applyGlobalStyle()` |
+| `src/ui/GameMenu.js` | 支持 `chrome.backgroundImage` + decorations；按钮图标从 theme icon set 覆盖；按钮 skin key 接入 |
+| `src/ui/SaveLoadScreen.js` | root chrome、close/page-tab skin、delete icon / skin、decorations |
+| `src/ui/BacklogScreen.js` | root chrome、close skin、voice replay icon theme、decorations |
+| `src/ui/SettingsScreen.js` | root chrome 与现有 panel-bg 分层；settings tab / close / footer button skin；复用 decorations helper |
+| `src/ui/QuickActionBar.js` | 支持 theme icon set 替换硬编码 SVG；按钮 skin key 接入 |
+| `src/style.css` | 新增 dialogue decoration layer / screen decoration layer / cursor fallback class / selected-state selectors |
+| `src/editor/components/DialogueBoxSettings.vue` | 从“纯字体设置”升级为“字体 + 图片 chrome”；接 iframe runtime 预览 |
+| `src/editor/components/theme/NineSliceModal.vue` | target key 扩面；state 从 2 态扩成 4 态 |
+| `src/editor/components/layout/*Section.vue` | major screen 各自新增 `chrome.backgroundImage` 与 `decorations[]` 编辑入口 |
+| `src/editor/views/ProjectSettings.vue` | 继续作为主题 / 对话框图片编辑入口，不要新开 tab |
+| `src/editor/composables/useThemeEditor.js` | 增加 theme skin / cursor / icons 预览发送；最好也支持 dialogue chrome 发送 |
+| `src/editor/stores/script.js` | `applyBuiltinTheme()` 需要覆盖 dialogueBox chrome / theme icons / cursor |
+| `src/editor/builtinThemes.js` | builtin theme 数据结构补图像皮肤字段 |
+| `src/utils/themePackager.js` | 不能只打 nine-slice，要打 cursor / icons / dialogue chrome 相关图片引用 |
+| `src/engine/scanAssets.js` | 明确加入新路径扫描，否则导出漏资源 |
 
-**Where it comes from:**  
-`main.js` already has multiple manual reset paths. v1.4 adds more temporary classes/timers/overlay state.
+## New vs Modified Modules
 
-**Prevention:** one `resetRuntimeVisualState()` helper reused everywhere.
+## New
 
----
+| Module | Purpose |
+|---|---|
+| `src/shared/uiImageContract.js` | 统一 v1.5 skin / decor schema |
+| `src/ui/helpers/renderDecorations.js` | 所有 screen / dialogue 共用装饰层渲染 |
 
-## Implementation Order That Minimizes Risk
+## Modified
 
-## Step 1 — Freeze contracts and layer ownership
+| Module | Purpose |
+|---|---|
+| `ThemeManager.js` | 统一 UI 图片皮肤注入中心 |
+| `DialogueBox.js` | 对话框图片层承载 |
+| `GameMenu.js` / `SaveLoadScreen.js` / `BacklogScreen.js` / `SettingsScreen.js` | major screen full-screen bg + decor + skinned buttons |
+| `QuickActionBar.js` | icon set / skin 接入 |
+| `main.js` | preview/runtime 消息入口 |
+| `ProjectSettings.vue` / `DialogueBoxSettings.vue` / `NineSliceModal.vue` / screen sections | editor side 配置入口 |
+| `script.js` / `builtinThemes.js` / `themePackager.js` / `scanAssets.js` | 主题应用、打包、导出链路补齐 |
 
-Do first:
-- page data contract
-- runtime event contract
-- `#stage-layer` DOM wrapper decision
-- `.character-motion` wrapper decision
+## Runtime Hook Recommendations
 
-**Reason:** these choices affect all later code and avoid transform rewrites.
+## 1) New preview message: `update-dialogue-box`
 
-## Step 2 — Character runtime foundation
+当前 `ProjectSettings` iframe 只会增量接收：
 
-Build:
-- preset registry
-- `CharacterLayer` motion wrapper
-- animation apply/cleanup lifecycle
+- `update-theme`
+- `update-screen-layout`
 
-**Reason:** isolated from editor; easiest first runtime win.
+但 `DialogueBoxSettings.vue` 改的是 `ui.dialogueBox`。如果不加这个消息，图片化对话框只能靠整次 `start` 才能看到。
 
-## Step 3 — Camera runtime foundation
+建议 payload：
 
-Build:
-- `CameraController`
-- `page_camera` event wiring
-- shared reset helper
+```js
+{
+  type: 'update-dialogue-box',
+  config: { ...script.data.ui.dialogueBox }
+}
+```
 
-**Reason:** preview, replay, skip, and title-return all need cleanup semantics before editor exposure.
+Runtime 侧：
 
-## Step 4 — Expanded background transitions
+- `dialogueBox.applyGlobalStyle(config)`
+- `dialogueBox.setChrome(config.chrome || null)`
 
-Build in `BackgroundLayer`.
+## 2) Extend `show-screen` for better preview context
 
-**Reason:** independent of animation/camera UI, but should align with final cleanup order before preview work.
+`show-screen` 基本够用，但 SaveLoad / Backlog 预览样本过空。建议扩展：
 
-## Step 5 — Iframe targeted preview API
+```js
+{
+  type: 'show-screen',
+  screenId: 'saveLoadScreen',
+  mode: 'save',
+  previewSeed: true
+}
+```
 
-Build:
-- preview message types
-- iframe handlers
-- reply/error contract
-- `usePageEditor` helpers
+并增加：
 
-**Reason:** editor UI should consume stable runtime behavior, not define it.
+```js
+{
+  type: 'preview-dialogue',
+  speakerName: '小明',
+  text: '这是一段预览文本'
+}
+```
 
-## Step 6 — Editor controls
+## 3) Keep screen editors on existing `update-screen-layout`
 
-Build:
-- `PageInspector` controls
-- `CharacterPicker` default animation
-- unknown-value preservation
-- disabled-state reasons
+screen background / decor 不需要新协议。只要把新增字段挂在现有 config 上，`useScreenLayoutEditor.js` 现有发送逻辑就能继续用。
 
-**Reason:** now the UI only writes existing contracts and calls existing preview APIs.
+## Data Flow Impact
 
----
+## Editor → Store
 
-## Test Plan by Layer
+- `DialogueBoxSettings.vue` 修改 `script.data.ui.dialogueBox`
+- 各 screen section 修改 `script.data.ui.<screen>`
+- theme modal / toolbar 修改 `script.data.ui.theme`
 
-## 1. Contract / engine tests
+## Store → Preview
 
-**Files:** `ScriptEngine.js`, script store
+- `useThemeEditor.js` 发送 `update-theme`
+- `useScreenLayoutEditor.js` 发送 `update-screen-layout`
+- 新增对话框编辑发送 `update-dialogue-box`
 
-Must verify:
-- old pages still render without new fields
-- `show_character.animation` is emitted
-- `page_camera` emits after character visual events and before dialogue/choice
-- unknown raw enum values pass through engine untouched
+## Preview Runtime
 
-## 2. Runtime DOM tests
+- `main.js` 收消息
+- `ThemeManager` 注入 CSS skin / cursor
+- 各 screen `setLayout()` 重渲染
+- `DialogueBox` 更新 chrome
 
-### CharacterLayer
-Must verify:
-- one-shot animation class applied then cleaned
-- loop animation persists until clear/hide/replacement
-- expression crossfade still works while animation is active
-- custom scale/position remains correct
+## Export / Packaging
 
-### CameraController
-Must verify:
-- only one camera effect active at a time
-- `clear()` removes transforms/flash overlay
-- stage only is affected, not sibling UI layers
-- quick replay replaces previous effect cleanly
+- `scanAssets.js` 扫新路径
+- `themePackager.js` 打 / 解包新字段
+- `applyBuiltinTheme()` 一次性落地 theme + dialogueBox + screens
 
-### BackgroundLayer
-Must verify:
-- new transition class assignment
-- timer/class cleanup after transition
-- unknown transition falls back safely
+## Preview / Runtime Parity
 
-## 3. Preview integration tests
+必须沿用 v1.4 的原则：**预览必须走真实 runtime owner，不要做 editor-only 假预览。**
 
-**Files:** `usePageEditor.js`, iframe message handlers in `main.js`
+### Specific parity requirements
 
-Must verify:
-- preview buttons disable when iframe not ready
-- each preview command sends a fresh script snapshot
-- new preview request cancels/overrides old one
-- preview failure returns explicit reason
-- preview cleanup restores steady state
+- **Dialogue box**：图片 chrome 必须接 iframe runtime
+- **Screen backgrounds / decor**：继续走各 screen editor 现有 iframe
+- **Cursor / icons**：必须通过 `update-theme` 落到 iframe runtime
 
-## 4. Editor form tests
+任何新增 image path 都必须同时满足：
 
-**Files:** `PageInspector.vue`, `CharacterPicker.vue`
+1. editor form 可配置
+2. preview 可增量看到
+3. `scanAssets.js` 可导出
+4. builtin theme / package 可承载
 
-Must verify:
-- animation select writes `character.animation`
-- camera field visibility changes by effect type
-- transition list includes new values
-- unknown enums display but are preserved on save
+## Safest Build Order
 
-## 5. Regression smoke tests
+## Phase 1 — Shared contract + injector foundation
 
-Must verify:
-- old project opens with no migration
-- play mode / skip mode / auto mode still behave
-- load/save/replay/title return clear all cinematic state
-- editor preview and exported runtime behave the same for one sample page per effect
+- `uiImageContract.js`
+- `ThemeManager.js` 扩面：selector registry + 4-state skins + cursor
+- `renderDecorations.js`
+- `scanAssets.js` 新路径扫描框架
 
----
+## Phase 2 — Dialogue box runtime first
 
-## Roadmap Implications
+- `DialogueBox.js` 多层 DOM
+- `ui.dialogueBox.chrome`
+- `main.js` 的 `update-dialogue-box`
+- `DialogueBoxSettings.vue` 接 runtime-backed preview
 
-Recommended milestone build order:
+## Phase 3 — Button image state rollout
 
-1. **Runtime contracts + DOM ownership refactor**
-2. **Character animation runtime**
-3. **Camera runtime + shared cleanup**
-4. **Background transition expansion**
-5. **Iframe effect preview API**
-6. **Editor controls + preservation UX**
-7. **Full regression pass across preview/runtime/export**
+目标 surface：
 
-This order is safest because the editor is a consumer here, not the source of truth.
+- `.game-menu-button`
+- `.save-load-close`
+- `.backlog-close`
+- `.qab-btn`
+- `.page-tab`
+- `.settings-tab-btn`
+- `.settings-structured-close`
 
----
+## Phase 4 — Major screen full-screen bg + decorations
 
-## Sources
+- `screen.chrome.backgroundImage`
+- `screen.chrome.decorations[]`
+- 各 screen editor section 配置入口
+- 运行时复用 `renderDecorations.js`
 
-- `.planning/PROJECT.md` — milestone scope, engine/editor constraints
-- `docs/gap-analysis-vs-mature-engines.md` — confirms animation/camera/transition gap is real and priority-worthy
-- `docs/superpowers/plans/2026-04-21-v1.4-cinematic-upgrade.md` — intended file touch points and phase breakdown
-- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md` — target contract and preview principles
-- `index.html` — current layer DOM structure
-- `src/main.js` — current runtime wiring, preview message handling, duplicated reset points
-- `src/engine/ScriptEngine.js` — current page render ordering and emitted events
-- `src/ui/CharacterLayer.js` — current transform/crossfade behavior
-- `src/ui/BackgroundLayer.js` — current transition ownership
-- `src/style.css` — current transform responsibilities
-- `src/editor/stores/script.js` — default page schema
-- `src/editor/components/page-editor/PageInspector.vue` — current page-level editing surface
-- `src/editor/components/page-editor/CharacterPicker.vue` — current character insert contract
-- `src/editor/composables/usePageEditor.js` — current iframe preview API
-- `src/editor/views/PageEditor.vue` — current preview/read-only behavior
+## Phase 5 — Cursor + icon theming
+
+- `ui.theme.cursor`
+- `ui.theme.icons`
+- `QuickActionBar.js` / `GameMenu.js` / `BacklogScreen.js` icon override
+- `update-theme` 增量预览
+
+## Phase 6 — Editor / package / export backfill
+
+- `NineSliceModal.vue` 扩面
+- builtin theme 数据升级
+- `themePackager.js` 打 / 解包新字段
+- `script.applyBuiltinTheme()` 覆盖新字段
+- regression for preview / export / theme apply
+
+## Concrete Recommendations
+
+1. 不要新建一套独立 “UI image engine”
+2. 不要把所有图片配置都塞进 `ui.theme`
+3. 不要改 screen editor 总架构
+4. 不要再做 editor-only 对话框图片预览
+5. 不要漏 `scanAssets.js`
+
+## Biggest Risk
+
+最大的返工风险不是 runtime，而是 **schema 漂移**：
+
+- editor 配的是 A 字段
+- preview 用的是 B 字段
+- export 扫的是 C 字段
+- builtin theme 写的是 D 字段
+
+所以 v1.5 第一阶段最重要的不是 UI，而是先统一 **shared contract + asset scan + preview message**。

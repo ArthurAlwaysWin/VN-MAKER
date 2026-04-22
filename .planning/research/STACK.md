@@ -1,309 +1,339 @@
-# Technology Stack — v1.4 演出力升级
+# Technology Stack — v1.5 UI 图片驱动体系
 
-**Project:** Galgame Maker v1.4 — cinematic presentation upgrade  
-**Researched:** 2026-04-21  
-**Scope:** Only stack additions/changes required for preset character animation, page-level camera effects, editor-side preview, and expanded background transitions. Existing page engine, iframe preview path, Vue/Pinia editor stack, and Electron/Vite foundation are already validated.
+**Project:** Galgame Maker v1.5 — UI 图片驱动体系  
+**Researched:** 2026-04-22  
+**Scope:** 只回答本里程碑新增 UI 图片能力：对话框图片化、主要按钮图片态扩面、全屏界面背景/装饰层、自定义光标与图标集、编辑器侧图片 UI 资产管理与即时预览。  
+**Overall confidence:** HIGH
 
 ## Executive Recommendation
 
 **Required npm dependencies: 0. Required stack migrations: 0.**
 
-v1.4 should be built with the **existing Electron 41 + Vue 3 + Pinia + Vite + pure JS DOM runtime stack**, plus a few **new internal runtime modules** and **targeted DOM/CSS structure changes**:
+v1.5 应该继续建立在 **Electron 41 + Vue 3 + Pinia + Vite + 纯 JavaScript DOM/CSS runtime** 上。当前技术栈已经足够支撑这批功能；真正需要补的是：
 
-1. **CSS keyframes + transitions** for character presets and background transitions  
-2. **A dedicated stage/camera wrapper** so camera transforms do not fight dialogue/UI layers  
-3. **A small `CameraController` runtime module** for shake/zoom/pan/flash lifecycle + cleanup  
-4. **A character animation preset registry** so editor/runtime share one canonical enum table  
-5. **More preview messages on the existing iframe path**, not a second preview implementation
+1. **运行时数据模型扩展**：把“UI 图片资产”从零散背景图字段升级为结构化配置  
+2. **ThemeManager/各 UI 组件的图片层能力**：从“单层 nine-slice”升级到“多层图片 + 更多按钮状态 + cursor/icon 注入”  
+3. **导出扫描链路补齐**：确保 `assets/ui/*` 和新字段会进入 Web/桌面导出  
+4. **编辑器资产工作流补齐**：直接复用现有 `ui` 资源分类、AssetPicker、iframe 预览，不另起一套系统
 
-The main technical conclusion: **browser/Electron primitives are already sufficient**. Do **not** add GSAP, anime.js, PixiJS, a timeline engine, canvas/WebGL rendering, or a general animation scripting system for v1.4.
+**结论很明确：这是能力扩面，不是技术换代。**  
+不要为 v1.5 引入 PixiJS、Canvas/WebGL、GSAP、图标字体、图片处理库、主题包格式重做，或任何“为了图片化而平台重写”的方案。
 
-**Overall confidence: HIGH** — based on direct inspection of current runtime/editor code and milestone docs. The current codebase already uses DOM layers, CSS transitions, `requestAnimationFrame`, iframe `postMessage`, and jsdom/Vitest. v1.4 is an extension of those patterns, not a platform change.
+## Current Stack Sufficiency
 
-## Current Baseline (keep unchanged)
-
-| Technology | Current Version | Keep? | Why |
-|---|---:|---|---|
-| Electron | 41.0.4 | Yes | Modern Chromium desktop shell; enough for CSS transforms, keyframes, opacity, filter-based effects |
-| Vue | 3.5.31 | Yes | Editor inspector/preview controls fit existing Composition API patterns |
-| Pinia | 3.0.4 | Yes | Page schema/UI state changes stay in existing stores |
-| Vite | 6.3.0 | Yes | No build-system change needed |
-| Vitest | 4.1.4 | Yes | Enough for timing/lifecycle tests with fake timers |
-| jsdom | 29.0.2 | Yes | Enough for controller/class cleanup tests |
-| Pure JS ES modules | current | Yes | Matches project constraint; no TypeScript migration needed |
-
-## Must-Have Stack Changes
-
-These are the **actual** additions needed for v1.4.
-
-### 1. Add a dedicated stage wrapper for camera effects
-
-**Why needed:** Current DOM has `#background-layer`, `#character-layer`, `#dialogue-layer`, `#ui-overlay` directly under `#game-container`. If camera transforms hit `#game-container`, they risk moving dialogue/UI too. That makes preview less stable and creates transform conflicts.
-
-**Recommended structure:**
-
-```html
-<div id="game-container">
-  <div id="stage-layer">
-    <div id="background-layer"></div>
-    <div id="character-layer"></div>
-    <div id="camera-flash-layer"></div>
-  </div>
-  <div id="dialogue-layer"></div>
-  <div id="ui-overlay"></div>
-</div>
-```
-
-**Use:**  
-- `#stage-layer` → camera `shake / zoom / pan`  
-- `#camera-flash-layer` → `flash` overlay  
-- `#dialogue-layer` + `#ui-overlay` stay outside camera transforms
-
-**Why this is better than adding a library:** It solves the real problem: layer ownership.
-
-### 2. Split character positioning from character motion
-
-**Why needed:** `CharacterLayer` currently uses `transform` for centering/custom scaling. New preset animations also want `transform`. If both write to the same element, they will overwrite each other.
-
-**Required change:** Introduce a motion child/wrapper.
-
-**Recommended pattern:**
-
-```html
-<div class="character-sprite pos-center">
-  <div class="character-motion char-anim-shake">
-    <img class="char-img-a" />
-    <img class="char-img-b" />
-  </div>
-</div>
-```
-
-**Responsibility split:**  
-- outer `.character-sprite` → layout position / base scale  
-- inner `.character-motion` → preset animation classes
-
-**Result:** no transform collisions between position, scale, and animation.
-
-### 3. Add internal runtime modules, not external packages
-
-| Internal Module | Needed? | Purpose | Why |
+| Area | Current stack | Sufficiency | What it already covers |
 |---|---|---|---|
-| `src/ui/characterAnimationPresets.js` | Must | Canonical preset table shared by editor + runtime | Prevent enum drift and unknown-value bugs |
-| `src/ui/CameraController.js` | Must | Own stage effects, flash overlay, cleanup, replay rules | Keeps `main.js` from becoming effect spaghetti |
-| `src/ui/resetRuntimeVisualState.js` | Must | Shared cleanup for preview stop / replay / fast page changes | v1.4 will otherwise leak classes/transforms |
-| `src/ui/runtimeCameraBinding.js` | Nice-to-have | Small adapter from engine events to controller | Keeps event wiring isolated and testable |
+| Runtime shell | Electron 41 | Sufficient | Chromium 级 DOM/CSS、`cursor:url()`、绝对定位层、滤镜、伪类状态、图片预加载 |
+| Editor UI | Vue 3.5 + Pinia 3 | Sufficient | 现有 Theme/Screen/Title 编辑器、store 驱动表单、iframe 预览通信 |
+| Build/dev | Vite 6 | Sufficient | 无需新增 loader；项目资产本来就是文件夹结构 |
+| Asset pathing | `asset://` + `resolvePath()` | Sufficient | 预览/Electron/Web/Desktop 四环境路径统一 |
+| Asset storage | `assets/ui/` + IPC `list-assets/import-assets/select-asset` | Sufficient | UI 图本来就有独立分类，可直接接入 |
+| Preview architecture | 现有 `postMessage` + runtime-backed iframe | Sufficient | 主题、screen layout、widgetStyles 已支持热更新预览 |
 
-**Package.json change:** none.
+## What Can Be Built With The Current Stack
 
-### 4. Extend the existing page schema only
+这些能力 **不用加依赖**，直接用现有栈实现：
 
-**Required data additions:**
+- **对话框图片主题化**：DOM 子层 + `<img>` / `background-image`
+- **按钮多状态图片**：CSS `:hover/:active` + `.active/.disabled` + 现有 style injection
+- **SaveLoad / Backlog / GameMenu / Settings 全屏插画背景**：绝对定位背景层 + 装饰层数组
+- **主题光标**：根层 CSS `cursor: url(...) x y, auto`
+- **主题图标替换**：把硬编码 emoji / inline SVG 改成“优先用主题图片，否则回退默认 SVG/文本”
+- **编辑器即时预览**：继续走现有 iframe runtime，不要新做第二套预览
 
-```json
-{
-  "characters": [
-    { "id": "hero", "expression": "smile", "animation": "breathe" }
-  ],
-  "camera": {
-    "effect": "shake",
-    "durationMs": 300,
-    "intensity": "medium",
-    "direction": "horizontal",
-    "trigger": "onEnter"
+## Actual Stack Changes Needed
+
+## 1. Add a structured UI asset config layer
+
+当前问题不是“Electron 不行”，而是**数据结构太窄**。现在：
+
+- `ThemeManager.applyNineSlice()` 只覆盖 6 个 selector，且按钮只支持 `hover/active`
+- `DialogueBox` 只有基础 nameplate/style，没有图片层模型
+- 各 screen editor 大量图片字段仍是手填路径字符串
+
+**v1.5 需要的不是新库，而是新 schema。**
+
+### Recommended milestone-scoped schema direction
+
+```js
+ui: {
+  theme: {
+    uiSkins: {
+      buttons: {
+        gameMenuButton: { mode: 'nineSlice', normal: {}, hover: {}, active: {}, disabled: {} },
+        saveLoadClose:  { mode: 'nineSlice', normal: {}, hover: {}, active: {} },
+        backlogClose:   { mode: 'nineSlice', normal: {}, hover: {}, active: {} },
+        settingsClose:  { mode: 'nineSlice', normal: {}, hover: {}, active: {} },
+        qabButton:      { mode: 'nineSlice', normal: {}, hover: {}, active: {}, disabled: {} },
+        pageTab:        { mode: 'nineSlice', normal: {}, hover: {}, active: {}, selected: {} }
+      },
+      icons: {
+        auto: 'ui/icons/auto.png',
+        skip: 'ui/icons/skip.png',
+        backlog: 'ui/icons/backlog.png',
+        save: 'ui/icons/save.png',
+        load: 'ui/icons/load.png',
+        quicksave: 'ui/icons/quicksave.png',
+        quickload: 'ui/icons/quickload.png',
+        settings: 'ui/icons/settings.png',
+        close: 'ui/icons/close.png'
+      },
+      cursor: {
+        default: { src: 'ui/cursor-default.png', x: 4, y: 2, fallback: 'auto' },
+        pointer: { src: 'ui/cursor-pointer.png', x: 8, y: 2, fallback: 'pointer' }
+      }
+    }
   },
-  "transition": {
-    "type": "dissolve",
-    "duration": 800
-  }
+  dialogueBox: {
+    visuals: {
+      frame: 'ui/dialogue/frame.png',
+      fullReplacement: null,
+      nameplateImage: 'ui/dialogue/nameplate.png',
+      decorations: [{ src: 'ui/dialogue/deco-left.png', x: 0, y: 0, width: 180, height: 80 }]
+    }
+  },
+  saveLoadScreen: { backgroundImage: 'ui/screens/save-load-bg.png', decorations: [] },
+  backlogScreen:  { backgroundImage: 'ui/screens/backlog-bg.png', decorations: [] },
+  gameMenu:       { backgroundImage: 'ui/screens/game-menu-panel.png', decorations: [] },
+  settingsScreen: { backgroundImage: 'ui/screens/settings-bg.png', decorations: [] }
 }
 ```
 
-**Do not add:** timeline tracks, arbitrary easing objects, nested animation graphs, or freeform keyframe JSON.
+**Opinionated recommendation:**  
+把路径都存成 **项目相对路径**（如 `ui/...png`），不要把 v1.5 的大图继续存成 data URL。
 
-### 5. Expand the existing iframe preview contract
+## 2. Generalize ThemeManager beyond single-layer nine-slice
 
-**Why needed:** The preview path is already the validated authority. v1.4 needs more commands, not a new preview system.
+现有 `ThemeManager.js` 方向是对的，但能力不够：
 
-**Recommended additions to postMessage contract:**
+- selector map 只覆盖 6 个目标
+- state model 太少（主要只有 normal/hover/active）
+- 只能处理 `::before` 单层，不适合对话框多装饰层
 
-| Message | Purpose |
+### Required internal additions
+
+| Module / File | Change | Why |
+|---|---|---|
+| `src/engine/ThemeManager.js` | 保留 `applyTheme()`；把 `applyNineSlice()` 扩成更通用的 `applyUiAssetStyles()` 或并行新函数 | v1.5 不再只是 nine-slice |
+| `src/ui/DialogueBox.js` | 新增结构化图片层 DOM | 对话框多层图片不能继续硬塞进单个 `::before` |
+| `src/ui/QuickActionBar.js` | 图标来源改为主题可替换 | 当前图标硬编码为 inline SVG |
+| `src/ui/GameMenu.js` | 按钮背景/图标状态接入主题图片 | 当前只有 panel 背景图和按钮文字/icon |
+| `src/ui/SaveLoadScreen.js` | 支持 screen decorations + close/tab/button skin | 当前有背景图，但缺装饰层和统一按钮皮肤 |
+| `src/ui/BacklogScreen.js` | 支持 decorations + close/voice button skin | 当前只有背景/header 背景 |
+| `src/ui/SettingsScreen.js` | 复用现有 decorations 模式，扩到全屏层/close/icon skin | 当前已经有局部 decorations，是最佳复用点 |
+
+### Implementation stance
+
+- **Stretchable 框体**：继续用 nine-slice / border-image
+- **装饰层、名牌图、整图替换**：用真实 DOM 子层（absolute positioned img/div）
+- **按钮状态**：用结构化状态配置，不要把所有状态拼成任意 CSS 字符串
+
+## 3. Add one small shared image preload utility, not a library
+
+v1.5 会比 v1.4 更频繁地切换 UI 图。为避免 hover/打开界面时闪图，建议新增一个很小的内部工具：
+
+| Internal utility | Needed? | Purpose |
+|---|---|---|
+| `src/engine/preloadImage.js` 或同类模块 | Yes | `new Image()` + `img.decode()` 预热 UI 图 |
+
+**Why:**  
+`CharacterLayer` 已证明 `img.decode()` 预加载路线可靠。UI 图片也应复用这个思路，而不是引入图片缓存库。
+
+## 4. Asset pipeline changes are mandatory
+
+这是 v1.5 唯一必须动到“构建/导出链”的地方。
+
+### Current gap
+
+`scanAssets()` 目前只扫描：
+
+- scene backgrounds / bgm / se / voices
+- fonts
+- `titleScreen`
+- `settingsScreen` 的 `background` 与 `elements[].image`
+
+**它不会完整扫描 v1.5 新增的 UI 图引用。**
+
+### Required pipeline work
+
+| File | Required change |
 |---|---|
-| `start` | existing full page preview |
-| `stop` | existing preview stop |
-| `replay-character-animation` | replay one character preset on current page |
-| `preview-camera` | replay current page camera effect |
-| `preview-transition` | preview page transition without real navigation |
-| `cancel-preview-effect` | cancel running effect and restore state |
+| `src/engine/scanAssets.js` | 扫描 `ui.dialogueBox.visuals.*`、`ui.theme.uiSkins.*`、各 screen `decorations[]`、新增按钮状态图、cursor/icon 图 |
+| `electron/exportGame.js` | 复制新增 UI 资产集合 |
+| `electron/exportDesktop.js` | 同步复制新增 UI 资产集合 |
+| `src/utils/themePackager.js` | **v1.5 不做格式升级**；仅确保不会错误吞掉项目内图片引用 |
 
-**Rule:** preview messages must drive the same runtime classes/controllers used by exported runtime.
+### Strong recommendation
 
-## Browser / CSS / DOM Primitives to Rely On
+给 `scanAssets()` 新增明确的 `ui` 资产桶，而不是继续把所有 UI 图混进 `backgrounds`。
 
-These are sufficient for v1.4.
+这样更利于：
 
-| Feature | Primitive | Use It For | Notes |
-|---|---|---|---|
-| Character preset motion | CSS `@keyframes` | `shake`, `nod`, `bounce`, `breathe` | Best fit for named presets |
-| Character enter effects | CSS transitions + keyframes | `fade-in`, `slide-in-left/right` | Reuse existing class-trigger model |
-| Camera motion | CSS `transform` on `#stage-layer` | `shake`, `zoom`, `pan` | Controlled by one runtime owner |
-| Flash | absolutely-positioned overlay div + opacity animation | `flash` | Cleaner than brightness/filter hacks |
-| Background dissolve | dual-layer opacity transition | `dissolve` | Current `BackgroundLayer` already almost does this |
-| Background scale | CSS `transform: scale()` | `scale` transition | Apply on incoming/outgoing bg layer only |
-| Background blur | CSS `filter: blur()` + opacity | `blur` transition | Fine in Electron 41; keep durations short |
-| Wipe | CSS `clip-path` **or** reveal wrapper with `overflow:hidden` | `wipe` | Prefer simple CSS reveal; degrade to fade if needed |
-| Reliable replay | `requestAnimationFrame()` reflow/restart pattern | replay same class/effect twice | Necessary for editor “重播” buttons |
-| Cleanup | `animationend`, `transitionend`, plus guarded timeouts | remove one-shot classes/inline styles | Must support fast navigation/cancel |
+- 导出审计
+- 后续 v1.6 主题包升级
+- 排查“某个 UI 图为什么没打包”
 
-## Lightweight Dependency Recommendation
+## 5. Editor-side asset management should reuse existing asset infrastructure
 
-## Required
+这部分最不该新起炉灶。现有基础已经够好：
 
-**None.**
+- `assets` store 已有 `ui` 分类
+- Electron IPC 已支持 `ui` 的导入/列举/选择/校验
+- `AssetGrid.vue` 已支持图片缩略图网格
+- `AssetPickerModal.vue` 已支持 `category="ui"`
 
-Native DOM/CSS is enough for all v1.4 target effects.
+### Minimal editor additions
 
-## Optional Nicety (not recommended for v1.4)
-
-If the team later decides CSS-only orchestration is too awkward for chained effects, the **only defensible lightweight candidate** is:
-
-| Package | Current Version | Status | Why / Why Not |
-|---|---:|---|---|
-| `motion` | 12.38.0 | **Do not add in v1.4** | Small and modern, but still unnecessary for the current preset-only scope |
-
-**Recommendation:** keep this out of v1.4. Add it only if a later milestone genuinely needs richer sequencing than CSS classes + controller timers can handle.
-
-## Explicitly Do NOT Add in v1.4
-
-| Library / Approach | Why Not |
+| Area | Minimal addition |
 |---|---|
-| **GSAP (`gsap` 3.15.0)** | Powerful, but overkill for 6-8 presets + 4 camera effects; adds imperative animation layer the project does not need |
-| **anime.js (`animejs` 4.3.6)** | Same problem: extra abstraction for effects CSS can already do |
-| **PixiJS / Phaser / canvas/WebGL renderer** | Wrong rendering model; would fork the DOM runtime and break editor/runtime parity |
-| **Lottie** | Solves vector timeline animation, not scene/character motion |
-| **General timeline editor / ATL-like system** | Explicitly out of scope; turns v1.4 into a platform rewrite |
-| **Per-frame JS animation loops** | Harder to clean up, more bug-prone under fast navigation/preview cancel |
-| **Animation logic inside theme system** | Theme config is not the right ownership boundary for page runtime motion |
-| **TypeScript migration** | Not needed for this milestone; violates current project constraint |
-| **CSS/animation framework** | Native CSS is enough; frameworks add bulk without solving layer/lifecycle problems |
+| `ResourceLibrary.vue` | 增加 “UI 图片” 子标签，直接复用 `AssetGrid category="ui"` |
+| Theme editor | 在现有 theme editor / screen editors 中接入 `AssetPickerModal`，不要继续让用户手打路径 |
+| Live preview | 继续复用 `useThemeEditor` / `useScreenLayoutEditor` 的 iframe postMessage |
+| Dialogue/theme inspectors | 增加缩略图 + 清除按钮 + “从 UI 资源库选择” |
 
-## Integration Guidance by Feature
+**Editor recommendation:**  
+v1.5 的“图片 UI 资产管理”应该是对现有 theme/screen editors 的增强，不是新增一个独立设计器产品。
 
-### Character preset animations
+## Browser / Runtime Capabilities To Rely On
 
-**Implement with:** CSS keyframes + preset registry + `CharacterLayer` class management
+| Capability | Use in v1.5 | Notes |
+|---|---|---|
+| Absolute-positioned image layers | 对话框装饰层、screen decorations | 现有 SettingsScreen decorations 已验证 |
+| `border-image` / nine-slice CSS | 可拉伸框体与按钮皮肤 | 继续沿用已有模型 |
+| `:hover`, `:active`, `.active`, `.disabled`, `[data-*]` | 按钮状态图切换 | `page-tab`/`QAB` 需要类状态，不只鼠标伪类 |
+| `cursor: url(...) x y, auto` | 主题 cursor | 用结构化字段生成，别让用户输入原始 CSS |
+| `img.decode()` | 预加载 UI 图，减少闪图 | 内部 utility 足够 |
+| `object-fit: contain/cover` | 图标与背景图适配 | 已在标题页/资源库使用 |
+| `pointer-events: none` | 装饰层不抢点击 | 对话框、screen decoration 必需 |
 
-**Needed code changes:**
-- extend `show_character` event payload with `animation`
-- add preset lookup in `CharacterLayer`
-- apply one-shot classes on enter/replay
-- keep loop class (`breathe`) active until page exit / replacement / preview cancel
+## Feature-by-Feature Stack Guidance
 
-**Important constraint:** animate the motion wrapper, not the positioned root container.
+### 1. Dialogue box image-driven theming
 
-### Camera effects
+**Can current stack do it?**  
+**Yes, with runtime DOM changes only.**
 
-**Implement with:** one `CameraController` owning `#stage-layer`
+**Needed approach:**
 
-**Needed code changes:**
-- `ScriptEngine` emits page camera contract on page activation
-- `CameraController` applies only one active effect at a time
-- all camera cleanup runs through shared reset helper
+- 在 `DialogueBox` 内增加 `frameLayer / decorationLayer / nameplateLayer / contentLayer`
+- `full image replacement` 也走同一 DOM 结构，不单独发明新渲染器
+- 图片路径通过 `resolvePath()`，不要直接写 `url(...)`
 
-**Important constraint:** never let `BackgroundLayer`, `CharacterLayer`, and page transition code each write stage transforms independently.
+**Do not do:**  
+继续把所有视觉层塞到 `#dialogue-box::before`。
 
-### Expanded transitions
+### 2. Wider button image states across major UI surfaces
 
-**Implement with:** existing dual background layer model + extra transition classes
+**Can current stack do it?**  
+**Mostly yes, but ThemeManager state model must expand.**
 
-**Recommended mapping:**
-- `dissolve` → opacity crossfade
-- `wipe` → clip/reveal animation
-- `scale` → incoming layer scale + opacity
-- `blur` → blur + opacity crossfade
+**Needed approach:**
 
-**Important constraint:** keep transition ownership in `BackgroundLayer`; do not create a second transition subsystem.
+- 把按钮皮肤目标扩到 `game-menu-button / save-load-close / backlog-close / settings-close / qab-btn / page-tab`
+- 支持 `selected/disabled`，因为仅有 `hover/active` 不够覆盖 page tab 和 quickload disabled
+- 保持 CSS 驱动状态，不加 JS 动画库
 
-### Editor preview
+### 3. Full-screen illustration backgrounds + decorative layers
 
-**Implement with:** existing iframe `postMessage` path only
+**Can current stack do it?**  
+**Yes.**
 
-**Needed code changes:**
-- add preview helper methods in `usePageEditor.js`
-- add preview buttons in `PageInspector.vue`
-- disable buttons when iframe not ready
-- ensure preview cancel fully restores runtime state
+**Needed approach:**
 
-**Important constraint:** canvas mode remains static editing only; runtime iframe remains preview authority.
+- 每个 screen 统一支持 `backgroundImage + decorations[]`
+- 直接复用 `SettingsScreen` 已有的 decoration 渲染思路
+- 把背景图作为独立 layer，而不是把所有东西都写成 overlay `background`
 
-## Compatibility Constraints
+### 4. Themed cursor and icon set replacement
 
-| Constraint | Requirement |
+**Can current stack do it?**  
+**Yes.**
+
+**Needed approach:**
+
+- cursor 配置采用 `{ src, x, y, fallback }`
+- icon set 采用“按语义 key 映射路径”
+- `QuickActionBar`、`GameMenu`、`Settings` tabs 等组件优先读 theme icon，缺失时回退默认 SVG/emoji
+
+**Do not do:**  
+引入 icon font、SVG sprite build step、第三方 cursor library。
+
+### 5. Editor-side image UI asset management with live preview
+
+**Can current stack do it?**  
+**Yes.**
+
+**Needed approach:**
+
+- UI 图统一进 `assets/ui/`
+- ResourceLibrary 增加 UI 子页
+- Theme/Screen/Dialogue 编辑面板接 AssetPickerModal
+- 改值后继续用现有 iframe preview 热刷新
+
+## Integration Points
+
+| Layer | Files / systems to touch |
 |---|---|
-| Existing projects | Old pages without `character.animation` or `page.camera` must keep working |
-| Unknown enum values | Preserve in editor data; runtime should no-op + warn in dev |
-| Fast navigation | Effects must be cancellable and fully cleaned up on page change |
-| Skip/auto mode | one-shot effects may shorten/skip, but must not leave stale classes/styles |
-| Web export | Use standards-based CSS/DOM only; if a transition proves unstable in some browsers, degrade that transition to `fade` rather than add a dependency |
-| Editor/runtime parity | Preview must call the same runtime code paths as export/runtime |
+| Runtime theme/style | `src/engine/ThemeManager.js`, `src/main.js` |
+| Runtime UI components | `src/ui/DialogueBox.js`, `QuickActionBar.js`, `GameMenu.js`, `SaveLoadScreen.js`, `BacklogScreen.js`, `SettingsScreen.js` |
+| Shared pathing/export | `src/engine/assetPath.js`, `src/engine/scanAssets.js`, `electron/exportGame.js`, `electron/exportDesktop.js` |
+| Editor stores/composables | `src/editor/stores/assets.js`, `src/editor/stores/script.js`, `useThemeEditor.js`, `useScreenLayoutEditor.js` |
+| Editor UI | `ResourceLibrary.vue`, `AssetGrid.vue`, `AssetPickerModal.vue`, theme/layout section components |
+| Native asset IPC | `electron/main.js`, `electron/validateAsset.js` |
 
-## Testing Stack (sufficient as-is)
+## Do NOT Add In v1.5
 
-| Tool | Version | Use |
-|---|---:|---|
-| Vitest | 4.1.4 | controller and lifecycle tests |
-| jsdom | 29.0.2 | DOM class/cleanup assertions |
-
-**Do not add for v1.4:** Playwright/Cypress visual regression just for these effects. Unit/integration timing tests are enough at this milestone.
-
-## Implementation Summary
-
-| Category | Recommendation |
+| Do not add | Why not |
 |---|---|
-| New npm runtime deps | **0** |
-| New dev deps | **0** |
-| New internal modules | 3-4 small JS files |
-| DOM change | add dedicated stage/camera wrapper + flash layer |
-| CSS change | add keyframes/classes for presets, camera, and transitions |
-| Engine change | extend `show_character` + page camera contract |
-| Editor change | extend PageInspector + usePageEditor preview helpers |
+| PixiJS / Phaser / Canvas/WebGL renderer | 这批需求是 DOM UI 皮肤化，不是渲染引擎切换 |
+| GSAP / anime.js / motion | 没有复杂时间轴需求；状态切换和层渲染原生 CSS 足够 |
+| 图标字体 / Font Awesome 类依赖 | 需求是主题图片图标替换，不是统一矢量图标体系 |
+| 图片压缩/转码/贴图打包工具 | 里程碑重点是通路打通，不是资源优化 |
+| 独立媒体数据库或在线素材服务 | 当前项目是本地文件夹项目，现有资产库足够 |
+| TypeScript 迁移 | 与项目约束冲突，且对本里程碑收益极低 |
+| 新 preview framework | 已有 runtime-backed iframe 是正确方案 |
+| `.gmtheme` / 主题包格式大改 | 这是 v1.6 话题；v1.5 先把运行时与项目资产通路打通 |
+| Base64 大图长期存进 `script.json` | 会让项目数据膨胀、导出难审计、资产复用变差 |
 
-## Installation
+## Recommended Milestone Stack Decision
 
-```bash
-# No new packages required for v1.4
-```
+**Final recommendation:**  
+v1.5 只做 **内部能力扩展**：
 
-## Final Recommendation for REQUIREMENTS / ROADMAP
+- **继续用现有 Electron/Vue/Pinia/Vite/纯 JS**
+- **新增结构化 UI 图片 schema**
+- **扩展 ThemeManager 与各 UI 组件的图片层/state 能力**
+- **补齐 `assets/ui` 的编辑器入口与导出扫描**
 
-1. **Do not add any runtime animation library.**
-2. **Add one dedicated stage/camera wrapper before implementing effects.**
-3. **Add one dedicated character motion wrapper before implementing presets.**
-4. **Keep all motion preset-based and enum-driven.**
-5. **Use existing iframe preview infrastructure; only extend the message contract.**
-6. **Treat any effect that needs a heavyweight library as out of scope for v1.4.**
+**不要做平台级新增依赖，不要做主题包格式翻修，不要做渲染栈替换。**
+
+这是最小、最稳、最符合项目“创作者留在视觉工作流、引擎负责逻辑”的路线。
 
 ## Sources
 
-High-confidence direct codebase sources:
-
+- `package.json`
 - `.planning/PROJECT.md`
 - `docs/gap-analysis-vs-mature-engines.md`
-- `docs/superpowers/plans/2026-04-21-v1.4-cinematic-upgrade.md`
-- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md`
-- `package.json`
-- `index.html`
+- `src/engine/ThemeManager.js`
+- `src/engine/scanAssets.js`
+- `src/engine/assetPath.js`
+- `src/engine/widgetDefaults.js`
+- `src/ui/DialogueBox.js`
+- `src/ui/QuickActionBar.js`
+- `src/ui/GameMenu.js`
+- `src/ui/SaveLoadScreen.js`
+- `src/ui/BacklogScreen.js`
+- `src/ui/SettingsScreen.js`
 - `src/main.js`
-- `src/style.css`
-- `src/engine/ScriptEngine.js`
-- `src/ui/CharacterLayer.js`
-- `src/ui/BackgroundLayer.js`
+- `src/editor/stores/assets.js`
 - `src/editor/stores/script.js`
-- `src/editor/composables/usePageEditor.js`
-- `src/editor/components/page-editor/PageInspector.vue`
-- `src/editor/views/PageEditor.vue`
-
-Version spot-checks for optional-but-not-recommended packages:
-
-- `npm view motion version` → `12.38.0`
-- `npm view animejs version` → `4.3.6`
-- `npm view gsap version` → `3.15.0`
+- `src/editor/views/ResourceLibrary.vue`
+- `src/editor/components/resource-library/AssetGrid.vue`
+- `src/editor/components/resource-library/AssetPickerModal.vue`
+- `src/editor/components/theme/NineSliceModal.vue`
+- `src/editor/composables/useThemeEditor.js`
+- `src/editor/composables/useScreenLayoutEditor.js`
+- `electron/main.js`
+- `electron/exportGame.js`
+- `electron/exportDesktop.js`
+- `electron/validateAsset.js`

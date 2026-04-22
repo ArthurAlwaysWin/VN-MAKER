@@ -1,192 +1,125 @@
 # Project Research Summary
 
-**Project:** VN-MAKER / Galgame Maker  
-**Domain:** GUI-first, no-code visual novel authoring tool with Electron/Vue editor and pure-JS DOM runtime  
-**Researched:** 2026-04-21  
+**Project:** Galgame Maker — v1.5 UI 图片驱动体系  
+**Domain:** 图片驱动的 VN UI 主题化  
+**Researched:** 2026-04-22  
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v1.4 is a **bounded cinematic upgrade**, not an animation-platform rewrite. The product remains a page-based, GUI-first VN maker where creators choose presets rather than author timelines. Research is aligned across stack, feature, architecture, and pitfalls: the right move is to extend the existing **Electron + Vue + Pinia editor** and **pure JavaScript DOM runtime** with preset character motion, one page-level camera effect, a few higher-value transitions, and runtime-backed iframe preview.
+v1.5 不是“重做 UI 引擎”，而是把现有 Electron + Vue + Pinia + DOM/CSS runtime 扩成一条完整的 **UI 图片资产通路**：项目内 `assets/ui/` 持有图片，编辑器用现有资产库与 iframe runtime 预览配置，运行时把图片应用到对话框、按钮、主要界面、光标与图标，导出链路再把这些资源完整带走。核心判断一致：**不加新依赖，不换渲染栈，只补 schema、runtime owner、预览消息和资产扫描。**
 
-The strongest recommendation is also the simplest: **add zero new npm dependencies**. Native DOM/CSS primitives already cover the target scope. The real work is architectural ownership: add a dedicated `#stage-layer` for camera effects, add a per-character motion wrapper so transforms stop colliding, centralize camera logic in a `CameraController`, centralize cleanup in a shared reset helper, and keep the existing iframe preview path as the only truth source.
+本里程碑的正确切法是“固定槽位、可视化配置、真实预览、导出可用”。必须优先解决 shared contract、ThemeManager 扩面、DialogueBox/major screens 的图片层、以及 `scanAssets()` 对 UI 图片的覆盖；否则会出现编辑器能看、导出丢图，或 editor/runtime/schema 三套字段漂移的问题。
 
-The main delivery risk is not visual polish but **runtime reliability**: transform collisions, stale classes/overlays after preview or fast navigation, and editor/runtime drift if preview is reimplemented locally. Roadmap order should therefore prioritize **contracts, layer ownership, cleanup, and runtime foundations before editor UI**. If v1.4 stays preset-based and refuses timeline/freeform scope creep, it is high-confidence and high-ROI.
+最大风险不是实现不了，而是 **资产来源失控、预览与运行时分叉、覆盖面半完成**。缓解方式也很明确：所有图片只存项目相对路径；继续使用 runtime-backed iframe；先冻结按钮族/界面 coverage matrix；把“主题包重构、插件化、自由 selector、动画特效系统”明确留到后续版本。
 
 ## Key Findings
 
-### Recommended Stack
+### Stack Additions
 
-Research conclusion: **no stack migration, no new runtime library, no new dev dependency**. v1.4 should ship on the existing Electron 41 + Vue 3 + Pinia + Vite + pure JS ES modules stack, using CSS keyframes/transitions, DOM wrappers, `requestAnimationFrame`, and the current iframe `postMessage` preview path.
+- **新增 npm 依赖：无**
+- **新增栈迁移：无**
+- 需要的只是：
+  - 结构化 UI 图片 schema（theme / dialogue / screen chrome / cursor / icons）
+  - `ThemeManager` 扩展到更多 selector 与更多状态
+  - 小型图片预加载工具（内部模块即可）
+  - `scanAssets()` / export / themePackager 对 UI 图片路径的补齐
 
-What actually gets added is internal structure, not packages: a stage wrapper for camera ownership, a character motion wrapper for transform isolation, a shared preset registry, a small camera controller, a shared runtime visual reset helper, and a few new preview commands on the existing iframe contract.
+### Must-Have Feature Categories
 
-**Core technologies:**
-- **Electron 41 / Chromium runtime:** already sufficient for transforms, opacity, blur, flash overlays, and preview parity.
-- **Vue 3.5 + Pinia 3:** keep existing editor state/UI patterns for PageInspector controls and schema updates.
-- **Pure JS DOM/CSS runtime:** use CSS keyframes/transitions for presets and transitions; avoid GSAP/anime.js/PixiJS/timeline systems.
-- **`#stage-layer` + `CameraController`:** isolate page camera effects to stage visuals only; keep dialogue/UI stable.
-- **Character preset registry + motion wrapper:** share one canonical enum table and avoid transform collisions between layout and animation.
-- **Existing iframe preview path:** extend `postMessage`; do not build a second preview implementation.
+1. **对话框图片化** — 主框图、名牌图、装饰层，且文本安全区不坏。  
+2. **主要按钮图片态扩面** — 覆盖 game menu、save/load、backlog、QAB、分页/标签、close 等按钮族。  
+3. **非标题主界面背景图与装饰层** — SaveLoad / Backlog / GameMenu / Settings 统一支持。  
+4. **主题光标与图标集** — 限定为 default/pointer cursor 与核心 action icon slots。  
+5. **编辑器图片资产管理 + 即时预览** — 必须走资产库、缩略图选择、runtime-backed iframe 预览。
 
-**Critical version requirements:**
-- Keep current validated baseline: Electron `41.0.4`, Vue `3.5.31`, Pinia `3.0.4`, Vite `6.3.0`, Vitest `4.1.4`, jsdom `29.0.2`.
-- Preserve pure JavaScript; **no TypeScript migration** in v1.4.
+### Explicit Deferrals / Out of Scope
 
-**Explicit non-additions:**
-- No GSAP, anime.js, Motion, PixiJS, Phaser, canvas/WebGL renderer, timeline engine, ATL-like scripting, particle system, or new preview renderer.
-
-### Expected Features
-
-v1.4 table stakes are clear and tightly bounded: creators should be able to add **basic commercial-VN-style motion** without code and preview it through the real runtime. This is not the milestone for choreography, scripting, or asset-heavy cinematic systems.
-
-**Must have (table stakes):**
-- **Per-character preset animation** — one preset per character on a page, with at least 6 stable presets: `fade-in`, `slide-in-left`, `slide-in-right`, `shake`, `nod`, `breathe` (`bounce` recommended as a 7th).
-- **Automatic lifecycle** — one-shot vs loop behavior handled by runtime; replay, page leave, skip, and fast navigation clean up correctly.
-- **One page-level camera effect** — `shake`, `zoom`, `pan`, or `flash`, with simple controls (`durationMs`, `intensity`, `direction` when relevant), triggered on page enter only.
-- **Expanded transitions** — grow from `none / fade / slide-*` to a 7-option family including `dissolve`, `wipe`, `scale`, and `blur`.
-- **Editor-side configuration + runtime-backed preview** — PageInspector controls, targeted replay buttons, disabled reasons, cancelable preview, and state restoration.
-- **Backward/forward compatibility** — old pages still work; unknown enum values are preserved in editor data and safe-no-op in runtime.
-
-**Should have (competitive, if capacity remains after foundations):**
-- **`bounce` as the 7th shipped preset** — rounds out the preset library without changing architecture.
-- **Tighter preview UX messaging** — explicit ok/error reasons and strong disabled-state explanations.
-
-**Defer (v2+ / intentionally out for v1.4):**
-- Freeform animation language or ATL-style scripting
-- Timeline / keyframe / curve editor
-- Multi-effect camera choreography or `effects[]`
-- Combination preset authoring/macros
-- Particle/weather systems, video, asset-driven cinematic packs
-- Theme-driven animation system
-- Continuous cross-page cinematic state
-- Any feature that requires a heavyweight animation dependency
+- 不引入 PixiJS / Canvas / WebGL / GSAP / icon font / 新预览框架
+- 不做 `.gmtheme` 格式升级或社区分享流
+- 不做任意 selector 注入、插件系统、通用 UI 组件注册
+- 不做 per-scene / per-page 主题切换
+- 不做动画装饰、视差、图片优化/压缩、编辑器内绘图工具
 
 ### Architecture Approach
 
-The architecture should stay additive and page-based. `ScriptEngine` emits data contracts; `CharacterLayer` owns character motion; `BackgroundLayer` owns page transitions; a new `CameraController` owns stage camera effects; `main.js` only wires events and lifecycle; editor code writes schema and sends iframe preview commands. The milestone succeeds if each visual concern has **one owner** and every temporary visual state has **one cleanup path**.
+- **`ui.theme`**：放跨界面复用的按钮皮肤、cursor、icons  
+- **`ui.dialogueBox`**：新增 chrome/visuals，承载对话框图片层  
+- **`ui.<screen>.chrome`**：各 major screen 的背景图与 decorations  
+- **`ThemeManager`**：继续做统一 CSS skin 注入中心，不改成新引擎  
+- **iframe runtime preview**：继续做权威预览，不允许 editor-only 假预览
 
-**Major components:**
-1. **`ScriptEngine`** — extend contracts only: pass through `character.animation`, emit `page_camera`, preserve old-page behavior when fields are absent.
-2. **`CharacterLayer`** — keep expression crossfade, add inner `.character-motion` wrapper, manage preset class lifecycle and replay.
-3. **`CameraController`** — own `#stage-layer` shake/zoom/pan/flash lifecycle, replacement rules, overlay handling, and cleanup.
-4. **`BackgroundLayer`** — remain the single home for transition rendering, normalization, fallback, and transition preview helpers.
-5. **`resetRuntimeVisualState()`** — one shared cleanup entrypoint for replay, preview stop, page leave, title return, load, and end flow.
-6. **`usePageEditor` + `PageInspector`** — editor-only consumers of frozen runtime contracts; send targeted iframe preview requests, never simulate runtime locally.
+### Biggest Risks
 
-### Critical Pitfalls
-
-The biggest risks are integration bugs, not lack of effect power.
-
-1. **Transform ownership collisions** — avoid by splitting ownership: `#stage-layer` for camera, `.character-sprite` for position/scale, `.character-motion` for animation, `BackgroundLayer` for transitions only.
-2. **Dirty-stage cleanup leaks** — avoid by adding a shared reset helper and requiring every subsystem to expose a full `clear()` path for classes, timers, inline styles, and overlays.
-3. **Preview/runtime drift** — avoid by making iframe runtime preview the only authority; never add canvas-only or Vue-local effect playback.
-4. **Unknown enum loss on open/save** — avoid by preserving unsupported values in editor UI (`未知效果：...`) and only overwriting when user explicitly changes them.
-5. **Skip/auto/rapid replay timing bugs** — avoid with cancellation/generation semantics, explicit skip behavior, and tests for replay, preview cancel, fast navigation, title return, and load.
+1. **资产来源混乱** — 文本路径、base64、项目资源并存；要求统一为 `assets/ui/` + 项目相对路径。  
+2. **导出漏图** — `scanAssets()` 目前覆盖不足；UI 图片扫描与 export 是本里程碑完成定义的一部分。  
+3. **预览/运行时分叉** — 对话框和按钮预览必须走真实 runtime owner。  
+4. **覆盖面半成品** — 必须先冻结按钮族与 screen coverage matrix，再按族验收。  
+5. **兼容性回退失守** — 所有图片字段都是可选增强；缺失时必须回退现有 CSS 外观。
 
 ## Implications for Roadmap
 
-Based on combined research, the roadmap should treat editor work as a **consumer** of engine/runtime foundations, not the starting point.
+### Recommended Build Order
 
-### Phase 1: Contract Freeze + Layer Ownership Refactor
-**Rationale:** This is the dependency root. Without clear transform ownership, later animation/camera/transition work will fight itself.  
-**Delivers:** final page schema additions, runtime event contract, `#stage-layer` decision, `.character-motion` wrapper decision, canonical enum names.  
-**Addresses:** stack additions/non-additions, compatibility rules, predictable effect ordering.  
-**Avoids:** transform collision, naming drift, accidental scope creep.
+**Phase 1 — Shared contract + export gate**  
+先统一 schema、slot registry、decor model、preview message、`scanAssets()` 框架。  
+交付：shared UI image contract、ThemeManager 状态扩面、UI asset scan registry。  
+避免：schema 漂移、导出漏图。
 
-### Phase 2: Character Preset Runtime Foundation
-**Rationale:** Highest user-visible gain with lowest architectural blast radius once ownership is frozen.  
-**Delivers:** preset registry, CharacterLayer motion wrapper, one-shot/loop lifecycle, replay support, cleanup on page leave/hide/replace.  
-**Addresses:** per-character preset animation, automatic lifecycle, replay reliability.  
-**Avoids:** crossfade/animation races, stale loop classes, position/scale breakage.
+**Phase 2 — Dialogue box first**  
+先做最显眼的主视觉区域，并把对话框预览切到真实 runtime。  
+交付：对话框主框图 / 名牌图 / 装饰层 / sample preview。  
+避免：本地假预览、文本区被图片破坏。
 
-### Phase 3: Camera Runtime + Shared Cleanup
-**Rationale:** Camera is the second big presentation gap, but it must land with reset infrastructure or it will be visibly unreliable.  
-**Delivers:** `CameraController`, flash layer/overlay handling, `page_camera` event binding, single-active-effect rules, `resetRuntimeVisualState()`.  
-**Uses:** existing DOM/CSS runtime only; no new deps.  
-**Implements:** stage-only camera ownership and cross-flow cleanup.  
-**Avoids:** dirty-stage state, UI contamination, replay/stop/title/load bugs.
+**Phase 3 — Button family rollout**  
+以按钮族而非零散 selector 推进，统一 normal/hover/pressed，必要处加 selected/disabled。  
+交付：game-menu / save-load / backlog / QAB / tabs / close button 皮肤扩面。  
+避免：只做主按钮、次按钮漏掉。
 
-### Phase 4: Background Transition Expansion
-**Rationale:** Transitions are valuable but should extend the existing `BackgroundLayer`, not create a parallel system.  
-**Delivers:** transition enum expansion, `dissolve / wipe / scale / blur` implementations, fallback behavior for unknown/unstable transitions.  
-**Addresses:** 7-option transition set and stable page-enter ordering.  
-**Avoids:** second transition subsystem, broken legacy values, transition preview corruption.
+**Phase 4 — Major screen chrome**  
+复用 screen config 与 decorations 思路，统一铺 SaveLoad / Backlog / GameMenu / Settings。  
+交付：每屏背景图 + decorations + 真实 screen preview。  
+避免：只做 SaveLoad 的 demo 化交付。
 
-### Phase 5: Iframe Effect Preview API
-**Rationale:** Preview should expose already-stable runtime behavior, not invent it.  
-**Delivers:** targeted `postMessage` commands (`preview-character-animation`, `preview-camera`, `preview-transition`), ok/error replies, cancel/override behavior, state restore rules.  
-**Addresses:** runtime-backed preview, replay buttons, explicit failure/disabled states.  
-**Avoids:** preview/runtime drift, hidden iframe-state dependency, flaky replay.
-
-### Phase 6: Editor Controls + Compatibility UX
-**Rationale:** Once runtime and preview contracts are frozen, PageInspector can safely become a thin contract editor.  
-**Delivers:** character animation dropdowns, camera config section, transition option expansion, unknown-value preservation UI, disabled-state messaging, default `camera: null` / `animation: 'none'` behavior.  
-**Addresses:** no-code authoring and backwards/forwards compatibility.  
-**Avoids:** destructive save behavior, impossible runtime states, premature UI churn.
-
-### Phase 7: Full Integration and Regression Gate
-**Rationale:** v1.4 will fail in practice if only happy-path previews work. Regression is a milestone deliverable here.  
-**Delivers:** fixed test matrix across manual play, auto, skip, rapid replay, preview stop, load, title return, end-of-game return, and legacy project open/save.  
-**Addresses:** preview/export trust and production stability.  
-**Avoids:** shipping flashy but unreliable behavior.
-
-### Phase Ordering Rationale
-
-- **Contracts before effects:** schema, DOM ownership, and enum names affect every later file touch.
-- **Runtime before editor:** the iframe runtime is the truth source; UI should consume, not define, effect behavior.
-- **Cleanup before preview UX:** replay/preview is only credible once reset semantics are centralized.
-- **Transitions before final editor polish:** transition work is still runtime-layer work and should stabilize before final preview/config UX.
-- **Regression as a real phase:** the top risks are cross-flow integration bugs, not missing CSS.
+**Phase 5 — Cursor/icons + editor workflow polish**  
+最后收小而硬的 polish，并把资产管理、引用提示、导出回归补齐。  
+交付：cursor/icon slots、AssetPicker 接入、缺失资源预警、导出验证。  
+避免：小特性抢主线、图片路径继续靠手填。
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 4 (Transition expansion):** validate final `wipe` implementation (`clip-path` vs reveal wrapper) and define degradation-to-`fade` policy for unstable environments.
-- **Phase 5 (Iframe effect preview API):** verify current iframe readiness/read-only constraints and finalize reply/error semantics so inspector controls remain trustworthy.
-- **Phase 7 (Regression gate):** define exact skip/auto behavior policy for each effect type to prevent ambiguous acceptance criteria.
-
-Phases with standard patterns (skip research-phase):
-- **Phase 1:** architecture direction is already well documented and high confidence.
-- **Phase 2:** preset character animation via CSS classes/wrappers is straightforward and already aligned with current CharacterLayer patterns.
-- **Phase 3:** camera implementation is clear once stage ownership and reset boundaries are accepted.
-- **Phase 6:** editor controls are thin consumers of stable contracts; mostly implementation, not discovery.
+- **Likely needs deeper phase research:** Phase 1（shared schema / scan registry boundary）, Phase 5（themePackager 与引用校验收口）
+- **Standard patterns, can plan directly:** Phase 2-4（DOM image layers、CSS state skins、screen decorations、iframe preview 复用）
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Direct codebase inspection and milestone docs all point to zero new package needs and additive internal modules only. |
-| Features | HIGH | v1.4 cut line is explicit across PROJECT, feature research, milestone spec, and gap analysis. |
-| Architecture | HIGH | File/module boundaries, event flow, and DOM ownership decisions are strongly supported by current code structure. |
-| Pitfalls | HIGH | Risks are concrete, code-informed, and repeated consistently across architecture + pitfalls research. |
+| Stack | HIGH | 基于仓库现状，结论明确为“无新依赖” |
+| Features | HIGH | 里程碑目标与 feature cut line 一致 |
+| Architecture | HIGH | 可复用主线清晰，改动集中 |
+| Pitfalls | HIGH | 主要来自仓库现状与既有缺口，风险具体 |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Final preview command naming/ack contract:** lock this in during planning so editor and iframe do not drift.
-- **Exact skip/auto degradation policy:** decide which effects become instant/no-op under skip and document it in requirements.
-- **Transition implementation choice for `wipe`:** decide early whether `clip-path` is stable enough or whether reveal-wrapper + `fade` fallback is safer.
-- **Legacy transition naming UX:** keep schema-compatible values (`slide-left` / `slide-right`) while presenting clearer UI labels.
+- 需要在 requirements 中先冻结 **按钮族 coverage matrix** 与 **screen slot 清单**
+- 需要明确旧 base64 / 旧路径字段的兼容读入与“重新选择后改写”为相对路径规则
+- 需要定义 editor 里哪些入口放在 Project Settings、哪些放在 screen sections，避免 UI 面板爆炸
 
 ## Sources
 
-### Primary (HIGH confidence)
-- `.planning/research/STACK.md` — stack additions, non-additions, internal modules, DOM/CSS strategy
-- `.planning/research/FEATURES.md` — v1.4 cut line, table stakes, anti-features, UX expectations
-- `.planning/research/ARCHITECTURE.md` — module boundaries, data contracts, runtime/editor ownership, implementation order
-- `.planning/research/PITFALLS.md` — critical failure modes, mitigation rules, milestone gating
-- `.planning/PROJECT.md` — product constraints, current stack, active milestone definition
-- `docs/superpowers/specs/2026-04-21-v1.4-cinematic-upgrade-design.md` — official v1.4 scope, contracts, lifecycle, acceptance criteria
-
-### Secondary (MEDIUM-HIGH confidence)
-- `docs/gap-analysis-vs-mature-engines.md` — validates that animation, camera, and transition breadth are the right near-term gap to close
-- Current codebase paths cited by the research files (`src/main.js`, `src/engine/ScriptEngine.js`, `src/ui/CharacterLayer.js`, `src/ui/BackgroundLayer.js`, `src/editor/composables/usePageEditor.js`, `src/editor/components/page-editor/PageInspector.vue`, `src/editor/stores/script.js`, `index.html`, `src/style.css`) — implementation anchor points
-
-### Tertiary (LOW-MEDIUM confidence)
-- Mature-engine comparisons in gap analysis — useful for expectation-setting, but less authoritative than the project’s own milestone spec and codebase constraints
+- `.planning/research/STACK.md`
+- `.planning/research/FEATURES.md`
+- `.planning/research/ARCHITECTURE.md`
+- `.planning/research/PITFALLS.md`
+- `.planning/PROJECT.md`
 
 ---
-*Research completed: 2026-04-21*  
+*Research completed: 2026-04-22*  
 *Ready for roadmap: yes*
+
+## Recommendation for Requirement Scoping
+
+把 v1.5 requirement 写成 **5 个固定能力包**：对话框图片化、按钮族图片态、major screen chrome、cursor/icon slots、编辑器资产管理与预览；每个 requirement 都必须同时写清 **配置槽位、runtime owner、预览入口、导出扫描、CSS fallback**，这样 roadmap 才不会把“能配”“能看”“能导出”拆成不闭环的半成品。

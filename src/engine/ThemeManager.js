@@ -77,7 +77,7 @@ function buildNineSliceCSS(nineSlice) {
 
     // Parent setup: overflow:hidden clips ::before to border-radius (D-01),
     // isolation:isolate creates stacking context for z-index:-1 (Pitfall 1)
-    const parentProps = ['overflow: hidden', 'isolation: isolate'];
+    const parentProps = [key === 'dialogueBox' ? 'overflow: visible' : 'overflow: hidden', 'isolation: isolate'];
     if (NEEDS_POSITION.has(key)) parentProps.push('position: relative');
     if (HAS_BACKDROP.has(key)) {
       parentProps.push('backdrop-filter: none');

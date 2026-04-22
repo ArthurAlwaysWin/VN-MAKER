@@ -2,6 +2,7 @@
  * DialogueBox — Displays dialogue text with typewriter effect
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
+import { resolvePath } from '../engine/assetPath.js';
 
 export class DialogueBox {
   /**
@@ -14,7 +15,11 @@ export class DialogueBox {
     this.el = document.createElement('div');
     this.el.id = 'dialogue-box';
     this.el.innerHTML = `
+      <div class="dialogue-visual-underlay">
+        <div class="dialogue-decoration-layer"></div>
+      </div>
       <div class="dialogue-name-plate">
+        <div class="dialogue-nameplate-art" aria-hidden="true"></div>
         <span class="dialogue-speaker-name"></span>
       </div>
       <div class="dialogue-text-area">
@@ -24,6 +29,9 @@ export class DialogueBox {
     `;
     this.container.appendChild(this.el);
 
+    this.namePlateEl = this.el.querySelector('.dialogue-name-plate');
+    this.nameplateArtEl = this.el.querySelector('.dialogue-nameplate-art');
+    this.decorationLayerEl = this.el.querySelector('.dialogue-decoration-layer');
     this.nameEl = this.el.querySelector('.dialogue-speaker-name');
     this.textEl = this.el.querySelector('.dialogue-text');
     this.indicatorEl = this.el.querySelector('.dialogue-indicator');
@@ -70,7 +78,7 @@ export class DialogueBox {
     this._applyStyle(data.style, data.fontOverride);
 
     // Apply nameplate style class
-    const namePlate = this.nameEl.parentElement;
+    const namePlate = this.namePlateEl;
     namePlate.classList.remove('nameplate-inline', 'nameplate-floating', 'nameplate-banner');
     namePlate.classList.add(`nameplate-${this._nameplateStyle}`);
 
@@ -83,10 +91,10 @@ export class DialogueBox {
         this.nameEl.style.color = nameColor;
       }
       // else: CSS var(--gm-text, #fff) handles the default
-      this.nameEl.parentElement.classList.add('visible');
+      this.namePlateEl.classList.add('visible');
     } else {
       this.nameEl.textContent = '';
-      this.nameEl.parentElement.classList.remove('visible');
+      this.namePlateEl.classList.remove('visible');
     }
 
     // Start typewriter
@@ -161,6 +169,10 @@ export class DialogueBox {
   applyGlobalStyle(settings) {
     this._globalSettings = settings || {};
     this._applyFontSettings(this._globalSettings);
+    this._applyArtSettings(this._globalSettings);
+    if (this._globalSettings.nameplateStyle) {
+      this.setNameplateStyle(this._globalSettings.nameplateStyle);
+    }
   }
 
   /**
@@ -193,6 +205,69 @@ export class DialogueBox {
       this.nameEl.style.color = nc;
       this._activeNameplateColor = nc;
     }
+  }
+
+  _applyArtSettings(s) {
+    this._setNameplateArt(s?.nameplateBackgroundImage);
+    this._setDecorations(s?.decorations);
+  }
+
+  _setNameplateArt(src) {
+    const resolved = this._resolveDialogueArtPath(src);
+    this.nameplateArtEl.style.cssText = '';
+    this.namePlateEl.classList.remove('has-art');
+    if (!resolved) return;
+    this.nameplateArtEl.style.backgroundImage = `url("${resolved}")`;
+    this.nameplateArtEl.style.backgroundRepeat = 'no-repeat';
+    this.nameplateArtEl.style.backgroundSize = '100% 100%';
+    this.nameplateArtEl.style.backgroundPosition = 'center';
+    this.namePlateEl.classList.add('has-art');
+  }
+
+  _setDecorations(decorations) {
+    this.decorationLayerEl.innerHTML = '';
+    for (const [index, decoration] of (decorations || []).entries()) {
+      const node = document.createElement('div');
+      node.className = 'dialogue-decoration';
+      node.setAttribute('data-dialogue-decoration-index', String(index));
+      node.style.pointerEvents = 'none';
+
+      const x = clampField('x', decoration?.x);
+      const y = clampField('y', decoration?.y);
+      const width = clampField('width', decoration?.width);
+      const height = clampField('height', decoration?.height);
+      if (x !== undefined) node.style.left = `${x}px`;
+      if (y !== undefined) node.style.top = `${y}px`;
+      if (width !== undefined) node.style.width = `${width}px`;
+      if (height !== undefined) node.style.height = `${height}px`;
+
+      const resolved = this._resolveDialogueArtPath(decoration?.src);
+      if (resolved) {
+        node.style.backgroundImage = `url("${resolved}")`;
+        node.style.backgroundRepeat = 'no-repeat';
+        node.style.backgroundSize = 'contain';
+        node.style.backgroundPosition = 'center';
+      }
+
+      this.decorationLayerEl.appendChild(node);
+    }
+  }
+
+  _resolveDialogueArtPath(src) {
+    if (typeof src !== 'string') return '';
+    const trimmed = src.trim();
+    if (!trimmed) return '';
+    if (
+      trimmed.startsWith('ui/') ||
+      trimmed.startsWith('asset://ui/') ||
+      trimmed.startsWith('/game/ui/') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('data:')
+    ) {
+      return resolvePath(trimmed);
+    }
+    return '';
   }
 
   // ─── Nameplate style ─────────────────────────────────────
@@ -246,6 +321,31 @@ export class DialogueBox {
   hide() {
     this.el.classList.remove('visible');
     this._stopTypewriter();
+  }
+
+  renderPreviewLine({ speakerName = '', speakerColor = null, text = '' } = {}) {
+    this._stopTypewriter();
+    this.el.classList.add('visible');
+    this._applyStyle(null, null);
+
+    this.namePlateEl.classList.remove('nameplate-inline', 'nameplate-floating', 'nameplate-banner');
+    this.namePlateEl.classList.add(`nameplate-${this._nameplateStyle}`);
+
+    if (speakerName) {
+      this.nameEl.textContent = speakerName;
+      this.namePlateEl.classList.add('visible');
+      const nameColor = speakerColor || this._activeNameplateColor;
+      this.nameEl.style.color = nameColor || '';
+    } else {
+      this.nameEl.textContent = '';
+      this.namePlateEl.classList.remove('visible');
+    }
+
+    this._fullText = text;
+    this._charIndex = text.length;
+    this._complete = true;
+    this.textEl.textContent = text;
+    this.indicatorEl.classList.add('visible');
   }
 
   /**

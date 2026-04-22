@@ -88,4 +88,21 @@ describe('ThemeManager UI image handling', () => {
     resetNineSlice();
     expect(getNineSliceCss()).toBe('');
   });
+
+  it('keeps dialogueBox nine-slice overflow visible so floating nameplates are not clipped above the frame', () => {
+    applyNineSlice({
+      nineSlice: {
+        dialogueBox: {
+          src: 'ui/dialogue/frame.webp',
+          slice: [24, 24, 24, 24],
+          width: [24, 24, 24, 24],
+        },
+      },
+    });
+
+    const css = getNineSliceCss();
+    expect(css).toContain('#dialogue-box { overflow: visible; isolation: isolate;');
+    expect(css).not.toContain('#dialogue-box { overflow: hidden; isolation: isolate;');
+    expect(css).toContain('url("resolved:ui/dialogue/frame.webp")');
+  });
 });

@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.4 演出力升级 (Shipped: 2026-04-22)
+
+**Phases completed:** 10 phases, 20 plans, 21 tasks
+**Timeline:** 2026-04-21 → 2026-04-22
+**Milestone audit:** 18/18 requirements passed, 10/10 phases verified, 11/11 integrations, 7/7 flows
+
+**Key accomplishments:**
+
+- unknown-safe cinematic contract + `#stage-layer` ownership，保证镜头只作用于舞台，未知动画/镜头/转场值不会在打开/保存中丢失
+- 角色预设动画运行时闭环：`fade-in` / `slide-in-left` / `slide-in-right` / `shake` / `nod` / `breathe` 全部落地，并具备 one-shot / loop cleanup 语义
+- 页面级镜头效果与扩展转场落地：`shake` / `zoom` / `pan` / `flash` + `dissolve` / `wipe` / `scale` / `blur`，并以 background gate 稳定时序
+- runtime-backed iframe effect preview + PageInspector 内联配置完成接线，角色 / 镜头 / 转场预览都走真实 runtime owner
+- focused PREV-05 regression gate 关闭 skip / auto / load / title / preview-stop 清理残留问题
+- 通过 Phase 68-70 docs-only verification backfill 关闭全部 orphaned audit gaps，让 v1.4 milestone audit 最终通过
+
+**Archives:** milestones/v1.4-ROADMAP.md, milestones/v1.4-REQUIREMENTS.md, milestones/v1.4-MILESTONE-AUDIT.md
+
+---
+
 ## v1.3 主题系统表达力升级 (Shipped: 2026-04-20)
 
 **Phases completed:** 9 phases (52-60), 21 plans, 27 requirements

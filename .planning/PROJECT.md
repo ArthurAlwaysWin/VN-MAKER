@@ -80,23 +80,42 @@
 - ✓ 控件风格编辑器（widgetStyles 可视化编辑：Tab 形状/Toggle 样式/Slider·Panel·Button 颜色 + iframe 实时预览）— v1.2
 - ✓ 界面布局编辑器（SaveLoad/Backlog/GameMenu/SettingsScreen 结构化表单配置 + iframe 预览）— v1.2
 - ✓ 5 套内置主题（default/wafuu/modern-sky/fantasy-dark/minimal-white）一键应用 + 主题选择器 UI — v1.2
+- ✓ v1.4 演出力升级：角色预设动画与生命周期清理（ANIM-01~04）— v1.4
+- ✓ v1.4 演出力升级：页面级镜头效果与舞台隔离（CAM-01~05）— v1.4
+- ✓ v1.4 演出力升级：背景转场扩展与稳定 page-enter 时序（TRAN-01~04）— v1.4
+- ✓ v1.4 演出力升级：PageInspector 内联配置 + runtime-backed iframe 预览（PREV-01~03）— v1.4
+- ✓ v1.4 演出力升级：skip/auto/load/title/preview-stop cleanup 回归门（PREV-05）— v1.4
 
 ### Active
 
-- [ ] v1.4 演出力升级：立绘预设动画（shake / bounce / slide-in / fade-in / nod / breathe）
-- [ ] v1.4 演出力升级：页面级镜头效果（shake / zoom / pan / flash）
-- [ ] v1.4 演出力升级：编辑器动画与镜头配置 + iframe 预览
-- [ ] v1.4 演出力升级：补充背景转场（dissolve / wipe / zoom / blur）
+- [ ] **CINE-01**: 组合多个角色动画预设形成宏效果
+- [ ] **CINE-02**: 为一个页面编排多个镜头效果或镜头链
+- [ ] **CINE-03**: 使用时间轴、关键帧或曲线编辑动画
+- [ ] **CINE-04**: 添加粒子、天气、视频等更重型演出系统
+- [ ] **CINE-05**: 配置跨页面持续存在的连续演出状态
 
-## Current Milestone: v1.4 演出力升级
+## Current State
 
-**Goal:** 先补齐最影响“游戏感”的演出能力地基，用较低实现成本快速提升 VN 成片表现力。
+**已交付：** v0.1 ~ v1.4（设置页设计器 → 资源库 → PPT 编辑器 → 语音字体 → 游戏 UI → 主题包系统 → Web 导出 → 桌面导出 → 本地化帮助 → 角色表情差分 → UI Theme v2 引擎 → 主题配置编辑器 → 智能配色与结构参数 → 演出力升级）
 
-**Target features:**
-- 立绘预设动画（shake / bounce / slide-in / fade-in / nod / breathe）
-- 页面级镜头效果（shake / zoom / pan / flash）
-- 编辑器动画与镜头配置（PageInspector + iframe 预览）
-- 更多背景转场（dissolve / wipe / zoom / blur）
+**v1.4 已完成：** 预设角色动画、页面级镜头效果、扩展背景转场、runtime-backed iframe 演出预览、PageInspector 内联演出配置全部交付；18/18 requirements 与 milestone audit 全部通过。
+
+**下一步：** 运行 `/gsd-new-milestone`，为下一轮“高级演出 / Advanced Cinematics”重新定义 requirements 与 roadmap。
+
+## Previous Milestone: ✅ v1.4 演出力升级 (Shipped 2026-04-22)
+
+**Delivered:** 预设角色动画 + 单页镜头效果 + 扩展转场 + runtime-backed effect preview + PageInspector 演出配置 + 68-70 verification backfill。18/18 requirements，10 phases，milestone audit passed。
+
+<details>
+<summary>v1.4 target features (delivered)</summary>
+
+- ✅ 立绘预设动画（fade-in / slide-in-left / slide-in-right / shake / nod / breathe）
+- ✅ 页面级镜头效果（shake / zoom / pan / flash）
+- ✅ 编辑器动画与镜头配置 + iframe runtime 真预览
+- ✅ 背景转场扩展（dissolve / wipe / scale / blur）
+- ✅ PREV-05 focused regression gate + docs-only audit closeout
+
+</details>
 
 ## Previous Milestone: ✅ v1.3 主题系统表达力升级 (Shipped 2026-04-20)
 
@@ -156,6 +175,7 @@ P1 编辑器 + 内置主题 — ✅ 已在 v1.2 完成
 - [ ] **开场/结尾动画**（OP/ED） — v0.9+
 - [ ] **启动画面**（Splash Screen） — v0.9+
 - [ ] **macOS / Linux 桌面打包** — v0.8+
+- [ ] **高级演出系统**：宏动画 / 多镜头链 / 时间轴 / 粒子天气视频
 
 ### Out of Scope
 
@@ -181,7 +201,7 @@ P1 编辑器 + 内置主题 — ✅ 已在 v1.2 完成
 - **资源库**：5 类资源（背景/角色/音频/字体/通用），统一 Pinia store + IPC 管理
 - **运行时双模式**：有自定义布局时渲染 JSON 元素；无布局时渲染内置默认页面
 - **设置页覆盖层**：右侧滑入 overlay，ESC 优先级链（settings > game menu），stack-based 层管理
-- **已发布**：v0.1 ~ v1.0（设置页设计器 → 资源库 → PPT 编辑器 → 语音字体 → 游戏 UI → 主题包 → Web 导出 → 桌面导出 → 本地化帮助 → 角色表情差分）
+- **已发布**：v0.1 ~ v1.4（设置页设计器 → 资源库 → PPT 编辑器 → 语音字体 → 游戏 UI → 主题包 → Web 导出 → 桌面导出 → 本地化帮助 → 角色表情差分 → 主题系统表达力升级 → 演出力升级）
 
 ### 已知问题
 
@@ -252,6 +272,10 @@ P1 编辑器 + 内置主题 — ✅ 已在 v1.2 完成
 | 表情状态 Map + resolution chain | char.expression → inherited → first → '' | ✓ Good |
 | Canvas vs Engine 继承不对称 | 画布静态预览 vs 引擎运行时，意图正确 | ✓ Good |
 | 删除表情前全场景引用扫描 | 批量替换+单步 pushState，安全可撤销 | ✓ Good |
+| preset-based cinematic contract | 用有限预设快速提升成片表现力，同时避免演出系统失控扩张 | ✓ Good |
+| runtime-backed effect preview | 预览必须走真实 runtime owner，确保编辑器/运行时一致 | ✓ Good |
+| stage-layer-only camera scope | 镜头效果只作用于舞台，保护对话与 overlay 可读性 | ✓ Good |
+| focused PREV-05 gate + verification backfill | 用聚焦回归门证明清理路径，并用 docs-only closeout 补齐审计证据链 | ✓ Good |
 
 ## Evolution
 
@@ -274,14 +298,12 @@ This document evolves at phase transitions and milestone boundaries.
 
 - ✅ **v1.2** — 编辑器主题配置 + 示范主题 (Phases 46-51)
 - ✅ **v1.3** — 主题系统表达力升级 (Phases 52-60)
+- ✅ **v1.4** — 演出力升级 (Phases 61-70)
 
-## Current State
+### 已知问题
 
-**已交付：** v0.1 ~ v1.3（設置頁設計器 → 資源庫 → 編輯器 → 語音字體 → 遊戲 UI 補全 → 主題包系統 → Web 導出 → 桌面導出 → 本地化與幫助系統 → 角色表情/差分場景切換 → UI Theme v2 引擎 → 主題配置編輯器 → 智能配色 + 結構參數 + 主題升級）
-
-**v1.3 已完成：** OKLCH 智能配色系统 + 设置页结构参数引擎 + 完整编辑器 UI + 标题页预览 + 5 套商业级主题升级。27/27 需求验证通过，~170 测试。
-
-**下一步：** 定义 v1.4 需求并拆解路线图
+- ⚠ preview preflight 规则仍在 `usePageEditor.js` 与 `PageInspector.vue` 间重复实现，后续有漂移风险
+- ⚠ repo-wide `npx vitest run` 仍包含与 v1.4 无关的 legacy test collection / `tests/mainConfigRouting.test.js` 债务
 
 ---
-*Last updated: 2026-04-21 after v1.4 milestone start*
+*Last updated: 2026-04-22 after v1.4 milestone completion*

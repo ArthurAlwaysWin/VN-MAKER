@@ -98,6 +98,96 @@
             <span class="color-hint">{{ settings.nameplateColor || '默认' }}</span>
           </div>
         </div>
+
+        <div class="subsection-label">对话框图片</div>
+
+        <div class="form-group">
+          <label>名牌背景图</label>
+          <div class="image-row">
+            <input
+              class="image-path"
+              :value="getUiImageDisplayValue(settings.nameplateBackgroundImage)"
+              readonly
+              placeholder="未选择"
+            />
+            <button type="button" class="picker-btn" @click="pickNameplateBackgroundImage">选择图片</button>
+            <button
+              v-if="settings.nameplateBackgroundImage"
+              type="button"
+              class="reset-btn"
+              @click="clearNameplateBackgroundImage"
+              title="清空图片"
+            >✕</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="decoration-header">
+            <label>装饰图层</label>
+            <button type="button" class="picker-btn" @click="addDecoration">添加装饰</button>
+          </div>
+
+          <div v-if="!settings.decorations.length" class="empty-hint">暂无装饰图层</div>
+
+          <div
+            v-for="(decoration, index) in settings.decorations"
+            :key="index"
+            class="decoration-card"
+          >
+            <div class="image-row">
+              <input
+                class="image-path"
+                :value="getUiImageDisplayValue(decoration.src)"
+                readonly
+                placeholder="未选择"
+              />
+              <button type="button" class="picker-btn" @click="pickDecorationImage(index)">选择图片</button>
+              <button
+                v-if="decoration.src"
+                type="button"
+                class="reset-btn"
+                @click="clearDecorationImage(index)"
+                title="清空图片"
+              >✕</button>
+              <button type="button" class="remove-btn" @click="removeDecoration(index)">删除</button>
+            </div>
+
+            <div class="decoration-grid">
+              <label>
+                X
+                <input
+                  type="number"
+                  :value="decoration.x ?? 0"
+                  @change="setDecorationNumber(index, 'x', $event.target.value)"
+                />
+              </label>
+              <label>
+                Y
+                <input
+                  type="number"
+                  :value="decoration.y ?? 0"
+                  @change="setDecorationNumber(index, 'y', $event.target.value)"
+                />
+              </label>
+              <label>
+                宽度
+                <input
+                  type="number"
+                  :value="decoration.width ?? 160"
+                  @change="setDecorationNumber(index, 'width', $event.target.value)"
+                />
+              </label>
+              <label>
+                高度
+                <input
+                  type="number"
+                  :value="decoration.height ?? 160"
+                  @change="setDecorationNumber(index, 'height', $event.target.value)"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Right: Mini Preview -->
@@ -113,14 +203,20 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { useAssetStore } from '../stores/assets.js';
 import HelpTip from './HelpTip.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
+import {
+  clearUiImage,
+  getUiImageDisplayValue,
+  pickUiImage,
+} from '../utils/uiImageField.js';
 
 const script = useScriptStore();
 const assets = useAssetStore();
+const triggerDialoguePreview = inject('dialoguePreview', async () => {});
 
 const systemFonts = [
   { label: 'Noto Sans SC', value: "'Noto Sans SC', sans-serif" },
@@ -136,6 +232,7 @@ function setField(field, value) {
   if (!settings.value) return;
   const updated = { ...settings.value, [field]: value };
   script.updateDialogueBox(updated);
+  void triggerDialoguePreview();
 }
 
 function onSliderInput(field, event) {
@@ -147,6 +244,85 @@ function onSliderCommit(field, event) {
   if (!settings.value) return;
   const updated = { ...settings.value, [field]: Number(event.target.value) };
   script.updateDialogueBox(updated);
+  void triggerDialoguePreview();
+}
+
+function commitDialogueSettings() {
+  if (!settings.value) return;
+  script.updateDialogueBox(JSON.parse(JSON.stringify(settings.value)));
+}
+
+async function pickNameplateBackgroundImage() {
+  if (!settings.value) return;
+  await pickUiImage({
+    assets,
+    setValue: (value) => {
+      settings.value.nameplateBackgroundImage = value;
+    },
+    preview: () => triggerDialoguePreview(),
+    commit: () => commitDialogueSettings(),
+  });
+}
+
+function clearNameplateBackgroundImage() {
+  if (!settings.value) return;
+  clearUiImage({
+    setValue: (value) => {
+      settings.value.nameplateBackgroundImage = value;
+    },
+    preview: () => triggerDialoguePreview(),
+    commit: () => commitDialogueSettings(),
+  });
+}
+
+function addDecoration() {
+  if (!settings.value) return;
+  settings.value.decorations.push({
+    src: null,
+    x: 0,
+    y: 0,
+    width: 160,
+    height: 160,
+  });
+  commitDialogueSettings();
+  void triggerDialoguePreview();
+}
+
+function removeDecoration(index) {
+  if (!settings.value) return;
+  settings.value.decorations.splice(index, 1);
+  commitDialogueSettings();
+  void triggerDialoguePreview();
+}
+
+async function pickDecorationImage(index) {
+  if (!settings.value?.decorations?.[index]) return;
+  await pickUiImage({
+    assets,
+    setValue: (value) => {
+      settings.value.decorations[index].src = value;
+    },
+    preview: () => triggerDialoguePreview(),
+    commit: () => commitDialogueSettings(),
+  });
+}
+
+function clearDecorationImage(index) {
+  if (!settings.value?.decorations?.[index]) return;
+  clearUiImage({
+    setValue: (value) => {
+      settings.value.decorations[index].src = value;
+    },
+    preview: () => triggerDialoguePreview(),
+    commit: () => commitDialogueSettings(),
+  });
+}
+
+function setDecorationNumber(index, field, value) {
+  if (!settings.value?.decorations?.[index]) return;
+  settings.value.decorations[index][field] = Number(value);
+  commitDialogueSettings();
+  void triggerDialoguePreview();
 }
 
 const previewTextStyle = computed(() => ({
@@ -199,12 +375,75 @@ const previewNameplateStyle = computed(() => ({
   border-radius: 4px; background: none; cursor: pointer; padding: 0;
 }
 .color-hint { font-size: 12px; color: #888; }
+.empty-hint { font-size: 12px; color: #777; padding: 8px 0; }
 .reset-btn {
   background: none; border: 1px solid #555; color: #aaa;
   border-radius: 3px; cursor: pointer; font-size: 11px;
   padding: 2px 6px; line-height: 1;
 }
 .reset-btn:hover { border-color: #a22; color: #e88; }
+.picker-btn,
+.remove-btn {
+  background: #333;
+  border: 1px solid #555;
+  color: #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.remove-btn:hover { border-color: #a22; color: #ff9a9a; }
+.picker-btn:hover { border-color: #007acc; color: #9fd7ff; }
+.image-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.image-path {
+  flex: 1;
+  min-width: 0;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #cfcfcf;
+  padding: 6px 8px;
+}
+.decoration-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.decoration-card {
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.decoration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.decoration-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+}
+.decoration-grid input {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 6px 8px;
+}
 
 .font-preview-box {
   width: 280px; flex-shrink: 0;

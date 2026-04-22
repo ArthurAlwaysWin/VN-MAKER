@@ -1306,6 +1306,32 @@ function initPreview() {
         }
         break;
       }
+      case 'show-dialogue-preview': {
+        stopAuto();
+        stopSkip();
+        cancelPageTransitionGate();
+        choiceMenu.hide();
+        gameMenu.hide();
+        saveLoadScreen.hide();
+        backlogScreen.hide();
+        settingsScreen.hide();
+        titleScreen.hide();
+        dialogueBox.hide();
+
+        if (engine.script.ui?.dialogueBox) {
+          dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
+          if (engine.script.ui.dialogueBox.nameplateStyle) {
+            dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
+          }
+        }
+
+        dialogueBox.renderPreviewLine({
+          speakerName: msg.speakerName,
+          text: msg.text,
+          speakerColor: msg.speakerColor,
+        });
+        break;
+      }
       case 'preview-effect': {
         if (previewRestorePending) {
           postEffectPreviewResult({

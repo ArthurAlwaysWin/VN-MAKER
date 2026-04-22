@@ -74,7 +74,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, onBeforeUnmount } from 'vue';
+import { provide, ref, onMounted, onActivated, onBeforeUnmount } from 'vue';
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
@@ -94,6 +94,11 @@ const script = useScriptStore();
 const themeEditor = createThemeEditor();
 const showExport = ref(false);
 const showPackage = ref(false);
+const DIALOGUE_PREVIEW_SAMPLE = {
+  type: 'show-dialogue-preview',
+  speakerName: '预览角色',
+  text: '这是一段用于检查对话框图片层、文字层和继续指示的稳定示例台词。',
+};
 
 function onIframeRef(el) {
   themeEditor.iframeRef.value = el;
@@ -119,6 +124,15 @@ function sendShowScreen() {
     screenId: 'settingsScreen',
   }, '*');
 }
+
+function sendDialoguePreview() {
+  if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
+  themeEditor.startEngine();
+  themeEditor.flushPreview();
+  themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+}
+
+provide('dialoguePreview', sendDialoguePreview);
 
 function onMessage(event) {
   themeEditor.onEngineMessage(event);

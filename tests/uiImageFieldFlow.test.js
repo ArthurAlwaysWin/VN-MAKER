@@ -179,4 +179,34 @@ describe('uiImageField helper flow', () => {
     expect(source).not.toContain('FileReader');
     expect(source).not.toContain('readAsDataURL');
   });
+
+  it('rewires DialogueBoxSettings image fields to the shared picker helpers and exposes decoration rows without a freeform file loader', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'DialogueBoxSettings.vue'),
+      'utf8',
+    );
+
+    expect(source).toContain('pickUiImage');
+    expect(source).toContain('clearUiImage');
+    expect(source).toContain('nameplateBackgroundImage');
+    expect(source).toContain('decorations');
+    expect(source).toContain("'x'");
+    expect(source).toContain("'y'");
+    expect(source).toContain("'width'");
+    expect(source).toContain("'height'");
+    expect(source).not.toContain('FileReader');
+    expect(source).not.toContain('readAsDataURL');
+  });
+
+  it('routes dialogue preview ownership through ProjectSettings instead of local mini preview guesses', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'views', 'ProjectSettings.vue'),
+      'utf8',
+    );
+
+    expect(source).toContain("type: 'show-dialogue-preview'");
+    expect(source).toContain("speakerName: '预览角色'");
+    expect(source).toContain('themeEditor.flushPreview()');
+    expect(source).toContain("provide('dialoguePreview'");
+  });
 });

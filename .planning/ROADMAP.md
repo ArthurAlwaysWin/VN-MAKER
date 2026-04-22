@@ -316,7 +316,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 - [x] **Phase 66: Editor Controls & Compatibility UX** - Add in-flow PageInspector controls for cinematic settings without a new editing mode (completed 2026-04-21)
 - [x] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows (completed 2026-04-21)
 - [x] **Phase 68: Foundation Verification Backfill** - Rebuild auditable verification evidence for the v1.4 foundation phases so milestone requirements stop failing as orphaned audit gaps (completed 2026-04-22)
-- [ ] **Phase 69: Preview & Transition Verification Backfill** - Rebuild auditable verification evidence for transition, preview, and editor UX phases without reopening deferred tech debt scope
+- [x] **Phase 69: Preview & Transition Verification Backfill** - Rebuild auditable verification evidence for transition, preview, and editor UX phases without reopening deferred tech debt scope (completed 2026-04-22)
 - [ ] **Phase 70: Regression Gate Verification Closeout** - Close the final PREV-05 evidence gap and prepare v1.4 for re-audit
 
 ## Phase Details
@@ -439,8 +439,8 @@ Plans:
   3. The milestone audit can trace transition and preview requirements through REQUIREMENTS.md, SUMMARY evidence, and verification artifacts without orphan status.
 **Plans**: 2 plans
 Plans:
-- [ ] 69-01-PLAN.md — Verify transition and preview runtime evidence for Phase 64 and Phase 65 requirements
-- [ ] 69-02-PLAN.md — Verify PageInspector cinematic UX evidence for Phase 66 and reconcile preview requirement traceability
+- [x] 69-01-PLAN.md — Verify transition and preview runtime evidence for Phase 64 and Phase 65 requirements
+- [x] 69-02-PLAN.md — Verify PageInspector cinematic UX evidence for Phase 66 and reconcile preview requirement traceability
 
 ### Phase 70: Regression Gate Verification Closeout
 **Goal**: Close the final PREV-05 audit gap and make v1.4 ready for milestone re-audit.
@@ -466,5 +466,5 @@ Plans:
 | 66. Editor Controls & Compatibility UX | 2/2 | Complete   | 2026-04-21 |
 | 67. Integration & Regression Gate | 2/2 | Complete   | 2026-04-21 |
 | 68. Foundation Verification Backfill | 2/2 | Complete | 2026-04-22 |
-| 69. Preview & Transition Verification Backfill | 0/2 | Pending | - |
+| 69. Preview & Transition Verification Backfill | 2/2 | Complete | 2026-04-22 |
 | 70. Regression Gate Verification Closeout | 0/2 | Pending | - |

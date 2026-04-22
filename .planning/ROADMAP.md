@@ -315,6 +315,9 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 - [x] **Phase 65: Iframe Effect Preview API** - Expose runtime-backed replay for character, camera, and transition previews (completed 2026-04-21)
 - [x] **Phase 66: Editor Controls & Compatibility UX** - Add in-flow PageInspector controls for cinematic settings without a new editing mode (completed 2026-04-21)
 - [x] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows (completed 2026-04-21)
+- [x] **Phase 68: Foundation Verification Backfill** - Rebuild auditable verification evidence for the v1.4 foundation phases so milestone requirements stop failing as orphaned audit gaps (completed 2026-04-22)
+- [ ] **Phase 69: Preview & Transition Verification Backfill** - Rebuild auditable verification evidence for transition, preview, and editor UX phases without reopening deferred tech debt scope
+- [ ] **Phase 70: Regression Gate Verification Closeout** - Close the final PREV-05 evidence gap and prepare v1.4 for re-audit
 
 ## Phase Details
 
@@ -411,6 +414,48 @@ Plans:
 - [x] 67-01-PLAN.md — Add the PREV-05 regression matrix and extend focused cinematic cleanup suites before runtime edits
 - [x] 67-02-PLAN.md — Apply the smallest main.js cleanup-orchestration fixes needed to make the PREV-05 gate pass
 
+### Phase 68: Foundation Verification Backfill
+**Goal**: Recreate auditable verification artifacts for the v1.4 foundation phases so completed runtime work can satisfy milestone audit gates.
+**Depends on**: Phase 67
+**Requirements**: CAM-05, PREV-04, ANIM-01, ANIM-02, ANIM-03, CAM-01, CAM-02, CAM-03, CAM-04
+**Gap Closure**: Closes orphaned audit gaps for Phase 61-63 requirements from `.planning/v1.4-v1.4-MILESTONE-AUDIT.md`.
+**Success Criteria** (what must be TRUE):
+  1. Phase 61, 62, and 63 each have phase-level verification artifacts with explicit requirement tables and evidence.
+  2. Nyquist validation coverage exists or is explicitly refreshed for the foundation phases instead of remaining missing.
+  3. The milestone audit can trace CAM/ANIM/PREV foundation requirements through REQUIREMENTS.md, SUMMARY evidence, and verification artifacts without orphan status.
+**Plans**: 2 plans
+Plans:
+- [x] 68-01-PLAN.md — Produce verification coverage for Phase 61 and Phase 62 requirements with auditable evidence
+- [x] 68-02-PLAN.md — Produce verification coverage for Phase 63 requirements and close the remaining foundation audit gaps
+
+### Phase 69: Preview & Transition Verification Backfill
+**Goal**: Recreate auditable verification artifacts for transition, preview, and PageInspector cinematic phases without expanding scope into deferred cleanup debt.
+**Depends on**: Phase 68
+**Requirements**: TRAN-01, TRAN-02, TRAN-04, ANIM-04, TRAN-03, PREV-02, PREV-03, PREV-01
+**Gap Closure**: Closes orphaned audit gaps for Phase 64-66 requirements from `.planning/v1.4-v1.4-MILESTONE-AUDIT.md`.
+**Success Criteria** (what must be TRUE):
+  1. Phase 64, 65, and 66 each have phase-level verification artifacts with explicit requirement tables and evidence.
+  2. Existing VALIDATION.md planning files are superseded by actual verification evidence for transition/preview/editor UX requirements.
+  3. The milestone audit can trace transition and preview requirements through REQUIREMENTS.md, SUMMARY evidence, and verification artifacts without orphan status.
+**Plans**: 2 plans
+Plans:
+- [ ] 69-01-PLAN.md — Verify transition and preview runtime evidence for Phase 64 and Phase 65 requirements
+- [ ] 69-02-PLAN.md — Verify PageInspector cinematic UX evidence for Phase 66 and reconcile preview requirement traceability
+
+### Phase 70: Regression Gate Verification Closeout
+**Goal**: Close the final PREV-05 audit gap and make v1.4 ready for milestone re-audit.
+**Depends on**: Phase 69
+**Requirements**: PREV-05
+**Gap Closure**: Closes the remaining Phase 67 orphaned requirement and final re-audit blocker from `.planning/v1.4-v1.4-MILESTONE-AUDIT.md`.
+**Success Criteria** (what must be TRUE):
+  1. Phase 67 has auditable verification evidence that ties the focused regression gate to PREV-05.
+  2. v1.4 requirement traceability is consistent with the new gap-closure phases and no longer relies on stale completed markers.
+  3. The milestone is ready for `/gsd-audit-milestone` rerun without PREV-05 remaining orphaned.
+**Plans**: 2 plans
+Plans:
+- [ ] 70-01-PLAN.md — Produce verification evidence for PREV-05 using the focused regression gate and cleanup suites
+- [ ] 70-02-PLAN.md — Reconcile milestone traceability evidence and prepare v1.4 for re-audit
+
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 61. Contract Freeze & Visual Ownership | 2/2 | Complete   | 2026-04-21 |
@@ -420,3 +465,6 @@ Plans:
 | 65. Iframe Effect Preview API | 2/2 | Complete   | 2026-04-21 |
 | 66. Editor Controls & Compatibility UX | 2/2 | Complete   | 2026-04-21 |
 | 67. Integration & Regression Gate | 2/2 | Complete   | 2026-04-21 |
+| 68. Foundation Verification Backfill | 2/2 | Complete | 2026-04-22 |
+| 69. Preview & Transition Verification Backfill | 0/2 | Pending | - |
+| 70. Regression Gate Verification Closeout | 0/2 | Pending | - |

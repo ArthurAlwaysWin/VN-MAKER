@@ -24,18 +24,18 @@ Requirements for milestone v1.4 演出力升级.
 
 ### Transitions
 
-- [x] **TRAN-01**: 创作者可以为页面选择至少 7 种可区分的转场类型。
-- [x] **TRAN-02**: 新增转场能力至少覆盖 `dissolve`、`wipe`、`scale`（缩放）、`blur`，并保留现有 `none`、`fade`、`slide-*` 兼容行为。
+- [ ] **TRAN-01**: 创作者可以为页面选择至少 7 种可区分的转场类型。
+- [ ] **TRAN-02**: 新增转场能力至少覆盖 `dissolve`、`wipe`、`scale`（缩放）、`blur`，并保留现有 `none`、`fade`、`slide-*` 兼容行为。
 - [ ] **TRAN-03**: 创作者可以在编辑器中预览单次转场效果，而不需要真正切换到其他页面。
-- [x] **TRAN-04**: 播放者看到的页面切换顺序保持稳定：旧页面退出与背景转场完成后，再进入角色动画和镜头效果。
+- [ ] **TRAN-04**: 播放者看到的页面切换顺序保持稳定：旧页面退出与背景转场完成后，再进入角色动画和镜头效果。
 
 ### Preview and Compatibility
 
-- [x] **PREV-01**: 创作者可以在现有页面编辑流程内配置角色动画、镜头效果和转场，不需要进入额外模式。
+- [ ] **PREV-01**: 创作者可以在现有页面编辑流程内配置角色动画、镜头效果和转场，不需要进入额外模式。
 - [ ] **PREV-02**: 创作者可以通过 iframe 运行时预览分别重播角色动画、镜头效果和转场，且预览支持明确的失败/禁用提示。
 - [ ] **PREV-03**: 创作者在执行预览后，编辑器会恢复到预览前的页面编辑状态。
 - [x] **PREV-04**: 旧项目和未来项目中的未知动画值、镜头值、转场值在编辑器打开和保存后不会被静默清除。
-- [x] **PREV-05**: 播放者在跳过、自动、读档、返回标题和停止预览等流程中，不会看到残留的动画类、镜头状态或闪屏覆盖层。
+- [ ] **PREV-05**: 播放者在跳过、自动、读档、返回标题和停止预览等流程中，不会看到残留的动画类、镜头状态或闪屏覆盖层。
 
 ## v2 Requirements
 
@@ -64,24 +64,24 @@ Deferred to future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANIM-01 | Phase 62 | Complete |
-| ANIM-02 | Phase 62 | Complete |
-| ANIM-03 | Phase 62 | Complete |
-| ANIM-04 | Phase 65 | Complete |
-| CAM-01 | Phase 63 | Complete |
-| CAM-02 | Phase 63 | Complete |
-| CAM-03 | Phase 63 | Complete |
-| CAM-04 | Phase 63 | Complete |
-| CAM-05 | Phase 61 | Complete |
-| TRAN-01 | Phase 64 | Complete |
-| TRAN-02 | Phase 64 | Complete |
-| TRAN-03 | Phase 65 | Complete |
-| TRAN-04 | Phase 64 | Complete |
-| PREV-01 | Phase 66 | Complete |
-| PREV-02 | Phase 65 | Complete |
-| PREV-03 | Phase 65 | Complete |
-| PREV-04 | Phase 61 | Complete |
-| PREV-05 | Phase 67 | Complete |
+| ANIM-01 | Phase 68 | Complete |
+| ANIM-02 | Phase 68 | Complete |
+| ANIM-03 | Phase 68 | Complete |
+| ANIM-04 | Phase 69 | Pending |
+| CAM-01 | Phase 68 | Complete |
+| CAM-02 | Phase 68 | Complete |
+| CAM-03 | Phase 68 | Complete |
+| CAM-04 | Phase 68 | Complete |
+| CAM-05 | Phase 68 | Complete |
+| TRAN-01 | Phase 69 | Pending |
+| TRAN-02 | Phase 69 | Pending |
+| TRAN-03 | Phase 69 | Pending |
+| TRAN-04 | Phase 69 | Pending |
+| PREV-01 | Phase 69 | Pending |
+| PREV-02 | Phase 69 | Pending |
+| PREV-03 | Phase 69 | Pending |
+| PREV-04 | Phase 68 | Complete |
+| PREV-05 | Phase 70 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total

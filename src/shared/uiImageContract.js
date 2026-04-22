@@ -128,8 +128,17 @@ function collectWidgetStyleUiImages(script, add) {
   addCanonicalUiImage(add, widgetStyles?.button?.nineSlice?.src);
 }
 
+function collectDialogueBoxUiImages(script, add) {
+  const dialogueBox = script?.ui?.dialogueBox;
+  addCanonicalUiImage(add, dialogueBox?.nameplateBackgroundImage);
+  for (const decoration of dialogueBox?.decorations || []) {
+    addCanonicalUiImage(add, decoration?.src);
+  }
+}
+
 export const UI_IMAGE_SCAN_REGISTRY = [
   collectThemeUiImages,
+  collectDialogueBoxUiImages,
   collectScreenChromeUiImages,
   collectWidgetStyleUiImages,
 ];

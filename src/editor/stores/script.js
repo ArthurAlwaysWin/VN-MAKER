@@ -92,14 +92,7 @@ export const useScriptStore = defineStore('script', () => {
   function getDialogueBox() {
     if (!data.value) return null;
     data.value.ui ??= {};
-    data.value.ui.dialogueBox ??= {
-      fontSize: 18,
-      fontFamily: null,
-      textColor: null,
-      nameplateFontSize: 20,
-      nameplateFontFamily: null,
-      nameplateColor: null,
-    };
+    data.value.ui.dialogueBox = normalizeDialogueBox(data.value.ui.dialogueBox);
     return data.value.ui.dialogueBox;
   }
 
@@ -403,3 +396,16 @@ export const useScriptStore = defineStore('script', () => {
     loadScript, saveScript
   };
 });
+  function normalizeDialogueBox(dialogueBox) {
+    const normalized = dialogueBox ?? {};
+    normalized.fontSize ??= 18;
+    normalized.fontFamily ??= null;
+    normalized.textColor ??= null;
+    normalized.nameplateFontSize ??= 20;
+    normalized.nameplateFontFamily ??= null;
+    normalized.nameplateColor ??= null;
+    normalized.nameplateStyle ??= 'inline';
+    normalized.nameplateBackgroundImage ??= null;
+    normalized.decorations ??= [];
+    return normalized;
+  }

@@ -139,6 +139,14 @@ const fullScript = {
         nineSlice: { src: 'ui/button-nine.png' },
       },
     },
+    dialogueBox: {
+      nameplateBackgroundImage: 'ui/dialogue/nameplate.webp',
+      decorations: [
+        { src: 'ui/dialogue/decor-flower.webp', x: 12, y: -8, width: 144, height: 96 },
+        { src: 'legacy/dialogue/decor-old.png', x: 0, y: 0, width: 80, height: 80 },
+        { src: '', x: 0, y: 0, width: 0, height: 0 },
+      ],
+    },
   },
 };
 
@@ -176,6 +184,8 @@ const expectedFull = {
     'ui/backlog-header.png',
     'ui/button-nine.png',
     'ui/decor-star.png',
+    'ui/dialogue/decor-flower.webp',
+    'ui/dialogue/nameplate.webp',
     'ui/game-menu-bg.png',
     'ui/icons/save.png',
     'ui/icons/tab-audio.png',
@@ -398,6 +408,14 @@ describe('UI screens', () => {
     ok(result.ui.includes('ui/icons/tab-audio.png'));
     ok(result.ui.includes('ui/slider-thumb.png'));
     ok(result.ui.includes('ui/button-nine.png'));
+    ok(result.ui.includes('ui/dialogue/nameplate.webp'));
+    ok(result.ui.includes('ui/dialogue/decor-flower.webp'));
+  });
+
+  it('ignores non-canonical dialogue image values instead of reclassifying them as ui assets', () => {
+    const result = scanAssets(fullScript);
+    ok(!result.ui.includes('legacy/dialogue/decor-old.png'));
+    ok(!result.ui.includes('assets/ui/dialogue/nameplate.webp'));
   });
 });
 

@@ -317,7 +317,7 @@ See .planning/milestones/v1.3-ROADMAP.md for full phase details.
 - [x] **Phase 67: Integration & Regression Gate** - Prove clean behavior across skip, auto, load, title return, and preview-stop flows (completed 2026-04-21)
 - [x] **Phase 68: Foundation Verification Backfill** - Rebuild auditable verification evidence for the v1.4 foundation phases so milestone requirements stop failing as orphaned audit gaps (completed 2026-04-22)
 - [x] **Phase 69: Preview & Transition Verification Backfill** - Rebuild auditable verification evidence for transition, preview, and editor UX phases without reopening deferred tech debt scope (completed 2026-04-22)
-- [ ] **Phase 70: Regression Gate Verification Closeout** - Close the final PREV-05 evidence gap and prepare v1.4 for re-audit
+- [x] **Phase 70: Regression Gate Verification Closeout** - Close the final PREV-05 evidence gap and prepare v1.4 for re-audit (completed 2026-04-22)
 
 ## Phase Details
 
@@ -453,8 +453,8 @@ Plans:
   3. The milestone is ready for `/gsd-audit-milestone` rerun without PREV-05 remaining orphaned.
 **Plans**: 2 plans
 Plans:
-- [ ] 70-01-PLAN.md — Produce verification evidence for PREV-05 using the focused regression gate and cleanup suites
-- [ ] 70-02-PLAN.md — Reconcile milestone traceability evidence and prepare v1.4 for re-audit
+- [x] 70-01-PLAN.md — Produce verification evidence for PREV-05 using the focused regression gate and cleanup suites
+- [x] 70-02-PLAN.md — Reconcile milestone traceability evidence and prepare v1.4 for re-audit
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -467,4 +467,4 @@ Plans:
 | 67. Integration & Regression Gate | 2/2 | Complete   | 2026-04-21 |
 | 68. Foundation Verification Backfill | 2/2 | Complete | 2026-04-22 |
 | 69. Preview & Transition Verification Backfill | 2/2 | Complete | 2026-04-22 |
-| 70. Regression Gate Verification Closeout | 0/2 | Pending | - |
+| 70. Regression Gate Verification Closeout | 2/2 | Complete   | 2026-04-22 |

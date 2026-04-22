@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: — 设置页设计器 ✅
-status: Phase complete — ready for verification
-stopped_at: Completed 67-02-PLAN.md
-last_updated: "2026-04-21T16:38:37.208Z"
-last_activity: 2026-04-21
+status: Milestone re-audit ready
+stopped_at: Completed 70-02-PLAN.md
+last_updated: "2026-04-22T07:18:11.635Z"
+last_activity: 2026-04-22
 progress:
-  total_phases: 13
-  completed_phases: 12
-  total_plans: 23
-  completed_plans: 22
+  total_phases: 16
+  completed_phases: 15
+  total_plans: 29
+  completed_plans: 28
 ---
 
 # Project State
@@ -20,19 +20,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑
-**Current focus:** v1.4 gap-closure follow-up — Phase 69 complete, Phase 70 next
+**Current focus:** v1.4 re-audit handoff complete — PREV-05 is closed under Phase 70
 
 ## Current Position
 
-Phase: 69 (preview-transition-verification-backfill) — COMPLETE
+Phase: 70 (regression-gate-verification-closeout) — COMPLETE
 Plan: 2 of 2 complete
-Plans: 69-01 and 69-02 complete
-Next: /gsd-plan-phase 70
+Plans: 70-01 and 70-02 complete
+Next: /gsd-audit-milestone v1.4
 Last activity: 2026-04-22
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ (archived)
-v1.4 ██████████████████░░ 9/10 phases complete
+v1.4 ████████████████████ 10/10 phases complete
 ```
 
 ## Performance Metrics
@@ -61,6 +61,7 @@ v1.4 ██████████████████░░ 9/10 phases co
 | Phase 66 P02 | 6 min | 2 tasks | 3 files |
 | Phase 67 P01 | 3 min | 2 tasks | 5 files |
 | Phase 67 P02 | 167 | 1 tasks | 1 files |
+| Phase 70 P02 | 2 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ v1.4 ██████████████████░░ 9/10 phases co
 - [Phase 67]: Bounded PREV-05 failures to saveLoadScreen.onLoad missing stopAuto/stopSkip symmetry by slicing exact handlers in the regression suites.
 - [Phase 67]: Kept the PREV-05 repair in src/main.js only because the 67-01 matrix proved orchestration was sufficient.
 - [Phase 67]: Preserved the Phase 65/66 preview protocol and left CharacterLayer, CameraController, and BackgroundLayer untouched.
+- [Phase 70]: Kept the re-audit handoff scoped to PREV-05, the new Phase 67 evidence chain, and the already-closed Phase 68/69 verification context.
+- [Phase 70]: Added a minimal 70-VERIFICATION.md because Phase 70 becomes the final owner in REQUIREMENTS.md, and leaving it without a verification file would likely recreate the orphan pattern on the next audit run.
 
 ### Blockers/Concerns
 
@@ -103,7 +106,7 @@ v1.4 ██████████████████░░ 9/10 phases co
 
 ## Session Continuity
 
-Last session: 2026-04-22T11:35:42.710+10:00
-Stopped at: Phase 69 executed and verified; transition, preview, and PageInspector audit evidence for Phase 64-66 is now backfilled.
-Resume hint: plan Phase 70 next to close PREV-05 and prepare the milestone for re-audit.
-Next action: Plan Phase 70
+Last session: 2026-04-22T07:16:53.429Z
+Stopped at: Completed 70-02-PLAN.md
+Resume hint: rerun `/gsd-audit-milestone v1.4`; Phase 70 already closed PREV-05 with `70-REAUDIT.md` and `70-VERIFICATION.md`.
+Next action: Re-audit v1.4 milestone

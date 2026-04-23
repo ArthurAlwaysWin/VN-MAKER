@@ -14,6 +14,8 @@ import {
   registerUiImageCollector,
 } from '../src/shared/uiImageContract.js';
 
+const DEFAULT_UI_IMAGE_SCAN_REGISTRY = [...UI_IMAGE_SCAN_REGISTRY];
+
 describe('uiImageContract canonical path rules', () => {
   it('accepts only ui/... project-relative paths as canonical values', () => {
     assert.equal(isCanonicalUiImagePath('ui/dialogue/frame.png'), true);
@@ -45,7 +47,7 @@ describe('uiImageContract canonical path rules', () => {
 
 describe('uiImageContract shared roots and registry', () => {
   beforeEach(() => {
-    UI_IMAGE_SCAN_REGISTRY.splice(0, UI_IMAGE_SCAN_REGISTRY.length);
+    UI_IMAGE_SCAN_REGISTRY.splice(0, UI_IMAGE_SCAN_REGISTRY.length, ...DEFAULT_UI_IMAGE_SCAN_REGISTRY);
   });
 
   it('exports the locked shared schema roots for theme, dialogue box, and screen chrome', () => {
@@ -76,6 +78,93 @@ describe('uiImageContract shared roots and registry', () => {
     unregisterOne();
 
     assert.deepEqual(seen, ['ui/first.png', 'ui/second.png']);
-    assert.equal(UI_IMAGE_SCAN_REGISTRY.length, 1);
+    assert.equal(UI_IMAGE_SCAN_REGISTRY.length, DEFAULT_UI_IMAGE_SCAN_REGISTRY.length + 1);
+  });
+
+  it('collects only locked three-state button family canonical paths and ignores empty or legacy values', () => {
+    const seen = [];
+
+    collectUiImagePaths({
+      ui: {
+        theme: {
+          buttonFamilies: {
+            gameMenuButton: {
+              normal: 'ui/buttons/game-menu-normal.webp',
+              hover: 'ui/buttons/game-menu-hover.webp',
+              pressed: 'ui/buttons/game-menu-pressed.webp',
+            },
+            qab: {
+              normal: 'ui/buttons/qab-normal.webp',
+              hover: 'ui/buttons/qab-hover.webp',
+              pressed: 'ui/buttons/qab-pressed.webp',
+              disabled: 'ui/buttons/qab-disabled.webp',
+            },
+            closeButton: {
+              normal: 'ui/buttons/close-normal.webp',
+              hover: 'ui/buttons/close-hover.webp',
+              pressed: 'ui/buttons/close-pressed.webp',
+            },
+            legacyFamily: {
+              normal: 'ui/buttons/legacy-family.webp',
+            },
+          },
+        },
+      },
+    }, value => seen.push(value));
+
+    assert.deepEqual(seen.sort(), [
+      'ui/buttons/close-hover.webp',
+      'ui/buttons/close-normal.webp',
+      'ui/buttons/close-pressed.webp',
+      'ui/buttons/game-menu-hover.webp',
+      'ui/buttons/game-menu-normal.webp',
+      'ui/buttons/game-menu-pressed.webp',
+      'ui/buttons/qab-hover.webp',
+      'ui/buttons/qab-normal.webp',
+      'ui/buttons/qab-pressed.webp',
+    ]);
+  });
+
+  it('collects only locked four-state button family canonical paths and ignores empty or legacy values', () => {
+    const seen = [];
+
+    collectUiImagePaths({
+      ui: {
+        theme: {
+          buttonFamilies: {
+            pageTabPager: {
+              normal: 'ui/buttons/page-tab-normal.webp',
+              hover: 'ui/buttons/page-tab-hover.webp',
+              pressed: 'ui/buttons/page-tab-pressed.webp',
+              selected: 'ui/buttons/page-tab-selected.webp',
+            },
+            settingsTab: {
+              normal: 'ui/buttons/settings-tab-normal.webp',
+              hover: 'ui/buttons/settings-tab-hover.webp',
+              pressed: 'ui/buttons/settings-tab-pressed.webp',
+              selected: 'ui/buttons/settings-tab-selected.webp',
+              disabled: 'ui/buttons/settings-tab-disabled.webp',
+            },
+            closeButton: {
+              normal: 'assets/ui/buttons/close-normal.webp',
+              hover: '',
+              pressed: 'data:image/png;base64,close-pressed',
+              selected: 'ui/buttons/close-selected.webp',
+            },
+          },
+        },
+      },
+    }, value => seen.push(value));
+
+    assert.deepEqual(seen.sort(), [
+      'ui/buttons/page-tab-hover.webp',
+      'ui/buttons/page-tab-normal.webp',
+      'ui/buttons/page-tab-pressed.webp',
+      'ui/buttons/page-tab-selected.webp',
+      'ui/buttons/settings-tab-hover.webp',
+      'ui/buttons/settings-tab-normal.webp',
+      'ui/buttons/settings-tab-pressed.webp',
+      'ui/buttons/settings-tab-selected.webp',
+    ]);
   });
 });

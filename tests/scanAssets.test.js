@@ -122,6 +122,38 @@ const fullScript = {
           },
         },
       },
+      buttonFamilies: {
+        gameMenuButton: {
+          normal: 'ui/buttons/game-menu-normal.webp',
+          hover: 'ui/buttons/game-menu-hover.webp',
+          pressed: 'ui/buttons/game-menu-pressed.webp',
+        },
+        qab: {
+          normal: 'ui/buttons/qab-normal.webp',
+          hover: 'ui/buttons/qab-hover.webp',
+          pressed: 'ui/buttons/qab-pressed.webp',
+        },
+        closeButton: {
+          normal: 'ui/buttons/close-normal.webp',
+          hover: 'ui/buttons/close-hover.webp',
+          pressed: 'ui/buttons/close-pressed.webp',
+        },
+        pageTabPager: {
+          normal: 'ui/buttons/page-tab-normal.webp',
+          hover: 'ui/buttons/page-tab-hover.webp',
+          pressed: 'ui/buttons/page-tab-pressed.webp',
+          selected: 'ui/buttons/page-tab-selected.webp',
+        },
+        settingsTab: {
+          normal: 'ui/buttons/settings-tab-normal.webp',
+          hover: 'ui/buttons/settings-tab-hover.webp',
+          pressed: 'ui/buttons/settings-tab-pressed.webp',
+          selected: 'ui/buttons/settings-tab-selected.webp',
+        },
+        legacyFamily: {
+          normal: 'ui/buttons/legacy-family.webp',
+        },
+      },
     },
     widgetStyles: {
       tab: {
@@ -183,6 +215,23 @@ const expectedFull = {
     'ui/backlog-bg.png',
     'ui/backlog-header.png',
     'ui/button-nine.png',
+    'ui/buttons/close-hover.webp',
+    'ui/buttons/close-normal.webp',
+    'ui/buttons/close-pressed.webp',
+    'ui/buttons/game-menu-hover.webp',
+    'ui/buttons/game-menu-normal.webp',
+    'ui/buttons/game-menu-pressed.webp',
+    'ui/buttons/page-tab-hover.webp',
+    'ui/buttons/page-tab-normal.webp',
+    'ui/buttons/page-tab-pressed.webp',
+    'ui/buttons/page-tab-selected.webp',
+    'ui/buttons/qab-hover.webp',
+    'ui/buttons/qab-normal.webp',
+    'ui/buttons/qab-pressed.webp',
+    'ui/buttons/settings-tab-hover.webp',
+    'ui/buttons/settings-tab-normal.webp',
+    'ui/buttons/settings-tab-pressed.webp',
+    'ui/buttons/settings-tab-selected.webp',
     'ui/decor-star.png',
     'ui/dialogue/decor-flower.webp',
     'ui/dialogue/nameplate.webp',
@@ -405,6 +454,10 @@ describe('UI screens', () => {
     ok(result.ui.includes('ui/save-bg.png'));
     ok(result.ui.includes('ui/save-header.png'));
     ok(result.ui.includes('ui/settings-header.png'));
+    ok(result.ui.includes('ui/buttons/game-menu-normal.webp'));
+    ok(result.ui.includes('ui/buttons/qab-pressed.webp'));
+    ok(result.ui.includes('ui/buttons/page-tab-selected.webp'));
+    ok(result.ui.includes('ui/buttons/settings-tab-selected.webp'));
     ok(result.ui.includes('ui/icons/tab-audio.png'));
     ok(result.ui.includes('ui/slider-thumb.png'));
     ok(result.ui.includes('ui/button-nine.png'));
@@ -416,6 +469,7 @@ describe('UI screens', () => {
     const result = scanAssets(fullScript);
     ok(!result.ui.includes('legacy/dialogue/decor-old.png'));
     ok(!result.ui.includes('assets/ui/dialogue/nameplate.webp'));
+    ok(!result.ui.includes('ui/buttons/legacy-family.webp'));
   });
 });
 

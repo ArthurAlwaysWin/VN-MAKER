@@ -49,6 +49,7 @@
           </div>
           <SmartColorPanel />
           <TokenAccordion />
+          <ButtonFamilyImageSettings @preview="onButtonFamilyPreview" />
         </div>
       </div>
     </div>
@@ -87,6 +88,7 @@ import PaletteModal from '../components/theme/PaletteModal.vue';
 import NineSliceModal from '../components/theme/NineSliceModal.vue';
 import PresetModal from '../components/theme/PresetModal.vue';
 import ThemePackageModal from '../components/theme/ThemePackageModal.vue';
+import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
 
 const project = useProjectStore();
@@ -130,6 +132,10 @@ function sendDialoguePreview() {
   themeEditor.startEngine();
   themeEditor.flushPreview();
   themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+}
+
+function onButtonFamilyPreview(/* familyKey - used by Task 2 for preview routing */) {
+  // Preview routing will be wired in Task 2
 }
 
 provide('dialoguePreview', sendDialoguePreview);

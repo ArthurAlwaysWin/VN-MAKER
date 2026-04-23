@@ -229,8 +229,9 @@ describe('createTabBar selected-state parity', () => {
       const buttons = Array.from(el.querySelectorAll('.gm-tab'));
 
       assert.equal(buttons.length, 3);
-      assert.equal(buttons[0].classList.contains('active'), false);
+      assert.equal(buttons[0].classList.contains('active'), true);
       assert.equal(buttons[1].classList.contains('active'), false);
+      assert.equal(buttons[2].classList.contains('active'), false);
 
       setActive(1);
       assert.equal(buttons[0].classList.contains('active'), false);

@@ -364,6 +364,9 @@ export class SettingsScreen {
     wrapper.classList.add('sc-button');
 
     const btn = document.createElement('button');
+    if (elem.action === 'close') {
+      btn.classList.add('settings-custom-close');
+    }
     if (elem.displayMode === 'icon') {
       btn.textContent = '×';
       btn.classList.add('sc-close-icon');
@@ -566,6 +569,9 @@ export class SettingsScreen {
       for (const btnCfg of layout.footer.buttons) {
         const btn = document.createElement('button');
         btn.className = 'settings-structured-footer-btn';
+        if (btnCfg.action === 'close') {
+          btn.classList.add('settings-structured-footer-close');
+        }
         btn.textContent = btnCfg.text || '';
         btn.style.position = 'absolute';
         const bx = clampField('x', btnCfg.x);

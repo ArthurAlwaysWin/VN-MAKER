@@ -96,12 +96,13 @@ export function createTabBar(labels, config, onSelect) {
     _activeIndex = index;
     el._activeIndex = index;
     for (let i = 0; i < buttons.length; i++) {
+      buttons[i].classList.toggle('active', i === index);
       _applyTabShape(buttons[i], shape, i === index, config);
     }
   }
 
   // Initial active state
-  el._activeIndex = 0;
+  setActive(0);
 
   return { el, setActive };
 }

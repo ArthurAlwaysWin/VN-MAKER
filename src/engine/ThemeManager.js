@@ -57,6 +57,29 @@ const NEEDS_POSITION = new Set(['menuPanel', 'choiceButton', 'titleButton']);
 /** Elements that have backdrop-filter — disable when 9-slice active (performance P7) */
 const HAS_BACKDROP = new Set(['dialogueBox', 'choiceButton', 'settingsPanel']);
 
+/** Button-family selectors frozen for Phase 73 rollout. */
+export const BUTTON_FAMILY_SELECTOR_REGISTRY = Object.freeze({
+  gameMenuButton: Object.freeze(['.game-menu-button']),
+  qab: Object.freeze(['.qab-btn']),
+  closeButton: Object.freeze([
+    '.save-load-close',
+    '.backlog-close',
+    '.settings-close',
+    '.settings-structured-close',
+    '.settings-structured-footer-close',
+    '.settings-custom-close',
+  ]),
+  pageTabPager: Object.freeze(['.page-tab', '.page-dot']),
+  settingsTab: Object.freeze(['.settings-tab-btn', '.gm-tab']),
+});
+
+const BUTTON_FAMILY_STATE_SELECTORS = Object.freeze({
+  normal: selectors => selectors,
+  hover: selectors => selectors.map(selector => `${selector}:hover`),
+  pressed: selectors => selectors.map(selector => `${selector}:active`),
+  selected: selectors => selectors.map(selector => `${selector}.active`),
+});
+
 /**
  * Build CSS text for all configured nineSlice entries.
  * Generates ::before pseudo-element rules with border-image for each
@@ -128,6 +151,51 @@ function buildNineSliceCSS(nineSlice) {
   return rules.join('\n');
 }
 
+function buildButtonFamilyRule(selectors, src) {
+  if (!src) {
+    return '';
+  }
+
+  const resolvedSrc = resolvePath(src);
+  return (
+    `${selectors.join(', ')} {\n` +
+    `  background-image: url("${resolvedSrc}");\n` +
+    `  background-repeat: no-repeat;\n` +
+    `  background-position: center;\n` +
+    `  background-size: 100% 100%;\n` +
+    `}`
+  );
+}
+
+function buildButtonFamilyCSS(buttonFamilies) {
+  if (!buttonFamilies) {
+    return '';
+  }
+
+  const rules = [];
+
+  for (const [familyKey, selectors] of Object.entries(BUTTON_FAMILY_SELECTOR_REGISTRY)) {
+    const family = buttonFamilies[familyKey];
+    if (!family || typeof family !== 'object') {
+      continue;
+    }
+
+    for (const [stateKey, selectorBuilder] of Object.entries(BUTTON_FAMILY_STATE_SELECTORS)) {
+      const src = family[stateKey];
+      if (!src) {
+        continue;
+      }
+
+      const rule = buildButtonFamilyRule(selectorBuilder(selectors), src);
+      if (rule) {
+        rules.push(rule);
+      }
+    }
+  }
+
+  return rules.join('\n');
+}
+
 /**
  * Apply 9-slice background images by injecting CSS into a dedicated style tag.
  * Creates `<style id="galgame-nine-slice">` on first call, overwrites textContent
@@ -146,10 +214,33 @@ export function applyNineSlice(themeData) {
 }
 
 /**
+ * Apply button-family background imagery by injecting CSS into a dedicated style tag.
+ *
+ * @param {object|null|undefined} themeData — the ui.theme object from script.json
+ */
+export function applyButtonFamilies(themeData) {
+  let styleEl = document.getElementById('galgame-button-families');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'galgame-button-families';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = buildButtonFamilyCSS(themeData?.buttonFamilies);
+}
+
+/**
  * Remove all 9-slice CSS rules by clearing the style tag content.
  * Does not remove the tag itself (reusable on next applyNineSlice call).
  */
 export function resetNineSlice() {
   const styleEl = document.getElementById('galgame-nine-slice');
+  if (styleEl) styleEl.textContent = '';
+}
+
+/**
+ * Remove all button-family CSS rules by clearing the style tag content.
+ */
+export function resetButtonFamilies() {
+  const styleEl = document.getElementById('galgame-button-families');
   if (styleEl) styleEl.textContent = '';
 }

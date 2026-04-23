@@ -63,7 +63,11 @@ Plans:
   2. 用户可以为 `page-tab / pager`、`settings-tab` 配置 `normal / hover / pressed / selected` 图片态，并能清楚区分当前选中项。
   3. 用户应用按钮图片皮肤后，这 5 个按钮族上的文字或图标仍保持可读、对齐稳定且可点击。
   4. 用户在真实运行时里操作 hover、pressed、selected 等状态时，看到的按钮图片反馈与实际交互状态一致。
-**Plans**: TBD  
+**Plans**: 3 plans  
+Plans:
+- [ ] 73-01-PLAN.md — 冻结 `ui.theme.buttonFamilies` 契约、selector registry 与 scan coverage
+- [ ] 73-02-PLAN.md — 归一化 runtime close/tab hooks 并注入 5 个按钮族图片 CSS
+- [ ] 73-03-PLAN.md — 在全局主题编辑面板中接入按钮族图片字段与 runtime-backed 预览切换
 **UI hint**: yes
 
 ### Phase 74: 主要界面图片化

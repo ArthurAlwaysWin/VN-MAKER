@@ -49,6 +49,7 @@
           </div>
           <SmartColorPanel />
           <TokenAccordion />
+          <ButtonFamilyImageSettings @preview="onButtonFamilyPreview" />
         </div>
       </div>
     </div>
@@ -87,6 +88,7 @@ import PaletteModal from '../components/theme/PaletteModal.vue';
 import NineSliceModal from '../components/theme/NineSliceModal.vue';
 import PresetModal from '../components/theme/PresetModal.vue';
 import ThemePackageModal from '../components/theme/ThemePackageModal.vue';
+import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
 
 const project = useProjectStore();
@@ -130,6 +132,27 @@ function sendDialoguePreview() {
   themeEditor.startEngine();
   themeEditor.flushPreview();
   themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+}
+
+const buttonFamilyPreviewMap = {
+  gameMenuButton: { type: 'show-screen', screenId: 'gameMenu' },
+  pageTabPager: { type: 'show-screen', screenId: 'saveLoadScreen' },
+  settingsTab: { type: 'show-screen', screenId: 'settingsScreen' },
+  closeButton: { type: 'show-screen', screenId: 'settingsScreen' },
+  qab: null, // uses show-dialogue-preview path
+};
+
+function onButtonFamilyPreview(familyKey) {
+  if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
+  themeEditor.startEngine();
+  themeEditor.flushPreview();
+
+  const route = buttonFamilyPreviewMap[familyKey];
+  if (route) {
+    themeEditor.iframeRef.value.contentWindow.postMessage(route, '*');
+  } else if (familyKey === 'qab') {
+    themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+  }
 }
 
 provide('dialoguePreview', sendDialoguePreview);

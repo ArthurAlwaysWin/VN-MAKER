@@ -210,3 +210,113 @@ describe('uiImageField helper flow', () => {
     expect(source).toContain("provide('dialoguePreview'");
   });
 });
+
+describe('ButtonFamilyImageSettings editor surface', () => {
+  it('exists as a Vue component and writes only the five locked family keys under ui.theme.buttonFamilies', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'theme', 'ButtonFamilyImageSettings.vue'),
+      'utf8',
+    );
+
+    // Must reference all five locked families
+    expect(source).toContain('gameMenuButton');
+    expect(source).toContain('qab');
+    expect(source).toContain('closeButton');
+    expect(source).toContain('pageTabPager');
+    expect(source).toContain('settingsTab');
+
+    // Must write through theme.buttonFamilies
+    expect(source).toContain('buttonFamilies');
+    expect(source).toContain('getTheme');
+    expect(source).toContain('commitTheme');
+  });
+
+  it('uses pickUiImage and clearUiImage from the shared helpers with no FileReader fallback', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'theme', 'ButtonFamilyImageSettings.vue'),
+      'utf8',
+    );
+
+    expect(source).toContain('pickUiImage');
+    expect(source).toContain('clearUiImage');
+    expect(source).not.toContain('FileReader');
+    expect(source).not.toContain('readAsDataURL');
+  });
+
+  it('exposes normal/hover/pressed for three-state families and normal/hover/pressed/selected for tab families', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'theme', 'ButtonFamilyImageSettings.vue'),
+      'utf8',
+    );
+
+    // Must reference all state keys
+    expect(source).toContain('normal');
+    expect(source).toContain('hover');
+    expect(source).toContain('pressed');
+    expect(source).toContain('selected');
+  });
+
+  it('is mounted in ProjectSettings inside the global theme section', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'views', 'ProjectSettings.vue'),
+      'utf8',
+    );
+
+    expect(source).toContain('ButtonFamilyImageSettings');
+    expect(source).toContain("import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue'");
+  });
+
+  it('writes through theme owner and triggers iframe update on pick and clear', async () => {
+    const harness = mountThemeHarness(makeScriptData());
+    const { store, editor, postMessage } = harness;
+
+    vi.useFakeTimers();
+
+    // Initialize buttonFamilies
+    const theme = store.getTheme();
+    theme.buttonFamilies = {
+      gameMenuButton: { normal: null, hover: null, pressed: null },
+      qab: { normal: null, hover: null, pressed: null },
+      closeButton: { normal: null, hover: null, pressed: null },
+      pageTabPager: { normal: null, hover: null, pressed: null, selected: null },
+      settingsTab: { normal: null, hover: null, pressed: null, selected: null },
+    };
+
+    const assets = {
+      selectAsset: vi.fn().mockResolvedValue('ui/buttons/menu-normal.webp'),
+    };
+
+    // Pick image for gameMenuButton.normal
+    await pickUiImage({
+      assets,
+      setValue: (value) => {
+        theme.buttonFamilies.gameMenuButton.normal = value;
+      },
+      preview: () => editor.sendThemeToPreview(),
+      commit: () => editor.commitTheme(),
+    });
+
+    vi.runAllTimers();
+
+    expect(theme.buttonFamilies.gameMenuButton.normal).toBe('ui/buttons/menu-normal.webp');
+    expect(postMessage).toHaveBeenCalled();
+
+    // Clear should set to null and trigger update
+    postMessage.mockClear();
+    clearUiImage({
+      setValue: (value) => {
+        theme.buttonFamilies.gameMenuButton.normal = value;
+      },
+      preview: () => editor.sendThemeToPreview(),
+      commit: () => editor.commitTheme(),
+    });
+
+    vi.runAllTimers();
+
+    expect(theme.buttonFamilies.gameMenuButton.normal).toBeNull();
+    expect(postMessage).toHaveBeenCalled();
+
+    harness.app.unmount();
+    vi.useRealTimers();
+  });
+});

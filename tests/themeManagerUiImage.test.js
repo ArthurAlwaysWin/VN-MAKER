@@ -163,20 +163,23 @@ describe('ThemeManager UI image handling', () => {
     expect(resolvePath).toHaveBeenCalledWith('ui/buttons/close-pressed.webp');
 
     const css = getButtonFamilyCss();
-    expect(css).toContain('.game-menu-button {');
-    expect(css).toContain('url("resolved:ui/buttons/game-menu-normal.webp")');
-    expect(css).toContain('.game-menu-button:hover {');
-    expect(css).toContain('url("resolved:ui/buttons/game-menu-hover.webp")');
-    expect(css).toContain('.game-menu-button:active {');
-    expect(css).toContain('url("resolved:ui/buttons/game-menu-pressed.webp")');
-    expect(css).toContain('.qab-btn {');
-    expect(css).toContain('url("resolved:ui/buttons/qab-normal.webp")');
-    expect(css).toContain('.save-load-close, .backlog-close, .settings-close, .settings-structured-close, .settings-structured-footer-close, .settings-custom-close {');
-    expect(css).toContain('url("resolved:ui/buttons/close-normal.webp")');
-    expect(css).toContain('.save-load-close:hover, .backlog-close:hover, .settings-close:hover, .settings-structured-close:hover, .settings-structured-footer-close:hover, .settings-custom-close:hover {');
-    expect(css).toContain('url("resolved:ui/buttons/close-hover.webp")');
-    expect(css).toContain('.save-load-close:active, .backlog-close:active, .settings-close:active, .settings-structured-close:active, .settings-structured-footer-close:active, .settings-custom-close:active {');
-    expect(css).toContain('url("resolved:ui/buttons/close-pressed.webp")');
+    expect(css).toContain('.game-menu-button, .qab-btn, .save-load-close, .backlog-close, .settings-close, .settings-structured-close, .settings-structured-footer-close, .settings-custom-close {');
+    expect(css).toContain('position: relative;');
+    expect(css).toContain('isolation: isolate;');
+    expect(css).toContain('.game-menu-button::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/game-menu-normal.webp")');
+    expect(css).toContain('.game-menu-button:hover::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/game-menu-hover.webp")');
+    expect(css).toContain('.game-menu-button:active::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/game-menu-pressed.webp")');
+    expect(css).toContain('.qab-btn::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/qab-normal.webp")');
+    expect(css).toContain('.save-load-close::before, .backlog-close::before, .settings-close::before, .settings-structured-close::before, .settings-structured-footer-close::before, .settings-custom-close::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/close-normal.webp")');
+    expect(css).toContain('.save-load-close:hover::before, .backlog-close:hover::before, .settings-close:hover::before, .settings-structured-close:hover::before, .settings-structured-footer-close:hover::before, .settings-custom-close:hover::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/close-hover.webp")');
+    expect(css).toContain('.save-load-close:active::before, .backlog-close:active::before, .settings-close:active::before, .settings-structured-close:active::before, .settings-structured-footer-close:active::before, .settings-custom-close:active::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/close-pressed.webp")');
   });
 
   it('maps selected-state button imagery onto existing active semantics for pager and settings tabs', () => {
@@ -198,14 +201,14 @@ describe('ThemeManager UI image handling', () => {
     });
 
     const css = getButtonFamilyCss();
-    expect(css).toContain('.page-tab, .page-dot {');
-    expect(css).toContain('.page-tab:hover, .page-dot:hover {');
-    expect(css).toContain('.page-tab:active, .page-dot:active {');
-    expect(css).toContain('.page-tab.active, .page-dot.active {');
-    expect(css).toContain('url("resolved:ui/buttons/page-tab-selected.webp")');
-    expect(css).toContain('.settings-tab-btn, .gm-tab {');
-    expect(css).toContain('.settings-tab-btn.active, .gm-tab.active {');
-    expect(css).toContain('url("resolved:ui/buttons/settings-tab-selected.webp")');
+    expect(css).toContain('.page-tab::before, .page-dot::before {');
+    expect(css).toContain('.page-tab:hover::before, .page-dot:hover::before {');
+    expect(css).toContain('.page-tab:active::before, .page-dot:active::before {');
+    expect(css).toContain('.page-tab.active::before, .page-dot.active::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/page-tab-selected.webp")');
+    expect(css).toContain('.settings-tab-btn::before, .gm-tab::before {');
+    expect(css).toContain('.settings-tab-btn.active::before, .gm-tab.active::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/settings-tab-selected.webp")');
   });
 
   it('skips missing optional states without emitting broken rules or clearing fallback CSS', () => {
@@ -219,11 +222,11 @@ describe('ThemeManager UI image handling', () => {
     });
 
     const css = getButtonFamilyCss();
-    expect(css).toContain('url("resolved:ui/buttons/settings-tab-normal.webp")');
-    expect(css).toContain('.settings-tab-btn.active, .gm-tab.active {');
-    expect(css).toContain('url("resolved:ui/buttons/settings-tab-selected.webp")');
-    expect(css).not.toContain(':hover');
-    expect(css).not.toContain(':active');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/settings-tab-normal.webp")');
+    expect(css).toContain('.settings-tab-btn.active::before, .gm-tab.active::before {');
+    expect(css).toContain('background-image: url("resolved:ui/buttons/settings-tab-selected.webp")');
+    expect(css).not.toContain(':hover::before');
+    expect(css).not.toContain(':active::before');
     expect(css).not.toContain('undefined');
 
     resetButtonFamilies();

@@ -28,6 +28,7 @@ vi.mock('../src/engine/assetPath.js', () => ({
 }));
 
 import { GameMenu } from '../src/ui/GameMenu.js';
+import { applyButtonFamilies, resetButtonFamilies } from '../src/engine/ThemeManager.js';
 import { resolvePath } from '../src/engine/assetPath.js';
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -80,6 +81,7 @@ describe('GameMenu.setLayout()', () => {
   beforeEach(() => {
     container = makeContainer();
     menu = new GameMenu(container);
+    document.head.innerHTML = '';
     resolvePath.mockClear();
   });
 
@@ -176,6 +178,26 @@ describe('COMPAT-02: null config default rendering', () => {
 
     const revertedHtml = menu.el.querySelector('.game-menu-panel').outerHTML;
     expect(revertedHtml).toBe(defaultHtml);
+  });
+
+  it('preserves button labels and click targets when button-family imagery is applied', () => {
+    applyButtonFamilies({
+      buttonFamilies: {
+        gameMenuButton: {
+          normal: 'ui/buttons/game-menu-normal.webp',
+        },
+      },
+    });
+
+    const buttons = menu.el.querySelectorAll('.game-menu-button');
+    expect(buttons).toHaveLength(6);
+    expect(buttons[0].textContent).toBe('存 档');
+    expect(buttons[5].dataset.action).toBe('close');
+
+    const css = document.getElementById('galgame-button-families')?.textContent ?? '';
+    expect(css).toContain('.game-menu-button::before {');
+
+    resetButtonFamilies();
   });
 });
 

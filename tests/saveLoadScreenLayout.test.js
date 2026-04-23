@@ -18,6 +18,7 @@ vi.mock('../src/engine/assetPath.js', () => ({
 }));
 
 import { SaveLoadScreen } from '../src/ui/SaveLoadScreen.js';
+import { applyButtonFamilies, resetButtonFamilies } from '../src/engine/ThemeManager.js';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ describe('SaveLoadScreen.setLayout', () => {
   beforeEach(() => {
     container = document.createElement('div');
     document.body.appendChild(container);
+    document.head.innerHTML = '';
     sm = stubSaveManager();
     screen = new SaveLoadScreen(container, sm);
   });
@@ -190,6 +192,33 @@ describe('SaveLoadScreen.setLayout', () => {
       await vi.waitFor(() => {
         expect(screenA.el.innerHTML).toBe(screenB.el.innerHTML);
       });
+    });
+
+    it('keeps close and pager selectors intact when button-family imagery is applied', async () => {
+      applyButtonFamilies({
+        buttonFamilies: {
+          closeButton: {
+            normal: 'ui/buttons/close-normal.webp',
+          },
+          pageTabPager: {
+            normal: 'ui/buttons/page-tab-normal.webp',
+            selected: 'ui/buttons/page-tab-selected.webp',
+          },
+        },
+      });
+
+      screen.setLayout(null);
+      screen.show('save');
+      await vi.waitFor(() => {
+        expect(screen.el.querySelector('.save-load-close')).not.toBeNull();
+        expect(screen.el.querySelectorAll('.page-tab').length).toBe(12);
+      });
+
+      const css = document.getElementById('galgame-button-families')?.textContent ?? '';
+      expect(css).toContain('.save-load-close::before');
+      expect(css).toContain('.page-tab.active::before, .page-dot.active::before');
+
+      resetButtonFamilies();
     });
   });
 

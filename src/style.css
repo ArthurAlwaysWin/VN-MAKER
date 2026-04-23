@@ -1725,3 +1725,30 @@ body {
   width: 20px;
   height: 20px;
 }
+
+/* ─── Button-family image underlay (Phase 73) ──────────── */
+/* The ThemeManager-injected galgame-button-families style tag
+   sets background-image on ::before per family/state.
+   This base rule ensures the underlay stays below labels/SVGs
+   and never intercepts pointer events. */
+.game-menu-button::before,
+.qab-btn::before,
+.save-load-close::before,
+.backlog-close::before,
+.settings-close::before,
+.settings-structured-close::before,
+.settings-structured-footer-close::before,
+.settings-custom-close::before,
+.page-tab::before,
+.page-dot::before,
+.settings-tab-btn::before,
+.gm-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+}

@@ -290,6 +290,41 @@ describe('SettingsScreen structured mode', () => {
     });
   });
 
+  describe('close-role hooks', () => {
+    it('adds a dedicated close hook only to structured footer close buttons', () => {
+      const layout = structuredLayout();
+      layout.footer.buttons = [
+        { id: 'back-to-title', text: '返回标题', action: 'title', x: 980, y: 15 },
+        { id: 'reset-settings', text: '重置', action: 'reset', x: 1080, y: 15 },
+        { id: 'close-settings', text: '关闭', action: 'close', x: 1180, y: 15 },
+      ];
+
+      screen.setLayout(layout);
+      screen.show();
+
+      const footerButtons = Array.from(screen.el.querySelectorAll('.settings-structured-footer-btn'));
+      expect(footerButtons).toHaveLength(3);
+      expect(footerButtons[0].classList.contains('settings-structured-footer-close')).toBe(false);
+      expect(footerButtons[1].classList.contains('settings-structured-footer-close')).toBe(false);
+      expect(footerButtons[2].classList.contains('settings-structured-footer-close')).toBe(true);
+    });
+
+    it('adds a dedicated close hook to custom layout close buttons only', () => {
+      screen.setLayout({
+        elements: [
+          { type: 'button', label: '返回标题', action: 'title', x: 20, y: 20, width: 120, height: 40 },
+          { type: 'button', label: '关闭', action: 'close', x: 20, y: 80, width: 120, height: 40 },
+        ],
+      });
+      screen.show();
+
+      const customButtons = Array.from(screen.el.querySelectorAll('.sc-button button'));
+      expect(customButtons).toHaveLength(2);
+      expect(customButtons[0].classList.contains('settings-custom-close')).toBe(false);
+      expect(customButtons[1].classList.contains('settings-custom-close')).toBe(true);
+    });
+  });
+
   // ─── Tab bar with widgetStyles ────────────────────────
 
   describe('tab bar with widgetStyles', () => {

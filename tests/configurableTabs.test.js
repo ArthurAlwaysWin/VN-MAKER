@@ -8,9 +8,11 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
 
 // ── Import SUT ────────────────────────────────────────────
 import { normalizeTabs, resolveTabSettingKeys } from '../src/ui/SettingsScreen.js';
+import { createTabBar } from '../src/ui/widgets/TabWidget.js';
 import { SETTING_DEFS } from '../src/engine/settingDefs.js';
 
 const ALL_KEYS = Object.keys(SETTING_DEFS);
@@ -200,5 +202,51 @@ describe('Backward compatibility', () => {
     // Tab 2 should have gameplay keys
     assert.ok(resolved[2].settingKeys.includes('text-speed'));
     assert.ok(resolved[2].settingKeys.includes('skip-mode'));
+  });
+});
+
+// ── 5. Widget tab selected-state parity ───────────────────
+
+describe('createTabBar selected-state parity', () => {
+  it('setActive toggles .active on gm-tab buttons', () => {
+    const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+      url: 'http://localhost/',
+    });
+    const previousWindow = globalThis.window;
+    const previousDocument = globalThis.document;
+    const previousHTMLElement = globalThis.HTMLElement;
+    const previousHTMLButtonElement = globalThis.HTMLButtonElement;
+    const previousHTMLDivElement = globalThis.HTMLDivElement;
+
+    globalThis.window = dom.window;
+    globalThis.document = dom.window.document;
+    globalThis.HTMLElement = dom.window.HTMLElement;
+    globalThis.HTMLButtonElement = dom.window.HTMLButtonElement;
+    globalThis.HTMLDivElement = dom.window.HTMLDivElement;
+
+    try {
+      const { el, setActive } = createTabBar(['声音', '画面', '游戏'], {}, () => {});
+      const buttons = Array.from(el.querySelectorAll('.gm-tab'));
+
+      assert.equal(buttons.length, 3);
+      assert.equal(buttons[0].classList.contains('active'), false);
+      assert.equal(buttons[1].classList.contains('active'), false);
+
+      setActive(1);
+      assert.equal(buttons[0].classList.contains('active'), false);
+      assert.equal(buttons[1].classList.contains('active'), true);
+      assert.equal(buttons[2].classList.contains('active'), false);
+
+      setActive(2);
+      assert.equal(buttons[1].classList.contains('active'), false);
+      assert.equal(buttons[2].classList.contains('active'), true);
+    } finally {
+      globalThis.window = previousWindow;
+      globalThis.document = previousDocument;
+      globalThis.HTMLElement = previousHTMLElement;
+      globalThis.HTMLButtonElement = previousHTMLButtonElement;
+      globalThis.HTMLDivElement = previousHTMLDivElement;
+      dom.window.close();
+    }
   });
 });

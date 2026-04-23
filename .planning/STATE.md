@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: ready
-stopped_at: Phase 72 completed
-last_updated: "2026-04-22T16:29:00.000Z"
-last_activity: 2026-04-22 -- Phase 72 completed
+status: verifying
+stopped_at: Completed 73-button-family-image-rollout-01-PLAN.md
+last_updated: "2026-04-23T03:06:12.270Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: 73 (button-family-image-rollout) — READY
 Plan: 0 of 0
-Status: Phase 72 completed
+Status: Phase complete — ready for verification
 Next: /gsd-discuss-phase 73 --auto  
-Last activity: 2026-04-22 -- Phase 72 completed
+Last activity: 2026-04-23
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ archived
@@ -57,6 +57,7 @@ v1.5 ████████░░░░░░░░░░░░ 2/5 phases ●
 | v1.3 | 9 | 21 | 27 ✅ |
 | v1.4 | 10 | 20 | 18 ✅ |
 | v1.5 | 5 | 0 | 17 |
+| Phase 73-button-family-image-rollout P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ v1.5 ████████░░░░░░░░░░░░ 2/5 phases ●
 - 按钮族 coverage 冻结为 5 族：`game-menu-button`、`QAB`、`close-button family`、`page-tab / pager`、`settings-tab`。
 - major screen coverage 冻结为 4 屏：SaveLoad、Backlog、GameMenu、Settings。
 - AST-03 / AST-04 收口到最终 Phase 75，作为 preview/runtime/export parity 与 fallback gate 的最终 owner。
+- [Phase 73]: The button-family contract stays under ui.theme.buttonFamilies and only scans the five locked Phase 73 families.
+- [Phase 73]: ThemeManager owns one selector registry for button families and uses .active for selected-state CSS instead of introducing a new state machine.
 
 ### Blockers/Concerns
 
@@ -78,7 +81,7 @@ v1.5 ████████░░░░░░░░░░░░ 2/5 phases ●
 
 ## Session Continuity
 
-Last session: 2026-04-22T23:00:00+10:00  
-Stopped at: Phase 72 completed  
-Resume hint: 下次从 Phase 73 开始自动推进 discuss / plan / execution。  
-Next action: /gsd-discuss-phase 73 --auto
+Last session: 2026-04-23T03:06:12.265Z
+Stopped at: Completed 73-button-family-image-rollout-01-PLAN.md
+Resume hint: 已完成 Phase 73 context capture；下一步进入 auto plan，按冻结的按钮族矩阵拆成可执行 plans。  
+Next action: /gsd-plan-phase 73 --auto

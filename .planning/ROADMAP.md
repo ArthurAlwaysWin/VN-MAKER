@@ -65,7 +65,7 @@ Plans:
   4. 用户在真实运行时里操作 hover、pressed、selected 等状态时，看到的按钮图片反馈与实际交互状态一致。
 **Plans**: 3 plans  
 Plans:
-- [ ] 73-01-PLAN.md — 冻结 `ui.theme.buttonFamilies` 契约、selector registry 与 scan coverage
+- [x] 73-01-PLAN.md — 冻结 `ui.theme.buttonFamilies` 契约、selector registry 与 scan coverage
 - [ ] 73-02-PLAN.md — 归一化 runtime close/tab hooks 并注入 5 个按钮族图片 CSS
 - [ ] 73-03-PLAN.md — 在全局主题编辑面板中接入按钮族图片字段与 runtime-backed 预览切换
 **UI hint**: yes
@@ -125,6 +125,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 71. 共享契约与资产通路基线 | 0/TBD | Not started | - |
 | 72. 对话框图片化闭环 | 0/TBD | Not started | - |
-| 73. 按钮族图片态扩面 | 0/TBD | Not started | - |
+| 73. 按钮族图片态扩面 | 1/3 | In Progress|  |
 | 74. 主要界面图片化 | 0/TBD | Not started | - |
 | 75. 光标图标与全链路收口 | 0/TBD | Not started | - |

@@ -151,21 +151,13 @@ function buildNineSliceCSS(nineSlice) {
   return rules.join('\n');
 }
 
-function buildButtonFamilyRule(selectors, src) {
-  if (!src) {
-    return '';
-  }
-
-  const resolvedSrc = resolvePath(src);
-  return (
-    `${selectors.join(', ')} {\n` +
-    `  background-image: url("${resolvedSrc}");\n` +
-    `  background-repeat: no-repeat;\n` +
-    `  background-position: center;\n` +
-    `  background-size: 100% 100%;\n` +
-    `}`
-  );
-}
+/** Map state key to the pseudo-element suffix used in CSS selectors. */
+const BUTTON_FAMILY_PSEUDO_MAP = Object.freeze({
+  normal: '::before',
+  hover: ':hover::before',
+  pressed: ':active::before',
+  selected: '.active::before',
+});
 
 function buildButtonFamilyCSS(buttonFamilies) {
   if (!buttonFamilies) {
@@ -174,23 +166,44 @@ function buildButtonFamilyCSS(buttonFamilies) {
 
   const rules = [];
 
+  // Collect all selectors that need base position/isolation
+  const baseSelectors = [];
+
   for (const [familyKey, selectors] of Object.entries(BUTTON_FAMILY_SELECTOR_REGISTRY)) {
     const family = buttonFamilies[familyKey];
     if (!family || typeof family !== 'object') {
       continue;
     }
 
-    for (const [stateKey, selectorBuilder] of Object.entries(BUTTON_FAMILY_STATE_SELECTORS)) {
+    baseSelectors.push(...selectors);
+
+    for (const [stateKey, pseudoSuffix] of Object.entries(BUTTON_FAMILY_PSEUDO_MAP)) {
       const src = family[stateKey];
       if (!src) {
         continue;
       }
 
-      const rule = buildButtonFamilyRule(selectorBuilder(selectors), src);
-      if (rule) {
-        rules.push(rule);
-      }
+      const resolvedSrc = resolvePath(src);
+      const stateSelectors = selectors.map(s => `${s}${pseudoSuffix}`);
+      rules.push(
+        `${stateSelectors.join(', ')} {\n` +
+        `  background-image: url("${resolvedSrc}");\n` +
+        `  background-repeat: no-repeat;\n` +
+        `  background-position: center;\n` +
+        `  background-size: 100% 100%;\n` +
+        `}`
+      );
     }
+  }
+
+  // Emit shared base rule: position:relative + isolation for stacking context
+  if (baseSelectors.length > 0) {
+    rules.unshift(
+      `${baseSelectors.join(', ')} {\n` +
+      `  position: relative;\n` +
+      `  isolation: isolate;\n` +
+      `}`
+    );
   }
 
   return rules.join('\n');

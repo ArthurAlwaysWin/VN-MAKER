@@ -10,7 +10,7 @@ import { AudioManager } from './engine/AudioManager.js';
 import { SaveManager } from './engine/SaveManager.js';
 import { ConfigManager } from './engine/ConfigManager.js';
 import { ReadHistory } from './engine/ReadHistory.js';
-import { applyTheme, applyNineSlice } from './engine/ThemeManager.js';
+import { applyTheme, applyNineSlice, applyButtonFamilies } from './engine/ThemeManager.js';
 import { detectEnvironment, ENV, BASE_PATH, SCRIPT_PATH, _capturedStartMsg } from './engine/assetPath.js';
 import { WebSaveManager } from './engine/WebSaveManager.js';
 
@@ -132,6 +132,7 @@ function applyPreviewScriptSnapshot(request) {
 
   applyTheme(gameContainer, engine.script.ui?.theme);
   applyNineSlice(engine.script.ui?.theme);
+  applyButtonFamilies(engine.script.ui?.theme);
 
   if (engine.script.ui?.dialogueBox) {
     dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
@@ -1202,6 +1203,7 @@ async function init() {
     // Apply theme token overrides (D-08: theme first, font settings can override)
     applyTheme(gameContainer, engine.script.ui?.theme);
     applyNineSlice(engine.script.ui?.theme);
+    applyButtonFamilies(engine.script.ui?.theme);
 
     // Apply global dialogue box font settings if defined in script
     if (engine.script.ui?.dialogueBox) {
@@ -1279,6 +1281,7 @@ function initPreview() {
       case 'update-theme': {
         applyTheme(gameContainer, msg.theme);
         applyNineSlice(msg.theme);
+        applyButtonFamilies(msg.theme);
         break;
       }
       case 'update-widget-styles': {

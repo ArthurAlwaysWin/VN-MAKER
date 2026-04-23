@@ -134,8 +134,25 @@ function sendDialoguePreview() {
   themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
 }
 
-function onButtonFamilyPreview(/* familyKey - used by Task 2 for preview routing */) {
-  // Preview routing will be wired in Task 2
+const buttonFamilyPreviewMap = {
+  gameMenuButton: { type: 'show-screen', screenId: 'gameMenu' },
+  pageTabPager: { type: 'show-screen', screenId: 'saveLoadScreen' },
+  settingsTab: { type: 'show-screen', screenId: 'settingsScreen' },
+  closeButton: { type: 'show-screen', screenId: 'settingsScreen' },
+  qab: null, // uses show-dialogue-preview path
+};
+
+function onButtonFamilyPreview(familyKey) {
+  if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
+  themeEditor.startEngine();
+  themeEditor.flushPreview();
+
+  const route = buttonFamilyPreviewMap[familyKey];
+  if (route) {
+    themeEditor.iframeRef.value.contentWindow.postMessage(route, '*');
+  } else if (familyKey === 'qab') {
+    themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+  }
 }
 
 provide('dialoguePreview', sendDialoguePreview);

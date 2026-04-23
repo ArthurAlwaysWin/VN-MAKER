@@ -9,6 +9,13 @@ export const UI_SCREEN_CHROME_ROOTS = Object.freeze({
   gameMenu: 'ui.gameMenu.chrome',
   settingsScreen: 'ui.settingsScreen.chrome',
 });
+const UI_BUTTON_FAMILY_STATE_KEYS = Object.freeze({
+  gameMenuButton: Object.freeze(['normal', 'hover', 'pressed']),
+  qab: Object.freeze(['normal', 'hover', 'pressed']),
+  closeButton: Object.freeze(['normal', 'hover', 'pressed']),
+  pageTabPager: Object.freeze(['normal', 'hover', 'pressed', 'selected']),
+  settingsTab: Object.freeze(['normal', 'hover', 'pressed', 'selected']),
+});
 
 function trimUiImageValue(value) {
   if (typeof value !== 'string') return '';
@@ -90,6 +97,24 @@ function collectThemeUiImages(script, add) {
   }
 }
 
+function collectButtonFamilyUiImages(script, add) {
+  const families = script?.ui?.theme?.buttonFamilies;
+  if (!families || typeof families !== 'object') {
+    return;
+  }
+
+  for (const [familyKey, stateKeys] of Object.entries(UI_BUTTON_FAMILY_STATE_KEYS)) {
+    const family = families[familyKey];
+    if (!family || typeof family !== 'object') {
+      continue;
+    }
+
+    for (const stateKey of stateKeys) {
+      addCanonicalUiImage(add, family[stateKey]);
+    }
+  }
+}
+
 function collectScreenChromeUiImages(script, add) {
   const saveLoad = script?.ui?.saveLoadScreen;
   addCanonicalUiImage(add, saveLoad?.background);
@@ -138,6 +163,7 @@ function collectDialogueBoxUiImages(script, add) {
 
 export const UI_IMAGE_SCAN_REGISTRY = [
   collectThemeUiImages,
+  collectButtonFamilyUiImages,
   collectDialogueBoxUiImages,
   collectScreenChromeUiImages,
   collectWidgetStyleUiImages,

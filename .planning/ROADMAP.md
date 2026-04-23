@@ -66,8 +66,8 @@ Plans:
 **Plans**: 3 plans  
 Plans:
 - [x] 73-01-PLAN.md — 冻结 `ui.theme.buttonFamilies` 契约、selector registry 与 scan coverage
-- [ ] 73-02-PLAN.md — 归一化 runtime close/tab hooks 并注入 5 个按钮族图片 CSS
-- [ ] 73-03-PLAN.md — 在全局主题编辑面板中接入按钮族图片字段与 runtime-backed 预览切换
+- [x] 73-02-PLAN.md — 归一化 runtime close/tab hooks 并注入 5 个按钮族图片 CSS
+- [x] 73-03-PLAN.md — 在全局主题编辑面板中接入按钮族图片字段与 runtime-backed 预览切换
 **UI hint**: yes
 
 ### Phase 74: 主要界面图片化

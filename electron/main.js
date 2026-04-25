@@ -955,7 +955,12 @@ app.whenReady().then(() => {
     // Support Range requests for audio/video seeking & duration detection
     const rangeHeader = request.headers.get('Range');
     if (rangeHeader) {
-      const stat = await fs.stat(fullPath);
+      let stat;
+      try {
+        stat = await fs.stat(fullPath);
+      } catch {
+        return new Response('Not Found', { status: 404 });
+      }
       const total = stat.size;
       const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
       if (match) {
@@ -998,7 +1003,11 @@ app.whenReady().then(() => {
       }
     }
 
-    return net.fetch(pathToFileURL(fullPath).toString());
+    try {
+      return await net.fetch(pathToFileURL(fullPath).toString());
+    } catch {
+      return new Response('Not Found', { status: 404 });
+    }
   });
   createWindow();
 });

@@ -78,10 +78,13 @@ export class TitleScreen {
     this.el.style.inset = '0';
 
     if (this.layout.background) {
-      const bgUrl = resolvePath(this.layout.background);
-      this.el.style.backgroundImage = `url('${bgUrl}')`;
-      this.el.style.backgroundSize = 'cover';
-      this.el.style.backgroundPosition = 'center';
+      const safeBg = sanitizeCssValue(this.layout.background);
+      if (safeBg) {
+        const bgUrl = resolvePath(safeBg);
+        this.el.style.backgroundImage = `url('${bgUrl}')`;
+        this.el.style.backgroundSize = 'cover';
+        this.el.style.backgroundPosition = 'center';
+      }
     }
 
     this.layout.elements.forEach(elem => {

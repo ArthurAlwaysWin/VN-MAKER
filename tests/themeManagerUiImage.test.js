@@ -10,10 +10,16 @@ vi.mock('../src/engine/assetPath.js', () => ({
 
 import {
   BUTTON_FAMILY_SELECTOR_REGISTRY,
+  CURSOR_SLOT_SELECTORS,
+  SCREEN_BACKGROUND_SELECTORS,
   applyButtonFamilies,
+  applyCursors,
   applyNineSlice,
+  applyScreenBackgrounds,
   resetButtonFamilies,
+  resetCursors,
   resetNineSlice,
+  resetScreenBackgrounds,
 } from '../src/engine/ThemeManager.js';
 import { resolvePath } from '../src/engine/assetPath.js';
 
@@ -23,6 +29,10 @@ function getNineSliceCss() {
 
 function getButtonFamilyCss() {
   return document.getElementById('galgame-button-families')?.textContent ?? '';
+}
+
+function getScreenBackgroundCss() {
+  return document.getElementById('galgame-screen-backgrounds')?.textContent ?? '';
 }
 
 describe('ThemeManager UI image handling', () => {
@@ -231,5 +241,185 @@ describe('ThemeManager UI image handling', () => {
 
     resetButtonFamilies();
     expect(getButtonFamilyCss()).toBe('');
+  });
+
+  it('exports the locked screen background selectors for all four major screens', () => {
+    expect(SCREEN_BACKGROUND_SELECTORS).toEqual({
+      saveLoadScreen: '#save-load-screen',
+      backlogScreen: '#backlog-screen',
+      gameMenu: '#game-menu',
+      settingsScreen: '#settings-screen',
+    });
+  });
+
+  it('applies screen background images for all four major screens with object-fit:cover', () => {
+    applyScreenBackgrounds(document.body, {
+      saveLoadScreen: { chrome: { backgroundImage: 'ui/saveLoad/bg.png' } },
+      backlogScreen: { chrome: { backgroundImage: 'ui/backlog/bg.png' } },
+      gameMenu: { chrome: { backgroundImage: 'ui/gameMenu/bg.png' } },
+      settingsScreen: { chrome: { backgroundImage: 'ui/settings/bg.png' } },
+    });
+
+    expect(resolvePath).toHaveBeenCalledWith('ui/saveLoad/bg.png');
+    expect(resolvePath).toHaveBeenCalledWith('ui/backlog/bg.png');
+    expect(resolvePath).toHaveBeenCalledWith('ui/gameMenu/bg.png');
+    expect(resolvePath).toHaveBeenCalledWith('ui/settings/bg.png');
+
+    const css = getScreenBackgroundCss();
+    expect(css).toContain('#save-load-screen {');
+    expect(css).toContain('background-image: url("resolved:ui/saveLoad/bg.png")');
+    expect(css).toContain('background-size: cover;');
+    expect(css).toContain('#backlog-screen {');
+    expect(css).toContain('background-image: url("resolved:ui/backlog/bg.png")');
+    expect(css).toContain('#game-menu {');
+    expect(css).toContain('background-image: url("resolved:ui/gameMenu/bg.png")');
+    expect(css).toContain('#settings-screen {');
+    expect(css).toContain('background-image: url("resolved:ui/settings/bg.png")');
+  });
+
+  it('falls back to legacy gameMenu.backgroundImage when chrome path is absent', () => {
+    applyScreenBackgrounds(document.body, {
+      gameMenu: { backgroundImage: 'ui/gameMenu/legacy-bg.png' },
+    });
+
+    expect(resolvePath).toHaveBeenCalledWith('ui/gameMenu/legacy-bg.png');
+
+    const css = getScreenBackgroundCss();
+    expect(css).toContain('background-image: url("resolved:ui/gameMenu/legacy-bg.png")');
+  });
+
+  it('prefers chrome.backgroundImage over legacy backgroundImage for gameMenu', () => {
+    applyScreenBackgrounds(document.body, {
+      gameMenu: {
+        backgroundImage: 'ui/gameMenu/legacy-bg.png',
+        chrome: { backgroundImage: 'ui/gameMenu/chrome-bg.png' },
+      },
+    });
+
+    expect(resolvePath).toHaveBeenCalledWith('ui/gameMenu/chrome-bg.png');
+
+    const css = getScreenBackgroundCss();
+    expect(css).toContain('background-image: url("resolved:ui/gameMenu/chrome-bg.png")');
+    expect(css).not.toContain('legacy-bg');
+  });
+
+  it('manages the galgame-screen-backgrounds style tag lifecycle', () => {
+    expect(document.getElementById('galgame-screen-backgrounds')).toBeNull();
+
+    applyScreenBackgrounds(document.body, {
+      saveLoadScreen: { chrome: { backgroundImage: 'ui/sl/bg.png' } },
+    });
+
+    const styleEl = document.getElementById('galgame-screen-backgrounds');
+    expect(styleEl).not.toBeNull();
+    expect(styleEl.textContent).toContain('background-image');
+
+    resetScreenBackgrounds();
+    expect(styleEl.textContent).toBe('');
+  });
+
+  it('does not emit rules for screens without background images', () => {
+    applyScreenBackgrounds(document.body, {
+      saveLoadScreen: { chrome: {} },
+      backlogScreen: { chrome: { backgroundImage: null } },
+      gameMenu: {},
+    });
+
+    const css = getScreenBackgroundCss();
+    expect(css).toBe('');
+  });
+
+  it('does not conflict with nine-slice or button-family style tags', () => {
+    applyNineSlice({
+      nineSlice: {
+        dialogueBox: { src: 'ui/dialogue/frame.webp', slice: [24, 24, 24, 24] },
+      },
+    });
+    applyButtonFamilies({
+      buttonFamilies: {
+        gameMenuButton: { normal: 'ui/buttons/gm.webp' },
+      },
+    });
+    applyScreenBackgrounds(document.body, {
+      saveLoadScreen: { chrome: { backgroundImage: 'ui/sl/bg.png' } },
+    });
+
+    expect(document.getElementById('galgame-nine-slice')).not.toBeNull();
+    expect(document.getElementById('galgame-button-families')).not.toBeNull();
+    expect(document.getElementById('galgame-screen-backgrounds')).not.toBeNull();
+
+    expect(getNineSliceCss()).toContain('dialogue');
+    expect(getButtonFamilyCss()).toContain('game-menu-button');
+    expect(getScreenBackgroundCss()).toContain('#save-load-screen');
+  });
+
+  // ─── Cursor System (Phase 75) ──────────────────────────
+
+  it('exports the locked cursor slot selectors', () => {
+    expect(CURSOR_SLOT_SELECTORS).toEqual({
+      default: '#game-container',
+      pointer: '#game-container a, #game-container button, #game-container [role="button"], #game-container input[type="range"], #game-container .clickable',
+    });
+  });
+
+  it('applies default and pointer cursor images with CSS fallback keywords', () => {
+    applyCursors({
+      cursor: {
+        default: 'ui/cursors/default.png',
+        pointer: 'ui/cursors/pointer.png',
+      },
+    });
+
+    expect(resolvePath).toHaveBeenCalledWith('ui/cursors/default.png');
+    expect(resolvePath).toHaveBeenCalledWith('ui/cursors/pointer.png');
+
+    const styleEl = document.getElementById('galgame-cursors');
+    expect(styleEl).not.toBeNull();
+    const css = styleEl.textContent;
+    expect(css).toContain('#game-container {');
+    expect(css).toContain('cursor: url("resolved:ui/cursors/default.png") 0 0, default;');
+    expect(css).toContain('#game-container a, #game-container button');
+    expect(css).toContain('cursor: url("resolved:ui/cursors/pointer.png") 0 0, pointer;');
+  });
+
+  it('skips cursor slots that are not configured', () => {
+    applyCursors({
+      cursor: {
+        default: 'ui/cursors/arrow.png',
+      },
+    });
+
+    const css = document.getElementById('galgame-cursors')?.textContent ?? '';
+    expect(css).toContain('cursor: url("resolved:ui/cursors/arrow.png") 0 0, default;');
+    expect(css).not.toContain('pointer');
+  });
+
+  it('emits no CSS when no cursor images are configured', () => {
+    applyCursors({ cursor: {} });
+
+    const css = document.getElementById('galgame-cursors')?.textContent ?? '';
+    expect(css).toBe('');
+  });
+
+  it('emits no CSS when cursor is null or undefined', () => {
+    applyCursors({});
+    expect(document.getElementById('galgame-cursors')?.textContent ?? '').toBe('');
+
+    resetCursors();
+    applyCursors(null);
+    expect(document.getElementById('galgame-cursors')?.textContent ?? '').toBe('');
+  });
+
+  it('manages the galgame-cursors style tag lifecycle', () => {
+    expect(document.getElementById('galgame-cursors')).toBeNull();
+
+    applyCursors({ cursor: { default: 'ui/cursors/default.png' } });
+
+    const styleEl = document.getElementById('galgame-cursors');
+    expect(styleEl).not.toBeNull();
+    expect(styleEl.textContent).toContain('cursor:');
+
+    resetCursors();
+    expect(styleEl.textContent).toBe('');
   });
 });

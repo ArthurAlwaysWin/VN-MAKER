@@ -257,3 +257,151 @@ export function resetButtonFamilies() {
   const styleEl = document.getElementById('galgame-button-families');
   if (styleEl) styleEl.textContent = '';
 }
+
+// ─── Screen Background System (Phase 74) ───────────────
+
+/** CSS selectors for each major screen background (Phase 74) */
+export const SCREEN_BACKGROUND_SELECTORS = Object.freeze({
+  saveLoadScreen: '#save-load-screen',
+  backlogScreen: '#backlog-screen',
+  gameMenu: '#game-menu',
+  settingsScreen: '#settings-screen',
+});
+
+// ─── Cursor System (Phase 75) ──────────────────────────
+
+/** CSS selectors for each cursor slot (Phase 75 — CUR-01). */
+export const CURSOR_SLOT_SELECTORS = Object.freeze({
+  default: '#game-container',
+  pointer: '#game-container a, #game-container button, #game-container [role="button"], #game-container input[type="range"], #game-container .clickable',
+});
+
+/**
+ * Resolve the effective background image for a screen.
+ * For gameMenu, falls back to legacy `backgroundImage` if chrome path is absent.
+ *
+ * @param {string} screenId - Screen key (saveLoadScreen, backlogScreen, gameMenu, settingsScreen)
+ * @param {object} screenData - The screen's UI config object
+ * @returns {string|null} Resolved image path or null
+ */
+function getScreenBackgroundImage(screenId, screenData) {
+  const chromeBg = screenData?.chrome?.backgroundImage || null;
+
+  // @deprecated Remove in next major milestone — Phase 74 migration path
+  if (screenId === 'gameMenu' && !chromeBg) {
+    return screenData?.backgroundImage || null;
+  }
+
+  return chromeBg;
+}
+
+/**
+ * Build CSS text for all configured screen background images.
+ *
+ * @param {object|null|undefined} uiData — the ui object from script.json
+ * @returns {string} Complete CSS text for injection
+ */
+function buildScreenBackgroundCSS(uiData) {
+  if (!uiData) return '';
+  const rules = [];
+
+  for (const [screenId, selector] of Object.entries(SCREEN_BACKGROUND_SELECTORS)) {
+    const screenData = uiData[screenId === 'settingsScreen' ? 'settingsScreen' : screenId];
+    const bgImage = getScreenBackgroundImage(screenId, screenData);
+    if (!bgImage) continue;
+
+    const resolvedSrc = resolvePath(bgImage);
+    rules.push(
+      `${selector} {\n` +
+      `  background-image: url("${resolvedSrc}");\n` +
+      `  background-size: cover;\n` +
+      `  background-position: center;\n` +
+      `  background-repeat: no-repeat;\n` +
+      `}`
+    );
+  }
+
+  return rules.join('\n');
+}
+
+/**
+ * Apply screen background images by injecting CSS into a dedicated style tag.
+ * Creates `<style id="galgame-screen-backgrounds">` on first call, overwrites
+ * textContent on subsequent calls.
+ *
+ * @param {HTMLElement} container - The game container element (unused but kept for API consistency)
+ * @param {object|null|undefined} uiData — the ui object from script.json
+ */
+export function applyScreenBackgrounds(container, uiData) {
+  let styleEl = document.getElementById('galgame-screen-backgrounds');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'galgame-screen-backgrounds';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = buildScreenBackgroundCSS(uiData);
+}
+
+/**
+ * Remove all screen background CSS rules by clearing the style tag content.
+ */
+export function resetScreenBackgrounds() {
+  const styleEl = document.getElementById('galgame-screen-backgrounds');
+  if (styleEl) styleEl.textContent = '';
+}
+
+// ─── Cursor System (Phase 75) ──────────────────────────
+
+/**
+ * Build CSS text for custom cursor images.
+ * Uses `cursor: url(...) <hotspot>, <fallback>` pattern — when the image
+ * fails to load or is not configured, the browser falls back to the
+ * CSS keyword (default / pointer).
+ *
+ * @param {object|null|undefined} cursorData — the ui.theme.cursor object
+ * @returns {string} Complete CSS text for injection
+ */
+function buildCursorCSS(cursorData) {
+  if (!cursorData || typeof cursorData !== 'object') return '';
+  const rules = [];
+
+  for (const [slotKey, selector] of Object.entries(CURSOR_SLOT_SELECTORS)) {
+    const src = cursorData[slotKey];
+    if (!src) continue;
+
+    const resolvedSrc = resolvePath(src);
+    const fallback = slotKey === 'pointer' ? 'pointer' : 'default';
+    rules.push(
+      `${selector} {\n` +
+      `  cursor: url("${resolvedSrc}") 0 0, ${fallback};\n` +
+      `}`
+    );
+  }
+
+  return rules.join('\n');
+}
+
+/**
+ * Apply custom cursor images by injecting CSS into a dedicated style tag.
+ * Creates `<style id="galgame-cursors">` on first call, overwrites
+ * textContent on subsequent calls.
+ *
+ * @param {object|null|undefined} themeData — the ui.theme object from script.json
+ */
+export function applyCursors(themeData) {
+  let styleEl = document.getElementById('galgame-cursors');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'galgame-cursors';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = buildCursorCSS(themeData?.cursor);
+}
+
+/**
+ * Remove all cursor CSS rules by clearing the style tag content.
+ */
+export function resetCursors() {
+  const styleEl = document.getElementById('galgame-cursors');
+  if (styleEl) styleEl.textContent = '';
+}

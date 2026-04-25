@@ -3,12 +3,20 @@ const LEGACY_DATA_URL_PREFIX = 'data:image/';
 
 export const UI_THEME_ROOT = 'ui.theme';
 export const UI_DIALOGUE_BOX_ROOT = 'ui.dialogueBox';
+export const UI_CURSOR_ROOT = 'ui.theme.cursor';
+export const UI_ICON_ROOT = 'ui.theme.icons';
 export const UI_SCREEN_CHROME_ROOTS = Object.freeze({
   saveLoadScreen: 'ui.saveLoadScreen.chrome',
   backlogScreen: 'ui.backlogScreen.chrome',
   gameMenu: 'ui.gameMenu.chrome',
   settingsScreen: 'ui.settingsScreen.chrome',
 });
+
+/** Locked cursor slot keys (Phase 75 — CUR-01). */
+export const UI_CURSOR_SLOT_KEYS = Object.freeze(['default', 'pointer']);
+
+/** Locked icon slot keys (Phase 75 — ICO-01). */
+export const UI_ICON_SLOT_KEYS = Object.freeze(['gameMenu', 'qab', 'close', 'voiceReplay']);
 const UI_BUTTON_FAMILY_STATE_KEYS = Object.freeze({
   gameMenuButton: Object.freeze(['normal', 'hover', 'pressed']),
   qab: Object.freeze(['normal', 'hover', 'pressed']),
@@ -116,21 +124,37 @@ function collectButtonFamilyUiImages(script, add) {
 }
 
 function collectScreenChromeUiImages(script, add) {
+  // SaveLoad — legacy + chrome paths
   const saveLoad = script?.ui?.saveLoadScreen;
   addCanonicalUiImage(add, saveLoad?.background);
   addCanonicalUiImage(add, saveLoad?.header?.backgroundImage);
   addCanonicalUiImage(add, saveLoad?.slot?.backgroundImage);
+  addCanonicalUiImage(add, saveLoad?.chrome?.backgroundImage);
+  for (const decoration of saveLoad?.chrome?.decorations || []) {
+    addCanonicalUiImage(add, decoration?.src);
+  }
 
+  // Backlog — legacy + chrome paths
   const backlog = script?.ui?.backlogScreen;
   addCanonicalUiImage(add, backlog?.backgroundImage);
   addCanonicalUiImage(add, backlog?.header?.backgroundImage);
+  addCanonicalUiImage(add, backlog?.chrome?.backgroundImage);
+  for (const decoration of backlog?.chrome?.decorations || []) {
+    addCanonicalUiImage(add, decoration?.src);
+  }
 
+  // GameMenu — legacy path + chrome paths
   const gameMenu = script?.ui?.gameMenu;
-  addCanonicalUiImage(add, gameMenu?.backgroundImage);
+  addCanonicalUiImage(add, gameMenu?.backgroundImage); // @deprecated legacy — Remove in next major milestone (Phase 74 migration path)
   for (const button of Object.values(gameMenu?.buttons || {})) {
     addCanonicalUiImage(add, button?.icon);
   }
+  addCanonicalUiImage(add, gameMenu?.chrome?.backgroundImage);
+  for (const decoration of gameMenu?.chrome?.decorations || []) {
+    addCanonicalUiImage(add, decoration?.src);
+  }
 
+  // Settings — legacy + chrome paths
   const settings = script?.ui?.settingsScreen;
   addCanonicalUiImage(add, settings?.background);
   addCanonicalUiImage(add, settings?.header?.backgroundImage);
@@ -139,6 +163,10 @@ function collectScreenChromeUiImages(script, add) {
   }
   for (const tab of settings?.tabBar?.tabs || []) {
     addCanonicalUiImage(add, tab?.icon);
+  }
+  addCanonicalUiImage(add, settings?.chrome?.backgroundImage);
+  for (const decoration of settings?.chrome?.decorations || []) {
+    addCanonicalUiImage(add, decoration?.src);
   }
 }
 
@@ -151,6 +179,26 @@ function collectWidgetStyleUiImages(script, add) {
   addCanonicalUiImage(add, widgetStyles?.slider?.thumbImage);
   addCanonicalUiImage(add, widgetStyles?.slider?.trackImage);
   addCanonicalUiImage(add, widgetStyles?.button?.nineSlice?.src);
+}
+
+function collectCursorIconUiImages(script, add) {
+  const theme = script?.ui?.theme;
+
+  // Cursor images (CUR-01)
+  const cursor = theme?.cursor;
+  if (cursor && typeof cursor === 'object') {
+    for (const slotKey of UI_CURSOR_SLOT_KEYS) {
+      addCanonicalUiImage(add, cursor[slotKey]);
+    }
+  }
+
+  // Icon images (ICO-01)
+  const icons = theme?.icons;
+  if (icons && typeof icons === 'object') {
+    for (const slotKey of UI_ICON_SLOT_KEYS) {
+      addCanonicalUiImage(add, icons[slotKey]);
+    }
+  }
 }
 
 function collectDialogueBoxUiImages(script, add) {
@@ -167,6 +215,7 @@ export const UI_IMAGE_SCAN_REGISTRY = [
   collectDialogueBoxUiImages,
   collectScreenChromeUiImages,
   collectWidgetStyleUiImages,
+  collectCursorIconUiImages,
 ];
 
 export function registerUiImageCollector(collector) {

@@ -10,7 +10,7 @@ import { AudioManager } from './engine/AudioManager.js';
 import { SaveManager } from './engine/SaveManager.js';
 import { ConfigManager } from './engine/ConfigManager.js';
 import { ReadHistory } from './engine/ReadHistory.js';
-import { applyTheme, applyNineSlice, applyButtonFamilies } from './engine/ThemeManager.js';
+import { applyTheme, applyNineSlice, applyButtonFamilies, applyScreenBackgrounds, applyCursors } from './engine/ThemeManager.js';
 import { detectEnvironment, ENV, BASE_PATH, SCRIPT_PATH, _capturedStartMsg } from './engine/assetPath.js';
 import { WebSaveManager } from './engine/WebSaveManager.js';
 
@@ -95,16 +95,26 @@ let activeEffectPreview = null;
 let previewRestorePending = false;
 
 // ─── Toast notifications (D-11, D-12) ──────────────────
+let currentToast = null;
 function showToast(message, duration = 3000) {
+  // Remove any existing toast before showing a new one (SUG-03: dedup)
+  if (currentToast) {
+    currentToast.remove();
+    currentToast = null;
+  }
   const toast = document.createElement('div');
   toast.className = 'game-toast';
   toast.textContent = message;
   toast.style.cssText = 'position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:10px 24px;border-radius:6px;font-size:14px;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.3s;';
   gameContainer.appendChild(toast);
+  currentToast = toast;
   requestAnimationFrame(() => { toast.style.opacity = '1'; });
   setTimeout(() => {
     toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(() => {
+      if (currentToast === toast) currentToast = null;
+      toast.remove();
+    }, 300);
   }, duration);
 }
 
@@ -133,6 +143,8 @@ function applyPreviewScriptSnapshot(request) {
   applyTheme(gameContainer, engine.script.ui?.theme);
   applyNineSlice(engine.script.ui?.theme);
   applyButtonFamilies(engine.script.ui?.theme);
+  applyScreenBackgrounds(gameContainer, engine.script.ui);
+  applyCursors(engine.script.ui?.theme);
 
   if (engine.script.ui?.dialogueBox) {
     dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
@@ -144,6 +156,15 @@ function applyPreviewScriptSnapshot(request) {
   saveLoadScreen.setLayout(engine.script.ui?.saveLoadScreen);
   backlogScreen.setLayout(engine.script.ui?.backlogScreen);
   gameMenu.setLayout(engine.script.ui?.gameMenu);
+
+  // Apply theme-level icons (Phase 75 — ICO-01)
+  const themeIcons = engine.script.ui?.theme?.icons;
+  if (themeIcons) {
+    saveLoadScreen.setThemeIcons(themeIcons);
+    gameMenu.setThemeIcons(themeIcons);
+    backlogScreen.setThemeIcons(themeIcons);
+    settingsScreen.setThemeIcons(themeIcons);
+  }
 
   if (engine.script.ui?.dialogueBox?.nameplateStyle) {
     dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
@@ -269,7 +290,6 @@ async function runEffectPreview(request) {
     if (request.effectKind === 'camera') {
       if (!isKnownCameraEffect(request.payload?.effect)) {
         activeEffectPreview = null;
-        await restorePreviewSnapshot(snapshot);
         postEffectPreviewResult({
           requestId: request.requestId,
           effectKind: request.effectKind,
@@ -279,6 +299,7 @@ async function runEffectPreview(request) {
         return;
       }
 
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       camera.play(request.payload);
       await waitForPreviewDuration(request.payload?.durationMs ?? 450);
     }
@@ -371,18 +392,22 @@ async function captureGameScreenshot() {
   if (!window.ipcRenderer) return null; // iframe preview guard (D-13)
 
   try {
-    // Hide dialogue box for cleaner screenshot (bar follows as DOM child)
-    // DialogueBox only uses 'visible' class — it never adds 'hidden', so check for 'visible'
+    // Hide dialogue box visually without stopping typewriter (BUG-04 fix)
+    // Using visibility:hidden instead of hide() avoids killing the typewriter timer
     const dlgWasVisible = dialogueBox.el?.classList.contains('visible');
-    dialogueBox.hide();
+    if (dlgWasVisible) {
+      dialogueBox.el.style.visibility = 'hidden';
+    }
 
     // Wait one frame for DOM update
     await new Promise(r => requestAnimationFrame(r));
 
     const result = await window.ipcRenderer.invoke('capture-screenshot');
 
-    // Restore UI immediately after capture
-    if (dlgWasVisible) dialogueBox.el.classList.add('visible');
+    // Restore visibility immediately after capture
+    if (dlgWasVisible) {
+      dialogueBox.el.style.visibility = '';
+    }
 
     if (!result.success) {
       console.error('[GalgameMaker] Screenshot failed:', result.error);
@@ -391,6 +416,8 @@ async function captureGameScreenshot() {
 
     return result.data;
   } catch (e) {
+    // Ensure visibility is restored even on error
+    dialogueBox.el.style.visibility = '';
     console.error('[GalgameMaker] Screenshot error:', e);
     return null;
   }
@@ -463,6 +490,15 @@ function playCharacterEvent(type, data) {
       return;
     }
     characters.show(data);
+    return;
+  }
+
+  if (type === 'hide_character') {
+    if (skipMode) {
+      characters.hide({ ...data, duration: 0 });
+      return;
+    }
+    characters.hide(data);
     return;
   }
 
@@ -547,6 +583,11 @@ engine.on('show_character', (data) => {
 });
 
 engine.on('hide_character', (data) => {
+  if (pageTransitionGateOpen) {
+    pendingCharacterEvents.push({ type: 'hide_character', data });
+    return;
+  }
+
   if (skipMode) {
     characters.hide({ ...data, duration: 0 });
     return;
@@ -1195,6 +1236,15 @@ async function init() {
       gameMenu.setLayout(engine.script.ui.gameMenu);
     }
 
+    // Apply theme-level icons (Phase 75 — ICO-01)
+    const themeIcons = engine.script.ui?.theme?.icons;
+    if (themeIcons) {
+      saveLoadScreen.setThemeIcons(themeIcons);
+      gameMenu.setThemeIcons(themeIcons);
+      backlogScreen.setThemeIcons(themeIcons);
+      settingsScreen.setThemeIcons(themeIcons);
+    }
+
     // Apply nameplate style (v1.1 Phase 45)
     if (engine.script.ui?.dialogueBox?.nameplateStyle) {
       dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
@@ -1204,6 +1254,8 @@ async function init() {
     applyTheme(gameContainer, engine.script.ui?.theme);
     applyNineSlice(engine.script.ui?.theme);
     applyButtonFamilies(engine.script.ui?.theme);
+    applyScreenBackgrounds(gameContainer, engine.script.ui);
+    applyCursors(engine.script.ui?.theme);
 
     // Apply global dialogue box font settings if defined in script
     if (engine.script.ui?.dialogueBox) {
@@ -1282,6 +1334,14 @@ function initPreview() {
         applyTheme(gameContainer, msg.theme);
         applyNineSlice(msg.theme);
         applyButtonFamilies(msg.theme);
+        applyScreenBackgrounds(gameContainer, engine.script.ui);
+        applyCursors(msg.theme);
+        // Theme icons may have changed
+        const themeIcons = msg.theme?.icons;
+        saveLoadScreen.setThemeIcons(themeIcons || null);
+        gameMenu.setThemeIcons(themeIcons || null);
+        backlogScreen.setThemeIcons(themeIcons || null);
+        settingsScreen.setThemeIcons(themeIcons || null);
         break;
       }
       case 'update-widget-styles': {

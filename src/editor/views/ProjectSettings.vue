@@ -50,6 +50,7 @@
           <SmartColorPanel />
           <TokenAccordion />
           <ButtonFamilyImageSettings @preview="onButtonFamilyPreview" />
+          <CursorIconSettings />
         </div>
       </div>
     </div>
@@ -89,6 +90,7 @@ import NineSliceModal from '../components/theme/NineSliceModal.vue';
 import PresetModal from '../components/theme/PresetModal.vue';
 import ThemePackageModal from '../components/theme/ThemePackageModal.vue';
 import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
+import CursorIconSettings from '../components/theme/CursorIconSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
 
 const project = useProjectStore();

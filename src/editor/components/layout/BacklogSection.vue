@@ -31,6 +31,9 @@
       <span class="unit">px</span>
     </div>
 
+    <!-- Chrome: Background & Decorations -->
+    <MajorScreenImageSettings />
+
     <!-- Entry Styling -->
     <h4 class="form-group-title">条目样式</h4>
     <div class="config-row">
@@ -66,6 +69,7 @@
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
 import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
+import MajorScreenImageSettings from './MajorScreenImageSettings.vue';
 
 const editor = useScreenLayoutEditor();
 

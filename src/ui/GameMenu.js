@@ -3,6 +3,8 @@
  */
 import { sanitizeCssValue, clamp, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
+import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
+import { resolveThemeIcon } from './themeIconHelpers.js';
 
 /** Default button labels matching the hardcoded originals */
 const DEFAULT_LABELS = {
@@ -38,6 +40,9 @@ export class GameMenu {
     /** @type {object|null} Layout config from ui.gameMenu schema */
     this._layoutConfig = null;
 
+    /** @type {object|null} Theme-level icons from ui.theme.icons */
+    this._themeIcons = null;
+
     this._render();
 
     // Click handler uses event delegation — set once in constructor
@@ -66,6 +71,15 @@ export class GameMenu {
    */
   setLayout(config) {
     this._layoutConfig = config || null;
+    this._render();
+  }
+
+  /**
+   * Apply theme-level icon configuration (Phase 75 — ICO-01).
+   * @param {object|null} icons — ui.theme.icons object
+   */
+  setThemeIcons(icons) {
+    this._themeIcons = icons || null;
     this._render();
   }
 
@@ -120,8 +134,11 @@ export class GameMenu {
       const btnCfg = cfg.buttons?.[action];
       const label = btnCfg?.text || DEFAULT_LABELS[action];
       let iconHtml = '';
+      // Per-button icon takes precedence; fall back to theme icon (ICO-01)
       if (btnCfg?.icon) {
         iconHtml = `<img src="${resolvePath(btnCfg.icon)}" class="game-menu-icon" alt="" />`;
+      } else if (this._themeIcons?.gameMenu) {
+        iconHtml = `<img src="${resolvePath(this._themeIcons.gameMenu)}" class="game-menu-icon" alt="" />`;
       }
       return `<button class="game-menu-button" data-action="${action}">${iconHtml}${label}</button>`;
     }).join('\n        ');
@@ -164,8 +181,10 @@ export class GameMenu {
     }
 
     // Background image → panel (covers panel area)
-    if (cfg.backgroundImage) {
-      const safeBgImg = sanitizeCssValue(cfg.backgroundImage);
+    // Chrome path takes precedence; @deprecated legacy fallback for migration
+    const bgImage = cfg.chrome?.backgroundImage || cfg.backgroundImage;
+    if (bgImage) {
+      const safeBgImg = sanitizeCssValue(bgImage);
       if (safeBgImg) {
         panel.style.backgroundImage = `url("${resolvePath(safeBgImg)}")`;
         panel.style.backgroundSize = 'cover';
@@ -188,6 +207,12 @@ export class GameMenu {
     if (cfg.buttonGap != null) {
       const gap = clampField('padding', cfg.buttonGap);
       if (gap !== undefined) panel.style.gap = gap + 'px';
+    }
+
+    // ── Chrome decorations (Phase 74) ──
+    clearScreenDecorations(this.el);
+    if (cfg.chrome?.decorations) {
+      renderScreenDecorations(this.el, cfg.chrome.decorations);
     }
   }
 }

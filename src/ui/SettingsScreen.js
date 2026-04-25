@@ -10,6 +10,8 @@ import { SETTING_DEFS, DEFAULT_SETTING_STYLE, DEFAULT_LABEL_STYLE, DEFAULT_BUTTO
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 import { deepMergeWidgetStyles } from '../engine/widgetDefaults.js';
+import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
+import { hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
 import { createToggle } from './widgets/ToggleWidget.js';
 import { createSlider, getSliderCSS } from './widgets/SliderWidget.js';
 import { createTabBar } from './widgets/TabWidget.js';
@@ -82,6 +84,8 @@ export class SettingsScreen {
     this._sliderCssInjected = false;
     /** @type {number} Active tab index for structured mode */
     this._activeTab = 0;
+    /** @type {object|null} Theme-level icons from ui.theme.icons (Phase 75) */
+    this._themeIcons = null;
 
     this.el = document.createElement('div');
     this.el.id = 'settings-screen';
@@ -100,6 +104,10 @@ export class SettingsScreen {
   /** Load a custom layout from script.json ui.settingsScreen */
   setLayout(layout) {
     this.customLayout = layout;
+    // Clamp active tab to valid range when layout changes (BUG-06 fix)
+    if (this._resolvedTabs) {
+      this._activeTab = Math.min(this._activeTab, this._resolvedTabs.length - 1);
+    }
     if (this.isVisible) this.show();
   }
 
@@ -112,6 +120,15 @@ export class SettingsScreen {
    */
   setWidgetStyles(styles) {
     this._widgetStyles = styles ? deepMergeWidgetStyles(styles) : null;
+    if (this.isVisible) this.show();
+  }
+
+  /**
+   * Apply theme-level icon configuration (Phase 75 — ICO-01).
+   * @param {object|null} icons — ui.theme.icons object
+   */
+  setThemeIcons(icons) {
+    this._themeIcons = icons || null;
     if (this.isVisible) this.show();
   }
 
@@ -132,6 +149,14 @@ export class SettingsScreen {
     } else {
       this._renderDefault();
     }
+
+    // ── Chrome decorations (Phase 74) ──
+    // Rendered at screen level (not inside header/content sub-containers)
+    clearScreenDecorations(this.el);
+    if (this.customLayout?.chrome?.decorations) {
+      renderScreenDecorations(this.el, this.customLayout.chrome.decorations);
+    }
+
     this.el.classList.remove('hidden');
     requestAnimationFrame(() => this.el.classList.add('visible'));
   }
@@ -368,7 +393,11 @@ export class SettingsScreen {
       btn.classList.add('settings-custom-close');
     }
     if (elem.displayMode === 'icon') {
-      btn.textContent = '×';
+      if (hasThemeIcon(this._themeIcons, 'close')) {
+        btn.innerHTML = resolveThemeIcon(this._themeIcons, 'close', '×', 'close-icon');
+      } else {
+        btn.textContent = '×';
+      }
       btn.classList.add('sc-close-icon');
     } else {
       btn.textContent = elem.label || '返回';
@@ -527,7 +556,11 @@ export class SettingsScreen {
     // Close button
     const closeBtn = document.createElement('button');
     closeBtn.className = 'settings-structured-close';
-    closeBtn.textContent = '×';
+    if (hasThemeIcon(this._themeIcons, 'close')) {
+      closeBtn.innerHTML = resolveThemeIcon(this._themeIcons, 'close', '×', 'close-icon');
+    } else {
+      closeBtn.textContent = '×';
+    }
     closeBtn.style.position = 'absolute';
     closeBtn.style.right = '16px';
     closeBtn.style.top = '50%';
@@ -889,7 +922,7 @@ export class SettingsScreen {
     this.el.innerHTML = `
       <div class="settings-header">
         <div class="settings-title">设 定</div>
-        <button class="settings-close">返回</button>
+        <button class="settings-close">${hasThemeIcon(this._themeIcons, 'close') ? resolveThemeIcon(this._themeIcons, 'close', '返回', 'close-icon') : '返回'}</button>
       </div>
       <div class="settings-content">
         <div class="settings-item">

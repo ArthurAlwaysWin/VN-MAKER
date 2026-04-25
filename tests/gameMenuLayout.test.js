@@ -283,6 +283,69 @@ describe('Config-driven panel styles', () => {
     const panel = menu.el.querySelector('.game-menu-panel');
     expect(panel.style.backgroundImage).toBe('');
   });
+
+  // ── Phase 74: chrome.backgroundImage + decorations ──
+
+  it('chrome.backgroundImage takes precedence over legacy backgroundImage', () => {
+    menu.setLayout({
+      backgroundImage: 'ui/menu/legacy_bg.png',
+      chrome: { backgroundImage: 'ui/menu/chrome_bg.png' },
+    });
+    const panel = menu.el.querySelector('.game-menu-panel');
+    expect(resolvePath).toHaveBeenCalledWith('ui/menu/chrome_bg.png');
+    expect(panel.style.backgroundImage).toContain('resolved:ui/menu/chrome_bg.png');
+  });
+
+  it('falls back to legacy backgroundImage when chrome.backgroundImage is absent', () => {
+    menu.setLayout({
+      backgroundImage: 'ui/menu/legacy_bg.png',
+      chrome: {},
+    });
+    const panel = menu.el.querySelector('.game-menu-panel');
+    expect(resolvePath).toHaveBeenCalledWith('ui/menu/legacy_bg.png');
+    expect(panel.style.backgroundImage).toContain('resolved:ui/menu/legacy_bg.png');
+  });
+
+  it('renders chrome.decorations as .screen-decoration elements', () => {
+    menu.setLayout({
+      chrome: {
+        decorations: [
+          { src: 'ui/menu/decor1.png', x: 10, y: 20, width: 100, height: 50 },
+          { src: 'ui/menu/decor2.png', x: 200, y: 300, width: 80, height: 40 },
+        ],
+      },
+    });
+    const decorations = menu.el.querySelectorAll('.screen-decoration');
+    expect(decorations.length).toBe(2);
+    expect(decorations[0].src).toContain('resolved:ui/menu/decor1.png');
+    expect(decorations[0].style.left).toBe('10px');
+    expect(decorations[0].style.top).toBe('20px');
+    expect(decorations[1].style.left).toBe('200px');
+  });
+
+  it('re-calling setLayout replaces decorations instead of accumulating', () => {
+    menu.setLayout({
+      chrome: {
+        decorations: [{ src: 'ui/menu/decor1.png', x: 0, y: 0, width: 50, height: 50 }],
+      },
+    });
+    expect(menu.el.querySelectorAll('.screen-decoration').length).toBe(1);
+
+    menu.setLayout({
+      chrome: {
+        decorations: [
+          { src: 'ui/menu/decor2.png', x: 0, y: 0, width: 50, height: 50 },
+          { src: 'ui/menu/decor3.png', x: 0, y: 0, width: 50, height: 50 },
+        ],
+      },
+    });
+    expect(menu.el.querySelectorAll('.screen-decoration').length).toBe(2);
+  });
+
+  it('empty chrome.decorations array produces no decoration elements', () => {
+    menu.setLayout({ chrome: { decorations: [] } });
+    expect(menu.el.querySelectorAll('.screen-decoration').length).toBe(0);
+  });
 });
 
 // ─── Config-driven button text and icons ──────────────────

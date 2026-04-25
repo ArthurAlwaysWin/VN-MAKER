@@ -13,6 +13,8 @@ const TOTAL_PAGES = 12;
 
 import { resolvePath } from '../engine/assetPath.js';
 import { sanitizeCssValue, clampField } from './sanitize.js';
+import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
+import { hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
 
 
 export class SaveLoadScreen {
@@ -31,6 +33,8 @@ export class SaveLoadScreen {
 
     /** @type {'save'|'load'} */
     this.mode = 'save';
+    /** @type {object|null} Theme-level icons from ui.theme.icons (Phase 75) */
+    this._themeIcons = null;
     /** @type {string} Close routing source — 'bar'|'menu'|'title' */
     this._source = 'bar';
     /** @type {number} Current page (1-12) */
@@ -62,6 +66,15 @@ export class SaveLoadScreen {
    */
   setLayout(config) {
     this._layoutConfig = config || null;
+    if (this.el.classList.contains('visible')) this._render();
+  }
+
+  /**
+   * Apply theme-level icon configuration (Phase 75 — ICO-01).
+   * @param {object|null} icons — ui.theme.icons object
+   */
+  setThemeIcons(icons) {
+    this._themeIcons = icons || null;
     if (this.el.classList.contains('visible')) this._render();
   }
 
@@ -131,11 +144,12 @@ export class SaveLoadScreen {
       const title = this.mode === 'save'
         ? (hdr.saveTitle || '存 档')
         : (hdr.loadTitle || '読 档');
+      const closeContent = hasThemeIcon(this._themeIcons, 'close') ? resolveThemeIcon(this._themeIcons, 'close', '返回', 'close-icon') : '返回';
 
       this.el.innerHTML = `
         <div class="save-load-header">
           <div class="save-load-title">${title}</div>
-          <button class="save-load-close">返回</button>
+          <button class="save-load-close">${closeContent}</button>
         </div>
         <div class="save-load-grid"></div>
         <div class="save-load-pagination"></div>
@@ -192,10 +206,11 @@ export class SaveLoadScreen {
     } else {
       // ── Default layout (COMPAT-02: unchanged) ──
       const title = this.mode === 'save' ? '存 档' : '読 档';
+      const closeContent = hasThemeIcon(this._themeIcons, 'close') ? resolveThemeIcon(this._themeIcons, 'close', '返回', 'close-icon') : '返回';
       this.el.innerHTML = `
         <div class="save-load-header">
           <div class="save-load-title">${title}</div>
-          <button class="save-load-close">返回</button>
+          <button class="save-load-close">${closeContent}</button>
         </div>
         <div class="save-load-grid"></div>
         <div class="save-load-pagination"></div>
@@ -205,6 +220,12 @@ export class SaveLoadScreen {
     this.el.querySelector('.save-load-close').addEventListener('click', () => this.hide());
     this._renderGrid();
     this._renderPagination();
+
+    // ── Chrome decorations (Phase 74) ──
+    clearScreenDecorations(this.el);
+    if (cfg?.chrome?.decorations) {
+      renderScreenDecorations(this.el, cfg.chrome.decorations);
+    }
   }
 
   /** @private Partial re-render of grid section only */

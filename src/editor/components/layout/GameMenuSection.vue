@@ -41,6 +41,9 @@
       <span class="unit">px</span>
     </div>
 
+    <!-- Chrome: Background & Decorations -->
+    <MajorScreenImageSettings />
+
     <!-- Buttons -->
     <h4 class="form-group-title">按钮文字</h4>
     <div v-for="btn in BUTTONS" :key="btn.action" class="config-row">
@@ -54,6 +57,7 @@
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
 import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
+import MajorScreenImageSettings from './MajorScreenImageSettings.vue';
 
 const editor = useScreenLayoutEditor();
 

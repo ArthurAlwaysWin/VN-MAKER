@@ -601,5 +601,57 @@ describe('SaveLoadScreen.setLayout', () => {
         });
       });
     });
+
+    describe('chrome.decorations (Phase 74)', () => {
+      it('renders chrome.decorations as .screen-decoration elements', async () => {
+        const cfg = fullConfig();
+        cfg.chrome = {
+          decorations: [
+            { src: 'ui/sl/decor1.png', x: 10, y: 20, width: 100, height: 50 },
+          ],
+        };
+        screen.setLayout(cfg);
+        screen.show('save');
+        await vi.waitFor(() => {
+          const decorations = screen.el.querySelectorAll('.screen-decoration');
+          expect(decorations.length).toBe(1);
+        });
+        const decorations = screen.el.querySelectorAll('.screen-decoration');
+        // Use getAttribute('src') to avoid jsdom URL normalization
+        const srcAttr = decorations[0].getAttribute('src');
+        expect(srcAttr).toContain('ui/sl/decor1.png');
+        expect(decorations[0].style.left).toBe('10px');
+      });
+
+      it('re-calling setLayout replaces decorations instead of accumulating', async () => {
+        const cfg1 = { ...fullConfig(), chrome: { decorations: [{ src: 'ui/sl/a.png', x: 0, y: 0, width: 50, height: 50 }] } };
+        screen.setLayout(cfg1);
+        screen.show('save');
+        await vi.waitFor(() => {
+          expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(1);
+        });
+
+        // Hide and re-show with different config
+        screen.hide();
+        const cfg2 = { ...fullConfig(), chrome: { decorations: [
+          { src: 'ui/sl/b.png', x: 0, y: 0, width: 50, height: 50 },
+          { src: 'ui/sl/c.png', x: 0, y: 0, width: 50, height: 50 },
+        ] } };
+        screen.setLayout(cfg2);
+        screen.show('save');
+        await vi.waitFor(() => {
+          expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(2);
+        });
+      });
+
+      it('empty chrome.decorations array produces no decoration elements', async () => {
+        const cfg = { ...fullConfig(), chrome: { decorations: [] } };
+        screen.setLayout(cfg);
+        screen.show('save');
+        await vi.waitFor(() => {
+          expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(0);
+        });
+      });
+    });
   });
 });

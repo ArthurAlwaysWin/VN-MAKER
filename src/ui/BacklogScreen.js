@@ -3,6 +3,8 @@
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
+import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
+import { resolveThemeIcon, hasThemeIcon } from './themeIconHelpers.js';
 
 export class BacklogScreen {
   /**
@@ -14,6 +16,7 @@ export class BacklogScreen {
     this.audio = audio;
     this._playingEntry = null;
     this._layoutConfig = null;
+    this._themeIcons = null;
     this.el = document.createElement('div');
     this.el.id = 'backlog-screen';
     this.el.classList.add('hidden');
@@ -27,6 +30,17 @@ export class BacklogScreen {
    */
   setLayout(config) {
     this._layoutConfig = config || null;
+    if (this.el.classList.contains('visible')) {
+      this.show(this._lastHistory || [], this._lastCharacters || {});
+    }
+  }
+
+  /**
+   * Apply theme-level icon configuration (Phase 75 — ICO-01).
+   * @param {object|null} icons — ui.theme.icons object
+   */
+  setThemeIcons(icons) {
+    this._themeIcons = icons || null;
     if (this.el.classList.contains('visible')) {
       this.show(this._lastHistory || [], this._lastCharacters || {});
     }
@@ -48,7 +62,7 @@ export class BacklogScreen {
     this.el.innerHTML = `
       <div class="backlog-header">
         <div class="backlog-title">回 想</div>
-        <button class="backlog-close">返回</button>
+        <button class="backlog-close">${hasThemeIcon(this._themeIcons, 'close') ? resolveThemeIcon(this._themeIcons, 'close', '返回', 'close-icon') : '返回'}</button>
       </div>
       <div class="backlog-content"></div>
     `;
@@ -88,11 +102,16 @@ export class BacklogScreen {
         div.appendChild(textDiv);
       }
 
-      // Voice replay button (D-01, D-02)
+      // Voice replay button (D-01, D-02) — icon or text (ICO-01)
       if (entry.voice && this.audio) {
         const btn = document.createElement('button');
         btn.className = 'backlog-voice-btn';
-        btn.textContent = '▶';
+        if (hasThemeIcon(this._themeIcons, 'voiceReplay')) {
+          btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '▶', 'voice-replay-icon');
+          btn.dataset.isIconBtn = '1';
+        } else {
+          btn.textContent = '▶';
+        }
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           this._playVoice(div, btn, entry.voice);
@@ -111,6 +130,12 @@ export class BacklogScreen {
 
     this.el.classList.remove('hidden');
     requestAnimationFrame(() => this.el.classList.add('visible'));
+
+    // ── Chrome decorations (Phase 74) ──
+    clearScreenDecorations(this.el);
+    if (cfg?.chrome?.decorations) {
+      renderScreenDecorations(this.el, cfg.chrome.decorations);
+    }
 
     // Scroll to bottom
     requestAnimationFrame(() => {
@@ -134,8 +159,11 @@ export class BacklogScreen {
 
     // Background image
     if (cfg.backgroundImage) {
-      const resolved = resolvePath(cfg.backgroundImage);
-      if (resolved) this.el.style.backgroundImage = `url("${resolved}")`;
+      const safeImg = sanitizeCssValue(cfg.backgroundImage);
+      if (safeImg) {
+        const resolved = resolvePath(safeImg);
+        if (resolved) this.el.style.backgroundImage = `url("${resolved}")`;
+      }
     }
 
     // Header config
@@ -150,8 +178,11 @@ export class BacklogScreen {
 
       // Header background image
       if (cfg.header.backgroundImage) {
-        const resolved = resolvePath(cfg.header.backgroundImage);
-        if (resolved) header.style.backgroundImage = `url("${resolved}")`;
+        const safeHdrImg = sanitizeCssValue(cfg.header.backgroundImage);
+        if (safeHdrImg) {
+          const resolved = resolvePath(safeHdrImg);
+          if (resolved) header.style.backgroundImage = `url("${resolved}")`;
+        }
       }
 
       // Header height
@@ -247,7 +278,12 @@ export class BacklogScreen {
     this._stopCurrentVoice();
 
     this._playingEntry = entryEl;
-    btn.textContent = '■';
+    if (btn.dataset.isIconBtn) {
+      btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '■', 'voice-replay-icon');
+      btn.classList.add('backlog-voice-playing');
+    } else {
+      btn.textContent = '■';
+    }
     entryEl.classList.add('backlog-playing');
 
     this.audio.playVoice(voiceFile).then(() => {
@@ -264,7 +300,13 @@ export class BacklogScreen {
       const btn = entry.querySelector('.backlog-voice-btn');
       this._playingEntry = null;
       this.audio.stopVoice();
-      if (btn) btn.textContent = '▶';
+      if (btn) {
+        if (btn.dataset.isIconBtn) {
+          btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '▶', 'voice-replay-icon');
+        } else {
+          btn.textContent = '▶';
+        }
+      }
       entry.classList.remove('backlog-playing');
     }
   }
@@ -272,7 +314,11 @@ export class BacklogScreen {
   /** @private */
   _restoreEntry(entryEl, btn) {
     this._playingEntry = null;
-    btn.textContent = '▶';
+    if (btn.dataset.isIconBtn) {
+      btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '▶', 'voice-replay-icon');
+    } else {
+      btn.textContent = '▶';
+    }
     entryEl.classList.remove('backlog-playing');
   }
 

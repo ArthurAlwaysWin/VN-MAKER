@@ -86,9 +86,10 @@ body {
 .camera-flash-overlay {
   position: absolute;
   inset: 0;
+  z-index: 5;
   pointer-events: none;
   opacity: 0;
-  background: rgba(255, 255, 255, var(--camera-flash-opacity, 0.42));
+  background: rgba(255, 255, 255, var(--camera-flash-opacity, 0.7));
 }
 
 .camera-flash-overlay.active {
@@ -139,8 +140,11 @@ body {
   0% {
     opacity: 0;
   }
-  25% {
+  8% {
     opacity: 1;
+  }
+  30% {
+    opacity: 0.45;
   }
   100% {
     opacity: 0;
@@ -890,6 +894,15 @@ body {
 }
 
 /* ============================================
+   Screen Decoration Layers (Phase 74)
+   ============================================ */
+.screen-decoration {
+  position: absolute;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+/* ============================================
    Save/Load Screen (Phase 21 — 3×3×12 grid)
    ============================================ */
 #save-load-screen {
@@ -898,6 +911,7 @@ body {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--gm-panel-bg, rgba(10, 10, 20, 0.95));
   backdrop-filter: blur(var(--gm-blur, 8px));
   opacity: 0;
@@ -1183,6 +1197,7 @@ body {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--gm-panel-bg, rgba(10, 10, 20, 0.8));
   backdrop-filter: blur(var(--gm-blur, 8px));
   -webkit-backdrop-filter: blur(var(--gm-blur, 8px));
@@ -1491,6 +1506,7 @@ body {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--gm-panel-bg, rgba(10, 10, 20, 0.95));
   backdrop-filter: blur(var(--gm-blur, 8px));
   opacity: 0;
@@ -1634,6 +1650,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background: var(--gm-panel-bg, rgba(0, 0, 0, 0.7));
   backdrop-filter: blur(var(--gm-blur, 6px));
   opacity: 0;

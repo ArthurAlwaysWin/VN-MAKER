@@ -1,100 +1,65 @@
 <template>
-  <div>
-    <!-- Screen-level Chrome -->
-    <h4 class="form-group-title">屏幕背景与装饰</h4>
+  <div class="major-screen-image-settings">
+    <!-- Background Image -->
+    <h4 class="form-group-title">屏幕背景</h4>
     <div class="config-row">
-      <label class="config-label">屏幕背景图</label>
+      <label class="config-label">背景图</label>
       <input type="text" :value="getUiImageDisplayValue(chrome.backgroundImage)" readonly class="config-text" placeholder="未选择" />
       <button class="config-btn" @click="pickChromeBackgroundImage">选择图片</button>
       <button v-if="chrome.backgroundImage" class="config-btn secondary" @click="clearChromeBackgroundImage">清除</button>
     </div>
-    <div class="decor-list">
-      <div v-for="(deco, idx) in chromeDecorations" :key="'chrome-' + idx" class="decor-card">
-        <div class="config-row">
-          <label class="config-label">装饰图片</label>
-          <input type="text" :value="getUiImageDisplayValue(deco.src)" readonly class="config-text" placeholder="未选择" />
-          <button class="config-btn" @click="pickChromeDecoImage(idx)">选择图片</button>
-          <button v-if="deco.src" class="config-btn secondary" @click="clearChromeDecoImage(idx)">清除</button>
-          <button class="btn-delete" @click="onDeleteChromeDeco(idx)" title="删除装饰">×</button>
-        </div>
-        <div class="decor-grid">
-          <div class="config-row">
-            <label class="config-label">X</label>
-            <input type="number" :value="deco.x ?? 0" @input="onChromeDecoNum(idx, 'x', $event)" @change="commit" min="0" max="1920" class="config-num" />
-            <span class="unit">px</span>
-          </div>
-          <div class="config-row">
-            <label class="config-label">Y</label>
-            <input type="number" :value="deco.y ?? 0" @input="onChromeDecoNum(idx, 'y', $event)" @change="commit" min="0" max="1080" class="config-num" />
-            <span class="unit">px</span>
-          </div>
-          <div class="config-row">
-            <label class="config-label">宽度</label>
-            <input type="number" :value="deco.width ?? 100" @input="onChromeDecoNum(idx, 'width', $event)" @change="commit" min="1" max="1920" class="config-num" />
-            <span class="unit">px</span>
-          </div>
-          <div class="config-row">
-            <label class="config-label">高度</label>
-            <input type="number" :value="deco.height ?? 100" @input="onChromeDecoNum(idx, 'height', $event)" @change="commit" min="1" max="1080" class="config-num" />
-            <span class="unit">px</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <button class="btn-add" @click="onAddChromeDeco">+ 添加屏幕装饰</button>
-    <p v-if="chromeDecorations.length > 3" class="perf-hint">装饰层较多可能影响性能</p>
 
-    <!-- Header-level Decorations -->
-    <h4 class="form-group-title">页头装饰</h4>
+    <!-- Decorations -->
+    <h4 class="form-group-title">装饰层</h4>
     <div class="decor-list">
       <div v-for="(deco, idx) in decorations" :key="idx" class="decor-card">
         <div class="config-row">
-          <label class="config-label">图片路径</label>
+          <label class="config-label">图片</label>
           <input type="text" :value="getUiImageDisplayValue(deco.src)" readonly class="config-text" placeholder="未选择" />
-          <button class="config-btn" @click="pickDecorationImage(idx)">选择图片</button>
+          <button class="config-btn" @click="pickDecorationImage(idx)">选择</button>
           <button v-if="deco.src" class="config-btn secondary" @click="clearDecorationImage(idx)">清除</button>
-          <button class="btn-delete" @click="onDelete(idx)" title="删除装饰">×</button>
+          <button class="btn-delete" @click="onDeleteDecoration(idx)" title="删除装饰">×</button>
         </div>
         <div class="decor-grid">
           <div class="config-row">
             <label class="config-label">X</label>
-            <input type="number" :value="deco.x ?? 0" @input="onNumInput(idx, 'x', $event)" @change="commit" min="0" max="1920" class="config-num" />
+            <input type="number" :value="deco.x ?? 0" @input="onDecoNumInput(idx, 'x', $event)" @change="commit" min="0" max="1920" class="config-num" />
             <span class="unit">px</span>
           </div>
           <div class="config-row">
             <label class="config-label">Y</label>
-            <input type="number" :value="deco.y ?? 0" @input="onNumInput(idx, 'y', $event)" @change="commit" min="0" max="1080" class="config-num" />
+            <input type="number" :value="deco.y ?? 0" @input="onDecoNumInput(idx, 'y', $event)" @change="commit" min="0" max="1080" class="config-num" />
             <span class="unit">px</span>
           </div>
           <div class="config-row">
             <label class="config-label">宽度</label>
-            <input type="number" :value="deco.width ?? 100" @input="onNumInput(idx, 'width', $event)" @change="commit" min="1" max="1920" class="config-num" />
+            <input type="number" :value="deco.width ?? 100" @input="onDecoNumInput(idx, 'width', $event)" @change="commit" min="1" max="1920" class="config-num" />
             <span class="unit">px</span>
           </div>
           <div class="config-row">
             <label class="config-label">高度</label>
-            <input type="number" :value="deco.height ?? 100" @input="onNumInput(idx, 'height', $event)" @change="commit" min="1" max="1080" class="config-num" />
+            <input type="number" :value="deco.height ?? 100" @input="onDecoNumInput(idx, 'height', $event)" @change="commit" min="1" max="1080" class="config-num" />
             <span class="unit">px</span>
           </div>
         </div>
       </div>
     </div>
-    <button class="btn-add" @click="onAdd">+ 添加装饰</button>
+    <button class="btn-add" @click="onAddDecoration">+ 添加装饰</button>
+    <p v-if="decorations.length > 3" class="perf-hint">装饰层较多可能影响性能</p>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
-import { addDecoration, deleteDecoration, setDecorationField } from './decorLayoutHelpers.js';
 import { addChromeDecoration, deleteChromeDecoration, setChromeDecorationField } from './chromeDecorHelpers.js';
 import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
 
 const editor = useScreenLayoutEditor();
+
 const cfg = computed(() => editor.getActiveScreenConfig() || {});
-const decorations = computed(() => cfg.value.header?.decorations || []);
 const chrome = computed(() => cfg.value.chrome || {});
-const chromeDecorations = computed(() => chrome.value.decorations || []);
+const decorations = computed(() => chrome.value.decorations || []);
 
 // ─── Chrome background image ───────────────────────────
 
@@ -114,82 +79,41 @@ function clearChromeBackgroundImage() {
 
 // ─── Chrome decorations ────────────────────────────────
 
-function onAddChromeDeco() {
+function onAddDecoration() {
   const raw = editor.getActiveScreenConfig();
   addChromeDecoration(raw);
   editor.sendScreenLayoutToPreview();
   editor.commitScreenLayout();
 }
 
-function onDeleteChromeDeco(idx) {
+function onDeleteDecoration(idx) {
   const raw = editor.getActiveScreenConfig();
   deleteChromeDecoration(raw, idx);
   editor.sendScreenLayoutToPreview();
   editor.commitScreenLayout();
 }
 
-function setChromeDecoValue(idx, field, value) {
+function setDecoValue(idx, field, value) {
   const raw = editor.getActiveScreenConfig();
   setChromeDecorationField(raw, idx, field, value);
   editor.sendScreenLayoutToPreview();
 }
 
-function onChromeDecoNum(idx, field, e) {
+function onDecoNumInput(idx, field, e) {
   const val = e.target.value === '' ? null : Number(e.target.value);
-  setChromeDecoValue(idx, field, val);
-}
-
-async function pickChromeDecoImage(idx) {
-  await pickUiImage({
-    setValue: (value) => setChromeDecoValue(idx, 'src', value),
-    commit: () => editor.commitScreenLayout(),
-  });
-}
-
-function clearChromeDecoImage(idx) {
-  clearUiImage({
-    setValue: (value) => setChromeDecoValue(idx, 'src', value),
-    commit: () => editor.commitScreenLayout(),
-  });
-}
-
-// ─── Header decorations (existing) ─────────────────────
-
-function onAdd() {
-  const raw = editor.getActiveScreenConfig();
-  addDecoration(raw);
-  editor.sendScreenLayoutToPreview();
-  editor.commitScreenLayout();
-}
-
-function onDelete(idx) {
-  const raw = editor.getActiveScreenConfig();
-  deleteDecoration(raw, idx);
-  editor.sendScreenLayoutToPreview();
-  editor.commitScreenLayout();
-}
-
-function setDecorationValue(idx, field, value) {
-  const raw = editor.getActiveScreenConfig();
-  setDecorationField(raw, idx, field, value);
-  editor.sendScreenLayoutToPreview();
-}
-
-function onNumInput(idx, field, e) {
-  const val = e.target.value === '' ? null : Number(e.target.value);
-  setDecorationValue(idx, field, val);
+  setDecoValue(idx, field, val);
 }
 
 async function pickDecorationImage(idx) {
   await pickUiImage({
-    setValue: (value) => setDecorationValue(idx, 'src', value),
+    setValue: (value) => setDecoValue(idx, 'src', value),
     commit: () => editor.commitScreenLayout(),
   });
 }
 
 function clearDecorationImage(idx) {
   clearUiImage({
-    setValue: (value) => setDecorationValue(idx, 'src', value),
+    setValue: (value) => setDecoValue(idx, 'src', value),
     commit: () => editor.commitScreenLayout(),
   });
 }

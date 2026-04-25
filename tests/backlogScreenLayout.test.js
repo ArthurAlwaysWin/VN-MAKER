@@ -445,4 +445,46 @@ describe('BacklogScreen.setLayout', () => {
       expect(screen.el.style.background).toBe('');
     });
   });
+
+  describe('chrome.decorations (Phase 74)', () => {
+    it('renders chrome.decorations as .screen-decoration elements', () => {
+      screen.setLayout({
+        chrome: {
+          decorations: [
+            { src: 'ui/bl/decor.png', x: 50, y: 100, width: 200, height: 80 },
+          ],
+        },
+      });
+      screen.show(SAMPLE_HISTORY, CHARACTERS);
+
+      const decorations = screen.el.querySelectorAll('.screen-decoration');
+      expect(decorations.length).toBe(1);
+      expect(decorations[0].getAttribute('src')).toContain('resolved:ui/bl/decor.png');
+      expect(decorations[0].style.left).toBe('50px');
+      expect(decorations[0].style.top).toBe('100px');
+    });
+
+    it('re-showing replaces decorations instead of accumulating', () => {
+      screen.setLayout({
+        chrome: { decorations: [{ src: 'ui/bl/a.png', x: 0, y: 0, width: 50, height: 50 }] },
+      });
+      screen.show(SAMPLE_HISTORY, CHARACTERS);
+      expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(1);
+
+      screen.setLayout({
+        chrome: { decorations: [
+          { src: 'ui/bl/b.png', x: 0, y: 0, width: 50, height: 50 },
+          { src: 'ui/bl/c.png', x: 0, y: 0, width: 50, height: 50 },
+        ] },
+      });
+      screen.show(SAMPLE_HISTORY, CHARACTERS);
+      expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(2);
+    });
+
+    it('empty chrome.decorations produces no decoration elements', () => {
+      screen.setLayout({ chrome: { decorations: [] } });
+      screen.show(SAMPLE_HISTORY, CHARACTERS);
+      expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(0);
+    });
+  });
 });

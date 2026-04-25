@@ -91,6 +91,9 @@
       <input type="text" :value="slot.emptyText || ''" @input="onNested('slot', 'emptyText', $event.target.value || null)" @change="commit" class="config-text" placeholder="— 空 —" />
     </div>
 
+    <!-- Chrome: Background & Decorations -->
+    <MajorScreenImageSettings />
+
     <!-- Pagination -->
     <h4 class="form-group-title">分页</h4>
     <div class="config-row">
@@ -115,6 +118,7 @@
 import { computed } from 'vue';
 import { useScreenLayoutEditor } from '../../composables/useScreenLayoutEditor.js';
 import { clearUiImage, getUiImageDisplayValue, pickUiImage } from '../../utils/uiImageField.js';
+import MajorScreenImageSettings from './MajorScreenImageSettings.vue';
 
 const editor = useScreenLayoutEditor();
 

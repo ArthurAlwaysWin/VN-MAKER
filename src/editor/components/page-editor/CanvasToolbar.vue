@@ -1,6 +1,6 @@
 <template>
   <div class="canvas-toolbar">
-    <template v-if="!editor.isPreviewMode.value">
+    <template v-if="editor.previewSessionType.value === null">
       <button class="add-char-btn" @click="editor.showCharPicker.value = true"
         :disabled="!editor.currentPage.value" title="添加角色到当前页面">
         + 添加角色
@@ -16,14 +16,14 @@
       <span class="toolbar-info" v-else>未选中页面</span>
     </template>
     <template v-else>
-      <span class="toolbar-info preview-label">🎮 试玩中</span>
+      <span class="toolbar-info preview-label">🎮 {{ editor.previewModeLabel.value }}</span>
     </template>
 
     <span class="toolbar-spacer"></span>
 
     <!-- Mute toggle (per D-16) — only in preview mode -->
     <button
-      v-if="editor.isPreviewMode.value"
+      v-if="editor.previewSessionType.value !== null"
       class="toolbar-btn"
       :title="editor.isMuted.value ? '取消静音' : '静音'"
       @click="editor.toggleMute()"
@@ -31,7 +31,7 @@
 
     <!-- Play / Stop toggle (per D-13) -->
     <button
-      v-if="!editor.isPreviewMode.value"
+      v-if="editor.previewSessionType.value === null"
       class="toolbar-btn play-btn"
       :disabled="!editor.currentPage.value || !editor.isEngineReady.value"
       title="试玩 (从当前页面开始)"
@@ -40,9 +40,9 @@
     <button
       v-else
       class="toolbar-btn stop-btn"
-      title="停止试玩"
+      :title="editor.stopPreviewLabel.value"
       @click="editor.stopPreview()"
-    >■ 停止</button>
+    >■ {{ editor.stopPreviewLabel.value }}</button>
   </div>
 </template>
 

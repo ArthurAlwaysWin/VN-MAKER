@@ -26,7 +26,11 @@
  */
 
 import { EventEmitter } from './EventEmitter.js';
-import { getRuntimeTransitionType } from '../shared/cinematicContract.js';
+import {
+  getCharacterAnimationValue,
+  getPageCameraContract,
+  getRuntimeTransitionType,
+} from '../shared/cinematicContract.js';
 
 export class ScriptEngine extends EventEmitter {
   constructor() {
@@ -295,6 +299,7 @@ export class ScriptEngine extends EventEmitter {
       sceneId: this.currentScene,
       pageIndex: this.pageIndex,
       page,
+      camera: getPageCameraContract(page.camera),
     });
 
     const transition = getRuntimeTransitionType(page.transition?.type);
@@ -347,6 +352,7 @@ export class ScriptEngine extends EventEmitter {
       this.emit('show_character', {
         id: char.id,
         expression: validExpr,
+        animation: getCharacterAnimationValue(char.animation),
         position: char.position || 'center',
         x: char.x,
         y: char.y,

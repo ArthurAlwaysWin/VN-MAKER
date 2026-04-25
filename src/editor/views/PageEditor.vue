@@ -1,7 +1,7 @@
 <template>
   <div class="page-editor" v-if="script.data">
     <!-- Left: Scene Tree Sidebar -->
-    <div class="sidebar" :class="{ 'preview-readonly': editor.isPreviewMode.value }">
+    <div class="sidebar" :class="{ 'preview-readonly': editor.previewSessionType.value !== null }">
       <SceneTree />
     </div>
 
@@ -9,25 +9,25 @@
     <div class="canvas-area">
       <CanvasToolbar />
       <div class="canvas-content">
-        <PageCanvas v-show="!editor.isPreviewMode.value" />
+        <PageCanvas v-show="editor.previewSessionType.value === null" />
         <iframe
-          v-show="editor.isPreviewMode.value"
+          v-show="editor.previewSessionType.value !== null"
           :ref="onIframeRef"
           class="preview-iframe"
           src="/index.html"
         ></iframe>
         <!-- Overlay stop button — per D-13, D-14: positioned outside iframe by editor -->
         <button
-          v-if="editor.isPreviewMode.value"
+          v-if="editor.previewSessionType.value !== null"
           class="preview-overlay-stop"
-          title="停止试玩"
+          :title="editor.stopPreviewLabel.value"
           @click="editor.stopPreview()"
-        >■ 停止</button>
+        >■ {{ editor.stopPreviewLabel.value }}</button>
       </div>
     </div>
 
     <!-- Right: Inspector Panel -->
-    <div class="inspector" :class="{ 'preview-readonly': editor.isPreviewMode.value }">
+    <div class="inspector" :class="{ 'preview-readonly': editor.previewSessionType.value !== null }">
       <PageInspector />
     </div>
 

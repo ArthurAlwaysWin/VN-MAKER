@@ -335,11 +335,38 @@ describe('unknown cinematic compatibility', () => {
     strictEqual(pageEnterEvents.length, 1);
     strictEqual(pageEnterEvents[0].page.camera.effect, 'legacy-zoom');
     strictEqual(pageEnterEvents[0].page.characters[0].animation, 'legacy-bounce');
+    strictEqual(pageEnterEvents[0].page.transition.type, 'legacy-wipe');
     strictEqual(bgEvents.length, 1);
     strictEqual(bgEvents[0].transition, 'fade', 'unknown transition should fall back safely');
     strictEqual(bgEvents[0].duration, 650);
     strictEqual(charEvents.length, 1);
     strictEqual(charEvents[0].transition, 'fade');
+  });
+
+  it('passes the known scale transition through to runtime consumers', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [
+          {
+            type: 'normal',
+            background: 'bg.png',
+            transition: { type: 'scale', duration: 480 },
+            characters: [{ id: 'hero', expression: 'normal', position: 'center' }],
+            dialogues: [{ speaker: 'hero', text: 'Scaled', expression: null, voice: null }],
+          },
+        ],
+      },
+    });
+
+    const bgEvents = [];
+    engine.on('set_background', data => bgEvents.push(data));
+
+    engine.startGame('start');
+
+    strictEqual(bgEvents.length, 1);
+    strictEqual(bgEvents[0].transition, 'scale');
+    strictEqual(bgEvents[0].duration, 480);
   });
 });
 

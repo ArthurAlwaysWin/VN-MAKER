@@ -3,6 +3,21 @@
  * Uses dual-layer DOM: container div + two img children (A/B) for crossfade transitions.
  */
 import { clampField } from './sanitize.js';
+import {
+  DEFAULT_CHARACTER_ANIMATION,
+  getCharacterAnimationValue,
+  isKnownCharacterAnimation,
+} from '../shared/cinematicContract.js';
+
+const CHARACTER_MOTION_PRESETS = {
+  'fade-in': { className: 'motion-fade-in', loop: false, duration: 320 },
+  'slide-in-left': { className: 'motion-slide-in-left', loop: false, duration: 380 },
+  'slide-in-right': { className: 'motion-slide-in-right', loop: false, duration: 380 },
+  'shake': { className: 'motion-shake', loop: false, duration: 260 },
+  'nod': { className: 'motion-nod', loop: false, duration: 280 },
+  'breathe': { className: 'motion-breathe', loop: true, duration: 2200 },
+  'bounce': { className: 'motion-bounce', loop: false, duration: 420 },
+};
 
 export class CharacterLayer {
   /**
@@ -13,7 +28,7 @@ export class CharacterLayer {
     this.container = container;
     this.basePath = basePath;
 
-    /** @type {Map<string, {container: HTMLDivElement, motion: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B', currentImage: string|null, _crossfadeGen: number, _crossfadeTimer: number|null}>} */
+    /** @type {Map<string, {container: HTMLDivElement, motion: HTMLDivElement, imgA: HTMLImageElement, imgB: HTMLImageElement, activeImg: 'A'|'B', currentImage: string|null, _crossfadeGen: number, _crossfadeTimer: number|null, _motionRunId: number, _motionTimer: number|null, _motionClass: string|null, _motionEndHandler: ((event: AnimationEvent) => void)|null}>} */
     this.characters = new Map();
   }
 
@@ -46,9 +61,23 @@ export class CharacterLayer {
       container.appendChild(motion);
       this.container.appendChild(container);
 
-      entry = { container, motion, imgA, imgB, activeImg: 'A', currentImage: null, _crossfadeGen: 0, _crossfadeTimer: null };
-      this.characters.set(data.id, entry);
-    }
+       entry = {
+         container,
+         motion,
+         imgA,
+         imgB,
+         activeImg: 'A',
+         currentImage: null,
+         _crossfadeGen: 0,
+         _crossfadeTimer: null,
+         _hideTimer: null,
+         _motionRunId: 0,
+         _motionTimer: null,
+         _motionClass: null,
+         _motionEndHandler: null,
+       };
+       this.characters.set(data.id, entry);
+     }
 
     // ─── Image handling ───
     if (data.image) {
@@ -106,10 +135,12 @@ export class CharacterLayer {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => entry.container.classList.add('entered'));
       });
-    } else {
-      entry.container.classList.add('entered');
-    }
-  }
+     } else {
+       entry.container.classList.add('entered');
+     }
+
+     this._playMotion(entry, data.animation);
+   }
 
   /**
    * Hide a character
@@ -124,11 +155,20 @@ export class CharacterLayer {
       entry._crossfadeTimer = null;
     }
 
+    // Clear any pending hide timer from a previous hide call (BUG-01 fix)
+    if (entry._hideTimer) {
+      clearTimeout(entry._hideTimer);
+      entry._hideTimer = null;
+    }
+
+    this._clearMotion(entry);
+
     const duration = data.duration || 400;
     entry.container.style.transitionDuration = `${duration}ms`;
     entry.container.classList.remove('entered');
 
-    setTimeout(() => {
+    entry._hideTimer = setTimeout(() => {
+      entry._hideTimer = null;
       entry.container.remove();
       this.characters.delete(data.id);
     }, duration);
@@ -154,9 +194,72 @@ export class CharacterLayer {
   clear() {
     this.characters.forEach(entry => {
       if (entry._crossfadeTimer) clearTimeout(entry._crossfadeTimer);
+      if (entry._hideTimer) clearTimeout(entry._hideTimer);
+      this._clearMotion(entry);
       entry.container.remove();
     });
     this.characters.clear();
+  }
+
+  /**
+   * @param {ReturnType<CharacterLayer['characters']['get']>} entry
+   * @param {string|undefined|null} animation
+   * @private
+   */
+  _playMotion(entry, animation) {
+    this._clearMotion(entry);
+
+    const normalized = getCharacterAnimationValue(animation);
+    if (normalized === DEFAULT_CHARACTER_ANIMATION || !isKnownCharacterAnimation(normalized)) {
+      return;
+    }
+
+    const preset = CHARACTER_MOTION_PRESETS[normalized];
+    if (!preset) return;
+
+    entry._motionRunId += 1;
+    const runId = entry._motionRunId;
+    entry._motionClass = preset.className;
+
+    void entry.motion.offsetWidth;
+    entry.motion.classList.add(preset.className);
+
+    if (preset.loop) return;
+
+    const cleanup = () => {
+      if (entry._motionRunId !== runId) return;
+      this._clearMotion(entry);
+    };
+
+    entry._motionEndHandler = (event) => {
+      if (event.target !== entry.motion) return;
+      cleanup();
+    };
+    entry.motion.addEventListener('animationend', entry._motionEndHandler, { once: true });
+    entry._motionTimer = setTimeout(cleanup, preset.duration + 50);
+  }
+
+  /**
+   * @param {ReturnType<CharacterLayer['characters']['get']>} entry
+   * @private
+   */
+  _clearMotion(entry) {
+    if (!entry) return;
+
+    if (entry._motionTimer) {
+      clearTimeout(entry._motionTimer);
+      entry._motionTimer = null;
+    }
+
+    if (entry._motionEndHandler) {
+      entry.motion.removeEventListener('animationend', entry._motionEndHandler);
+      entry._motionEndHandler = null;
+    }
+
+    if (entry._motionClass) {
+      entry.motion.classList.remove(entry._motionClass);
+      entry._motionClass = null;
+    }
   }
 
   /**
@@ -204,7 +307,10 @@ export class CharacterLayer {
     // Preload: wait for decode before starting transition (prevents flash-white)
     if (duration > 0) {
       try {
-        await incoming.decode();
+        await Promise.race([
+          incoming.decode(),
+          new Promise((resolve) => setTimeout(resolve, 500)), // SUG-06: timeout fallback
+        ]);
       } catch (e) {
         // decode() failed (broken/missing image) — proceed anyway
       }

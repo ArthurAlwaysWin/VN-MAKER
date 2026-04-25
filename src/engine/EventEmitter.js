@@ -29,6 +29,10 @@ export class EventEmitter {
   }
 
   /**
+   * Emit an event to all registered listeners.
+   * NOTE: Does NOT await async handlers — any returned Promise is silently discarded.
+   * If you need to wait for async processing, use a different coordination mechanism
+   * (e.g. gate flags, microtask queues) rather than relying on emit() return values.
    * @param {string} event
    * @param {*} data
    */

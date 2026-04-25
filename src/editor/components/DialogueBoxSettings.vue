@@ -3,7 +3,16 @@
     <h3>🔤 对话框字体 <HelpTip :text="HELP_SETTINGS.dialogueFont" /></h3>
 
     <div class="font-settings-layout">
-      <!-- Left: Controls -->
+      <!-- Top: Mini Preview -->
+      <div class="font-preview-box">
+        <div class="preview-label">预览</div>
+        <div class="preview-dialogue">
+          <div class="preview-nameplate" :style="previewNameplateStyle">小明</div>
+          <div class="preview-text" :style="previewTextStyle">这是一段示例对话文字，用于预览字体效果。</div>
+        </div>
+      </div>
+
+      <!-- Bottom: Controls -->
       <div class="font-controls">
         <!-- Dialogue Text Section -->
         <div class="subsection-label">对话文字</div>
@@ -190,14 +199,6 @@
         </div>
       </div>
 
-      <!-- Right: Mini Preview -->
-      <div class="font-preview-box">
-        <div class="preview-label">预览</div>
-        <div class="preview-dialogue">
-          <div class="preview-nameplate" :style="previewNameplateStyle">小明</div>
-          <div class="preview-text" :style="previewTextStyle">这是一段示例对话文字，用于预览字体效果。</div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -346,8 +347,8 @@ const previewNameplateStyle = computed(() => ({
 .dlgbox-settings { padding: 0; margin-top: 24px; }
 .dlgbox-settings h3 { font-size: 16px; color: #e0e0e0; margin: 0 0 16px; font-weight: 500; }
 
-.font-settings-layout { display: flex; gap: 24px; }
-.font-controls { flex: 1; min-width: 0; }
+.font-settings-layout { display: flex; flex-direction: column; gap: 16px; }
+.font-controls { min-width: 0; }
 
 .subsection-label {
   font-size: 12px; color: #888; text-transform: uppercase;
@@ -446,7 +447,7 @@ const previewNameplateStyle = computed(() => ({
 }
 
 .font-preview-box {
-  width: 280px; flex-shrink: 0;
+  width: 100%; box-sizing: border-box;
   background: rgba(0, 0, 0, 0.7); border-radius: 8px;
   padding: 16px; border: 1px solid #333;
   display: flex; flex-direction: column;

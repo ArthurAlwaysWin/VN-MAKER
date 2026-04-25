@@ -33,6 +33,9 @@ export class AudioManager {
 
   _unlock() {
     this._unlocked = true;
+    // Remove both listeners — whichever didn't fire yet is still on document (BUG-03 fix)
+    document.removeEventListener('click', this._unlockHandler);
+    document.removeEventListener('keydown', this._unlockHandler);
     // Resume any suspended audio context
     if (this._bgm) {
       this._bgm.play().catch(() => {});

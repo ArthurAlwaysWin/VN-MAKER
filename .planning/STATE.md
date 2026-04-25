@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 73-button-family-image-rollout-01-PLAN.md
-last_updated: "2026-04-23T03:06:12.270Z"
-last_activity: 2026-04-23
+status: phase_75_complete
+stopped_at: Phase 75 all plans executed — v1.5 milestone COMPLETE
+last_updated: "2026-04-25T09:10:00.000Z"
+last_activity: 2026-04-25
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 7
+  completed_phases: 5
+  total_plans: 12
+  completed_plans: 12
 ---
 
 # Project State
@@ -20,20 +20,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 73 — button-family-image-rollout
+**Current focus:** v1.5 milestone COMPLETE
 
 ## Current Position
 
-Phase: 73 (button-family-image-rollout) — READY
-Plan: 0 of 0
-Status: Phase complete — ready for verification
-Next: /gsd-discuss-phase 73 --auto  
-Last activity: 2026-04-23
+Phase: 75 (cursor-icon-pipeline-closure) — COMPLETE
+Plan: 3 of 3
+Status: All plans executed, 109 tests passing, build succeeds
+Next: Archive v1.5 milestone
+Last activity: 2026-04-25
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ archived
 v1.4 ████████████████████ 10/10 phases ✅ archived
-v1.5 ████████░░░░░░░░░░░░ 2/5 phases ● phase 72 complete
+v1.5 ████████████████████ 5/5 phases ✅ COMPLETE
 ```
 
 ## Performance Metrics
@@ -73,6 +73,11 @@ v1.5 ████████░░░░░░░░░░░░ 2/5 phases ●
 - AST-03 / AST-04 收口到最终 Phase 75，作为 preview/runtime/export parity 与 fallback gate 的最终 owner。
 - [Phase 73]: The button-family contract stays under ui.theme.buttonFamilies and only scans the five locked Phase 73 families.
 - [Phase 73]: ThemeManager owns one selector registry for button families and uses .active for selected-state CSS instead of introducing a new state machine.
+- [Phase 74]: Chrome 子路径统一 — 所有背景图和装饰层走 `.chrome` 子路径
+- [Phase 74]: GameMenu 旧路径迁移 — 带有 `@deprecated` fallback，注释标明下个 major milestone 移除
+- [Phase 74]: 装饰层 >3 时编辑器软性性能提示，不硬限
+- [Phase 74]: 不预留给 Phase 75 的 overlay/cursor 字段（YAGNI 与 Grey Area 2 Q5 决策一致）
+- [Phase 74]: 复用现有 iframe + postMessage 基础设施，不建新预览
 
 ### Blockers/Concerns
 
@@ -81,7 +86,7 @@ v1.5 ████████░░░░░░░░░░░░ 2/5 phases ●
 
 ## Session Continuity
 
-Last session: 2026-04-23T03:06:12.265Z
-Stopped at: Completed 73-button-family-image-rollout-01-PLAN.md
-Resume hint: 已完成 Phase 73 context capture；下一步进入 auto plan，按冻结的按钮族矩阵拆成可执行 plans。  
-Next action: /gsd-plan-phase 73 --auto
+Last session: 2026-04-25T09:10:00.000Z
+Stopped at: Phase 75 complete — v1.5 milestone fully delivered
+Resume hint: v1.5 里程碑全部完成。5 个 phase (71-75) 全部交付，109 个测试通过，构建成功。
+Next action: Archive v1.5 milestone / begin next milestone planning

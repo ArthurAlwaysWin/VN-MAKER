@@ -38,7 +38,7 @@
 - `@vitejs/plugin-vue` `^6.0.5` - Vue SFC compilation
 - `vite-plugin-electron` `^0.29.1` - Electron main process bundling
 - `vite-plugin-electron-renderer` `^0.14.6` - Electron renderer process support
-- None detected. No test framework, no test files, no test configuration.
+- Test framework detected: Vitest (`vitest.config.js`) plus existing Node `node:test` coverage in `tests/scriptEngine.test.js`.
 ## Key Dependencies
 - `vue` `^3.5.31` - Powers the entire editor UI (SFC components with `<script setup>`)
 - `pinia` `^3.0.4` - Two stores: `useProjectStore` (`src/editor/stores/project.js`) and `useScriptStore` (`src/editor/stores/script.js`)

@@ -79,7 +79,11 @@ Plans:
   2. 用户可以为这 4 个界面配置装饰层图片，启用后主要交互元素仍可点击和触发。
   3. 用户可以在编辑器中逐个预览这 4 个界面的 runtime-backed 真实图片效果，而不是只看编辑器侧静态占位。
   4. 用户在同一主题下切换这 4 个界面时，每个界面的背景图与装饰层都会按各自配置生效，不会串用到错误界面。
-**Plans**: TBD  
+**Plans**: 3 plans  
+Plans:
+- [ ] 74-01-PLAN.md — 冻结 screen chrome 契约 (backgroundImage + decorations)、GameMenu @deprecated fallback、scan/ThemeManager 扩展
+- [ ] 74-02-PLAN.md — Runtime 渲染：4 屏背景图 (object-fit:cover) + 装饰层 (pointer-events:none) + GameMenu fallback
+- [ ] 74-03-PLAN.md — 编辑器接入：MajorScreenImageSettings.vue 统一组件 + >3 装饰层软提示 + iframe 预览联调
 **UI hint**: yes
 
 ### Phase 75: 光标图标与全链路收口

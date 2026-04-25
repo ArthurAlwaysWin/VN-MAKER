@@ -381,7 +381,7 @@ async function previewTransitionEffect(request) {
 |----------|-------|
 | Framework | Vitest `4.1.4` + existing `node:test` for `tests/scriptEngine.test.js` |
 | Config file | `vitest.config.js` |
-| Quick run command | `npx vitest run tests/characterMotionPlayback.test.js tests/cameraRuntimePlayback.test.js tests/backgroundTransitionWiring.test.js tests/cameraCleanupWiring.test.js` |
+| Quick run command | `npx vitest run tests/pageEditorEffectPreviewState.test.js tests/iframeEffectPreviewWiring.test.js tests/backgroundTransitionPreview.test.js tests/backgroundTransitionWiring.test.js tests/cameraCleanupWiring.test.js` |
 | Full suite command | `npx vitest run && node --test tests/scriptEngine.test.js` |
 
 ### Phase Requirements → Test Map
@@ -389,7 +389,7 @@ async function previewTransitionEffect(request) {
 |--------|----------|-----------|-------------------|-------------|
 | ANIM-04 | Character effect preview sends request, replays via runtime owner, and reports terminal result | unit + wiring | `npx vitest run tests/pageEditorEffectPreviewState.test.js tests/iframeEffectPreviewWiring.test.js` | ❌ Wave 0 |
 | TRAN-03 | Transition preview uses runtime-only temporary variant without navigation mutation and awaits background completion | unit + wiring | `npx vitest run tests/backgroundTransitionPreview.test.js tests/iframeEffectPreviewWiring.test.js` | ❌ Wave 0 |
-| PREV-02 | Disabled reasons and runtime failure reasons are explicit and distinct | unit | `npx vitest run tests/pageEditorEffectPreviewState.test.js` | ❌ Wave 0 |
+| PREV-02 | Disabled reasons and runtime failure reasons are explicit and distinct | unit + wiring | `npx vitest run tests/pageEditorEffectPreviewState.test.js tests/iframeEffectPreviewWiring.test.js` | ❌ Wave 0 |
 | PREV-03 | Complete/cancel/error all restore pre-preview editor/runtime state | wiring + regression | `npx vitest run tests/iframeEffectPreviewWiring.test.js tests/backgroundTransitionWiring.test.js tests/cameraCleanupWiring.test.js` | ❌ Wave 0 |
 
 ### Sampling Rate

@@ -3,7 +3,10 @@
  *
  * Orchestrates 9 steps: Vite engine build → asset scanning → staging setup →
  * engine + asset copy → template fill → package.json generation →
- * icon conversion → @electron/packager → optional ZIP.
+ * icon conversion → Electron dist copy + app assembly → optional ZIP.
+ *
+ * Uses the already-extracted Electron from node_modules/electron/dist/
+ * instead of @electron/packager (which hangs on zip extraction on Windows).
  *
  * @module exportDesktop
  */
@@ -15,7 +18,6 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { packager } from '@electron/packager';
 import pngToIco from 'png-to-ico';
 import { scanAssets } from '../src/engine/scanAssets.js';
 import { generateHtml, createZip } from './exportGame.js';
@@ -154,25 +156,72 @@ export async function exportDesktop(options, sendProgress) {
     await fs.writeFile(path.join(stagingDir, 'icon.ico'), icoBuffer);
 
     // Step 8 — 打包应用 (75%)
-    sendProgress({ step: '打包应用', percent: 75 });
+    // Uses the already-extracted Electron from node_modules/electron/dist/
+    // instead of @electron/packager (which hangs on Windows zip extraction).
+    sendProgress({ step: '复制 Electron 运行时', percent: 75 });
     let finalOutputDir;
     if (!_skipPackager) {
-      const electronVersion = process.versions.electron || '41.0.4';
-      const outputPaths = await packager({
-        dir: stagingDir,
-        out: outputDir,
-        name: sanitized,
-        platform: 'win32',
-        arch: 'x64',
-        electronVersion,
-        executableName: sanitized,
-        // Pitfall 4: icon path WITHOUT .ico extension
-        icon: path.join(stagingDir, 'icon'),
-        asar: false,       // Locked decision: plain files, no ASAR
-        overwrite: true,    // Allow re-export to same directory
-        prune: false,       // Game app has zero node_modules
-      });
-      finalOutputDir = outputPaths[0];
+      const electronDist = path.join(appRoot, 'node_modules', 'electron', 'dist');
+      if (!existsSync(electronDist)) {
+        throw new Error(`Electron dist not found: ${electronDist}`);
+      }
+
+      // Electron patches fs to intercept .asar files as virtual directories.
+      // We need raw filesystem access to copy/delete .asar files as plain files.
+      const savedNoAsar = process.noAsar;
+      process.noAsar = true;
+
+      finalOutputDir = path.join(outputDir, `${sanitized}-win32-x64`);
+      await fs.rm(finalOutputDir, { recursive: true, force: true }).catch(() => {});
+      await fs.mkdir(finalOutputDir, { recursive: true });
+
+      // 8a — Copy Electron runtime files
+      console.log('[ExportDesktop] Copying Electron dist from:', electronDist);
+      await fs.cp(electronDist, finalOutputDir, { recursive: true });
+
+      // 8b — Rename electron.exe → {game}.exe
+      sendProgress({ step: '配置可执行文件', percent: 82 });
+      const srcExe = path.join(finalOutputDir, 'electron.exe');
+      const dstExe = path.join(finalOutputDir, `${sanitized}.exe`);
+      if (existsSync(srcExe)) {
+        await fs.rename(srcExe, dstExe);
+      }
+
+      // 8c — Replace default_app.asar with our game files in resources/app/
+      const resourcesApp = path.join(finalOutputDir, 'resources', 'app');
+      const defaultAsar = path.join(finalOutputDir, 'resources', 'default_app.asar');
+      await fs.rm(defaultAsar, { force: true }).catch(() => {});
+      await fs.mkdir(resourcesApp, { recursive: true });
+      await fs.cp(stagingDir, resourcesApp, { recursive: true });
+
+      // Restore asar patching
+      process.noAsar = savedNoAsar;
+
+      // 8d — Set custom icon on the exe via resedit (pure JS, no subprocess)
+      sendProgress({ step: '写入图标', percent: 86 });
+      const icoPath = path.join(stagingDir, 'icon.ico');
+      try {
+        const { NtExecutable, NtExecutableResource, Resource, Data } = await import('resedit');
+        const exeData = await fs.readFile(dstExe);
+        const exe = NtExecutable.from(exeData);
+        const res = NtExecutableResource.from(exe);
+        const iconGroups = Resource.IconGroupEntry.fromEntries(res.entries);
+        if (iconGroups.length > 0) {
+          const iconFile = Data.IconFile.from(await fs.readFile(icoPath));
+          Resource.IconGroupEntry.replaceIconsForResource(
+            res.entries, iconGroups[0].id, iconGroups[0].lang,
+            iconFile.icons.map((i) => i.data),
+          );
+          res.outputResource(exe);
+          await fs.writeFile(dstExe, Buffer.from(exe.generate()));
+          console.log('[ExportDesktop] Icon applied via resedit');
+        }
+      } catch (e) {
+        console.warn('[ExportDesktop] Icon injection skipped:', e.message);
+        warnings.push('图标写入失败，使用默认 Electron 图标');
+      }
+
+      console.log('[ExportDesktop] App assembled at:', finalOutputDir);
     } else {
       // Testing: return staging dir as output for test inspection
       finalOutputDir = stagingDir;

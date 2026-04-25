@@ -1208,7 +1208,7 @@ async function init() {
     }
 
     // Set title screen name from script
-    titleScreen.gameTitle = engine.script.meta.title;
+    titleScreen.gameTitle = engine.script.meta?.title || '';
 
     // Apply custom title screen layout if defined in script
     if (engine.script.ui?.titleScreen) {

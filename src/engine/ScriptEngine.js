@@ -90,7 +90,8 @@ export class ScriptEngine extends EventEmitter {
   // ─── Playback control ────────────────────────────────────
 
   /**
-   * Start the game from a given scene (default: 'start')
+   * Start the game from a given scene.
+   * Falls back to the first scene if the requested ID doesn't exist.
    * @param {string} [sceneId='start']
    */
   startGame(sceneId = 'start') {
@@ -98,7 +99,17 @@ export class ScriptEngine extends EventEmitter {
     this.history = [];
     this.ended = false;
     this._resetRenderState();
-    this._enterScene(sceneId);
+
+    // Resolve start scene: explicit ID → 'start' → first scene in object
+    let resolvedId = sceneId;
+    if (!this.script.scenes[resolvedId]) {
+      const firstId = Object.keys(this.script.scenes)[0];
+      if (firstId) {
+        console.warn(`[ScriptEngine] Scene "${resolvedId}" not found, falling back to first scene: "${firstId}"`);
+        resolvedId = firstId;
+      }
+    }
+    this._enterScene(resolvedId);
   }
 
   /**

@@ -86,7 +86,13 @@ v1.5 ████████████████████ 5/5 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-25T09:10:00.000Z
-Stopped at: Phase 75 complete — v1.5 milestone fully delivered
-Resume hint: v1.5 里程碑全部完成。5 个 phase (71-75) 全部交付，109 个测试通过，构建成功。
-Next action: Archive v1.5 milestone / begin next milestone planning
+Last session: 2026-04-27
+Stopped at: v1.5 complete + startGame fallback bug fix
+Resume hint: |
+  1. ROADMAP.md 已同步更新（Status: Complete, 所有 phase/plan 勾选框已标 [x]）
+  2. 修复了导出游戏黑屏 bug：ScriptEngine.startGame() 硬编码查找 'start' 场景，
+     但编辑器用时间戳 ID（如 scene_1774962424469）。已加 fallback 到 scenes 对象第一个场景。
+  3. dist-web/ 已重新构建包含修复；已手动 patch 到用户导出目录 real-temp/
+  4. 此次修复尚未 git commit
+  5. 用户提到还有"几个问题"，只处理了第一个（黑屏），可能还有后续
+Next action: commit startGame fix → Archive v1.5 milestone / address remaining user issues

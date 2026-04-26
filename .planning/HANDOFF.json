@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-26T16:35:41.790Z",
+  "phase": "hotfix",
+  "phase_name": "exported-game-black-screen-fix",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Sync ROADMAP.md with actual v1.5 completion status", "status": "done", "commit": null},
+    {"id": 2, "name": "Diagnose exported desktop game black screen bug", "status": "done", "commit": null},
+    {"id": 3, "name": "Fix ScriptEngine.startGame() fallback to first scene", "status": "done", "commit": null},
+    {"id": 4, "name": "Rebuild dist-web engine.js with fix", "status": "done", "commit": null},
+    {"id": 5, "name": "Patch exported game at real-temp/ with fixed engine.js", "status": "done", "commit": null},
+    {"id": 6, "name": "Update STATE.md session continuity", "status": "done", "commit": null}
+  ],
+  "remaining_tasks": [
+    {"id": 7, "name": "Git commit the startGame fix", "status": "not_started"},
+    {"id": 8, "name": "User mentioned '几个问题' - only first (black screen) was addressed", "status": "not_started"},
+    {"id": 9, "name": "wav BGM file missing from export - audio/848844__nicotep__savignac_dusk_birds_owl.wav referenced but not exported", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "User should test the patched exe at real-temp/my-second-vn-win32-x64/", "context": "Verify the startGame fallback fix works with their actual project", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Fallback to first scene in scenes object when requested scene ID not found", "rationale": "Editor creates scene IDs as timestamps (scene_1774962424469), not 'start'. Hardcoded default should degrade gracefully.", "phase": "hotfix"}
+  ],
+  "uncommitted_files": [
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md",
+    "src/engine/ScriptEngine.js"
+  ],
+  "next_action": "git commit the ScriptEngine.startGame() fix, then ask user about remaining issues they mentioned",
+  "context_notes": "Root cause: ScriptEngine.startGame('start') could not find scene ID 'start' because editor generates timestamp-based IDs. Title screen rendered fine because it reads ui.titleScreen config independently. User's project: my-second-vn, exported to ../real-temp/. Asset files use Chinese filenames (大海.jpg, 教室.webp, 屏幕截图...). Also noticed a missing wav audio file in export."
+}

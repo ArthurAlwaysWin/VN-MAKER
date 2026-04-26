@@ -1,6 +1,6 @@
 # Milestone v1.5: UI 图片驱动体系
 
-**Status:** Drafted  
+**Status:** Complete  
 **Phases:** 71-75  
 **Total Requirements:** 17  
 **Granularity:** standard
@@ -16,9 +16,9 @@ v1.5 聚焦把 **UI 图片资产** 从“能配置一点点”补成“可配置
 
 - [x] **Phase 71: 共享契约与资产通路基线** - 统一 UI 图片路径、旧字段兼容与扫描/导出前置门
 - [x] **Phase 72: 对话框图片化闭环** - 先交付最显眼的对话框图片层与真实运行时预览
-- [ ] **Phase 73: 按钮族图片态扩面** - 按覆盖矩阵把主要按钮族图片状态一次性铺开
-- [ ] **Phase 74: 主要界面图片化** - 为四个 major screen 补齐背景图、装饰层与逐屏真预览
-- [ ] **Phase 75: 光标图标与全链路收口** - 完成 cursor/icon slots，并把预览、运行时、导出与回退行为统一收口
+- [x] **Phase 73: 按钮族图片态扩面** - 按覆盖矩阵把主要按钮族图片状态一次性铺开
+- [x] **Phase 74: 主要界面图片化** - 为四个 major screen 补齐背景图、装饰层与逐屏真预览
+- [x] **Phase 75: 光标图标与全链路收口** - 完成 cursor/icon slots，并把预览、运行时、导出与回退行为统一收口
 
 ## Phase Details
 
@@ -33,9 +33,9 @@ v1.5 聚焦把 **UI 图片资产** 从“能配置一点点”补成“可配置
   4. 用户保存并重新打开项目后，已选 UI 图片引用仍保持稳定，不会回写成绝对路径、临时路径或不可复用格式。
 **Plans**: 3 plans  
 Plans:
-- [ ] 71-01-PLAN.md — 冻结共享 UI 图片契约与标准选图 helper
-- [ ] 71-02-PLAN.md — 打通 NineSlice 标准写入与 ThemeManager 兼容读取
-- [ ] 71-03-PLAN.md — 收口 screen/decor 旧写入口并建立 scan/export UI 注册基线
+- [x] 71-01-PLAN.md — 冻结共享 UI 图片契约与标准选图 helper
+- [x] 71-02-PLAN.md — 打通 NineSlice 标准写入与 ThemeManager 兼容读取
+- [x] 71-03-PLAN.md — 收口 screen/decor 旧写入口并建立 scan/export UI 注册基线
 **UI hint**: yes
 
 ### Phase 72: 对话框图片化闭环
@@ -49,9 +49,9 @@ Plans:
   4. 用户在切换或清空对话框图片配置后，新的对话框视觉结果会立即反映到预览与运行时结果中。
 **Plans**: 3 plans  
 Plans:
-- [ ] 72-01-PLAN.md — 冻结 `ui.dialogueBox` 图片 schema 与 scan/export collector 基线
-- [ ] 72-02-PLAN.md — 实现 dialogue runtime underlay、层级保护与 floating nameplate overflow 修复
-- [ ] 72-03-PLAN.md — 打通 DialogueBoxSettings canonical 写入口与 runtime-backed iframe 对话预览
+- [x] 72-01-PLAN.md — 冻结 `ui.dialogueBox` 图片 schema 与 scan/export collector 基线
+- [x] 72-02-PLAN.md — 实现 dialogue runtime underlay、层级保护与 floating nameplate overflow 修复
+- [x] 72-03-PLAN.md — 打通 DialogueBoxSettings canonical 写入口与 runtime-backed iframe 对话预览
 **UI hint**: yes
 
 ### Phase 73: 按钮族图片态扩面
@@ -81,9 +81,9 @@ Plans:
   4. 用户在同一主题下切换这 4 个界面时，每个界面的背景图与装饰层都会按各自配置生效，不会串用到错误界面。
 **Plans**: 3 plans  
 Plans:
-- [ ] 74-01-PLAN.md — 冻结 screen chrome 契约 (backgroundImage + decorations)、GameMenu @deprecated fallback、scan/ThemeManager 扩展
-- [ ] 74-02-PLAN.md — Runtime 渲染：4 屏背景图 (object-fit:cover) + 装饰层 (pointer-events:none) + GameMenu fallback
-- [ ] 74-03-PLAN.md — 编辑器接入：MajorScreenImageSettings.vue 统一组件 + >3 装饰层软提示 + iframe 预览联调
+- [x] 74-01-PLAN.md — 冻结 screen chrome 契约 (backgroundImage + decorations)、GameMenu @deprecated fallback、scan/ThemeManager 扩展
+- [x] 74-02-PLAN.md — Runtime 渲染：4 屏背景图 (object-fit:cover) + 装饰层 (pointer-events:none) + GameMenu fallback
+- [x] 74-03-PLAN.md — 编辑器接入：MajorScreenImageSettings.vue 统一组件 + >3 装饰层软提示 + iframe 预览联调
 **UI hint**: yes
 
 ### Phase 75: 光标图标与全链路收口
@@ -95,7 +95,7 @@ Plans:
   2. 用户可以为 `game menu`、`QAB`、`close`、`voice-replay` 这些核心 action slots 配置主题图标；缺图时会回退到默认图标。
   3. 用户在编辑器预览、运行时试玩和导出成品中查看已配置的 v1.5 UI 图片时，看到的是同一套资源，不会出现“编辑器可见、导出丢图”。
   4. 用户删除、移走或留空 UI 图片资源后，界面仍会回退到现有 CSS 外观 / 默认图标 / 系统光标，并保持可正常使用。
-**Plans**: TBD  
+**Plans**: 3 plans  
 **UI hint**: yes
 
 ## Coverage Map
@@ -127,8 +127,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 71. 共享契约与资产通路基线 | 0/TBD | Not started | - |
-| 72. 对话框图片化闭环 | 0/TBD | Not started | - |
-| 73. 按钮族图片态扩面 | 1/3 | In Progress|  |
-| 74. 主要界面图片化 | 0/TBD | Not started | - |
-| 75. 光标图标与全链路收口 | 0/TBD | Not started | - |
+| 71. 共享契约与资产通路基线 | 3/3 | ✅ Complete | 2026-04-25 |
+| 72. 对话框图片化闭环 | 3/3 | ✅ Complete | 2026-04-25 |
+| 73. 按钮族图片态扩面 | 3/3 | ✅ Complete | 2026-04-25 |
+| 74. 主要界面图片化 | 3/3 | ✅ Complete | 2026-04-25 |
+| 75. 光标图标与全链路收口 | 3/3 | ✅ Complete | 2026-04-25 |

@@ -76,7 +76,7 @@ Each card shows:
 - Version
 - Source badge
 - Complete vs partial badge
-- Current status badge
+- Current lifecycle badge
 - Short coverage summary
 
 The list is optimized for scanning and comparing, not for deep explanation.
@@ -203,7 +203,7 @@ Before apply, the browser computes impact using current project theme metadata p
 - If project metadata is incomplete, the browser avoids hard failure and falls back to conservative explanatory text.
 - If a selected theme cannot currently be applied, the reason is stated in the detail panel rather than silently disabling understanding.
 - If a theme has no real preview asset, the card uses a stable fallback preview instead of a broken or blank image slot.
-- After import, the browser refreshes immediately, selects the newly added theme item, and surfaces short in-context status feedback so the user stays inside the browser flow.
+- After import, the browser refreshes immediately, selects the newly added theme item, and surfaces short in-context inline feedback so the user stays inside the browser flow.
 - If import preflight or install fails, the browser keeps the current filter state, search state, and current selection unchanged, and surfaces the Phase 79 validation/install error inline near the toolbar import action.
 - Import failure must not clear the current detail panel or silently drop the user out of the browser context.
 
@@ -265,7 +265,7 @@ This logic stays outside the view layer so the UI remains thin and testable.
 Cover:
 
 - item normalization
-- status derivation
+- lifecycle derivation
 - coverage and missing coverage display inputs
 - overwrite impact calculation
 
@@ -275,7 +275,7 @@ Cover:
 
 - filter updates changing the visible list
 - selecting a card updating the detail panel
-- source/status/mode badges rendering correctly
+- source/lifecycle/mode badges rendering correctly
 - partial-theme messaging staying distinct from full-theme messaging
 
 ### Regression coverage

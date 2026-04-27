@@ -1,7 +1,7 @@
 # Milestone v1.5: UI 图片驱动体系
 
-**Status:** Complete  
-**Phases:** 71-75  
+**Status:** Gap Closure In Progress  
+**Phases:** 71-77  
 **Total Requirements:** 17  
 **Granularity:** standard
 
@@ -12,6 +12,8 @@ v1.5 聚焦把 **UI 图片资产** 从“能配置一点点”补成“可配置
 
 为避免 brownfield 代码库里出现 schema 漂移、导出漏图、预览/运行时分叉，本 roadmap 先冻结共享 contract 与资产通路，再按 **对话框 → 按钮族 → 主要界面 → 光标/图标与全链路收口** 的顺序推进。
 
+v1.5 审计后发现该 milestone 仍存在 **Phase 75 运行时图标闭环缺口** 与 **71 / 72 / 74 / 75 验证证据缺口**，因此在归档前追加 gap-closure phases 76-77。
+
 ## Phases
 
 - [x] **Phase 71: 共享契约与资产通路基线** - 统一 UI 图片路径、旧字段兼容与扫描/导出前置门
@@ -19,6 +21,8 @@ v1.5 聚焦把 **UI 图片资产** 从“能配置一点点”补成“可配置
 - [x] **Phase 73: 按钮族图片态扩面** - 按覆盖矩阵把主要按钮族图片状态一次性铺开
 - [x] **Phase 74: 主要界面图片化** - 为四个 major screen 补齐背景图、装饰层与逐屏真预览
 - [x] **Phase 75: 光标图标与全链路收口** - 完成 cursor/icon slots，并把预览、运行时、导出与回退行为统一收口
+- [ ] **Phase 76: 图标运行时闭环与回退修复** - 收口 QAB 图标 runtime wiring 与缺图回退合同
+- [ ] **Phase 77: v1.5 验证与追踪表回填** - 补齐 phase verification 证据并让 milestone 重新达到可归档状态
 
 ## Phase Details
 
@@ -94,31 +98,60 @@ Plans:
   1. 用户可以为主题配置 `default / pointer` 两种光标图片；缺图或路径失效时会自动回退到系统 cursor。
   2. 用户可以为 `game menu`、`QAB`、`close`、`voice-replay` 这些核心 action slots 配置主题图标；缺图时会回退到默认图标。
   3. 用户在编辑器预览、运行时试玩和导出成品中查看已配置的 v1.5 UI 图片时，看到的是同一套资源，不会出现“编辑器可见、导出丢图”。
-  4. 用户删除、移走或留空 UI 图片资源后，界面仍会回退到现有 CSS 外观 / 默认图标 / 系统光标，并保持可正常使用。
+4. 用户删除、移走或留空 UI 图片资源后，界面仍会回退到现有 CSS 外观 / 默认图标 / 系统光标，并保持可正常使用。
 **Plans**: 3 plans  
 **UI hint**: yes
+
+### Phase 76: 图标运行时闭环与回退修复
+**Goal**: 用户配置的主题图标在 preview / runtime / export 三条链路中真正闭环生效，且缺图时稳定回退到默认图标或文字。  
+**Depends on**: Phase 75  
+**Requirements**: ICO-01, AST-03, AST-04  
+**Gap Closure**: Closes gaps from `v1.5-MILESTONE-AUDIT.md`
+**Success Criteria** (what must be TRUE):
+  1. 用户为 `ui.theme.icons.qab` 配置图片后，QAB 在编辑器预览、运行时试玩和导出成品里都会显示该图标，而不是继续使用硬编码 SVG。
+  2. 用户配置错误路径、删除图标资源或留空图标槽位时，相关 action slot 会回退到默认文字或默认图标，而不是显示坏掉的 `<img>`。
+  3. 用户对 `game menu`、`QAB`、`close`、`voice-replay` 四类 icon slot 做切换时，看到的行为在 preview / runtime / export 三条链路中保持一致。
+  4. Phase 75 的核心 icon/runtime fallback 缺口在 phase-level verification 中被重新验证并记录为可审计证据。
+**Plans**: 2 plans
+Plans:
+- [ ] 76-01-PLAN.md — 补齐 QAB icon runtime consumer 与 main.js preview/runtime wiring
+- [ ] 76-02-PLAN.md — 统一 themed icon 缺图 fallback 合同并覆盖全部现有 consumer
+**UI hint**: yes
+
+### Phase 77: v1.5 验证与追踪表回填
+**Goal**: 用户在 milestone 归档前拥有完整、可追溯的验证证据，确保 v1.5 的已交付能力被 phase verification 和 requirement traceability 正式闭环。  
+**Depends on**: Phase 76  
+**Requirements**: AST-01, AST-02, AST-05, AST-06, DLG-01, DLG-02, DLG-03, SCR-01, SCR-02, SCR-03, CUR-01  
+**Gap Closure**: Closes gaps from `v1.5-MILESTONE-AUDIT.md`
+**Success Criteria** (what must be TRUE):
+  1. Phase 71、72、74、75 都补齐 `VERIFICATION.md`，并把 requirement/evidence/gaps 状态落成正式 phase-level 报告。
+  2. `REQUIREMENTS.md` 的 traceability table 与审计结果一致，不再出现“ROADMAP / SUMMARY 已完成，但 requirement 仍停留在旧 phase 或 Pending”的漂移。
+  3. v1.5 中来自 AST / DLG / SCR / CUR 的 partial requirements 被重新核对，只有真正满足者才会重新进入 milestone-ready 状态。
+  4. 重新执行 milestone audit 时，不再因为缺 verification artifact 或 traceability 漂移被阻塞。
+**Plans**: 0 plans
+**UI hint**: no
 
 ## Coverage Map
 
 | Requirement | Phase |
 |-------------|-------|
-| AST-01 | Phase 71 |
-| AST-02 | Phase 71 |
-| AST-05 | Phase 71 |
-| AST-06 | Phase 71 |
-| DLG-01 | Phase 72 |
-| DLG-02 | Phase 72 |
-| DLG-03 | Phase 72 |
+| AST-01 | Phase 77 |
+| AST-02 | Phase 77 |
+| AST-05 | Phase 77 |
+| AST-06 | Phase 77 |
+| DLG-01 | Phase 77 |
+| DLG-02 | Phase 77 |
+| DLG-03 | Phase 77 |
 | BTN-01 | Phase 73 |
 | BTN-02 | Phase 73 |
 | BTN-03 | Phase 73 |
-| SCR-01 | Phase 74 |
-| SCR-02 | Phase 74 |
-| SCR-03 | Phase 74 |
-| CUR-01 | Phase 75 |
-| ICO-01 | Phase 75 |
-| AST-03 | Phase 75 |
-| AST-04 | Phase 75 |
+| SCR-01 | Phase 77 |
+| SCR-02 | Phase 77 |
+| SCR-03 | Phase 77 |
+| CUR-01 | Phase 77 |
+| ICO-01 | Phase 76 |
+| AST-03 | Phase 76 |
+| AST-04 | Phase 76 |
 
 **Coverage:** 17/17 requirements mapped ✓  
 **Orphans:** 0
@@ -132,3 +165,5 @@ Plans:
 | 73. 按钮族图片态扩面 | 3/3 | ✅ Complete | 2026-04-25 |
 | 74. 主要界面图片化 | 3/3 | ✅ Complete | 2026-04-25 |
 | 75. 光标图标与全链路收口 | 3/3 | ✅ Complete | 2026-04-25 |
+| 76. 图标运行时闭环与回退修复 | 0/0 | ⏳ Pending | - |
+| 77. v1.5 验证与追踪表回填 | 0/0 | ⏳ Pending | - |

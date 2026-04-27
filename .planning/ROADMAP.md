@@ -57,7 +57,11 @@ Plans:
   3. 用户应用完整主题时，主题负责的范围会原子性整体替换，并支持一次撤销恢复到应用前状态。
   4. 用户应用完整主题、保存项目并重新打开后，编辑器预览、运行时试玩和导出成品中的结果保持一致，不会出现资源丢失或局部失配。
   5. 用户导出当前项目主题时，得到的是自包含的 `.gmtheme` 包；v1.6 不再导出 legacy `.theme`。
-**Plans**: 0 plans  
+**Plans**: 2 plans  
+
+Plans:
+- [x] `79-01-PLAN.md` — Unify built-in and imported full-theme install/apply through one project-local pipeline with atomic undo
+- [x] `79-02-PLAN.md` — Export the current applied full theme as self-contained `.gmtheme` and prove round-trip parity
 
 ### Phase 80: 主题浏览器与选择 UX
 **Goal**: 用户在真正应用主题之前，就能看懂这个主题是什么、覆盖什么、会改掉什么，以及它当前处于什么状态。  
@@ -68,8 +72,12 @@ Plans:
   2. 用户在应用主题前可以查看它覆盖哪些 UI 范围，以及本次操作会覆盖当前项目中的哪些范围，而不需要先实际应用才知道结果。
   3. 用户可以清楚分辨一个主题当前处于“内置可用 / 已导入 / 当前已应用 / 仅兼容部分主题”中的哪种状态。
   4. 用户在主题浏览器里看到的是静态卡片预览图与覆盖说明，而不是未应用主题的 live iframe 预览。
-**Plans**: 0 plans  
+**Plans**: 2 plans  
 **UI hint**: yes
+
+Plans:
+- [ ] `80-01-PLAN.md` — Normalize built-in/imported theme browser items and expose session-scoped imported browser entries
+- [ ] `80-02-PLAN.md` — Replace split Project Settings theme entry with one unified browser modal and focused UI wiring
 
 ### Phase 81: Golden Theme 验收样板
 **Goal**: 用户先拿到 1 套完整 golden theme，用它验证 v1.6 的完整主题标准与整条交付链路。  
@@ -120,7 +128,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 78. 主题包契约与兼容边界 | 2/2 | Complete   | 2026-04-27 |
-| 79. 统一安装 / 应用 / 导出链路 | 0/0 | ⏳ Pending | - |
-| 80. 主题浏览器与选择 UX | 0/0 | ⏳ Pending | - |
+| 79. 统一安装 / 应用 / 导出链路 | 0/2 | ⏳ Pending | - |
+| 80. 主题浏览器与选择 UX | 0/2 | ⏳ Pending | - |
 | 81. Golden Theme 验收样板 | 0/0 | ⏳ Pending | - |
 | 82. 剩余 4 套完整主题扩展 | 0/0 | ⏳ Pending | - |

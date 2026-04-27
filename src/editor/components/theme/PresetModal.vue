@@ -36,9 +36,28 @@
         <div class="export-import-section">
           <div class="section-divider"></div>
           <div class="export-import-row">
-            <button class="action-btn" @click="onExport" title="将当前主题导出为 .theme 文件">📤 导出主题</button>
-            <button class="action-btn" @click="onImport" title="从 .theme 文件导入主题">📥 导入主题</button>
+            <button class="action-btn" @click="onExport" title="将当前主题导出为兼容 .theme 文件（非 v1.6 完整主题）">📤 导出兼容主题</button>
+            <button class="action-btn" @click="onImport" title="选择 .gmtheme 或兼容 .theme，并先生成静态预检摘要">📥 导入主题包</button>
             <span v-if="exportStatus" class="status-text">{{ exportStatus }}</span>
+          </div>
+          <div v-if="importSummary" class="import-summary" :class="`is-${importSummary.state}`">
+            <div class="import-summary-header">
+              <strong>{{ importSummary.title }}</strong>
+              <span class="import-summary-badge">{{ importSummary.badge }}</span>
+            </div>
+            <div v-if="importSummary.namespaceText" class="import-summary-line">{{ importSummary.namespaceText }}</div>
+            <div v-if="importSummary.coverageText" class="import-summary-line">覆盖范围：{{ importSummary.coverageText }}</div>
+            <div v-if="importSummary.missingCoverageText" class="import-summary-line">缺失范围：{{ importSummary.missingCoverageText }}</div>
+            <div class="import-summary-line">预览方式：静态摘要（未应用主题不提供 live iframe）。</div>
+            <ul v-if="importSummary.planLines.length" class="import-summary-list">
+              <li v-for="line in importSummary.planLines" :key="line">{{ line }}</li>
+            </ul>
+            <ul v-if="importSummary.warningLines.length" class="import-summary-list">
+              <li v-for="line in importSummary.warningLines" :key="line">{{ line }}</li>
+            </ul>
+            <ul v-if="importSummary.blockingErrors.length" class="import-summary-errors">
+              <li v-for="line in importSummary.blockingErrors" :key="line">{{ line }}</li>
+            </ul>
           </div>
         </div>
 
@@ -56,8 +75,9 @@
 import { ref } from 'vue';
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import { preflightThemePackageImport } from '../../services/themePackageImport.js';
 import { THEME_PRESETS } from '../../../engine/presets.js';
-import { buildThemeZip, parseThemeZip } from '../../../utils/themePackager.js';
+import { buildThemeZip } from '../../../utils/themePackager.js';
 import HelpTip from '../HelpTip.vue';
 import { HELP_THEME } from '../../helpTexts.js';
 
@@ -66,6 +86,7 @@ const editor = useThemeEditor();
 const script = useScriptStore();
 const selectedId = ref(null);
 const exportStatus = ref('');
+const importSummary = ref(null);
 
 function onSelectPreset(preset) {
   selectedId.value = preset.id;
@@ -81,6 +102,7 @@ function onApply() {
 
 function onClose() {
   editor.cancelPreview();
+  importSummary.value = null;
   emit('close');
 }
 
@@ -117,31 +139,15 @@ async function onExport() {
 
 async function onImport() {
   try {
-    exportStatus.value = '导入中...';
-    const fileResult = await window.ipcRenderer.invoke('import-theme');
-    if (fileResult.canceled) {
-      exportStatus.value = '';
+    const result = await preflightThemePackageImport({
+      ipcRenderer: window.ipcRenderer,
+      scriptStore: script,
+    });
+    if (result.canceled) {
       return;
     }
-    if (!fileResult.success) {
-      exportStatus.value = '读取失败: ' + fileResult.error;
-      return;
-    }
-
-    const parsed = parseThemeZip(fileResult.buffer);
-    if (!parsed.success) {
-      exportStatus.value = '解析失败: ' + parsed.error;
-      return;
-    }
-
-    // Apply imported theme — full overwrite per D-12, pushes undo stack
-    script.updateTheme(parsed.theme);
-    editor.flushPreview();
-    exportStatus.value = '导入成功';
-    setTimeout(() => {
-      exportStatus.value = '';
-      emit('close');
-    }, 500);
+    exportStatus.value = '';
+    importSummary.value = result.summary;
   } catch (e) {
     console.error('[PresetModal] Import failed:', e);
     exportStatus.value = '导入失败: ' + e.message;
@@ -288,5 +294,45 @@ async function onImport() {
   font-size: 12px;
   color: #888;
   margin-left: 4px;
+}
+.import-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #3f3f46;
+  background: #1f1f22;
+  color: #d6d6d8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.import-summary.is-blocked {
+  border-color: rgba(200, 90, 90, 0.55);
+}
+.import-summary.is-legacy-partial {
+  border-color: rgba(197, 156, 77, 0.55);
+}
+.import-summary.is-ready {
+  border-color: rgba(73, 147, 112, 0.55);
+}
+.import-summary-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.import-summary-badge {
+  color: #f0c674;
+  white-space: nowrap;
+}
+.import-summary-line {
+  margin-bottom: 4px;
+}
+.import-summary-list,
+.import-summary-errors {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.import-summary-errors {
+  color: #ff9b9b;
 }
 </style>

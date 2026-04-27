@@ -230,4 +230,50 @@ describe('theme browser service', () => {
 
     expect(resolveThemeBrowserPreview(item)).toEqual(resolveThemeBrowserPreview(item));
   });
+
+  it('reconstructs the currently applied imported theme from packageMeta when no session import entry exists', () => {
+    const items = buildThemeBrowserItems({
+      builtins: [
+        {
+          id: 'default',
+          name: '默认',
+          tokens: {},
+          widgetStyles: {},
+          screens: {},
+        },
+      ],
+      importedEntries: [],
+      scriptData: {
+        ui: {
+          theme: {
+            packageMeta: {
+              source: 'file',
+              themeId: 'moonlight',
+              mode: 'full',
+              assetRoot: 'ui/themes/moonlight/',
+            },
+            tokens: {
+              primary: '#445566',
+            },
+          },
+          widgetStyles: {
+            button: {
+              background: '#223344',
+            },
+          },
+          dialogueBox: {
+            nameplateBackgroundImage: 'ui/themes/moonlight/dialogue/nameplate.png',
+          },
+        },
+      },
+    });
+
+    expect(items.find(item => item.rawId === 'moonlight')).toMatchObject({
+      source: 'imported',
+      lifecycle: 'applied',
+      mode: 'full',
+      canApply: false,
+      assetRoot: 'ui/themes/moonlight/',
+    });
+  });
 });

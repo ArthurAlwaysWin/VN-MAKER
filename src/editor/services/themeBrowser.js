@@ -39,6 +39,33 @@ function getAppliedPackageMeta(scriptData = {}) {
   return scriptData?.ui?.theme?.packageMeta ?? null;
 }
 
+function buildAppliedImportedEntry(scriptData = {}, importedEntries = []) {
+  const packageMeta = getAppliedPackageMeta(scriptData);
+  const appliedSource = normalizeAppliedSource(packageMeta?.source);
+  if (appliedSource !== 'imported' || !packageMeta?.themeId) {
+    return null;
+  }
+
+  const alreadyPresent = (Array.isArray(importedEntries) ? importedEntries : []).some(entry => {
+    return (entry?.rawId ?? entry?.themeId ?? entry?.id) === packageMeta.themeId;
+  });
+  if (alreadyPresent) {
+    return null;
+  }
+
+  return {
+    themeId: packageMeta.themeId,
+    source: 'imported',
+    status: packageMeta.mode === 'legacy-partial' ? 'legacy-partial' : 'ready',
+    mode: packageMeta.mode ?? 'full',
+    assetRoot: packageMeta.assetRoot ?? '',
+    coverage: packageMeta.mode === 'full' ? FULL_THEME_COVERAGE_KEYS : [],
+    missingCoverage: [],
+    tokens: scriptData?.ui?.theme?.tokens ?? {},
+    primaryColor: scriptData?.ui?.theme?.tokens?.primary ?? '',
+  };
+}
+
 function getAppliedCoverage(scriptData = {}) {
   const packageMeta = getAppliedPackageMeta(scriptData);
   if (packageMeta?.mode === 'full') {
@@ -238,11 +265,17 @@ export function buildThemeBrowserItems({
   importedEntries = [],
   scriptData = {},
 } = {}) {
+  const importedSourceEntries = Array.isArray(importedEntries) ? [...importedEntries] : [];
+  const appliedImportedEntry = buildAppliedImportedEntry(scriptData, importedSourceEntries);
+  if (appliedImportedEntry) {
+    importedSourceEntries.push(appliedImportedEntry);
+  }
+
   const builtinItems = (Array.isArray(builtins) ? builtins : []).map(theme => normalizeThemeBrowserItem(theme, {
     source: 'builtin',
     scriptData,
   }));
-  const importedItems = (Array.isArray(importedEntries) ? importedEntries : []).map(entry => normalizeThemeBrowserItem(entry, {
+  const importedItems = importedSourceEntries.map(entry => normalizeThemeBrowserItem(entry, {
     source: 'imported',
     scriptData,
   }));

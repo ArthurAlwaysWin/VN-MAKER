@@ -85,35 +85,48 @@
 - ✓ v1.4 演出力升级：背景转场扩展与稳定 page-enter 时序（TRAN-01~04）— v1.4
 - ✓ v1.4 演出力升级：PageInspector 内联配置 + runtime-backed iframe 预览（PREV-01~03）— v1.4
 - ✓ v1.4 演出力升级：skip/auto/load/title/preview-stop cleanup 回归门（PREV-05）— v1.4
+- ✓ UI 图片资产通路基线：`assets/ui/` 相对路径、旧字段兼容读取与 scan/export 闭环 — v1.5
+- ✓ 对话框图片化：主框/名牌/装饰层 + runtime-backed 真实预览 — v1.5
+- ✓ 5 类按钮族图片态 + 4 个 major screen 背景/装饰层图片化 — v1.5
+- ✓ 主题级 cursor / action icon slots + preview/runtime/export 一致回退 — v1.5
+- ✓ v1.5 phase verification / traceability / milestone audit 闭环 — v1.5
 
 ### Active
 
-- [ ] **UIIMG-01**: 对话框支持名牌背景图、装饰层与整体图片替换
-- [ ] **UIIMG-02**: 按钮图片三态扩展到 choice/title 之外的主要游戏界面按钮
-- [ ] **UIIMG-03**: SaveLoad / Backlog / GameMenu / SettingsScreen 支持全屏背景插画与装饰层
-- [ ] **UIIMG-04**: 主题支持自定义光标与可替换图标集
-- [ ] **UIIMG-05**: 主题编辑器支持可视化管理图片 UI 素材并即时预览
-
-## Current Milestone: v1.5 UI 图片驱动体系
-
-**Goal:** 打通图片素材作为 UI 视觉主体的完整通路，让游戏界面从“软件级参数化样式”升级到“游戏级主题皮肤”。
-
-**Target features:**
-- 对话框图片化：名牌背景、装饰层、多层图片替换
-- 按钮图片三态扩面：覆盖 game-menu、save-load、backlog、QAB、分页 tab 等主要按钮
-- 全屏界面背景图：SaveLoad / Backlog / GameMenu / Settings 统一支持背景插画与装饰层
-- 自定义光标与主题图标集
-- 主题编辑器中的图片 UI 配置与即时预览
+(当前无 active milestone — 下一里程碑待定义)
 
 ## Current State
 
-**已交付：** v0.1 ~ v1.4（设置页设计器 → 资源库 → PPT 编辑器 → 语音字体 → 游戏 UI → 主题包系统 → Web 导出 → 桌面导出 → 本地化帮助 → 角色表情差分 → UI Theme v2 引擎 → 主题配置编辑器 → 智能配色与结构参数 → 演出力升级）
+**已交付：** v0.1 ~ v1.5（设置页设计器 → 资源库 → PPT 编辑器 → 语音字体 → 游戏 UI → 主题包系统 → Web 导出 → 桌面导出 → 本地化帮助 → 角色表情差分 → UI Theme v2 引擎 → 主题配置编辑器 → 智能配色与结构参数 → 演出力升级 → UI 图片驱动体系）
 
 **v1.4 已完成：** 预设角色动画、页面级镜头效果、扩展背景转场、runtime-backed iframe 演出预览、PageInspector 内联演出配置全部交付；18/18 requirements 与 milestone audit 全部通过。
 
-**当前进行中：** v1.5「UI 图片驱动体系」已启动，正在定义 requirements 与 roadmap。
+**v1.5 已完成：** 对话框 / 按钮族 / major screens / cursor / icons 的图片化闭环全部交付，补齐了 Phase 76-77 gap closure 后达到 17/17 requirements、7/7 phases、2/2 integrations、5/5 flows。
 
-**下一步：** 收敛 v1.5 requirements，然后拆解为连续 phase roadmap。
+**当前进行中：** 无 active milestone。
+
+**下一步：** 定义下一里程碑目标，并重新创建新的 milestone-scoped `ROADMAP.md` / `REQUIREMENTS.md`。
+
+## Next Milestone Goals
+
+- 待用户确认下一里程碑主题与边界
+- 从已归档的 v1.5 状态出发重新定义 requirements
+- 仅在新 milestone 启动后恢复 phase-level roadmap 拆解
+
+## Previous Milestone: ✅ v1.5 UI 图片驱动体系 (Shipped 2026-04-27)
+
+**Delivered:** 统一 `assets/ui/` 资产通路与旧字段兼容；完成 dialogue / button families / major screens / cursor / icon 的图片化闭环；补齐 icon runtime fallback 缺口与 verification/traceability 回填。17/17 requirements，7 phases，milestone audit ready for archival。
+
+<details>
+<summary>v1.5 target features (delivered)</summary>
+
+- ✅ 对话框图片化：名牌背景、装饰层、多层图片替换 + runtime-backed 预览
+- ✅ 按钮图片态扩面：覆盖 game-menu、QAB、close family、page-tab / pager、settings-tab
+- ✅ 全屏界面背景图与装饰层：SaveLoad / Backlog / GameMenu / Settings
+- ✅ 主题级自定义光标与 action icon slots
+- ✅ preview / runtime / export / fallback parity 与审计证据闭环
+
+</details>
 
 ## Previous Milestone: ✅ v1.4 演出力升级 (Shipped 2026-04-22)
 
@@ -312,6 +325,7 @@ This document evolves at phase transitions and milestone boundaries.
 - ✅ **v1.2** — 编辑器主题配置 + 示范主题 (Phases 46-51)
 - ✅ **v1.3** — 主题系统表达力升级 (Phases 52-60)
 - ✅ **v1.4** — 演出力升级 (Phases 61-70)
+- ✅ **v1.5** — UI 图片驱动体系 (Phases 71-77)
 
 ### 已知问题
 
@@ -319,4 +333,4 @@ This document evolves at phase transitions and milestone boundaries.
 - ⚠ repo-wide `npx vitest run` 仍包含与 v1.4 无关的 legacy test collection / `tests/mainConfigRouting.test.js` 债务
 
 ---
-*Last updated: 2026-04-22 after starting v1.5 milestone*
+*Last updated: 2026-04-27 after completing v1.5 milestone*

@@ -1,5 +1,18 @@
 # Milestones
 
+## v1.5 UI 图片驱动体系 (Shipped: 2026-04-27)
+
+**Phases completed:** 7 phases, 16 plans, 16 tasks
+
+**Key accomplishments:**
+
+- Canonical `assets/ui/` pipeline closed: UI images now use project-relative paths with legacy-field compatibility, scan/export coverage, and preview/runtime/export parity.
+- Dialogue box, five button families, and four major screens all gained image-driven runtime-backed theming with editor preview wiring.
+- Theme-level cursor and action icon slots now close cleanly across runtime/export, including the QAB runtime consumer and broken-asset fallback recovery.
+- Phase 76-77 gap closure backfilled verification, traceability, and milestone audit evidence to reach 17/17 requirements with no remaining archival blockers.
+
+---
+
 ## v1.4 演出力升级 (Shipped: 2026-04-22)
 
 **Phases completed:** 10 phases, 20 plans, 21 tasks

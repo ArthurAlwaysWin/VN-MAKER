@@ -44,8 +44,9 @@
             <button class="toolbar-btn" @click="onResetTheme" title="重置主题">🔄 重置</button>
             <button class="toolbar-btn" @click="themeEditor.showPalette.value = true" title="调色盘生成器">🎨 调色盘</button>
             <button class="toolbar-btn" @click="themeEditor.showNineSlice.value = true" title="九宫格配置">🖼️ 九宫格</button>
-            <button class="toolbar-btn" @click="themeEditor.showPreset.value = true" title="主题预设">📦 预设</button>
-            <button class="toolbar-btn" @click="showPackage = true" title="完整主题包">🎭 完整主题</button>
+            <button class="toolbar-btn" @click="showThemeBrowser = true" title="统一主题浏览器">🎭 主题浏览器</button>
+            <button class="toolbar-btn" @click="onExportThemePackage" title="导出当前完整主题包">📤 导出主题包</button>
+            <span v-if="themeExportStatus" class="toolbar-status">{{ themeExportStatus }}</span>
           </div>
           <SmartColorPanel />
           <TokenAccordion />
@@ -69,8 +70,7 @@
     <template v-if="script.data">
       <PaletteModal v-if="themeEditor.showPalette.value" @close="themeEditor.showPalette.value = false" />
       <NineSliceModal v-if="themeEditor.showNineSlice.value" @close="themeEditor.showNineSlice.value = false" />
-      <PresetModal v-if="themeEditor.showPreset.value" @close="themeEditor.showPreset.value = false" />
-      <ThemePackageModal v-if="showPackage" @close="onPackageClose" />
+      <ThemeBrowserModal v-if="showThemeBrowser" @close="onThemeBrowserClose" />
     </template>
   </div>
 </template>
@@ -80,6 +80,7 @@ import { provide, ref, onMounted, onActivated, onBeforeUnmount } from 'vue';
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
+import { exportCurrentThemePackage } from '../services/themePackageExport.js';
 import DialogueBoxSettings from '../components/DialogueBoxSettings.vue';
 import ExportModal from '../components/ExportModal.vue';
 import HelpTip from '../components/HelpTip.vue';
@@ -87,8 +88,7 @@ import SmartColorPanel from '../components/theme/SmartColorPanel.vue';
 import TokenAccordion from '../components/theme/TokenAccordion.vue';
 import PaletteModal from '../components/theme/PaletteModal.vue';
 import NineSliceModal from '../components/theme/NineSliceModal.vue';
-import PresetModal from '../components/theme/PresetModal.vue';
-import ThemePackageModal from '../components/theme/ThemePackageModal.vue';
+import ThemeBrowserModal from '../components/theme/ThemeBrowserModal.vue';
 import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
 import CursorIconSettings from '../components/theme/CursorIconSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
@@ -97,7 +97,8 @@ const project = useProjectStore();
 const script = useScriptStore();
 const themeEditor = createThemeEditor();
 const showExport = ref(false);
-const showPackage = ref(false);
+const showThemeBrowser = ref(false);
+const themeExportStatus = ref('');
 const DIALOGUE_PREVIEW_SAMPLE = {
   type: 'show-dialogue-preview',
   speakerName: '预览角色',
@@ -113,8 +114,29 @@ function onResetTheme() {
   themeEditor.commitTheme();
 }
 
-function onPackageClose() {
-  showPackage.value = false;
+async function onExportThemePackage() {
+  try {
+    themeExportStatus.value = '导出中...';
+    const result = await exportCurrentThemePackage({
+      ipcRenderer: window.ipcRenderer,
+      scriptStore: script,
+    });
+    themeExportStatus.value = result.message || '';
+    if (result.status === 'success') {
+      setTimeout(() => {
+        if (themeExportStatus.value === result.message) {
+          themeExportStatus.value = '';
+        }
+      }, 3000);
+    }
+  } catch (error) {
+    console.error('[ProjectSettings] Export theme package failed:', error);
+    themeExportStatus.value = `导出失败：${error?.message ?? '未知错误'}`;
+  }
+}
+
+function onThemeBrowserClose() {
+  showThemeBrowser.value = false;
   if (themeEditor.isEngineReady.value) {
     themeEditor.startEngine();
     themeEditor.flushPreview();
@@ -249,4 +271,10 @@ onBeforeUnmount(() => {
   padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
 }
 .toolbar-btn:hover { background: #444; color: #e0e0e0; }
+.toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  color: #999;
+  font-size: 12px;
+}
 </style>

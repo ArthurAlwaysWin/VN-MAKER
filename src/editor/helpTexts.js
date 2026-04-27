@@ -9,7 +9,8 @@
 export const HELP_THEME = {
   paletteGenerator: '选择一个主色，系统自动生成\n与之协调的完整配色方案',
   nineSlice: '为对话框、面板等 UI 元素\n配置九宫格拉伸背景图',
-  presets: '选择内置主题预设或\n导入/导出自定义主题包',
+  themeBrowser: '统一主题浏览器：浏览内置/导入主题、查看静态预览\n与覆盖影响，并从同一入口导入与应用完整主题',
+  presets: '统一主题浏览器负责浏览与导入主题\n未应用主题仅提供静态预览，不提供 live preview',
   groupCore: '控制界面的主要色调\n影响按钮、标题、强调色等',
   groupBackgrounds: '各 UI 面板的背景色\n对话框、菜单、卡片等',
   groupButtons: '按钮的配色方案\n包含默认状态和悬停状态',

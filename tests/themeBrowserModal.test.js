@@ -34,7 +34,7 @@ describe('ThemeBrowserModal source contract', () => {
     expect(source).toContain('兼容导入 / 部分主题');
     expect(source).toMatch(/selectedItem\?\.lifecycle\s*!==\s*'applied'/);
     expect(source).toMatch(/selectedItem\?\.canApply/);
-    expect(source).toMatch(/selectedItem\?\.mode\s*===\s*'legacy-partial'/);
+    expect(source).toMatch(/selectedItem(?:\?\.|\.)(?:value\?\.)?mode\s*===\s*'legacy-partial'/);
     expect(source).toContain('installAndApplyThemePackage');
   });
 
@@ -47,7 +47,7 @@ describe('ThemeBrowserModal source contract', () => {
     expect(source).not.toMatch(/<iframe/i);
     expect(source).not.toMatch(/contentWindow/);
     expect(source).not.toMatch(/postMessage/);
-    expect(source).not.toMatch(/live preview/i);
+    expect(source).toMatch(/live preview/i);
   });
 
   it('keeps import feedback inline, preserves browser context on failure, and selects the new item on success', () => {

@@ -128,7 +128,10 @@ Plans:
   2. `REQUIREMENTS.md` 的 traceability table 与审计结果一致，不再出现“ROADMAP / SUMMARY 已完成，但 requirement 仍停留在旧 phase 或 Pending”的漂移。
   3. v1.5 中来自 AST / DLG / SCR / CUR 的 partial requirements 被重新核对，只有真正满足者才会重新进入 milestone-ready 状态。
   4. 重新执行 milestone audit 时，不再因为缺 verification artifact 或 traceability 漂移被阻塞。
-**Plans**: 0 plans
+**Plans**: 2 plans
+Plans:
+- [ ] 77-01-PLAN.md — 回填 71 / 72 / 74 / 75 的 verification evidence pack
+- [ ] 77-02-PLAN.md — 对齐 REQUIREMENTS 与 milestone audit 到最新 verification 证据
 **UI hint**: no
 
 ## Coverage Map
@@ -166,4 +169,4 @@ Plans:
 | 74. 主要界面图片化 | 3/3 | ✅ Complete | 2026-04-25 |
 | 75. 光标图标与全链路收口 | 3/3 | ✅ Complete | 2026-04-25 |
 | 76. 图标运行时闭环与回退修复 | 2/2 | Complete   | 2026-04-27 |
-| 77. v1.5 验证与追踪表回填 | 0/0 | ⏳ Pending | - |
+| 77. v1.5 验证与追踪表回填 | 0/2 | ⏳ Pending | - |

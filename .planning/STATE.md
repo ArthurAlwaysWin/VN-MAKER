@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: completed
-stopped_at: Completed 80-02-PLAN.md
-last_updated: "2026-04-27T09:14:06.359Z"
+status: active
+stopped_at: Awaiting Phase 81 human verification after exported settings fixes
+last_updated: "2026-04-27T22:41:00.000Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 81 context gathered; golden theme scope now includes title screen
+**Current focus:** Phase 81 automated implementation and exported-settings regression fixes are complete; human acceptance remains
 
 ## Current Position
 
 Phase: 81 — Golden Theme 验收样板
-Plan: —
-Status: Phase 81 context gathered
-Next: /gsd-plan-phase 81
+Plan: 03
+Status: Automated evidence green; waiting on final human visual/exported-output acceptance
+Next: human verify exported/playtest parity, then close Phase 81
 Last activity: 2026-04-27
 
 ```
@@ -105,6 +105,10 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 80]: ThemeBrowserModal consumes normalized browser items from themeBrowser.js instead of raw built-in/imported objects.
 - [Phase 80]: Successful theme apply closes the browser so Project Settings can reuse its existing preview refresh path.
 - [Phase 80]: Project Settings keeps a direct .gmtheme export action while unified browser owns browse/import/apply.
+- [Phase 81]: Full-theme coverage expands to 8 surfaces by including `titleScreen`, but theme ownership remains visual-only and excludes `titleScreen.bgm`.
+- [Phase 81]: Golden `wafuu` is the first title-inclusive shipped baseline and must travel through the same install/apply/export/import pipeline as imported themes.
+- [Phase 81]: Structured settings tabs must treat glyph/emoji `tab.icon` values as text, not asset paths.
+- [Phase 81]: Golden `wafuu` footer button coordinates are part of shipped baseline data, not runtime layout defaults.
 
 ### Blockers/Concerns
 
@@ -113,14 +117,13 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T19:26:05+10:00
-Stopped at: Phase 81 context gathered
-Resume file: .planning/phases/81-golden-theme/81-CONTEXT.md
+Last session: 2026-04-27T22:41:00+10:00
+Stopped at: Phase 81 automated evidence green; awaiting human verification
+Resume file: .planning/phases/81-golden-theme/81-03-PLAN.md
 Resume hint: |
 
-  1. Phase 81 的 golden theme 范围已被显式扩大：必须包含 title screen，目标是游戏内容之外完整的整体 UI/UX 成品方案
-  2. 推荐基线是现有 `wafuu`，但需要把它升格为第一套 fully-delivered golden theme，而不是只当作色彩变体
-  3. Phase 80 的 unified browser 与 shared package pipeline 已可复用；Phase 81 不应再造第二条链路
-  4. 下一步应为扩边后的 title + full UI scope 创建可执行计划，并同步 requirements / validation / verification 口径
-
-Next action: create the executable plan for Phase 81
+  1. Phase 81 代码与 focused gate 已完成：titleScreen 已进入 full-theme contract，golden `wafuu` 可 apply/save-reopen/export/reimport，并保持 `titleScreen.bgm` 项目所有权
+  2. 用户提供的导出设置页截图问题已定位并修复：emoji/glyph tab icon 不再被当作图片路径，`wafuu` footer 不再使用 0/0 占位坐标
+  3. 当前剩余 gate 是 81-03 的人工验收：playtest 与 exported output 的肉眼一致性，以及整体 UI coherence
+  4. 若人工验收通过，补最终 phase closeout/commit；若仍有视觉偏差，继续从 `src/ui/SettingsScreen.js` 与 `src/editor/builtinThemes.js` 方向追
+Next action: complete the final human verification for Phase 81

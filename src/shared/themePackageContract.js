@@ -15,6 +15,7 @@ export const FULL_THEME_COVERAGE_KEYS = Object.freeze([
   'backlogScreen',
   'gameMenu',
   'settingsScreen',
+  'titleScreen',
 ]);
 
 const BUTTON_FAMILY_STATE_KEYS = Object.freeze({
@@ -66,6 +67,41 @@ function pushRef(refs, slot, value) {
     slot,
     value: value.trim(),
   });
+}
+
+function looksLikeAssetReference(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return trimmed.includes('/')
+    || trimmed.includes('\\')
+    || trimmed.startsWith('data:')
+    || /^[a-zA-Z]:/.test(trimmed);
+}
+
+function pushMixedIconRef(refs, slot, value) {
+  if (looksLikeAssetReference(value)) {
+    pushRef(refs, slot, value);
+  }
+}
+
+function getTitleScreenVisualSnapshot(titleScreen) {
+  if (!titleScreen || typeof titleScreen !== 'object') {
+    return null;
+  }
+
+  return {
+    background: titleScreen.background,
+    elements: Array.isArray(titleScreen.elements)
+      ? titleScreen.elements.map(element => ({ ...(element ?? {}) }))
+      : [],
+  };
 }
 
 function collectThemeRefs(theme) {
@@ -143,7 +179,7 @@ function collectThemeRefs(theme) {
 
   pushRef(refs, 'ui.gameMenu.backgroundImage', ui.gameMenu?.backgroundImage);
   for (const [key, button] of Object.entries(ui.gameMenu?.buttons ?? {})) {
-    pushRef(refs, `ui.gameMenu.buttons.${key}.icon`, button?.icon);
+    pushMixedIconRef(refs, `ui.gameMenu.buttons.${key}.icon`, button?.icon);
   }
   pushRef(refs, 'ui.gameMenu.chrome.backgroundImage', ui.gameMenu?.chrome?.backgroundImage);
   for (const [index, decoration] of (ui.gameMenu?.chrome?.decorations ?? []).entries()) {
@@ -156,11 +192,19 @@ function collectThemeRefs(theme) {
     pushRef(refs, `ui.settingsScreen.header.decorations.${index}.src`, decoration?.src);
   }
   for (const [index, tab] of (ui.settingsScreen?.tabBar?.tabs ?? []).entries()) {
-    pushRef(refs, `ui.settingsScreen.tabBar.tabs.${index}.icon`, tab?.icon);
+    pushMixedIconRef(refs, `ui.settingsScreen.tabBar.tabs.${index}.icon`, tab?.icon);
   }
   pushRef(refs, 'ui.settingsScreen.chrome.backgroundImage', ui.settingsScreen?.chrome?.backgroundImage);
   for (const [index, decoration] of (ui.settingsScreen?.chrome?.decorations ?? []).entries()) {
     pushRef(refs, `ui.settingsScreen.chrome.decorations.${index}.src`, decoration?.src);
+  }
+
+  const titleScreen = getTitleScreenVisualSnapshot(ui.titleScreen);
+  pushRef(refs, 'ui.titleScreen.background', titleScreen?.background);
+  for (const [index, element] of (titleScreen?.elements ?? []).entries()) {
+    if (element?.type === 'image') {
+      pushRef(refs, `ui.titleScreen.elements.${index}.src`, element?.src);
+    }
   }
 
   return refs;
@@ -190,6 +234,9 @@ function detectCoverage(theme) {
   }
   if (hasMeaningfulValue(ui.settingsScreen)) {
     coverage.push('settingsScreen');
+  }
+  if (hasMeaningfulValue(getTitleScreenVisualSnapshot(ui.titleScreen))) {
+    coverage.push('titleScreen');
   }
 
   return coverage;

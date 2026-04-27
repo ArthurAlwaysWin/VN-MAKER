@@ -729,6 +729,25 @@ describe('SettingsScreen structured mode', () => {
       const styleEl = document.getElementById('gm-slider-styles');
       expect(styleEl).not.toBeNull();
     });
+
+    it('renders non-path tab icons as text instead of broken image tags in left-tab mode', () => {
+      const layout = structuredLayout();
+      layout.tabBar.position = 'left';
+      layout.tabBar.tabs = [
+        { label: '音声', icon: '🔊' },
+        { label: '画面', icon: '🖥️' },
+        { label: '文字', icon: '📝' },
+      ];
+
+      screen.setLayout(layout);
+      screen.show();
+
+      const buttons = Array.from(screen.el.querySelectorAll('.settings-tab-btn'));
+      expect(buttons).toHaveLength(3);
+      expect(buttons[0].querySelector('img')).toBeNull();
+      expect(buttons[0].textContent).toContain('🔊');
+      expect(buttons[0].textContent).toContain('音声');
+    });
   });
 
   // ─── Constructor / API ────────────────────────────────

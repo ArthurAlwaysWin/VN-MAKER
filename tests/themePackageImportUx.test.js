@@ -92,7 +92,7 @@ describe('theme package import UX helpers', () => {
           mode: 'full',
           themeId: 'moonlight',
           assetRoot: 'ui/themes/moonlight/',
-          coverage: ['theme', 'widgetStyles'],
+          coverage: ['theme', 'widgetStyles', 'titleScreen'],
           missingCoverage: [],
           blockingErrors: [],
           warnings: ['可立即在浏览器中查看'],
@@ -111,13 +111,13 @@ describe('theme package import UX helpers', () => {
       source: 'imported',
       mode: 'full',
       lifecycle: 'available',
-      coverage: ['theme', 'widgetStyles'],
+      coverage: ['theme', 'widgetStyles', 'titleScreen'],
       missingCoverage: [],
       filePath: 'E:/themes/moonlight.gmtheme',
       canApply: true,
     });
     expect(result.summary.planLines).toEqual([
-      '应用后将接管这些主题范围：主题基础、通用控件',
+      '应用后将接管这些主题范围：主题基础、通用控件、标题界面',
     ]);
     expect(result).not.toHaveProperty('registry');
     expect(result).not.toHaveProperty('inventory');

@@ -33,6 +33,20 @@ function createFullThemeZip(themeId, files) {
           backgroundImage: files[2]?.path ?? files[0]?.path ?? '',
         },
       },
+      titleScreen: {
+        background: files[3]?.path ?? files[0]?.path ?? '',
+        bgm: 'audio/title-theme.ogg',
+        elements: [
+          {
+            type: 'image',
+            src: files[4]?.path ?? files[0]?.path ?? '',
+            x: 120,
+            y: 90,
+            width: 320,
+            height: 180,
+          },
+        ],
+      },
     },
   };
   const archive = {
@@ -151,6 +165,14 @@ describe('theme package preflight', () => {
         path: 'ui/themes/moonlight/icons/qab.png',
         bytes: sameBytes,
       },
+      {
+        path: 'ui/themes/moonlight/title/background.png',
+        bytes: new Uint8Array([7, 7, 7, 7]),
+      },
+      {
+        path: 'ui/themes/moonlight/title/logo.png',
+        bytes: new Uint8Array([8, 8, 8, 8]),
+      },
     ]));
 
     const result = await preflightThemePackage({
@@ -164,6 +186,8 @@ describe('theme package preflight', () => {
       { type: 'copy', path: 'ui/themes/moonlight/widgets/tab-active.png' },
       { type: 'overwrite', path: 'ui/themes/moonlight/dialogue/nameplate.png' },
       { type: 'skip', path: 'ui/themes/moonlight/icons/qab.png' },
+      { type: 'copy', path: 'ui/themes/moonlight/title/background.png' },
+      { type: 'copy', path: 'ui/themes/moonlight/title/logo.png' },
     ]);
     expect(result.actions.every(action => !/-\d+\./.test(action.path))).toBe(true);
     await expect(

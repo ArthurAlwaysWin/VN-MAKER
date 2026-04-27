@@ -43,6 +43,20 @@ function createFullTheme(themeId, overrides = {}) {
           backgroundImage: `ui/themes/${themeId}/screens/settings-bg.png`,
         },
       },
+      titleScreen: {
+        background: `ui/themes/${themeId}/title/background.png`,
+        bgm: 'audio/title-theme.ogg',
+        elements: [
+          {
+            type: 'image',
+            src: `ui/themes/${themeId}/title/logo.png`,
+            x: 160,
+            y: 120,
+            width: 320,
+            height: 180,
+          },
+        ],
+      },
     },
     ...overrides,
   };
@@ -62,6 +76,8 @@ describe('theme package contract', () => {
         { path: `ui/themes/${themeId}/screens/backlog-bg.png`, sha256: 'backlog', bytes: 10 },
         { path: `ui/themes/${themeId}/screens/game-menu-bg.png`, sha256: 'menu', bytes: 10 },
         { path: `ui/themes/${themeId}/screens/settings-bg.png`, sha256: 'settings', bytes: 10 },
+        { path: `ui/themes/${themeId}/title/background.png`, sha256: 'title-bg', bytes: 10 },
+        { path: `ui/themes/${themeId}/title/logo.png`, sha256: 'title-logo', bytes: 10 },
       ],
     });
 
@@ -71,6 +87,7 @@ describe('theme package contract', () => {
     expect(valid.coverage).toContain('widgetStyles');
     expect(valid.coverage).toContain('dialogueBox');
     expect(valid.coverage).toContain('saveLoadScreen');
+    expect(valid.coverage).toContain('titleScreen');
 
     const invalidRefs = [
       'asset://ui/themes/moonlight/dialogue/nameplate.png',
@@ -152,6 +169,38 @@ describe('theme package contract', () => {
     expect(legacy.missingCoverage).toContain('widgetStyles');
     expect(legacy.missingCoverage).toContain('dialogueBox');
     expect(legacy.missingCoverage).toContain('saveLoadScreen');
+    expect(legacy.missingCoverage).toContain('titleScreen');
     expect(legacy.missingCoverage).not.toHaveLength(0);
+  });
+
+  it('treats titleScreen coverage as visual-only and excludes bgm ownership', () => {
+    const themeId = 'moonlight';
+    const bgmOnly = validateThemePackageDefinition({
+      mode: 'full',
+      themeId,
+      theme: {
+        ui: {
+          theme: {
+            tokens: {
+              primary: '#fff',
+            },
+          },
+          widgetStyles: {},
+          dialogueBox: {},
+          saveLoadScreen: {},
+          backlogScreen: {},
+          gameMenu: {},
+          settingsScreen: {},
+          titleScreen: {
+            bgm: 'audio/title-theme.ogg',
+          },
+        },
+      },
+      files: [],
+    });
+
+    expect(bgmOnly.coverage).not.toContain('titleScreen');
+    expect(bgmOnly.refs).not.toContain('audio/title-theme.ogg');
+    expect(bgmOnly.missingCoverage).toContain('titleScreen');
   });
 });

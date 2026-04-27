@@ -209,10 +209,22 @@ function collectDialogueBoxUiImages(script, add) {
   }
 }
 
+function collectTitleScreenUiImages(script, add) {
+  const titleScreen = script?.ui?.titleScreen;
+  addCanonicalUiImage(add, titleScreen?.background);
+
+  for (const element of titleScreen?.elements || []) {
+    if (element?.type === 'image') {
+      addCanonicalUiImage(add, element?.src);
+    }
+  }
+}
+
 export const UI_IMAGE_SCAN_REGISTRY = [
   collectThemeUiImages,
   collectButtonFamilyUiImages,
   collectDialogueBoxUiImages,
+  collectTitleScreenUiImages,
   collectScreenChromeUiImages,
   collectWidgetStyleUiImages,
   collectCursorIconUiImages,

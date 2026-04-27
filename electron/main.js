@@ -7,6 +7,9 @@ import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './val
 import { exportGame } from './exportGame.js';
 import { exportDesktop } from './exportDesktop.js';
 import { preflightThemePackage } from './themePackagePreflight.js';
+import { installThemePackage } from './themePackageInstaller.js';
+import { exportThemePackage } from './themePackageExporter.js';
+import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -189,11 +192,17 @@ ipcMain.handle('load-project', async (event, projectPath) => {
       projectData = JSON.parse(await fs.readFile(projectJsonPath, 'utf-8'));
     }
 
-    if (existsSync(scriptJsonPath)) {
-      scriptData = JSON.parse(await fs.readFile(scriptJsonPath, 'utf-8'));
-    } else {
-      scriptData = defaultScript();
-    }
+     if (existsSync(scriptJsonPath)) {
+       scriptData = JSON.parse(await fs.readFile(scriptJsonPath, 'utf-8'));
+     } else {
+       scriptData = defaultScript();
+     }
+
+      const migratedThemeData = migrateLegacyAppliedThemeData(scriptData);
+      if (migratedThemeData.changed) {
+        scriptData = migratedThemeData.script;
+        await fs.writeFile(scriptJsonPath, JSON.stringify(scriptData, null, 2), 'utf-8');
+      }
 
     // Legacy migration: script.json has meta but no project.json
     if (!projectData && scriptData.meta) {
@@ -767,18 +776,28 @@ ipcMain.handle('open-preview', (event, projectPath) => {
 
 // ─── Theme Export/Import IPC ─────────────────────────────
 
-ipcMain.handle('export-theme', async (event, { buffer }) => {
+ipcMain.handle('export-gmtheme', async (event, { metadata } = {}) => {
   try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    const exported = await exportThemePackage({
+      projectPath: currentProjectPath,
+      metadata,
+    });
+    if (!exported.success) {
+      return exported;
+    }
     const result = await dialog.showSaveDialog(getMainWindow(), {
       title: '导出主题',
-      defaultPath: 'my-theme.theme',
-      filters: [{ name: '主题文件', extensions: ['theme'] }],
+      defaultPath: `${exported.themeId || 'theme'}.gmtheme`,
+      filters: [{ name: '完整主题包', extensions: ['gmtheme'] }],
     });
     if (result.canceled) return { success: false, canceled: true };
-    await fs.writeFile(result.filePath, Buffer.from(buffer));
+    await fs.writeFile(result.filePath, Buffer.from(exported.buffer));
     return { success: true, path: result.filePath };
   } catch (e) {
-    console.error('[export-theme] Failed:', e);
+    console.error('[export-gmtheme] Failed:', e);
     return { success: false, error: e.message };
   }
 });
@@ -809,6 +828,21 @@ ipcMain.handle('preflight-theme-package', async (event, { filePath }) => {
     });
   } catch (e) {
     console.error('[preflight-theme-package] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('install-theme-package', async (event, payload) => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    return await installThemePackage({
+      ...payload,
+      projectPath: currentProjectPath,
+    });
+  } catch (e) {
+    console.error('[install-theme-package] Failed:', e);
     return { success: false, error: e.message };
   }
 });

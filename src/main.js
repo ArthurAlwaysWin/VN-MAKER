@@ -26,6 +26,7 @@ import { SettingsScreen } from './ui/SettingsScreen.js';
 import { TitleScreen } from './ui/TitleScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
+import { attachResponsiveGameContainer } from './ui/runtimeViewport.js';
 import { loadAllFonts } from './engine/fontLoader.js';
 import {
   isKnownCameraEffect,
@@ -40,6 +41,7 @@ const bgLayer = document.getElementById('background-layer');
 const charLayer = document.getElementById('character-layer');
 const dialogueLayer = document.getElementById('dialogue-layer');
 const uiOverlay = document.getElementById('ui-overlay');
+attachResponsiveGameContainer(gameContainer);
 
 // ─── Engine instances ───────────────────────────────────
 const engine = new ScriptEngine();

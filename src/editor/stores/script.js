@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, nextTick } from 'vue';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
+import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
 
 export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
@@ -44,7 +45,7 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function loadFromData(scriptData) {
-    data.value = scriptData;
+    data.value = migrateLegacyAppliedThemeData(scriptData).script;
     history.value = [];
     historyIndex.value = -1;
     pushState();
@@ -327,6 +328,36 @@ export const useScriptStore = defineStore('script', () => {
     return count;
   }
 
+  function replaceAssetPathReferences(oldPath, newPath) {
+    if (!data.value || !oldPath || !newPath || oldPath === newPath) return 0;
+
+    let count = 0;
+
+    function walk(node) {
+      if (!node || typeof node !== 'object') return;
+
+      if (Array.isArray(node)) {
+        for (const item of node) {
+          walk(item);
+        }
+        return;
+      }
+
+      for (const key of Object.keys(node)) {
+        const value = node[key];
+        if (value === oldPath) {
+          node[key] = newPath;
+          count++;
+          continue;
+        }
+        walk(value);
+      }
+    }
+
+    walk(data.value);
+    return count;
+  }
+
   // Temporary backward-compat shims — remove when views are rewritten in Chunk 3
   async function loadScript() {
     console.warn('loadScript() is deprecated — use loadFromData() via project store');
@@ -375,6 +406,33 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function applyThemeBundle(bundleConfig, packageMeta) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+
+    const nextTheme = JSON.parse(JSON.stringify(bundleConfig?.theme ?? {}));
+    if (packageMeta) {
+      nextTheme.packageMeta = JSON.parse(JSON.stringify(packageMeta));
+    }
+
+    data.value.ui.theme = nextTheme;
+    data.value.ui.widgetStyles = JSON.parse(JSON.stringify(bundleConfig?.widgetStyles ?? {}));
+    data.value.ui.dialogueBox = JSON.parse(JSON.stringify(bundleConfig?.dialogueBox ?? {}));
+    data.value.ui.saveLoadScreen = JSON.parse(JSON.stringify(bundleConfig?.saveLoadScreen ?? {}));
+    data.value.ui.backlogScreen = JSON.parse(JSON.stringify(bundleConfig?.backlogScreen ?? {}));
+    data.value.ui.gameMenu = JSON.parse(JSON.stringify(bundleConfig?.gameMenu ?? {}));
+    data.value.ui.settingsScreen = JSON.parse(JSON.stringify(bundleConfig?.settingsScreen ?? {}));
+    const currentTitleScreen = JSON.parse(JSON.stringify(data.value.ui.titleScreen ?? {}));
+    const nextTitleScreen = JSON.parse(JSON.stringify(bundleConfig?.titleScreen ?? {}));
+    data.value.ui.titleScreen = {
+      background: nextTitleScreen.background ?? null,
+      bgm: currentTitleScreen.bgm ?? null,
+      elements: Array.isArray(nextTitleScreen.elements) ? nextTitleScreen.elements : [],
+    };
+
+    pushState();
+  }
+
   return {
     data, isLoading, _skipWatch,
     pushState, undo, redo,
@@ -388,11 +446,11 @@ export const useScriptStore = defineStore('script', () => {
     getSaveLoadScreen, updateSaveLoadScreen,
     getBacklogScreen, updateBacklogScreen,
     getGameMenu, updateGameMenu,
-    applyBuiltinTheme,
+    applyBuiltinTheme, applyThemeBundle,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
     convertPageType, setSceneNext,
-    findExpressionReferences, replaceExpressionReferences,
+    findExpressionReferences, replaceExpressionReferences, replaceAssetPathReferences,
     loadScript, saveScript
   };
 });

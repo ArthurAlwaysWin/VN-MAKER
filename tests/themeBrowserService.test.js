@@ -62,6 +62,7 @@ describe('theme browser service', () => {
       author: 'Galgame Maker',
       version: '内置主题',
     });
+    expect(items.find(item => item.rawId === 'wafuu').coverageLabels).toContain('标题界面');
     expect(items.find(item => item.rawId === 'moonlight')).toMatchObject({
       source: 'imported',
       mode: 'full',
@@ -169,6 +170,16 @@ describe('theme browser service', () => {
     expect(overlapImpact.text).not.toContain('overwrite');
     expect(firstWriteImpact.text).toContain('首次写入这些主题范围');
     expect(firstWriteImpact.text).toContain('设置界面');
+
+    const titleFirstWriteImpact = computeThemeApplyImpact(
+      {
+        mode: 'full',
+        coverage: ['theme', 'titleScreen'],
+      },
+      {},
+    );
+
+    expect(titleFirstWriteImpact.text).toContain('标题界面');
   });
 
   it('filters normalized items by source, lifecycle, mode, and text query', () => {

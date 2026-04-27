@@ -7,6 +7,8 @@ function createFullThemePackage({
   id = 'moonlight',
   assetRoot = `ui/themes/${id}/`,
   filePath = `ui/themes/${id}/dialogue/nameplate.png`,
+  titleBackgroundPath = `ui/themes/${id}/title/background.png`,
+  titleLogoPath = `ui/themes/${id}/title/logo.png`,
 } = {}) {
   return zipSync({
     'manifest.json': strToU8(JSON.stringify({
@@ -16,28 +18,54 @@ function createFullThemePackage({
       name: 'Moonlight',
       assetRoot,
       preview: 'assets/_meta/preview.png',
-      files: [
-        {
-          path: filePath,
-          sha256: 'nameplate-sha',
-          bytes: 4,
-        },
-      ],
-    })),
-    'theme.json': strToU8(JSON.stringify({
-      ui: {
+        files: [
+          {
+            path: filePath,
+            sha256: 'nameplate-sha',
+            bytes: 4,
+          },
+          {
+            path: titleBackgroundPath,
+            sha256: 'title-background-sha',
+            bytes: 4,
+          },
+          {
+            path: titleLogoPath,
+            sha256: 'title-logo-sha',
+            bytes: 4,
+          },
+        ],
+      })),
+      'theme.json': strToU8(JSON.stringify({
+        ui: {
         theme: {
           tokens: {
             primary: '#ffffff',
           },
         },
-        dialogueBox: {
-          nameplateBackgroundImage: filePath,
+          dialogueBox: {
+            nameplateBackgroundImage: filePath,
+          },
+          titleScreen: {
+            background: titleBackgroundPath,
+            bgm: 'audio/title-theme.ogg',
+            elements: [
+              {
+                type: 'image',
+                src: titleLogoPath,
+                x: 160,
+                y: 80,
+                width: 320,
+                height: 180,
+              },
+            ],
+          },
         },
-      },
-    })),
+      })),
     'assets/_meta/preview.png': new Uint8Array([137, 80, 78, 71]),
     [`assets/${filePath}`]: new Uint8Array([1, 2, 3, 4]),
+    [`assets/${titleBackgroundPath}`]: new Uint8Array([5, 6, 7, 8]),
+    [`assets/${titleLogoPath}`]: new Uint8Array([9, 10, 11, 12]),
   });
 }
 
@@ -51,10 +79,21 @@ describe('theme packager', () => {
     expect(parsed.assetRoot).toBe('ui/themes/moonlight/');
     expect(parsed.coverage).toContain('theme');
     expect(parsed.coverage).toContain('dialogueBox');
+    expect(parsed.coverage).toContain('titleScreen');
     expect(parsed.files).toEqual([
       {
         path: 'ui/themes/moonlight/dialogue/nameplate.png',
         sha256: 'nameplate-sha',
+        bytes: 4,
+      },
+      {
+        path: 'ui/themes/moonlight/title/background.png',
+        sha256: 'title-background-sha',
+        bytes: 4,
+      },
+      {
+        path: 'ui/themes/moonlight/title/logo.png',
+        sha256: 'title-logo-sha',
         bytes: 4,
       },
     ]);
@@ -109,6 +148,7 @@ describe('theme packager', () => {
     expect(parsed.isFullTheme).toBe(false);
     expect(parsed.missingCoverage).toContain('widgetStyles');
     expect(parsed.missingCoverage).toContain('saveLoadScreen');
+    expect(parsed.missingCoverage).toContain('titleScreen');
     expect(parsed.blockingErrors).toEqual([]);
   });
 });

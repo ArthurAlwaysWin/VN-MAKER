@@ -15,6 +15,7 @@ const COVERAGE_LABELS = Object.freeze({
   backlogScreen: '回看界面',
   gameMenu: '游戏菜单',
   settingsScreen: '设置界面',
+  titleScreen: '标题界面',
 });
 
 const BUILTIN_THEME_AUTHOR = 'Galgame Maker';

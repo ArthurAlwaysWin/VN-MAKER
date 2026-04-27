@@ -58,6 +58,17 @@ function encodeBase64(bytes) {
   return btoa(binary);
 }
 
+function sha256(bytes) {
+  let hashA = 0x811c9dc5;
+  let hashB = 0x01000193;
+  for (const byte of toUint8Array(bytes)) {
+    hashA ^= byte;
+    hashA = Math.imul(hashA, 0x01000193) >>> 0;
+    hashB = (Math.imul(hashB ^ byte, 0x45d9f3b) + 0x9e3779b9) >>> 0;
+  }
+  return `${hashA.toString(16).padStart(8, '0')}${hashB.toString(16).padStart(8, '0')}`.repeat(2);
+}
+
 function readZipText(unzipped, filename) {
   const content = unzipped[filename];
   if (!content) {
@@ -264,6 +275,61 @@ export function buildThemeZip(themeData, metadata = {}) {
   files['theme.json'] = strToU8(JSON.stringify(themeJson, null, 2));
 
   return zipSync(files);
+}
+
+export function buildFullThemeZip({
+  themeId,
+  theme,
+  assets = [],
+  metadata = {},
+} = {}) {
+  const normalizedTheme = JSON.parse(JSON.stringify(theme ?? {}));
+  const normalizedAssets = assets.map(asset => ({
+    path: asset.path,
+    bytes: toUint8Array(asset.bytes),
+  })).sort((a, b) => a.path.localeCompare(b.path));
+
+  const validation = validateThemePackageDefinition({
+    mode: 'full',
+    themeId,
+    theme: normalizedTheme,
+    files: normalizedAssets.map(asset => ({
+      path: asset.path,
+      sha256: sha256(asset.bytes),
+      bytes: asset.bytes.length,
+    })),
+  });
+
+  if (validation.blockingErrors.length > 0) {
+    throw new Error(validation.blockingErrors.join('; '));
+  }
+
+  const manifest = {
+    formatVersion: FULL_THEME_FORMAT_VERSION,
+    packageVersion: metadata.packageVersion || '1.0.0',
+    id: validation.themeId,
+    name: metadata.name || validation.themeId || 'theme-package',
+    description: metadata.description || '',
+    author: metadata.author || '',
+    createdAt: metadata.createdAt || new Date().toISOString(),
+    assetRoot: validation.assetRoot,
+    files: normalizedAssets.map(asset => ({
+      path: asset.path,
+      sha256: sha256(asset.bytes),
+      bytes: asset.bytes.length,
+    })),
+  };
+
+  const archive = {
+    'manifest.json': strToU8(JSON.stringify(manifest, null, 2)),
+    'theme.json': strToU8(JSON.stringify(normalizedTheme, null, 2)),
+  };
+
+  for (const asset of normalizedAssets) {
+    archive[`assets/${asset.path}`] = asset.bytes;
+  }
+
+  return zipSync(archive);
 }
 
 // ─── ZIP Parse ───────────────────────────────────────────

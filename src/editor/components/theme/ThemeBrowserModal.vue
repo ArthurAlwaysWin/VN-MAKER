@@ -5,7 +5,7 @@
         <div class="modal-header">
           <div>
             <h3>🎭 主题浏览器</h3>
-            <p class="modal-subtitle">统一浏览内置主题与导入主题；未应用主题仅提供静态预览。</p>
+            <p class="modal-subtitle">统一浏览内置主题与导入主题；完整主题覆盖现已包含标题界面，未应用主题仅提供静态预览。</p>
           </div>
           <button class="close-btn" @click="$emit('close')" title="关闭">✕</button>
         </div>

@@ -4,7 +4,7 @@
  * Each theme contains:
  * - tokens: design token overrides (merged onto DEFAULT_TOKENS by engine)
  * - widgetStyles: widget appearance overrides (merged onto WIDGET_DEFAULTS by engine)
- * - screens: per-screen layout configs (saveLoadScreen, backlogScreen, gameMenu, settingsScreen)
+ * - screens: per-screen layout configs (titleScreen, saveLoadScreen, backlogScreen, gameMenu, settingsScreen)
  *
  * "default" captures the engine's built-in appearance (empty overrides).
  * "wafuu" provides a full Japanese-style config with nine-slice references.
@@ -101,7 +101,7 @@ export const BUILTIN_THEMES = [
       },
       settingsScreen: {
         header: {
-          title: { text: '系統設定', color: 'rgba(244, 235, 226, 0.9)' },
+          title: { text: '系统设定', color: 'rgba(244, 235, 226, 0.9)' },
           decorations: [
             { src: '', x: 0, y: 10, width: 60, height: 60 },
             { src: '', x: 1220, y: 10, width: 60, height: 60 },
@@ -120,10 +120,60 @@ export const BUILTIN_THEMES = [
         footer: {
           height: 60,
           buttons: [
-            { text: '关闭', action: 'close', x: 0, y: 0 },
-            { text: '恢复默认', action: 'reset', x: 0, y: 0 },
+            { text: '恢复默认', action: 'reset', x: 1030, y: 14 },
           ],
         },
+      },
+      titleScreen: {
+        background: null,
+        elements: [
+          {
+            type: 'text',
+            content: '物语',
+            x: 640,
+            y: 150,
+            anchor: 'center',
+            fontSize: 52,
+            fontFamily: "'Noto Serif SC', serif",
+            color: 'rgba(244, 235, 226, 0.92)',
+            letterSpacing: 12,
+            textShadow: '0 6px 24px rgba(20, 12, 10, 0.45)',
+          },
+          {
+            type: 'button',
+            text: '开始',
+            action: 'start',
+            x: 640,
+            y: 360,
+            anchor: 'center',
+            width: 220,
+            height: 52,
+            fontSize: 20,
+            fontFamily: "'Noto Serif SC', serif",
+            color: 'rgba(244, 235, 226, 0.92)',
+            backgroundColor: 'rgba(89, 56, 38, 0.72)',
+            hoverColor: 'rgba(138, 80, 40, 0.82)',
+            borderRadius: 6,
+            border: '1px solid rgba(193, 157, 113, 0.45)',
+          },
+          {
+            type: 'button',
+            text: '设置',
+            action: 'settings',
+            x: 640,
+            y: 430,
+            anchor: 'center',
+            width: 220,
+            height: 52,
+            fontSize: 20,
+            fontFamily: "'Noto Serif SC', serif",
+            color: 'rgba(244, 235, 226, 0.92)',
+            backgroundColor: 'rgba(89, 56, 38, 0.58)',
+            hoverColor: 'rgba(138, 80, 40, 0.78)',
+            borderRadius: 6,
+            border: '1px solid rgba(193, 157, 113, 0.35)',
+          },
+        ],
       },
     },
   },

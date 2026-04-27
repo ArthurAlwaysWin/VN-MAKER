@@ -28,6 +28,22 @@ const SETTING_GROUP_KEYS = [
 /** Default tab labels when layout.tabBar.tabs is not specified */
 const DEFAULT_TAB_LABELS = ['声音', '画面', '游戏'];
 
+function isTabIconImageSource(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return trimmed.includes('/')
+    || trimmed.includes('\\')
+    || trimmed.startsWith('data:')
+    || /^[a-zA-Z]:/.test(trimmed);
+}
+
 /**
  * Normalize tabBar.tabs input to a uniform `{label, icon?, settingKeys?}[]` format.
  * Returns null when input is absent (signals "use defaults").
@@ -678,7 +694,7 @@ export class SettingsScreen {
         btn.style.background = i === this._activeTab ? 'rgba(255,255,255,0.12)' : 'none';
         btn.style.color = i === this._activeTab ? '#fff' : 'rgba(255,255,255,0.5)';
 
-        if (tab.icon) {
+        if (isTabIconImageSource(tab.icon)) {
           const img = document.createElement('img');
           img.src = resolvePath(tab.icon);
           img.width = 24;
@@ -686,6 +702,13 @@ export class SettingsScreen {
           img.style.objectFit = 'contain';
           img.alt = '';
           btn.appendChild(img);
+          const span = document.createElement('span');
+          span.textContent = tab.label;
+          btn.appendChild(span);
+        } else if (tab.icon) {
+          const icon = document.createElement('span');
+          icon.textContent = tab.icon;
+          btn.appendChild(icon);
           const span = document.createElement('span');
           span.textContent = tab.label;
           btn.appendChild(span);
@@ -754,7 +777,7 @@ export class SettingsScreen {
           const btn = document.createElement('button');
           btn.className = `settings-tab-btn${i === this._activeTab ? ' active' : ''}`;
 
-          if (tab.icon) {
+          if (isTabIconImageSource(tab.icon)) {
             btn.style.display = 'flex';
             btn.style.alignItems = 'center';
             btn.style.gap = '6px';
@@ -765,6 +788,16 @@ export class SettingsScreen {
             img.style.objectFit = 'contain';
             img.alt = '';
             btn.appendChild(img);
+            const span = document.createElement('span');
+            span.textContent = tab.label;
+            btn.appendChild(span);
+          } else if (tab.icon) {
+            btn.style.display = 'flex';
+            btn.style.alignItems = 'center';
+            btn.style.gap = '6px';
+            const icon = document.createElement('span');
+            icon.textContent = tab.icon;
+            btn.appendChild(icon);
             const span = document.createElement('span');
             span.textContent = tab.label;
             btn.appendChild(span);

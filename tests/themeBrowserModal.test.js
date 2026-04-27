@@ -44,6 +44,7 @@ describe('ThemeBrowserModal source contract', () => {
     expect(source).toContain('静态预览');
     expect(source).toContain('预览占位');
     expect(source).toContain('覆盖影响');
+    expect(source).toContain('标题界面');
     expect(source).not.toMatch(/<iframe/i);
     expect(source).not.toMatch(/contentWindow/);
     expect(source).not.toMatch(/postMessage/);

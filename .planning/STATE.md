@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: UI 图片驱动体系
-status: archived
-stopped_at: Completed v1.5 milestone archival prep
-last_updated: "2026-04-27T03:49:14.045Z"
+milestone: v1.6
+milestone_name: 完整主题包与图片主题产出
+status: defining_requirements
+stopped_at: Started v1.6 milestone
+last_updated: "2026-04-27T04:15:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** v1.5 archived; awaiting next milestone definition
+**Current focus:** v1.6 milestone kickoff
 
 ## Current Position
 
-Phase: None
-Plan: None
-Status: Milestone archived
-Next: Define the next milestone
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Next: Decide whether to research first, then write REQUIREMENTS.md / ROADMAP.md
 Last activity: 2026-04-27
 
 ```
@@ -104,4 +104,4 @@ Resume hint: |
   3. 下一步应由用户决定是否启动新 milestone，或是否进一步整理 phase archive / push tag
   4. 当前工作区仍有与 milestone docs 无关的本地变更，提交时需避免带入
 
-Next action: decide whether to push the local v1.5 tag and/or start a new milestone
+Next action: decide whether to research the theme-package domain before defining v1.6 requirements

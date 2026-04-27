@@ -93,7 +93,20 @@
 
 ### Active
 
-(当前无 active milestone — 下一里程碑待定义)
+- [ ] **THEMEPACK-01**: 用户可以把包含 `theme.json + assets/` 的完整图片主题导入到项目中，并自动落盘所需素材
+- [ ] **THEMEPACK-02**: 用户可以将当前项目主题导出为可复用的 `.gmtheme` 包，并保留全部图片 UI 资产
+- [ ] **THEMEPACK-03**: 用户可以一键应用 5 套完整图片主题，让对话框、按钮、major screens、cursor、icons 形成统一风格
+- [ ] **THEMEPACK-04**: 用户在编辑器里可以预览并选择完整主题包，而不是只调单个图片槽位
+
+## Current Milestone: v1.6 完整主题包与图片主题产出
+
+**Goal:** 把 v1.5 已打通的图片 UI 能力升级成可分发、可复用、开箱即用的完整主题包体系。
+
+**Target features:**
+- `.gmtheme` 升级为包含 `theme.json + assets/` 的完整主题包
+- 主题导入/导出时自动携带并落盘图片素材
+- 产出 5 套完整图片主题（现代简约、日式传统、奇幻、以及另外 2 套完整风格）
+- Theme 选择/预览体验升级，让用户能一键套用整套图片主题
 
 ## Current State
 
@@ -103,15 +116,15 @@
 
 **v1.5 已完成：** 对话框 / 按钮族 / major screens / cursor / icons 的图片化闭环全部交付，补齐了 Phase 76-77 gap closure 后达到 17/17 requirements、7/7 phases、2/2 integrations、5/5 flows。
 
-**当前进行中：** 无 active milestone。
+**当前进行中：** v1.6「完整主题包与图片主题产出」已启动，正在定义 requirements 与 roadmap。
 
-**下一步：** 定义下一里程碑目标，并重新创建新的 milestone-scoped `ROADMAP.md` / `REQUIREMENTS.md`。
+**下一步：** 明确 v1.6 requirements，判断是否先做 research，再拆解为继续编号的 phase roadmap。
 
 ## Next Milestone Goals
 
-- 待用户确认下一里程碑主题与边界
-- 从已归档的 v1.5 状态出发重新定义 requirements
-- 仅在新 milestone 启动后恢复 phase-level roadmap 拆解
+- `.gmtheme` 从纯配置包升级为带 assets 的完整主题包
+- 用完整图片素材而不是单点参数调节，交付 5 套真正可开箱即用的主题
+- 把 Theme 选择体验从“调配置”升级到“选整套风格”
 
 ## Previous Milestone: ✅ v1.5 UI 图片驱动体系 (Shipped 2026-04-27)
 
@@ -333,4 +346,4 @@ This document evolves at phase transitions and milestone boundaries.
 - ⚠ repo-wide `npx vitest run` 仍包含与 v1.4 无关的 legacy test collection / `tests/mainConfigRouting.test.js` 债务
 
 ---
-*Last updated: 2026-04-27 after completing v1.5 milestone*
+*Last updated: 2026-04-27 after starting v1.6 milestone*

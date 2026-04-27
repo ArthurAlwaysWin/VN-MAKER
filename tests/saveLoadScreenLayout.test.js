@@ -220,6 +220,19 @@ describe('SaveLoadScreen.setLayout', () => {
 
       resetButtonFamilies();
     });
+
+    it('falls back to 返回 when a broken close theme icon fails to load', async () => {
+      screen.setThemeIcons({ close: 'ui/icons/close.png' });
+      screen.show('save');
+
+      await vi.waitFor(() => {
+        const img = screen.el.querySelector('.save-load-close img.close-icon');
+        expect(img).not.toBeNull();
+        img.dispatchEvent(new Event('error'));
+        expect(screen.el.querySelector('.save-load-close img')).toBeNull();
+        expect(screen.el.querySelector('.save-load-close').textContent).toBe('返回');
+      });
+    });
   });
 
   // ── SCREEN-01: Config application ──

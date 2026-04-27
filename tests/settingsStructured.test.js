@@ -203,6 +203,19 @@ describe('SettingsScreen structured mode', () => {
       expect(screen.el.classList.contains('settings-structured')).toBe(false);
     });
 
+    it('falls back to 返回 when a broken default close theme icon fails to load', () => {
+      screen.setThemeIcons({ close: 'ui/icons/close.png' });
+      screen.show();
+
+      const closeBtn = screen.el.querySelector('.settings-close');
+      const img = closeBtn.querySelector('img.close-icon');
+      expect(img).not.toBeNull();
+      img.dispatchEvent(new Event('error'));
+
+      expect(closeBtn.querySelector('img')).toBeNull();
+      expect(closeBtn.textContent).toBe('返回');
+    });
+
     it('routes to _renderDefault when layout has no header/tabBar/contentArea/elements', () => {
       screen.setLayout({ background: 'red' });
       screen.show();
@@ -287,6 +300,20 @@ describe('SettingsScreen structured mode', () => {
       const closeBtn = screen.el.querySelector('.settings-structured-close');
       closeBtn.click();
       expect(screen.el.classList.contains('hidden')).toBe(true);
+    });
+
+    it('falls back to × when a broken structured close theme icon fails to load', () => {
+      screen.setThemeIcons({ close: 'ui/icons/close.png' });
+      screen.setLayout(structuredLayout());
+      screen.show();
+
+      const closeBtn = screen.el.querySelector('.settings-structured-close');
+      const img = closeBtn.querySelector('img.close-icon');
+      expect(img).not.toBeNull();
+      img.dispatchEvent(new Event('error'));
+
+      expect(closeBtn.querySelector('img')).toBeNull();
+      expect(closeBtn.textContent).toBe('×');
     });
   });
 

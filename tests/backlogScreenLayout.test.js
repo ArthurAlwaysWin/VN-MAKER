@@ -39,6 +39,13 @@ function makeContainer() {
   return div;
 }
 
+function makeAudio() {
+  return {
+    playVoice: vi.fn(() => new Promise(() => {})),
+    stopVoice: vi.fn(),
+  };
+}
+
 const SAMPLE_HISTORY = [
   { speaker: 'alice', speakerName: 'Alice', text: 'Hello', voice: null },
   { speaker: 'bob', speakerName: 'Bob', text: 'Hi there', voice: null },
@@ -181,6 +188,18 @@ describe('BacklogScreen.setLayout', () => {
         expect(entry.style.borderBottom).toBe('');
         expect(entry.style.padding).toBe('');
       }
+    });
+
+    it('falls back to 返回 when a broken close theme icon fails to load', () => {
+      screen.setThemeIcons({ close: 'ui/icons/close.png' });
+      screen.show(SAMPLE_HISTORY, CHARACTERS);
+
+      const img = screen.el.querySelector('.backlog-close img.close-icon');
+      expect(img).not.toBeNull();
+      img.dispatchEvent(new Event('error'));
+
+      expect(screen.el.querySelector('.backlog-close img')).toBeNull();
+      expect(screen.el.querySelector('.backlog-close').textContent).toBe('返回');
     });
   });
 
@@ -485,6 +504,31 @@ describe('BacklogScreen.setLayout', () => {
       screen.setLayout({ chrome: { decorations: [] } });
       screen.show(SAMPLE_HISTORY, CHARACTERS);
       expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(0);
+    });
+  });
+
+  describe('voice replay theme icon fallback', () => {
+    it('recovers to ▶ / ■ text behavior after a broken themed voice icon fails', () => {
+      const audio = makeAudio();
+      screen = new BacklogScreen(container, audio);
+      screen.setThemeIcons({ voiceReplay: 'ui/icons/voice.png' });
+      screen.show([
+        { speaker: 'alice', speakerName: 'Alice', text: 'Hello', voice: 'voice/test.ogg' },
+      ], CHARACTERS);
+
+      const btn = screen.el.querySelector('.backlog-voice-btn');
+      const img = btn.querySelector('img.voice-replay-icon');
+      expect(img).not.toBeNull();
+      img.dispatchEvent(new Event('error'));
+
+      expect(btn.querySelector('img')).toBeNull();
+      expect(btn.textContent).toBe('▶');
+
+      btn.click();
+      expect(btn.textContent).toBe('■');
+
+      btn.click();
+      expect(btn.textContent).toBe('▶');
     });
   });
 });

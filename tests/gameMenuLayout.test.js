@@ -426,6 +426,20 @@ describe('Config-driven button text and icons', () => {
     const actions = Array.from(buttons).map((b) => b.dataset.action);
     expect(actions).toEqual(ACTIONS);
   });
+
+  it('falls back to label-only content when a broken theme icon fails to load', () => {
+    menu.setLayout({ buttons: { save: { text: 'SAVE', icon: null } } });
+    menu.setThemeIcons({ gameMenu: 'ui/icons/game-menu.png' });
+
+    const saveBtn = menu.el.querySelector('[data-action="save"]');
+    const img = saveBtn.querySelector('.game-menu-icon');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    expect(saveBtn.querySelector('img')).toBeNull();
+    expect(saveBtn.textContent).toBe('SAVE');
+  });
 });
 
 // ─── Click delegation after re-render ─────────────────────

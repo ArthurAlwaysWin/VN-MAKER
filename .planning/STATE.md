@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: Phase 80 plan 1 complete
-stopped_at: Completed 80-01-PLAN.md
-last_updated: "2026-04-27T09:04:30.041Z"
+status: completed
+stopped_at: Completed 80-02-PLAN.md
+last_updated: "2026-04-27T09:14:06.359Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 80 plan 1 complete; unified browser data layer ready for modal wiring
+**Current focus:** Phase 80 complete; unified browser UX now ships through Project Settings
 
 ## Current Position
 
 Phase: 80 — 主题浏览器与选择 UX
-Plan: 02
-Status: Plan 01 complete; ready for 80-02 execution
-Next: Execute `.planning/phases/80-theme-browser-ux/80-02-PLAN.md`
+Plan: Complete (2/2)
+Status: Phase complete
+Next: Prepare Phase 81 Golden Theme execution planning
 Last activity: 2026-04-27
 
 ```
@@ -64,6 +64,7 @@ v1.5 ████████████████████ 7/7 phases ✅
 | Phase 78 P01 | 5min | 2 tasks | 4 files |
 | Phase 78 P02 | 3min | 3 tasks | 7 files |
 | Phase 80 P01 | 3min | 2 tasks | 5 files |
+| Phase 80 P02 | 8min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 80]: The browser maps persisted packageMeta.source='file' to UI source='imported' without changing stored schema.
 - [Phase 80]: Apply impact messaging is derived from coverage overlap or first-write semantics, not namespace overwrite counts.
 - [Phase 80]: Imported browser entries stay session-scoped and are rebuilt from preflight metadata instead of a persisted registry.
+- [Phase 80]: ThemeBrowserModal consumes normalized browser items from themeBrowser.js instead of raw built-in/imported objects.
+- [Phase 80]: Successful theme apply closes the browser so Project Settings can reuse its existing preview refresh path.
+- [Phase 80]: Project Settings keeps a direct .gmtheme export action while unified browser owns browse/import/apply.
 
 ### Blockers/Concerns
 
@@ -109,14 +113,14 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T09:04:30.036Z
-Stopped at: Completed 80-01-PLAN.md
-Resume file: .planning/phases/80-theme-browser-ux/80-02-PLAN.md
+Last session: 2026-04-27T09:14:06.354Z
+Stopped at: Completed 80-02-PLAN.md
+Resume file: None
 Resume hint: |
 
-  1. Plan 80-01 已新增 `src/editor/services/themeBrowser.js` 与 focused tests，统一 item contract 已锁定
-  2. `preflightThemePackageImport()` 现在返回 session-scoped `browserEntry`，legacy-partial 仍为 inspect-only
-  3. 下一步直接实现统一 `ThemeBrowserModal` 与 `ProjectSettings.vue` wiring，继续复用 Phase 79 apply pipeline
+  1. Phase 80 已完成：Project Settings 现仅通过 `ThemeBrowserModal` 浏览、导入与应用主题
+  2. 浏览器继续复用 `themeBrowser.js` 归一化合同、`preflightThemePackageImport()` 会话态条目与 `installAndApplyThemePackage()` 共享 apply 通路
+  3. `.gmtheme` 导出入口已保留在 Project Settings toolbar，未因入口收敛而回退 Phase 79 能力
   4. 工作区仍可能有与本 phase 无关的本地修改，后续提交时需继续避免误带
 
-Next action: execute 80-02 unified browser modal wiring
+Next action: begin Phase 81 golden theme execution when plan artifacts are ready

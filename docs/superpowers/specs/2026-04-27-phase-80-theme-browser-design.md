@@ -127,13 +127,13 @@ The browser renders one normalized theme item shape regardless of source:
   id,
   source,
   mode,
+  lifecycle,
   name,
   author,
   version,
   preview,
   coverage,
   missingCoverage,
-  status,
   applyImpact
 }
 ```
@@ -168,15 +168,15 @@ The browser uses current project theme metadata from `script.json` as the source
 
 No extra registry or browser-only truth is introduced.
 
-## Status Rules
+## Lifecycle Rules
 
 ### Full themes
 
-Full themes can appear as:
+Full themes can appear as these orthogonal tuples:
 
-- built-in available
-- imported
-- currently applied
+- `source=builtin, mode=full, lifecycle=available`
+- `source=imported, mode=full, lifecycle=available`
+- `source=builtin|imported, mode=full, lifecycle=applied`
 
 ### Compatibility-only partial themes
 
@@ -186,6 +186,7 @@ Partial themes:
 - are explicitly labeled `兼容导入 / 部分主题`
 - show missing coverage in both card and detail surfaces
 - must never be visually equivalent to a full theme ready for whole-theme replacement
+- remain `lifecycle=available` unless and until a later phase explicitly introduces a different partial-theme lifecycle rule
 
 ## Overwrite Impact Rules
 
@@ -203,6 +204,8 @@ Before apply, the browser computes impact using current project theme metadata p
 - If a selected theme cannot currently be applied, the reason is stated in the detail panel rather than silently disabling understanding.
 - If a theme has no real preview asset, the card uses a stable fallback preview instead of a broken or blank image slot.
 - After import, the browser refreshes immediately, selects the newly added theme item, and surfaces short in-context status feedback so the user stays inside the browser flow.
+- If import preflight or install fails, the browser keeps the current filter state, search state, and current selection unchanged, and surfaces the Phase 79 validation/install error inline near the toolbar import action.
+- Import failure must not clear the current detail panel or silently drop the user out of the browser context.
 
 ## Preview Policy
 
@@ -240,7 +243,7 @@ Renders selected theme explanation, compatibility text, coverage details, and ap
 Owns:
 
 - normalization of built-in and imported records
-- status calculation
+- lifecycle calculation
 - coverage summary formatting
 - overwrite impact calculation
 - preview fallback resolution
@@ -249,7 +252,7 @@ The service layer is split into explicit units so each boundary is independently
 
 - `normalizeThemeBrowserItem(rawTheme, currentProjectState) -> ThemeBrowserItem`
 - `filterThemeBrowserItems(items, filterState) -> ThemeBrowserItem[]`
-- `computeThemeBrowserStatus(item, currentProjectState) -> status`
+- `computeThemeBrowserLifecycle(item, currentProjectState) -> lifecycle`
 - `computeThemeApplyImpact(item, currentProjectState) -> applyImpact`
 - `resolveThemeBrowserPreview(item) -> previewDescriptor`
 

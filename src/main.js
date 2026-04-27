@@ -164,6 +164,7 @@ function applyPreviewScriptSnapshot(request) {
     gameMenu.setThemeIcons(themeIcons);
     backlogScreen.setThemeIcons(themeIcons);
     settingsScreen.setThemeIcons(themeIcons);
+    quickBar.setThemeIcons(themeIcons);
   }
 
   if (engine.script.ui?.dialogueBox?.nameplateStyle) {
@@ -1243,6 +1244,7 @@ async function init() {
       gameMenu.setThemeIcons(themeIcons);
       backlogScreen.setThemeIcons(themeIcons);
       settingsScreen.setThemeIcons(themeIcons);
+      quickBar.setThemeIcons(themeIcons);
     }
 
     // Apply nameplate style (v1.1 Phase 45)
@@ -1342,6 +1344,7 @@ function initPreview() {
         gameMenu.setThemeIcons(themeIcons || null);
         backlogScreen.setThemeIcons(themeIcons || null);
         settingsScreen.setThemeIcons(themeIcons || null);
+        quickBar.setThemeIcons(themeIcons || null);
         break;
       }
       case 'update-widget-styles': {

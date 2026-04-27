@@ -63,7 +63,7 @@ Filters:
 
 - **Source**: built-in / imported
 - **Type**: full theme / compatibility-only partial
-- **Status**: currently applied / available / imported / compatibility-only
+- **Lifecycle**: currently applied / available
 - **Coverage**: theme areas such as dialogue, save/load, backlog, game menu, settings, full coverage
 
 ### 3. Center card list
@@ -115,7 +115,8 @@ The browser does not invent a new apply path. It only exposes actions already pe
 ### Currently applied theme
 
 - Show explicit `当前已应用` state.
-- Reapply can remain available only if the existing flow already permits it, but the state badge must remain primary so users do not confuse “already imported” with “currently active”.
+- Hide the primary **Apply** CTA for the selected applied theme item in Phase 80.
+- The state badge remains primary so users do not confuse “already imported” with “currently active”.
 
 ## Data Model
 
@@ -141,7 +142,7 @@ The browser renders one normalized theme item shape regardless of source:
 
 - `source`: `builtin` | `imported`
 - `mode`: `full` | `legacy-partial`
-- `status`: `builtin-available` | `imported` | `applied` | `legacy-partial`
+- `lifecycle`: `available` | `applied`
 - `coverage`: theme-owned UI areas this theme can provide
 - `missingCoverage`: areas absent from compatibility-only partial themes
 - `applyImpact`: normalized description of what current-project theme-owned areas would be replaced if applied now

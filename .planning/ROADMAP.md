@@ -25,7 +25,7 @@ v1.6 不是“继续补几个图片槽位”，而是把 v1.5 已打通的图片
 
 ## Phases
 
-- [ ] **Phase 78: 主题包契约与兼容边界** - 冻结 `.gmtheme`、legacy `.theme`、命名空间与 fail-closed 导入边界
+- [x] **Phase 78: 主题包契约与兼容边界** - 冻结 `.gmtheme`、legacy `.theme`、命名空间与 fail-closed 导入边界 (completed 2026-04-27)
 - [ ] **Phase 79: 统一安装 / 应用 / 导出链路** - 跑通 built-in / imported 共用的 install-apply-export 闭环
 - [ ] **Phase 80: 主题浏览器与选择 UX** - 让用户在应用前看懂主题内容、覆盖范围与覆盖影响
 - [ ] **Phase 81: Golden Theme 验收样板** - 先交付 1 套完整 golden theme 验证整链路与 coverage bar
@@ -41,7 +41,11 @@ v1.6 不是“继续补几个图片槽位”，而是把 v1.5 已打通的图片
   1. 用户导入损坏、不兼容或包含非法路径的主题包时，编辑器会在写入项目之前阻止导入并明确说明原因。
   2. 用户重复导入同一主题包时，相关主题资产会稳定更新到同一命名空间，不会不断生成 `-1/-2/-3` 之类的重复文件。
   3. 用户导入旧 `.theme` 包时，编辑器会明确标记它是“兼容导入 / 部分主题”，并展示缺失的覆盖范围，而不会把它伪装成完整 `.gmtheme`。
-**Plans**: 0 plans  
+**Plans**: 2 plans  
+
+Plans:
+- [ ] `78-01-PLAN.md` — Freeze `.gmtheme` schema, canonical namespace rules, and deterministic re-import policy
+- [ ] `78-02-PLAN.md` — Wire dry-run import preflight and legacy compatibility UX without Phase 79 install/apply work
 
 ### Phase 79: 统一安装 / 应用 / 导出链路
 **Goal**: 用户无论应用内置主题还是导入主题，都走同一条安装 / 应用路径，并得到可保存、可重开、可导出的项目内完整主题结果。  
@@ -115,7 +119,7 @@ v1.6 不是“继续补几个图片槽位”，而是把 v1.5 已打通的图片
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 78. 主题包契约与兼容边界 | 0/0 | ⏳ Pending | - |
+| 78. 主题包契约与兼容边界 | 2/2 | Complete   | 2026-04-27 |
 | 79. 统一安装 / 应用 / 导出链路 | 0/0 | ⏳ Pending | - |
 | 80. 主题浏览器与选择 UX | 0/0 | ⏳ Pending | - |
 | 81. Golden Theme 验收样板 | 0/0 | ⏳ Pending | - |

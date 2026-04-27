@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.6
-milestone_name: 完整主题包与图片主题产出
-status: roadmap_created
-stopped_at: Created v1.6 roadmap
-last_updated: "2026-04-27T04:55:00Z"
+milestone_name: milestone
+status: Roadmap created
+stopped_at: Completed 78-02-PLAN.md
+last_updated: "2026-04-27T05:09:01.845Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -61,6 +61,8 @@ v1.5 ████████████████████ 7/7 phases ✅
 | Phase 76 P01-02 | 35m | 4 tasks | 14 files |
 | Phase 77 P01 | 6 min | 4 tasks | 5 files |
 | Phase 77 P02 | 4 min | 2 tasks | 3 files |
+| Phase 78 P01 | 5min | 2 tasks | 4 files |
+| Phase 78 P02 | 3min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -93,6 +95,8 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 78+]: Built-in themes and imported themes must converge on the same install/apply path.
 - [Phase 78+]: `.gmtheme` is the only full export format in v1.6; legacy `.theme` is compatibility import only.
 - [Phase 78+]: Content production order is fixed to one golden theme first, then expand to the remaining four themes.
+- [Phase 78]: Phase 78 freezes full theme imports as explicit full or legacy-partial metadata with canonical ui/themes/<themeId>/ refs only.
+- [Phase 78]: Phase 78 theme selection now stops at dry-run preflight summaries; unopened packages get static summaries instead of live iframe preview.
 
 ### Blockers/Concerns
 
@@ -101,8 +105,8 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T04:55:00Z
-Stopped at: Created v1.6 roadmap
+Last session: 2026-04-27T05:09:01.842Z
+Stopped at: Completed 78-02-PLAN.md
 Resume hint: |
 
   1. v1.6 requirements 与 roadmap 已创建，当前下一个直接动作是计划 Phase 78

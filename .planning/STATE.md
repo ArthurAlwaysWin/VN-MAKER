@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: 验证与追踪表回填
 status: verifying
-stopped_at: Completed 77-01-PLAN.md
-last_updated: "2026-04-27T03:42:22.795Z"
+stopped_at: Completed 77-02-PLAN.md
+last_updated: "2026-04-27T03:45:18.184Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 16
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -60,6 +60,7 @@ v1.5 ████████████████████ 5/5 phases ✅
 | Phase 73-button-family-image-rollout P01 | 3min | 2 tasks | 5 files |
 | Phase 76 P01-02 | 35m | 4 tasks | 14 files |
 | Phase 77 P01 | 6 min | 4 tasks | 5 files |
+| Phase 77 P02 | 4 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ v1.5 ████████████████████ 5/5 phases ✅
 - [Phase 76]: Broken theme icon assets now recover through one shared helper-level fallback contract instead of per-screen icon systems.
 - [Phase 77]: Phase 75 verification closes CUR-01 only and cites Phase 76 for ICO-01, AST-03, and AST-04.
 - [Phase 77]: Phase 72 and 74 verification retain human-needed visual checks while still recording requirement satisfaction from current focused evidence.
+- [Phase 77]: BTN-03 stays owned by Phase 73 because existing verification already satisfied it; Phase 77 only repaired the traceability drift.
+- [Phase 77]: The refreshed audit treats human-needed UI smoke checks as follow-ups, not as missing-artifact blockers.
 
 ### Blockers/Concerns
 
@@ -92,8 +95,8 @@ v1.5 ████████████████████ 5/5 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T03:42:22.790Z
-Stopped at: Completed 77-01-PLAN.md
+Last session: 2026-04-27T03:45:18.179Z
+Stopped at: Completed 77-02-PLAN.md
 Resume hint: |
 
   1. v1.5 里程碑仍显示 complete，当前主线没有新的 phase/plan 待执行

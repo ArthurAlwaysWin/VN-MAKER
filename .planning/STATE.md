@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: Roadmap created
-stopped_at: Completed 78-02-PLAN.md
-last_updated: "2026-04-27T05:09:01.845Z"
+status: Context gathered
+stopped_at: Phase 80 context gathered
+last_updated: "2026-04-27T08:33:32.800Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 5
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** v1.6 roadmap ready; Phase 78 planning next
+**Current focus:** Phase 80 context gathered; planning next
 
 ## Current Position
 
-Phase: 78 — 主题包契约与兼容边界
+Phase: 80 — 主题浏览器与选择 UX
 Plan: —
-Status: Roadmap created
-Next: /gsd-plan-phase 78
+Status: Phase 80 context gathered
+Next: /gsd-plan-phase 80
 Last activity: 2026-04-27
 
 ```
@@ -105,13 +105,14 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T05:09:01.842Z
-Stopped at: Completed 78-02-PLAN.md
+Last session: 2026-04-27T18:33:32.800+10:00
+Stopped at: Phase 80 context gathered
+Resume file: .planning/phases/80-theme-browser-ux/80-CONTEXT.md
 Resume hint: |
 
-  1. v1.6 requirements 与 roadmap 已创建，当前下一个直接动作是计划 Phase 78
-  2. v1.6 不做未应用主题的 live iframe preview，只做卡片预览图 + 覆盖范围说明
-  3. 内容路线固定为 golden theme 先行，再扩展到其余 4 套 shipped themes
-  4. 当前工作区仍有与 planning docs 无关的本地变更，提交时需避免带入
+  1. Phase 80 context 已落盘到 `.planning/phases/80-theme-browser-ux/80-CONTEXT.md`
+  2. 统一浏览器、正交 item model、partial inspect-only、static preview only 已锁定
+  3. planner 下一步应直接围绕 browser service + unified modal + focused tests 拆 plan
+  4. 工作区仍可能有与本 phase 无关的本地修改，后续提交时需继续避免误带
 
-Next action: create the executable plan for Phase 78
+Next action: create the executable plan for Phase 80

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: Context gathered
-stopped_at: Phase 80 context gathered
-last_updated: "2026-04-27T08:33:32.800Z"
+status: Phase 80 plan 1 complete
+stopped_at: Completed 80-01-PLAN.md
+last_updated: "2026-04-27T09:04:30.041Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 80 context gathered; planning next
+**Current focus:** Phase 80 plan 1 complete; unified browser data layer ready for modal wiring
 
 ## Current Position
 
 Phase: 80 — 主题浏览器与选择 UX
-Plan: —
-Status: Phase 80 context gathered
-Next: /gsd-plan-phase 80
+Plan: 02
+Status: Plan 01 complete; ready for 80-02 execution
+Next: Execute `.planning/phases/80-theme-browser-ux/80-02-PLAN.md`
 Last activity: 2026-04-27
 
 ```
@@ -63,6 +63,7 @@ v1.5 ████████████████████ 7/7 phases ✅
 | Phase 77 P02 | 4 min | 2 tasks | 3 files |
 | Phase 78 P01 | 5min | 2 tasks | 4 files |
 | Phase 78 P02 | 3min | 3 tasks | 7 files |
+| Phase 80 P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 78+]: Content production order is fixed to one golden theme first, then expand to the remaining four themes.
 - [Phase 78]: Phase 78 freezes full theme imports as explicit full or legacy-partial metadata with canonical ui/themes/<themeId>/ refs only.
 - [Phase 78]: Phase 78 theme selection now stops at dry-run preflight summaries; unopened packages get static summaries instead of live iframe preview.
+- [Phase 80]: The browser maps persisted packageMeta.source='file' to UI source='imported' without changing stored schema.
+- [Phase 80]: Apply impact messaging is derived from coverage overlap or first-write semantics, not namespace overwrite counts.
+- [Phase 80]: Imported browser entries stay session-scoped and are rebuilt from preflight metadata instead of a persisted registry.
 
 ### Blockers/Concerns
 
@@ -105,14 +109,14 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T18:33:32.800+10:00
-Stopped at: Phase 80 context gathered
-Resume file: .planning/phases/80-theme-browser-ux/80-CONTEXT.md
+Last session: 2026-04-27T09:04:30.036Z
+Stopped at: Completed 80-01-PLAN.md
+Resume file: .planning/phases/80-theme-browser-ux/80-02-PLAN.md
 Resume hint: |
 
-  1. Phase 80 context 已落盘到 `.planning/phases/80-theme-browser-ux/80-CONTEXT.md`
-  2. 统一浏览器、正交 item model、partial inspect-only、static preview only 已锁定
-  3. planner 下一步应直接围绕 browser service + unified modal + focused tests 拆 plan
+  1. Plan 80-01 已新增 `src/editor/services/themeBrowser.js` 与 focused tests，统一 item contract 已锁定
+  2. `preflightThemePackageImport()` 现在返回 session-scoped `browserEntry`，legacy-partial 仍为 inspect-only
+  3. 下一步直接实现统一 `ThemeBrowserModal` 与 `ProjectSettings.vue` wiring，继续复用 Phase 79 apply pipeline
   4. 工作区仍可能有与本 phase 无关的本地修改，后续提交时需继续避免误带
 
-Next action: create the executable plan for Phase 80
+Next action: execute 80-02 unified browser modal wiring

@@ -80,15 +80,20 @@ Plans:
 - [ ] `80-02-PLAN.md` — Replace split Project Settings theme entry with one unified browser modal and focused UI wiring
 
 ### Phase 81: Golden Theme 验收样板
-**Goal**: 用户先拿到 1 套完整 golden theme，用它验证 v1.6 的完整主题标准与整条交付链路。  
+**Goal**: 用户先拿到 1 套包含 `titleScreen` 的完整 golden theme，用它验证 v1.6 的完整主题标准与整条交付链路。  
 **Depends on**: Phase 80  
 **Requirements**: THM-01  
 **Success Criteria** (what must be TRUE):
-  1. 用户可以一键应用第一套 shipped golden theme，并看到它完整覆盖 v1.6 定义的主题覆盖面，而不是只替换局部颜色或少量图片。
-  2. 用户应用 golden theme 后，保存、重开、试玩和导出项目时，看到的主题结果保持一致，不会丢图或出现局部失配。
-  3. 用户可以把 golden theme 作为 `.gmtheme` 在项目间导出和重新导入，得到相同的完整结果而不需要手动修补。
-**Plans**: 0 plans  
+  1. 用户可以一键应用第一套 shipped golden theme，并看到它完整覆盖 v1.6 定义的主题覆盖面，包含 `titleScreen`，而不是只替换局部颜色或少量图片。
+  2. 用户应用 golden theme 后，`titleScreen` 与其他主要非内容 UI 面在保存、重开、试玩和导出项目时保持一致，不会丢图或出现局部失配。
+  3. 用户可以把包含 `titleScreen` 的 golden theme 作为 `.gmtheme` 在项目间导出和重新导入，得到相同的完整结果而不需要手动修补。
+**Plans**: 3 plans  
 **UI hint**: yes
+
+Plans:
+- [ ] `81-01-PLAN.md` — Expand the shared `.gmtheme` contract and pipeline so full themes own titleScreen visuals while preserving `titleScreen.bgm`
+- [ ] `81-02-PLAN.md` — Promote built-in `wafuu` and unified browser/import UX to the titleScreen-inclusive golden theme baseline
+- [ ] `81-03-PLAN.md` — Lock end-to-end titleScreen parity evidence and run the final golden-theme acceptance check
 
 ### Phase 82: 剩余 4 套完整主题扩展
 **Goal**: 用户最终拿到 5 套同一完整度标准、可直接交付使用的完整图片主题，而不是 1 套完整加 4 套换色变体。  
@@ -130,5 +135,5 @@ Plans:
 | 78. 主题包契约与兼容边界 | 2/2 | Complete   | 2026-04-27 |
 | 79. 统一安装 / 应用 / 导出链路 | 0/2 | ⏳ Pending | - |
 | 80. 主题浏览器与选择 UX | 2/2 | Complete   | 2026-04-27 |
-| 81. Golden Theme 验收样板 | 0/0 | ⏳ Pending | - |
+| 81. Golden Theme 验收样板 | 0/3 | ⏳ Pending | - |
 | 82. 剩余 4 套完整主题扩展 | 0/0 | ⏳ Pending | - |

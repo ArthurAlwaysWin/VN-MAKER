@@ -51,4 +51,18 @@ describe('QuickActionBar theme icon rendering', () => {
     expect(quickBar.el.querySelectorAll('.qab-btn svg')).toHaveLength(8);
     expect(quickBar.el.querySelectorAll('.qab-btn img')).toHaveLength(0);
   });
+
+  it('falls back to the built-in SVG icons when themed qab assets fail to load', () => {
+    quickBar.setThemeIcons({ qab: 'ui/icons/qab.png' });
+
+    const icons = Array.from(quickBar.el.querySelectorAll('.qab-btn img.qab-theme-icon'));
+    expect(icons).toHaveLength(8);
+
+    icons.forEach((icon) => {
+      icon.dispatchEvent(new Event('error'));
+    });
+
+    expect(quickBar.el.querySelectorAll('.qab-btn img')).toHaveLength(0);
+    expect(quickBar.el.querySelectorAll('.qab-btn svg')).toHaveLength(8);
+  });
 });

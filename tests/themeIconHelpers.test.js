@@ -8,7 +8,7 @@ vi.mock('../src/engine/assetPath.js', () => ({
   resolvePath: vi.fn((value) => `resolved:${value}`),
 }));
 
-import { resolveThemeIcon, hasThemeIcon } from '../src/ui/themeIconHelpers.js';
+import { attachThemeIconFallback, resolveThemeIcon, hasThemeIcon } from '../src/ui/themeIconHelpers.js';
 
 describe('themeIconHelpers', () => {
   it('returns escaped fallback text when no icon is configured', () => {
@@ -26,6 +26,19 @@ describe('themeIconHelpers', () => {
   it('adds cssClass to <img> when provided', () => {
     const result = resolveThemeIcon({ close: 'ui/icons/close.png' }, 'close', '×', 'close-icon');
     expect(result).toContain('class="close-icon"');
+  });
+
+  it('replaces broken themed icons with fallback content after image error', () => {
+    const root = document.createElement('div');
+    root.innerHTML = resolveThemeIcon({ close: 'ui/icons/close.png' }, 'close', '返回', 'close-icon');
+
+    attachThemeIconFallback(root);
+
+    const img = root.querySelector('img.close-icon');
+    img.dispatchEvent(new Event('error'));
+
+    expect(root.querySelector('img')).toBeNull();
+    expect(root.textContent).toBe('返回');
   });
 
   it('returns fallback for unconfigured slots even when other slots are set', () => {

@@ -1,7 +1,7 @@
 /**
  * QuickActionBar — 8-button action bar embedded in dialogue box
  */
-import { resolveThemeIcon } from './themeIconHelpers.js';
+import { attachThemeIconFallback, resolveThemeIcon } from './themeIconHelpers.js';
 
 export class QuickActionBar {
   /**
@@ -107,9 +107,11 @@ export class QuickActionBar {
       if (action === 'skip' && this._skipActive) classes.push('active');
       if (action === 'quickload' && !this._quickLoadEnabled) classes.push('disabled');
       const icon = this._themeIcons?.qab
-        ? resolveThemeIcon(this._themeIcons, 'qab', title, 'qab-theme-icon')
+        ? resolveThemeIcon(this._themeIcons, 'qab', svg, 'qab-theme-icon')
         : svg;
       return `<button class="${classes.join(' ')}" data-action="${action}" title="${title}">${icon}</button>`;
     }).join('\n');
+
+    attachThemeIconFallback(this.el);
   }
 }

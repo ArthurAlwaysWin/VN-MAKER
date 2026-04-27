@@ -2,7 +2,7 @@
  * themeIconHelpers — Resolve theme-level icon images for UI components.
  *
  * Provides fallback-safe icon resolution: if ui.theme.icons[slot] is
- * configured, returns an <img> HTML string; otherwise returns the
+ * configured, returns themed icon markup; otherwise returns the
  * default text/emoji so the UI never breaks.
  *
  * Phase 75 — ICO-01
@@ -21,11 +21,13 @@ import { resolvePath } from '../engine/assetPath.js';
  */
 export function resolveThemeIcon(icons, slotKey, fallbackText, cssClass = '') {
   const src = icons?.[slotKey];
-  if (!src) return escapeHtml(fallbackText);
+  const fallbackHtml = renderFallbackContent(fallbackText);
+  if (!src) return fallbackHtml;
 
   const resolved = resolvePath(src);
   const classAttr = cssClass ? ` class="${cssClass}"` : '';
-  return `<img src="${resolved}"${classAttr} alt="${escapeHtml(fallbackText)}" />`;
+  const altText = stripMarkup(fallbackText) || slotKey;
+  return `<span class="theme-icon-shell" data-theme-icon-shell="1" data-theme-icon-fallback="${encodeURIComponent(fallbackHtml)}"><img src="${resolved}"${classAttr} data-theme-icon-image="1" alt="${escapeHtml(altText)}" /></span>`;
 }
 
 /**
@@ -40,14 +42,45 @@ export function hasThemeIcon(icons, slotKey) {
 }
 
 /**
+ * Attach one shared broken-asset fallback contract to themed icons.
+ *
+ * @param {ParentNode|HTMLElement|null} root
+   */
+export function attachThemeIconFallback(root) {
+  if (!root?.querySelectorAll) return;
+  root.querySelectorAll('[data-theme-icon-shell="1"]').forEach((shell) => {
+    const img = shell.querySelector('[data-theme-icon-image="1"]');
+    if (!img || img.dataset.themeIconBound === '1') {
+      return;
+    }
+    img.dataset.themeIconBound = '1';
+    img.addEventListener('error', () => {
+      const fallbackHtml = decodeURIComponent(shell.dataset.themeIconFallback || '');
+      const template = document.createElement('template');
+      template.innerHTML = fallbackHtml;
+      shell.replaceWith(template.content.cloneNode(true));
+    }, { once: true });
+  });
+}
+
+function renderFallbackContent(text) {
+  const value = String(text ?? '');
+  return /^\s*<svg[\s>]/i.test(value) ? value : escapeHtml(value);
+}
+
+/**
  * Minimal HTML escaping for fallback text.
  * @param {string} text
  * @returns {string}
  */
 function escapeHtml(text) {
-  return text
+  return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function stripMarkup(text) {
+  return String(text ?? '').replace(/<[^>]+>/g, '').trim();
 }

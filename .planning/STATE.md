@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: milestone
-status: phase_75_complete
-stopped_at: Phase 75 all plans executed — v1.5 milestone COMPLETE
-last_updated: "2026-04-25T09:10:00.000Z"
-last_activity: 2026-04-25
+milestone_name: 验证与追踪表回填
+status: verifying
+stopped_at: Completed 76-02-PLAN.md
+last_updated: "2026-04-27T03:30:17.386Z"
+last_activity: 2026-04-27
 progress:
-  total_phases: 5
+  total_phases: 7
   completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: 75 (cursor-icon-pipeline-closure) — COMPLETE
 Plan: 3 of 3
-Status: All plans executed, 109 tests passing, build succeeds
+Status: Phase complete — ready for verification
 Next: Archive v1.5 milestone
-Last activity: 2026-04-25
+Last activity: 2026-04-27
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ archived
@@ -58,6 +58,7 @@ v1.5 ████████████████████ 5/5 phases ✅
 | v1.4 | 10 | 20 | 18 ✅ |
 | v1.5 | 5 | 0 | 17 |
 | Phase 73-button-family-image-rollout P01 | 3min | 2 tasks | 5 files |
+| Phase 76 P01-02 | 35m | 4 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ v1.5 ████████████████████ 5/5 phases ✅
 - [Phase 74]: 装饰层 >3 时编辑器软性性能提示，不硬限
 - [Phase 74]: 不预留给 Phase 75 的 overlay/cursor 字段（YAGNI 与 Grey Area 2 Q5 决策一致）
 - [Phase 74]: 复用现有 iframe + postMessage 基础设施，不建新预览
+- [Phase 76]: Phase 76 reuses the existing ui.theme.icons slots and routes QAB through the same runtime preview path as other icon consumers.
+- [Phase 76]: Broken theme icon assets now recover through one shared helper-level fallback contract instead of per-screen icon systems.
 
 ### Blockers/Concerns
 
@@ -86,13 +89,15 @@ v1.5 ████████████████████ 5/5 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27
-Stopped at: v1.5 complete + startGame fallback bug fix
+Last session: 2026-04-27T03:30:17.380Z
+Stopped at: Completed 76-02-PLAN.md
 Resume hint: |
-  1. ROADMAP.md 已同步更新（Status: Complete, 所有 phase/plan 勾选框已标 [x]）
-  2. 修复了导出游戏黑屏 bug：ScriptEngine.startGame() 硬编码查找 'start' 场景，
-     但编辑器用时间戳 ID（如 scene_1774962424469）。已加 fallback 到 scenes 对象第一个场景。
-  3. dist-web/ 已重新构建包含修复；已手动 patch 到用户导出目录 real-temp/
-  4. 此次修复尚未 git commit
-  5. 用户提到还有"几个问题"，只处理了第一个（黑屏），可能还有后续
-Next action: commit startGame fix → Archive v1.5 milestone / address remaining user issues
+
+  1. v1.5 里程碑仍显示 complete，当前主线没有新的 phase/plan 待执行
+  2. 导出游戏黑屏修复已不再处于未提交状态；对应提交为 dc267fd
+  3. .planning/.continue-here.md 仍指向导出问题后续跟进：
+     - 用户提到还有其他导出问题
+     - 存在一个 wav 资源未被导出的问题线索
+  4. 当前工作区未提交变更与该 hotfix 无关（.claude/settings.local.json, test_output.txt）
+
+Next action: confirm whether to investigate remaining export issues or move on from the v1.5 hotfix context

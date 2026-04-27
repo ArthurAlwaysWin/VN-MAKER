@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 80 complete; unified browser UX now ships through Project Settings
+**Current focus:** Phase 81 context gathered; golden theme scope now includes title screen
 
 ## Current Position
 
-Phase: 80 — 主题浏览器与选择 UX
-Plan: Complete (2/2)
-Status: Phase complete
-Next: Prepare Phase 81 Golden Theme execution planning
+Phase: 81 — Golden Theme 验收样板
+Plan: —
+Status: Phase 81 context gathered
+Next: /gsd-plan-phase 81
 Last activity: 2026-04-27
 
 ```
@@ -113,14 +113,14 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T09:14:06.354Z
-Stopped at: Completed 80-02-PLAN.md
-Resume file: None
+Last session: 2026-04-27T19:26:05+10:00
+Stopped at: Phase 81 context gathered
+Resume file: .planning/phases/81-golden-theme/81-CONTEXT.md
 Resume hint: |
 
-  1. Phase 80 已完成：Project Settings 现仅通过 `ThemeBrowserModal` 浏览、导入与应用主题
-  2. 浏览器继续复用 `themeBrowser.js` 归一化合同、`preflightThemePackageImport()` 会话态条目与 `installAndApplyThemePackage()` 共享 apply 通路
-  3. `.gmtheme` 导出入口已保留在 Project Settings toolbar，未因入口收敛而回退 Phase 79 能力
-  4. 工作区仍可能有与本 phase 无关的本地修改，后续提交时需继续避免误带
+  1. Phase 81 的 golden theme 范围已被显式扩大：必须包含 title screen，目标是游戏内容之外完整的整体 UI/UX 成品方案
+  2. 推荐基线是现有 `wafuu`，但需要把它升格为第一套 fully-delivered golden theme，而不是只当作色彩变体
+  3. Phase 80 的 unified browser 与 shared package pipeline 已可复用；Phase 81 不应再造第二条链路
+  4. 下一步应为扩边后的 title + full UI scope 创建可执行计划，并同步 requirements / validation / verification 口径
 
-Next action: begin Phase 81 golden theme execution when plan artifacts are ready
+Next action: create the executable plan for Phase 81

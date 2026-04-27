@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 import { exportGame } from './exportGame.js';
 import { exportDesktop } from './exportDesktop.js';
+import { preflightThemePackage } from './themePackagePreflight.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -786,14 +787,28 @@ ipcMain.handle('import-theme', async () => {
   try {
     const result = await dialog.showOpenDialog(getMainWindow(), {
       title: '导入主题',
-      filters: [{ name: '主题文件', extensions: ['theme'] }],
+      filters: [{ name: '主题文件', extensions: ['gmtheme', 'theme'] }],
       properties: ['openFile'],
     });
     if (result.canceled) return { success: false, canceled: true };
-    const data = await fs.readFile(result.filePaths[0]);
-    return { success: true, buffer: data };
+    return { success: true, filePath: result.filePaths[0] };
   } catch (e) {
     console.error('[import-theme] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('preflight-theme-package', async (event, { filePath }) => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    return await preflightThemePackage({
+      filePath,
+      projectPath: currentProjectPath,
+    });
+  } catch (e) {
+    console.error('[preflight-theme-package] Failed:', e);
     return { success: false, error: e.message };
   }
 });

@@ -10,7 +10,7 @@ const ALLOWED_CHANNELS = [
   'save-quickslot', 'load-quickslot',
   'capture-screenshot', 'migrate-legacy-saves',
   'set-window-mode', 'show-save-dialog', 'dialog-open-directory',
-  'open-preview', 'export-theme', 'import-theme',
+  'open-preview', 'export-theme', 'import-theme', 'preflight-theme-package',
   'export-game', 'export-game-desktop', 'export-progress',
   'open-folder', 'dialog-open-file', 'read-file-base64',
 ];

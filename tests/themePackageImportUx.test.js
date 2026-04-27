@@ -45,6 +45,13 @@ describe('theme package import UX helpers', () => {
     expect(result.summary.blockingErrors).toContain('非法路径');
     expect(result.summary.previewMode).toBe('static');
     expect(result.summary.canAutoApply).toBe(false);
+    expect(result.browserEntry).toMatchObject({
+      source: 'imported',
+      mode: 'full',
+      lifecycle: 'available',
+      canApply: false,
+      applyDisabledReason: '该主题包当前不可应用',
+    });
     expect(scriptStore.updateTheme).not.toHaveBeenCalled();
   });
 
@@ -69,5 +76,85 @@ describe('theme package import UX helpers', () => {
     expect(summary.missingCoverageText).toContain('存档/读档');
     expect(summary.canAutoApply).toBe(false);
     expect(summary.previewMode).toBe('static');
+  });
+
+  it('returns a session-scoped browserEntry for ready imports without creating a persisted registry', async () => {
+    const ipcRenderer = {
+      invoke: vi
+        .fn()
+        .mockResolvedValueOnce({
+          success: true,
+          filePath: 'E:/themes/moonlight.gmtheme',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          status: 'ready',
+          mode: 'full',
+          themeId: 'moonlight',
+          assetRoot: 'ui/themes/moonlight/',
+          coverage: ['theme', 'widgetStyles'],
+          missingCoverage: [],
+          blockingErrors: [],
+          warnings: ['可立即在浏览器中查看'],
+          actions: [],
+          counts: { copy: 3, skip: 0, overwrite: 1 },
+        }),
+    };
+
+    const result = await preflightThemePackageImport({
+      ipcRenderer,
+      scriptStore: {},
+    });
+
+    expect(result.browserEntry).toMatchObject({
+      rawId: 'moonlight',
+      source: 'imported',
+      mode: 'full',
+      lifecycle: 'available',
+      coverage: ['theme', 'widgetStyles'],
+      missingCoverage: [],
+      filePath: 'E:/themes/moonlight.gmtheme',
+      canApply: true,
+    });
+    expect(result).not.toHaveProperty('registry');
+    expect(result).not.toHaveProperty('inventory');
+  });
+
+  it('keeps legacy-partial browser entries inspect-only after import preflight', async () => {
+    const ipcRenderer = {
+      invoke: vi
+        .fn()
+        .mockResolvedValueOnce({
+          success: true,
+          filePath: 'E:/themes/legacy-sakura.theme',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          status: 'legacy-partial',
+          mode: 'legacy-partial',
+          themeId: 'legacy-sakura',
+          assetRoot: 'ui/themes/legacy-sakura/',
+          coverage: ['theme'],
+          missingCoverage: ['widgetStyles', 'settingsScreen'],
+          blockingErrors: [],
+          warnings: [],
+          actions: [],
+          counts: { copy: 0, skip: 0, overwrite: 0 },
+        }),
+    };
+
+    const result = await preflightThemePackageImport({
+      ipcRenderer,
+      scriptStore: {},
+    });
+
+    expect(result.browserEntry).toMatchObject({
+      source: 'imported',
+      mode: 'legacy-partial',
+      lifecycle: 'available',
+      canApply: false,
+    });
+    expect(result.browserEntry.applyDisabledReason).toContain('兼容导入');
+    expect(result.browserEntry.preview.mode).toBe('fallback');
   });
 });

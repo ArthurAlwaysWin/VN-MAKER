@@ -1,7 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
-
 import { zipSync, strToU8 } from 'fflate';
 import { describe, expect, it } from 'vitest';
 

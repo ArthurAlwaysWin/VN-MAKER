@@ -7,6 +7,115 @@
  * @module utils/themePackager
  */
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
+import {
+  LEGACY_THEME_FORMAT_VERSION,
+  FULL_THEME_FORMAT_VERSION,
+  classifyLegacyThemeCoverage,
+  getThemePackageAssetRoot,
+  validateThemePackageDefinition,
+} from '../shared/themePackageContract.js';
+
+const BLANK_PNG_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5m8pUAAAAASUVORK5CYII=';
+
+function toUint8Array(value) {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+
+  return new Uint8Array(value);
+}
+
+function decodeBase64(base64) {
+  if (typeof Buffer !== 'undefined') {
+    return new Uint8Array(Buffer.from(base64, 'base64'));
+  }
+
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function encodeBase64(bytes) {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(bytes).toString('base64');
+  }
+
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function readZipText(unzipped, filename) {
+  const content = unzipped[filename];
+  if (!content) {
+    return null;
+  }
+
+  return strFromU8(content);
+}
+
+function parseZipJson(unzipped, filename) {
+  const raw = readZipText(unzipped, filename);
+  if (raw == null) {
+    return { exists: false, value: null };
+  }
+
+  return {
+    exists: true,
+    value: JSON.parse(raw),
+  };
+}
+
+function reconstructLegacyNineSlice(themeJson, unzipped) {
+  if (!themeJson.nineSlice) {
+    return undefined;
+  }
+
+  const nineSlice = JSON.parse(JSON.stringify(themeJson.nineSlice));
+  for (const config of Object.values(nineSlice)) {
+    if (!config || typeof config !== 'object') {
+      continue;
+    }
+
+    if (config.src && typeof config.src === 'string' && !config.src.startsWith('data:')) {
+      const bytes = unzipped[config.src];
+      if (bytes) {
+        config.src = uint8ArrayToBase64DataUrl(bytes);
+      }
+    }
+
+    if (!config.states || typeof config.states !== 'object') {
+      continue;
+    }
+
+    for (const state of ['hover', 'active']) {
+      const stateConfig = config.states[state];
+      if (!stateConfig?.src || typeof stateConfig.src !== 'string' || stateConfig.src.startsWith('data:')) {
+        continue;
+      }
+
+      const bytes = unzipped[stateConfig.src];
+      if (bytes) {
+        stateConfig.src = uint8ArrayToBase64DataUrl(bytes);
+      }
+    }
+  }
+
+  return nineSlice;
+}
 
 // ─── Base64 / Binary Helpers ─────────────────────────────
 
@@ -17,12 +126,7 @@ import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
  */
 export function base64ToUint8Array(dataUrl) {
   const base64 = dataUrl.split(',')[1];
-  const binaryStr = atob(base64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
-    bytes[i] = binaryStr.charCodeAt(i);
-  }
-  return bytes;
+  return decodeBase64(base64);
 }
 
 /**
@@ -32,11 +136,7 @@ export function base64ToUint8Array(dataUrl) {
  * @returns {string}
  */
 export function uint8ArrayToBase64DataUrl(bytes, mimeType = 'image/png') {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return `data:${mimeType};base64,${btoa(binary)}`;
+  return `data:${mimeType};base64,${encodeBase64(bytes)}`;
 }
 
 // ─── Swatch Preview Generator ────────────────────────────
@@ -51,10 +151,17 @@ export function uint8ArrayToBase64DataUrl(bytes, mimeType = 'image/png') {
  * @returns {string} data:image/png base64
  */
 export function generateSwatchPreview(tokens, width = 320, height = 180) {
+  if (typeof document === 'undefined') {
+    return BLANK_PNG_DATA_URL;
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return BLANK_PNG_DATA_URL;
+  }
 
   // Background
   ctx.fillStyle = tokens['panel-bg'] || '#0a0a14';
@@ -144,7 +251,7 @@ export function buildThemeZip(themeData, metadata = {}) {
 
   // Build theme.json
   const themeJson = {
-    formatVersion: 1,
+    formatVersion: LEGACY_THEME_FORMAT_VERSION,
     name: metadata.name || '自定义主题',
     description: metadata.description || '',
     author: metadata.author || '',
@@ -169,59 +276,85 @@ export function buildThemeZip(themeData, metadata = {}) {
  */
 export function parseThemeZip(zipBuffer) {
   try {
-    const unzipped = unzipSync(new Uint8Array(zipBuffer));
+    const unzipped = unzipSync(toUint8Array(zipBuffer));
+    const manifestJson = parseZipJson(unzipped, 'manifest.json');
+    const themeJson = parseZipJson(unzipped, 'theme.json');
+    const formatVersion = manifestJson.value?.formatVersion ?? themeJson.value?.formatVersion ?? LEGACY_THEME_FORMAT_VERSION;
 
-    // Parse theme.json
-    const themeJson = JSON.parse(strFromU8(unzipped['theme.json']));
+    if (manifestJson.exists || formatVersion >= FULL_THEME_FORMAT_VERSION) {
+      const manifest = manifestJson.value ?? {};
+      const theme = themeJson.value ?? {};
+      const themeId = manifest.id || theme.id || '';
+      const validation = validateThemePackageDefinition({
+        mode: 'full',
+        themeId,
+        theme,
+        files: manifest.files ?? [],
+      });
+      const blockingErrors = [...validation.blockingErrors];
 
-    // Forward-compatibility check
-    if (typeof themeJson.formatVersion === 'number' && themeJson.formatVersion > 1) {
-      console.warn('[themePackager] formatVersion', themeJson.formatVersion, '> 1, attempting import');
+      if (!manifestJson.exists) {
+        blockingErrors.push('主题包缺少 manifest.json');
+      }
+      if (!themeJson.exists) {
+        blockingErrors.push('主题包缺少 theme.json');
+      }
+
+      for (const file of manifest.files ?? []) {
+        if (!unzipped[`assets/${file.path}`]) {
+          blockingErrors.push(`主题包缺少资产文件：assets/${file.path}`);
+        }
+      }
+
+      return {
+        success: true,
+        mode: 'full',
+        formatVersion: FULL_THEME_FORMAT_VERSION,
+        manifest,
+        theme,
+        themeId,
+        assetRoot: manifest.assetRoot || validation.assetRoot || getThemePackageAssetRoot(themeId),
+        coverage: validation.coverage,
+        missingCoverage: validation.missingCoverage,
+        files: (manifest.files ?? []).map(file => ({ ...file })),
+        blockingErrors: [...new Set(blockingErrors)],
+        warnings: validation.warnings,
+      };
     }
 
-    // Validate minimum structure
-    if (!themeJson.tokens || typeof themeJson.tokens !== 'object') {
+    if (!themeJson.exists) {
+      return { success: false, error: '主题文件缺少 theme.json' };
+    }
+
+    if (!themeJson.value?.tokens || typeof themeJson.value.tokens !== 'object') {
       return { success: false, error: '主题文件缺少 tokens 数据' };
     }
 
-    // Reconstruct nine-slice images from binary → base64
-    if (themeJson.nineSlice) {
-      for (const [key, config] of Object.entries(themeJson.nineSlice)) {
-        // Main image
-        if (config.src && typeof config.src === 'string' && !config.src.startsWith('data:')) {
-          const bytes = unzipped[config.src];
-          if (bytes) {
-            config.src = uint8ArrayToBase64DataUrl(bytes);
-          }
-        }
-
-        // Button states
-        if (config.states) {
-          for (const state of ['hover', 'active']) {
-            if (config.states[state]?.src && typeof config.states[state].src === 'string' && !config.states[state].src.startsWith('data:')) {
-              const bytes = unzipped[config.states[state].src];
-              if (bytes) {
-                config.states[state].src = uint8ArrayToBase64DataUrl(bytes);
-              }
-            }
-          }
-        }
-      }
-    }
+    const nineSlice = reconstructLegacyNineSlice(themeJson.value, unzipped);
+    const compatibility = classifyLegacyThemeCoverage({
+      tokens: themeJson.value.tokens || {},
+      nineSlice,
+    });
 
     return {
       success: true,
+      mode: compatibility.mode,
+      isFullTheme: compatibility.isFullTheme,
       theme: {
-        tokens: themeJson.tokens || {},
-        nineSlice: themeJson.nineSlice || undefined,
+        tokens: themeJson.value.tokens || {},
+        nineSlice,
       },
       metadata: {
-        formatVersion: themeJson.formatVersion,
-        name: themeJson.name,
-        description: themeJson.description,
-        author: themeJson.author,
-        createdAt: themeJson.createdAt,
+        formatVersion: themeJson.value.formatVersion ?? LEGACY_THEME_FORMAT_VERSION,
+        name: themeJson.value.name,
+        description: themeJson.value.description,
+        author: themeJson.value.author,
+        createdAt: themeJson.value.createdAt,
       },
+      coverage: compatibility.coverage,
+      missingCoverage: compatibility.missingCoverage,
+      blockingErrors: compatibility.blockingErrors,
+      warnings: compatibility.warnings,
     };
   } catch (e) {
     console.error('[themePackager] Parse failed:', e);

@@ -50,4 +50,37 @@ describe('QuickActionBar button-family semantics', () => {
 
     resetButtonFamilies();
   });
+
+  it('keeps button-family underlay and click delegation intact when using themed qab icons', () => {
+    const onAuto = vi.fn();
+    quickBar.onAuto = onAuto;
+    quickBar.setThemeIcons({ qab: 'ui/icons/qab.png' });
+
+    applyButtonFamilies({
+      buttonFamilies: {
+        qab: {
+          normal: 'ui/buttons/qab-normal.webp',
+          hover: 'ui/buttons/qab-hover.webp',
+          pressed: 'ui/buttons/qab-pressed.webp',
+        },
+      },
+    });
+
+    const autoBtn = quickBar.el.querySelector('[data-action="auto"]');
+    const icon = autoBtn.querySelector('img.qab-theme-icon');
+    expect(icon).not.toBeNull();
+    expect(autoBtn.classList.contains('qab-btn')).toBe(true);
+
+    const wrapperClick = vi.fn();
+    container.addEventListener('click', wrapperClick);
+    icon.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(onAuto).toHaveBeenCalledOnce();
+    expect(wrapperClick).not.toHaveBeenCalled();
+
+    const css = document.getElementById('galgame-button-families')?.textContent ?? '';
+    expect(css).toContain('.qab-btn::before {');
+
+    resetButtonFamilies();
+  });
 });

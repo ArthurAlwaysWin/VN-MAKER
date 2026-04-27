@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: 完整主题包与图片主题产出
-status: defining_requirements
-stopped_at: Started v1.6 milestone
-last_updated: "2026-04-27T04:15:00Z"
+status: roadmap_created
+stopped_at: Created v1.6 roadmap
+last_updated: "2026-04-27T04:55:00Z"
 last_activity: 2026-04-27
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 16
-  completed_plans: 16
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** v1.6 milestone kickoff
+**Current focus:** v1.6 roadmap ready; Phase 78 planning next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 78 — 主题包契约与兼容边界
 Plan: —
-Status: Defining requirements
-Next: Decide whether to research first, then write REQUIREMENTS.md / ROADMAP.md
+Status: Roadmap created
+Next: /gsd-plan-phase 78
 Last activity: 2026-04-27
 
 ```
@@ -87,6 +87,12 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 77]: Phase 72 and 74 verification retain human-needed visual checks while still recording requirement satisfaction from current focused evidence.
 - [Phase 77]: BTN-03 stays owned by Phase 73 because existing verification already satisfied it; Phase 77 only repaired the traceability drift.
 - [Phase 77]: The refreshed audit treats human-needed UI smoke checks as follow-ups, not as missing-artifact blockers.
+- [Phase 78+]: v1.6 is locked as a complete theme package system milestone, not a continuation of ad hoc image-slot expansion.
+- [Phase 78+]: v1.6 phase order is fixed as 78 contract and compatibility → 79 install/apply/export → 80 browser UX → 81 golden theme → 82 remaining 4 themes.
+- [Phase 78+]: This milestone does not include un-applied live iframe preview; the browser uses card preview images plus coverage/overwrite explanation only.
+- [Phase 78+]: Built-in themes and imported themes must converge on the same install/apply path.
+- [Phase 78+]: `.gmtheme` is the only full export format in v1.6; legacy `.theme` is compatibility import only.
+- [Phase 78+]: Content production order is fixed to one golden theme first, then expand to the remaining four themes.
 
 ### Blockers/Concerns
 
@@ -95,13 +101,13 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T03:49:14.045Z
-Stopped at: Completed v1.5 milestone archival prep
+Last session: 2026-04-27T04:55:00Z
+Stopped at: Created v1.6 roadmap
 Resume hint: |
 
-  1. v1.5 已完成归档准备，milestones/ 下已有 v1.5 roadmap / requirements / audit
-  2. 当前没有 active milestone，也没有待执行 phase/plan
-  3. 下一步应由用户决定是否启动新 milestone，或是否进一步整理 phase archive / push tag
-  4. 当前工作区仍有与 milestone docs 无关的本地变更，提交时需避免带入
+  1. v1.6 requirements 与 roadmap 已创建，当前下一个直接动作是计划 Phase 78
+  2. v1.6 不做未应用主题的 live iframe preview，只做卡片预览图 + 覆盖范围说明
+  3. 内容路线固定为 golden theme 先行，再扩展到其余 4 套 shipped themes
+  4. 当前工作区仍有与 planning docs 无关的本地变更，提交时需避免带入
 
-Next action: decide whether to research the theme-package domain before defining v1.6 requirements
+Next action: create the executable plan for Phase 78

@@ -45,7 +45,7 @@ Build a **single unified theme browser** instead of preserving separate built-in
 
 ## UX Structure
 
-The browser uses a three-region layout:
+The browser uses a **four-region layout**:
 
 ### 1. Top toolbar
 
@@ -61,7 +61,8 @@ The left rail filters the theme list by normalized metadata only. It does not ow
 
 Filters:
 
-- **Source**: built-in / imported / compatibility-only partial
+- **Source**: built-in / imported
+- **Type**: full theme / compatibility-only partial
 - **Status**: currently applied / available / imported / compatibility-only
 - **Coverage**: theme areas such as dialogue, save/load, backlog, game menu, settings, full coverage
 
@@ -92,6 +93,30 @@ The right panel explains the selected card in full:
 
 The detail panel is the primary place for overwrite explanation. The card remains compact.
 
+## Action States
+
+The browser does not invent a new apply path. It only exposes actions already permitted by the Phase 79 install/apply boundary.
+
+### Full built-in themes
+
+- Show **Apply** CTA.
+- Applying uses the shared Phase 79 built-in install/apply service.
+
+### Full imported themes
+
+- Show **Apply** CTA.
+- Applying uses the shared Phase 79 imported install/apply service.
+
+### Compatibility-only partial themes
+
+- Do **not** show the same full-theme replace CTA.
+- Show compatibility-only framing instead: the user can inspect coverage and missing coverage, but the browser must not present the item as a whole-theme replacement candidate.
+
+### Currently applied theme
+
+- Show explicit `当前已应用` state.
+- Reapply can remain available only if the existing flow already permits it, but the state badge must remain primary so users do not confuse “already imported” with “currently active”.
+
 ## Data Model
 
 The browser renders one normalized theme item shape regardless of source:
@@ -120,6 +145,7 @@ The browser renders one normalized theme item shape regardless of source:
 - `coverage`: theme-owned UI areas this theme can provide
 - `missingCoverage`: areas absent from compatibility-only partial themes
 - `applyImpact`: normalized description of what current-project theme-owned areas would be replaced if applied now
+- `preview`: either a packaged/imported preview asset when available, or a deterministic fallback thumbnail generated from theme metadata and theme tokens
 
 ## Data Sources
 
@@ -174,6 +200,8 @@ Before apply, the browser computes impact using current project theme metadata p
 - If import produces a compatibility-only partial theme, it still appears in the browser list with restricted action framing.
 - If project metadata is incomplete, the browser avoids hard failure and falls back to conservative explanatory text.
 - If a selected theme cannot currently be applied, the reason is stated in the detail panel rather than silently disabling understanding.
+- If a theme has no real preview asset, the card uses a stable fallback preview instead of a broken or blank image slot.
+- After import, the browser refreshes immediately, selects the newly added theme item, and surfaces short in-context status feedback so the user stays inside the browser flow.
 
 ## Preview Policy
 
@@ -214,6 +242,15 @@ Owns:
 - status calculation
 - coverage summary formatting
 - overwrite impact calculation
+- preview fallback resolution
+
+The service layer is split into explicit units so each boundary is independently understandable and testable:
+
+- `normalizeThemeBrowserItem(rawTheme, currentProjectState) -> ThemeBrowserItem`
+- `filterThemeBrowserItems(items, filterState) -> ThemeBrowserItem[]`
+- `computeThemeBrowserStatus(item, currentProjectState) -> status`
+- `computeThemeApplyImpact(item, currentProjectState) -> applyImpact`
+- `resolveThemeBrowserPreview(item) -> previewDescriptor`
 
 This logic stays outside the view layer so the UI remains thin and testable.
 

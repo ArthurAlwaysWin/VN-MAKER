@@ -1,3 +1,5 @@
+import { createImportedThemeBrowserEntry } from './themeBrowser.js';
+
 const COVERAGE_LABELS = Object.freeze({
   theme: '主题基础',
   widgetStyles: '通用控件',
@@ -33,7 +35,6 @@ export function createThemePackageImportSummary(preflight = {}) {
 
   const coverageLabels = labelCoverage(preflight.coverage);
   const missingCoverageLabels = labelCoverage(preflight.missingCoverage);
-  const counts = preflight.counts ?? { copy: 0, skip: 0, overwrite: 0 };
   let badge = '导入已阻止';
   let title = '主题包预检已阻止';
 
@@ -46,14 +47,8 @@ export function createThemePackageImportSummary(preflight = {}) {
   }
 
   const planLines = [];
-  if (counts.copy > 0) {
-    planLines.push(`将新增 ${counts.copy} 个命名空间文件`);
-  }
-  if (counts.skip > 0) {
-    planLines.push(`${counts.skip} 个同 hash 文件将跳过`);
-  }
-  if (counts.overwrite > 0) {
-    planLines.push(`${counts.overwrite} 个同命名空间文件将覆盖更新`);
+  if (preflight.status === 'ready' && coverageLabels.length > 0) {
+    planLines.push(`应用后将接管这些主题范围：${coverageLabels.join('、')}`);
   }
   if (planLines.length === 0 && preflight.status === 'legacy-partial') {
     planLines.push('仅展示兼容导入摘要；本阶段不会自动安装或应用');
@@ -72,7 +67,7 @@ export function createThemePackageImportSummary(preflight = {}) {
     warningLines: preflight.warnings ?? [],
     planLines,
     namespaceText: preflight.assetRoot ? `命名空间：${preflight.assetRoot}` : '',
-    canAutoApply: false,
+    canAutoApply: preflight.status === 'ready',
   };
 }
 
@@ -80,8 +75,6 @@ export async function preflightThemePackageImport({
   ipcRenderer,
   scriptStore,
 } = {}) {
-  void scriptStore;
-
   const fileResult = await ipcRenderer.invoke('import-theme');
   if (fileResult?.canceled) {
     return {
@@ -105,10 +98,16 @@ export async function preflightThemePackageImport({
   const preflight = await ipcRenderer.invoke('preflight-theme-package', {
     filePath: fileResult.filePath,
   });
+  const scriptData = scriptStore?.data?.value ?? scriptStore?.data ?? {};
 
   return {
     canceled: false,
     preflight,
     summary: createThemePackageImportSummary(preflight),
+    browserEntry: createImportedThemeBrowserEntry({
+      ...preflight,
+      filePath: fileResult.filePath,
+      fileName: preflight?.fileName ?? fileResult?.filePath?.split(/[\\/]/).pop() ?? '',
+    }, scriptData),
   };
 }

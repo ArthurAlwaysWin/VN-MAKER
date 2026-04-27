@@ -1743,6 +1743,14 @@ body {
   height: 20px;
 }
 
+.qab-theme-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
 /* ─── Button-family image underlay (Phase 73) ──────────── */
 /* The ThemeManager-injected galgame-button-families style tag
    sets background-image on ::before per family/state.

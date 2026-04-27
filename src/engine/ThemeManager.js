@@ -353,15 +353,83 @@ export function resetScreenBackgrounds() {
 // ─── Cursor System (Phase 75) ──────────────────────────
 
 /**
+ * Maximum cursor image dimension (px). CSS `cursor: url(...)` images
+ * exceeding this are silently ignored by all major browsers/Electron.
+ * Chrome, Firefox, Safari all enforce 128×128 max.
+ */
+const CURSOR_MAX_SIZE = 128;
+
+/**
+ * Load an image from a URL and return an HTMLImageElement.
+ * Rejects if the image fails to load or if loading takes too long
+ * (3s timeout guards against environments where Image events never fire).
+ *
+ * @param {string} src — resolved image URL
+ * @returns {Promise<HTMLImageElement>}
+ * @private
+ */
+function _loadImage(src) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const img = new Image();
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error(`Cursor image load timed out: ${src}`));
+      }
+    }, 3000);
+
+    img.onload = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        resolve(img);
+      }
+    };
+    img.onerror = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(new Error(`Cursor image failed to load: ${src}`));
+      }
+    };
+    img.src = src;
+  });
+}
+
+/**
+ * Downscale an image to fit within CURSOR_MAX_SIZE × CURSOR_MAX_SIZE
+ * while preserving aspect ratio. Returns a data URI (PNG).
+ *
+ * @param {HTMLImageElement} img — loaded image element
+ * @returns {string} data:image/png;base64,... URI
+ * @private
+ */
+function _resizeCursorImage(img) {
+  const { naturalWidth: w, naturalHeight: h } = img;
+  const scale = Math.min(CURSOR_MAX_SIZE / w, CURSOR_MAX_SIZE / h, 1);
+  const dw = Math.round(w * scale);
+  const dh = Math.round(h * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = dw;
+  canvas.height = dh;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, dw, dh);
+  return canvas.toDataURL('image/png');
+}
+
+/**
  * Build CSS text for custom cursor images.
- * Uses `cursor: url(...) <hotspot>, <fallback>` pattern — when the image
- * fails to load or is not configured, the browser falls back to the
- * CSS keyword (default / pointer).
+ * Loads each cursor image, checks dimensions, and auto-resizes to
+ * ≤128×128 via canvas if needed (browsers silently ignore oversized
+ * cursor images). Returns a data URI for oversized images.
  *
  * @param {object|null|undefined} cursorData — the ui.theme.cursor object
- * @returns {string} Complete CSS text for injection
+ * @returns {Promise<string>} Complete CSS text for injection
  */
-function buildCursorCSS(cursorData) {
+async function buildCursorCSS(cursorData) {
   if (!cursorData || typeof cursorData !== 'object') return '';
   const rules = [];
 
@@ -371,9 +439,27 @@ function buildCursorCSS(cursorData) {
 
     const resolvedSrc = resolvePath(src);
     const fallback = slotKey === 'pointer' ? 'pointer' : 'default';
+
+    let finalSrc = resolvedSrc;
+    try {
+      const img = await _loadImage(resolvedSrc);
+      if (img.naturalWidth > CURSOR_MAX_SIZE || img.naturalHeight > CURSOR_MAX_SIZE) {
+        console.warn(
+          `[ThemeManager] Cursor "${slotKey}" image is ${img.naturalWidth}×${img.naturalHeight}px — ` +
+          `exceeds browser limit of ${CURSOR_MAX_SIZE}×${CURSOR_MAX_SIZE}px. ` +
+          `Auto-resizing. For best results, use an image ≤${CURSOR_MAX_SIZE}×${CURSOR_MAX_SIZE}px.`
+        );
+        finalSrc = _resizeCursorImage(img);
+      }
+    } catch (e) {
+      // Image failed to load — still emit the rule so the CSS fallback
+      // keyword (default/pointer) kicks in gracefully.
+      console.warn(`[ThemeManager] ${e.message}`);
+    }
+
     rules.push(
       `${selector} {\n` +
-      `  cursor: url("${resolvedSrc}") 0 0, ${fallback};\n` +
+      `  cursor: url("${finalSrc}") 0 0, ${fallback};\n` +
       `}`
     );
   }
@@ -386,16 +472,19 @@ function buildCursorCSS(cursorData) {
  * Creates `<style id="galgame-cursors">` on first call, overwrites
  * textContent on subsequent calls.
  *
+ * Async because oversized cursor images (>128×128) are auto-resized
+ * via canvas before injection.
+ *
  * @param {object|null|undefined} themeData — the ui.theme object from script.json
  */
-export function applyCursors(themeData) {
+export async function applyCursors(themeData) {
   let styleEl = document.getElementById('galgame-cursors');
   if (!styleEl) {
     styleEl = document.createElement('style');
     styleEl.id = 'galgame-cursors';
     document.head.appendChild(styleEl);
   }
-  styleEl.textContent = buildCursorCSS(themeData?.cursor);
+  styleEl.textContent = await buildCursorCSS(themeData?.cursor);
 }
 
 /**

@@ -40,6 +40,21 @@ describe('ThemeManager UI image handling', () => {
     document.head.innerHTML = '';
     document.body.innerHTML = '';
     vi.clearAllMocks();
+
+    // Mock Image in JSDOM — immediately fire onerror since JSDOM can't load images.
+    // This lets async applyCursors resolve instantly without hitting the 3s timeout.
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () {
+      const img = { onload: null, onerror: null, _src: '' };
+      Object.defineProperty(img, 'src', {
+        set(v) {
+          img._src = v;
+          // Fire onerror async (microtask) to simulate real browser behavior
+          Promise.resolve().then(() => { if (img.onerror) img.onerror(new Error('JSDOM')); });
+        },
+        get() { return img._src; },
+      });
+      return img;
+    });
   });
 
   it('resolves canonical ui paths before writing border-image CSS for normal, hover, and active states', () => {
@@ -362,8 +377,8 @@ describe('ThemeManager UI image handling', () => {
     });
   });
 
-  it('applies default and pointer cursor images with CSS fallback keywords', () => {
-    applyCursors({
+  it('applies default and pointer cursor images with CSS fallback keywords', async () => {
+    await applyCursors({
       cursor: {
         default: 'ui/cursors/default.png',
         pointer: 'ui/cursors/pointer.png',
@@ -382,8 +397,8 @@ describe('ThemeManager UI image handling', () => {
     expect(css).toContain('cursor: url("resolved:ui/cursors/pointer.png") 0 0, pointer;');
   });
 
-  it('skips cursor slots that are not configured', () => {
-    applyCursors({
+  it('skips cursor slots that are not configured', async () => {
+    await applyCursors({
       cursor: {
         default: 'ui/cursors/arrow.png',
       },
@@ -394,26 +409,26 @@ describe('ThemeManager UI image handling', () => {
     expect(css).not.toContain('pointer');
   });
 
-  it('emits no CSS when no cursor images are configured', () => {
-    applyCursors({ cursor: {} });
+  it('emits no CSS when no cursor images are configured', async () => {
+    await applyCursors({ cursor: {} });
 
     const css = document.getElementById('galgame-cursors')?.textContent ?? '';
     expect(css).toBe('');
   });
 
-  it('emits no CSS when cursor is null or undefined', () => {
-    applyCursors({});
+  it('emits no CSS when cursor is null or undefined', async () => {
+    await applyCursors({});
     expect(document.getElementById('galgame-cursors')?.textContent ?? '').toBe('');
 
     resetCursors();
-    applyCursors(null);
+    await applyCursors(null);
     expect(document.getElementById('galgame-cursors')?.textContent ?? '').toBe('');
   });
 
-  it('manages the galgame-cursors style tag lifecycle', () => {
+  it('manages the galgame-cursors style tag lifecycle', async () => {
     expect(document.getElementById('galgame-cursors')).toBeNull();
 
-    applyCursors({ cursor: { default: 'ui/cursors/default.png' } });
+    await applyCursors({ cursor: { default: 'ui/cursors/default.png' } });
 
     const styleEl = document.getElementById('galgame-cursors');
     expect(styleEl).not.toBeNull();

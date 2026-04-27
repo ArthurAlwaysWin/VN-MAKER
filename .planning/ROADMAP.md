@@ -130,7 +130,7 @@ Plans:
   4. 重新执行 milestone audit 时，不再因为缺 verification artifact 或 traceability 漂移被阻塞。
 **Plans**: 2 plans
 Plans:
-- [ ] 77-01-PLAN.md — 回填 71 / 72 / 74 / 75 的 verification evidence pack
+- [x] 77-01-PLAN.md — 回填 71 / 72 / 74 / 75 的 verification evidence pack
 - [ ] 77-02-PLAN.md — 对齐 REQUIREMENTS 与 milestone audit 到最新 verification 证据
 **UI hint**: no
 
@@ -169,4 +169,4 @@ Plans:
 | 74. 主要界面图片化 | 3/3 | ✅ Complete | 2026-04-25 |
 | 75. 光标图标与全链路收口 | 3/3 | ✅ Complete | 2026-04-25 |
 | 76. 图标运行时闭环与回退修复 | 2/2 | Complete   | 2026-04-27 |
-| 77. v1.5 验证与追踪表回填 | 0/2 | ⏳ Pending | - |
+| 77. v1.5 验证与追踪表回填 | 1/2 | In Progress|  |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: 验证与追踪表回填
 status: verifying
-stopped_at: Completed 76-02-PLAN.md
-last_updated: "2026-04-27T03:30:17.386Z"
+stopped_at: Completed 77-01-PLAN.md
+last_updated: "2026-04-27T03:42:22.795Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 15
+  total_plans: 16
+  completed_plans: 16
 ---
 
 # Project State
@@ -59,6 +59,7 @@ v1.5 ████████████████████ 5/5 phases ✅
 | v1.5 | 5 | 0 | 17 |
 | Phase 73-button-family-image-rollout P01 | 3min | 2 tasks | 5 files |
 | Phase 76 P01-02 | 35m | 4 tasks | 14 files |
+| Phase 77 P01 | 6 min | 4 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ v1.5 ████████████████████ 5/5 phases ✅
 - [Phase 74]: 复用现有 iframe + postMessage 基础设施，不建新预览
 - [Phase 76]: Phase 76 reuses the existing ui.theme.icons slots and routes QAB through the same runtime preview path as other icon consumers.
 - [Phase 76]: Broken theme icon assets now recover through one shared helper-level fallback contract instead of per-screen icon systems.
+- [Phase 77]: Phase 75 verification closes CUR-01 only and cites Phase 76 for ICO-01, AST-03, and AST-04.
+- [Phase 77]: Phase 72 and 74 verification retain human-needed visual checks while still recording requirement satisfaction from current focused evidence.
 
 ### Blockers/Concerns
 
@@ -89,8 +92,8 @@ v1.5 ████████████████████ 5/5 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T03:30:17.380Z
-Stopped at: Completed 76-02-PLAN.md
+Last session: 2026-04-27T03:42:22.790Z
+Stopped at: Completed 77-01-PLAN.md
 Resume hint: |
 
   1. v1.5 里程碑仍显示 complete，当前主线没有新的 phase/plan 待执行

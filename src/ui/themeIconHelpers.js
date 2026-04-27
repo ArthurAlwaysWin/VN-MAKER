@@ -27,7 +27,7 @@ export function resolveThemeIcon(icons, slotKey, fallbackText, cssClass = '') {
   const resolved = resolvePath(src);
   const classAttr = cssClass ? ` class="${cssClass}"` : '';
   const altText = stripMarkup(fallbackText) || slotKey;
-  return `<span class="theme-icon-shell" data-theme-icon-shell="1" data-theme-icon-fallback="${encodeURIComponent(fallbackHtml)}"><img src="${resolved}"${classAttr} data-theme-icon-image="1" alt="${escapeHtml(altText)}" /></span>`;
+  return `<span class="theme-icon-shell" data-theme-icon-shell="1" data-theme-icon-slot="${slotKey}" data-theme-icon-fallback="${encodeURIComponent(fallbackHtml)}"><img src="${resolved}"${classAttr} data-theme-icon-image="1" alt="${escapeHtml(altText)}" /></span>`;
 }
 
 /**
@@ -55,10 +55,17 @@ export function attachThemeIconFallback(root) {
     }
     img.dataset.themeIconBound = '1';
     img.addEventListener('error', () => {
+      const parent = shell.parentElement;
       const fallbackHtml = decodeURIComponent(shell.dataset.themeIconFallback || '');
       const template = document.createElement('template');
       template.innerHTML = fallbackHtml;
       shell.replaceWith(template.content.cloneNode(true));
+      parent?.dispatchEvent(new CustomEvent('theme-icon-fallback', {
+        bubbles: true,
+        detail: {
+          slotKey: shell.dataset.themeIconSlot || '',
+        },
+      }));
     }, { once: true });
   });
 }

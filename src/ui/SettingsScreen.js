@@ -11,7 +11,7 @@ import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 import { deepMergeWidgetStyles } from '../engine/widgetDefaults.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
-import { hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
+import { attachThemeIconFallback, hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
 import { createToggle } from './widgets/ToggleWidget.js';
 import { createSlider, getSliderCSS } from './widgets/SliderWidget.js';
 import { createTabBar } from './widgets/TabWidget.js';
@@ -156,6 +156,8 @@ export class SettingsScreen {
     if (this.customLayout?.chrome?.decorations) {
       renderScreenDecorations(this.el, this.customLayout.chrome.decorations);
     }
+
+    attachThemeIconFallback(this.el);
 
     this.el.classList.remove('hidden');
     requestAnimationFrame(() => this.el.classList.add('visible'));

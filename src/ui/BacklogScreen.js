@@ -4,7 +4,7 @@
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
-import { resolveThemeIcon, hasThemeIcon } from './themeIconHelpers.js';
+import { attachThemeIconFallback, resolveThemeIcon, hasThemeIcon } from './themeIconHelpers.js';
 
 export class BacklogScreen {
   /**
@@ -109,6 +109,12 @@ export class BacklogScreen {
         if (hasThemeIcon(this._themeIcons, 'voiceReplay')) {
           btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '▶', 'voice-replay-icon');
           btn.dataset.isIconBtn = '1';
+          btn.addEventListener('theme-icon-fallback', (e) => {
+            if (e.detail?.slotKey === 'voiceReplay') {
+              btn.dataset.isIconBtn = '';
+              btn.classList.remove('backlog-voice-playing');
+            }
+          });
         } else {
           btn.textContent = '▶';
         }
@@ -136,6 +142,8 @@ export class BacklogScreen {
     if (cfg?.chrome?.decorations) {
       renderScreenDecorations(this.el, cfg.chrome.decorations);
     }
+
+    attachThemeIconFallback(this.el);
 
     // Scroll to bottom
     requestAnimationFrame(() => {
@@ -280,6 +288,7 @@ export class BacklogScreen {
     this._playingEntry = entryEl;
     if (btn.dataset.isIconBtn) {
       btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '■', 'voice-replay-icon');
+      attachThemeIconFallback(btn);
       btn.classList.add('backlog-voice-playing');
     } else {
       btn.textContent = '■';
@@ -303,6 +312,7 @@ export class BacklogScreen {
       if (btn) {
         if (btn.dataset.isIconBtn) {
           btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '▶', 'voice-replay-icon');
+          attachThemeIconFallback(btn);
         } else {
           btn.textContent = '▶';
         }
@@ -316,6 +326,7 @@ export class BacklogScreen {
     this._playingEntry = null;
     if (btn.dataset.isIconBtn) {
       btn.innerHTML = resolveThemeIcon(this._themeIcons, 'voiceReplay', '▶', 'voice-replay-icon');
+      attachThemeIconFallback(btn);
     } else {
       btn.textContent = '▶';
     }

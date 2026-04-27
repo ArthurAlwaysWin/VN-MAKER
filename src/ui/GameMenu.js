@@ -4,7 +4,7 @@
 import { sanitizeCssValue, clamp, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
-import { resolveThemeIcon } from './themeIconHelpers.js';
+import { attachThemeIconFallback, resolveThemeIcon } from './themeIconHelpers.js';
 
 /** Default button labels matching the hardcoded originals */
 const DEFAULT_LABELS = {
@@ -138,7 +138,7 @@ export class GameMenu {
       if (btnCfg?.icon) {
         iconHtml = `<img src="${resolvePath(btnCfg.icon)}" class="game-menu-icon" alt="" />`;
       } else if (this._themeIcons?.gameMenu) {
-        iconHtml = `<img src="${resolvePath(this._themeIcons.gameMenu)}" class="game-menu-icon" alt="" />`;
+        iconHtml = resolveThemeIcon(this._themeIcons, 'gameMenu', '', 'game-menu-icon');
       }
       return `<button class="game-menu-button" data-action="${action}">${iconHtml}${label}</button>`;
     }).join('\n        ');
@@ -214,5 +214,7 @@ export class GameMenu {
     if (cfg.chrome?.decorations) {
       renderScreenDecorations(this.el, cfg.chrome.decorations);
     }
+
+    attachThemeIconFallback(this.el);
   }
 }

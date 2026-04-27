@@ -14,7 +14,7 @@ const TOTAL_PAGES = 12;
 import { resolvePath } from '../engine/assetPath.js';
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
-import { hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
+import { attachThemeIconFallback, hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
 
 
 export class SaveLoadScreen {
@@ -226,6 +226,8 @@ export class SaveLoadScreen {
     if (cfg?.chrome?.decorations) {
       renderScreenDecorations(this.el, cfg.chrome.decorations);
     }
+
+    attachThemeIconFallback(this.el);
   }
 
   /** @private Partial re-render of grid section only */

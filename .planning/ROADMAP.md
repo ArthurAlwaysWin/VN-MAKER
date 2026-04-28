@@ -16,6 +16,7 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 - **好感度只是 number 变量的 preset，不引入独立 runtime 子系统**
 - **结局与 CG 必须显式注册、显式解锁**
 - **save slot 与 persistent profile 必须分层；即使 scope 紧张，这条也不能砍**
+- **不把旧项目迁移兼容当成 v1.7 阻塞项**；优先 clean contract、schema versioning 与明确 reset 语义
 - **不做**：流程图、replay、BGM room、achievements、字符串变量 / 表达式语言、generic persistent vars、auto-detected unlocks、cloud sync
 
 ## Phases
@@ -28,14 +29,14 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 ## Phase Details
 
 ### Phase 83: 剧情系统契约与持久化护栏
-**Goal**: 项目先获得可信的剧情系统数据契约与玩家持久化边界，确保后续变量、结局、CG 都建立在不串档、不混档、可兼容旧数据的基础上。  
+**Goal**: 项目先获得可信的剧情系统数据契约与玩家持久化边界，确保后续变量、结局、CG 都建立在不串档、不混档、易于测试重置的基础上。  
 **Depends on**: Nothing (starts after Phase 82)  
 **Requirements**: DATA-01, DATA-02, DATA-03, PERS-01, PERS-02  
 **Success Criteria** (what must be TRUE):
   1. 作者保存并重新打开项目后，variables / endings / gallery.cg 这些项目级定义会以显式注册表和稳定 ID 保留下来，而不是退回自由文本或资源路径猜测。
   2. 玩家进度绑定到稳定 `projectId`，因此修改游戏标题后，既有跨周目进度不会因为 key 变化而丢失。
   3. 普通 save slot 与 persistent profile 被清楚分层：开始新周目、读取存档或删除存档都不会抹掉跨周目的 read-history / ending / CG 进度。
-  4. 旧项目与旧存档在缺少 v1.7 新字段时仍能正常打开和恢复，系统会补默认值而不是崩溃或静默丢失旧数据。
+  4. 作者在开发和测试阶段可以明确重置或重建 profile/save 数据，而不需要手动修改底层文件或依赖旧 schema 迁移。
   5. 作者保存并重开项目后，变量写入与 ending/CG 解锁动作会以统一 effect 结构持续存在，而不是散落成彼此不兼容的特例字段。
 **Plans**: TBD
 

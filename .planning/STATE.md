@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 83-03-PLAN.md
-last_updated: "2026-04-28T11:30:17.985Z"
+status: ready_for_planning
+stopped_at: Phase 83 complete; Phase 84 ready for planning
+last_updated: "2026-04-28T21:55:00+10:00"
 last_activity: 2026-04-28
 progress:
   total_phases: 4
@@ -20,21 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 83 — galgame-core-contract-persistence
+**Current focus:** Milestone v1.7 — Phase 83 complete, Phase 84 ready for planning
 
 ## Current Position
 
-Phase: 83 (galgame-core-contract-persistence) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Next: /gsd-execute-phase 83
+Phase: 84 — 变量注册表与条件分支 GUI
+Plan: —
+Status: Phase 83 complete
+Next: /gsd-plan-phase 84
 Last activity: 2026-04-28
 
 ```
 v1.4 ████████████████████ 10/10 phases ✅ archived
 v1.5 ████████████████████ 7/7 phases ✅ archived
 v1.6 ████████████████████ 5/5 phases ✅ archived
-v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (phase 83 planned)
+v1.7 ████░░░░░░░░░░░░░░ 1/4 phases (phase 83 complete)
 ```
 
 ## Performance Metrics
@@ -152,13 +152,13 @@ v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (phase 83
 ## Session Continuity
 
 Last session: 2026-04-28T11:30:17.979Z
-Stopped at: Completed 83-03-PLAN.md
+Stopped at: Phase 83 complete; Phase 84 ready for planning
 Resume file: None
 Resume hint: |
 
-  1. Phase 83 现已完成 planning，包含 `83-01` contract freeze、`83-02` persistence boundary、`83-03` effect DSL
-  2. 下一步从 `/gsd-execute-phase 83` 开始，优先守住 stable projectId、effect contract、save/profile separation
+  1. Phase 83 已完成 execution + verification + review follow-up，闭环包括 stable `projectId`、`systems.*` registries、profile/save separation、canonical `effects[]`
+  2. 下一步从 `/gsd-plan-phase 84` 开始，聚焦变量注册表、变量写入 GUI、条件页 GUI 与分支跳转摘要
   3. 明确延期：flowchart、replay、BGM room、achievements、字符串变量 / 表达式语言、generic persistent vars、auto-detected unlocks、cloud sync
   4. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: /gsd-execute-phase 83
+Next action: /gsd-plan-phase 84

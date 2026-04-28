@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Galgame 标配系统补全
-status: roadmap_created
-stopped_at: Roadmap created; Phase 83 ready for planning
-last_updated: "2026-04-28T20:08:01.1253616+10:00"
+status: phase_planned
+stopped_at: Phase 83 planned; ready for execution
+last_updated: "2026-04-28T20:45:00+10:00"
 last_activity: 2026-04-28
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
 ---
 
@@ -20,21 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Milestone v1.7 — roadmap created, Phase 83 ready for planning
+**Current focus:** Milestone v1.7 — Phase 83 planned, ready for execution
 
 ## Current Position
 
 Phase: 83 — 剧情系统契约与持久化护栏
-Plan: —
-Status: Roadmap created
-Next: /gsd-plan-phase 83
+Plan: 83-01 / 83-02 / 83-03
+Status: Planned
+Next: /gsd-execute-phase 83
 Last activity: 2026-04-28
 
 ```
 v1.4 ████████████████████ 10/10 phases ✅ archived
 v1.5 ████████████████████ 7/7 phases ✅ archived
 v1.6 ████████████████████ 5/5 phases ✅ archived
-v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (roadmap ready)
+v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (phase 83 planned)
 ```
 
 ## Performance Metrics
@@ -141,13 +141,13 @@ v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (roadmap 
 ## Session Continuity
 
 Last session: 2026-04-28T19:05:00+10:00
-Stopped at: Roadmap created; Phase 83 ready for planning
+Stopped at: Phase 83 planned; ready for execution
 Resume file: None
 Resume hint: |
 
-  1. v1.7 roadmap 已创建，Phase 83-86 顺序已冻结，下一步从 `/gsd-plan-phase 83` 开始
-  2. 先守住 stable projectId、effect contract、save/profile separation 与旧项目/旧存档兼容，再推进变量/结局/CG UI
+  1. Phase 83 现已完成 planning，包含 `83-01` contract freeze、`83-02` persistence boundary、`83-03` effect DSL
+  2. 下一步从 `/gsd-execute-phase 83` 开始，优先守住 stable projectId、effect contract、save/profile separation
   3. 明确延期：flowchart、replay、BGM room、achievements、字符串变量 / 表达式语言、generic persistent vars、auto-detected unlocks、cloud sync
   4. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: /gsd-plan-phase 83
+Next action: /gsd-execute-phase 83

@@ -38,7 +38,10 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
   3. 普通 save slot 与 persistent profile 被清楚分层：开始新周目、读取存档或删除存档都不会抹掉跨周目的 read-history / ending / CG 进度。
   4. 作者在开发和测试阶段可以明确重置或重建 profile/save 数据，而不需要手动修改底层文件或依赖旧 schema 迁移。
   5. 作者保存并重开项目后，变量写入与 ending/CG 解锁动作会以统一 effect 结构持续存在，而不是散落成彼此不兼容的特例字段。
-**Plans**: TBD
+**Plans**:
+- `83-01` Contract freeze: `projectId`, explicit `systems.*` registries, shared contract/version/reset helpers
+- `83-02` Persistence boundary: `PlayerDataRepository`, profile vs slot separation, named reset/rebuild entrypoints
+- `83-03` Effect normalization: shared `effects[]` DSL, runtime/editor normalization, unlock-to-profile wiring
 
 ### Phase 84: 变量注册表与条件分支 GUI
 **Goal**: 作者可以不写逻辑脚本，直接通过 GUI 配置变量、数值变化、条件判断与分支跳转。  
@@ -109,7 +112,7 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 83. 剧情系统契约与持久化护栏 | 0/0 | Not started | - |
+| 83. 剧情系统契约与持久化护栏 | 0/3 | Planned | - |
 | 84. 变量注册表与条件分支 GUI | 0/0 | Not started | - |
 | 85. 好感度预设与结局追踪 | 0/0 | Not started | - |
 | 86. CG 图鉴与一致性验证闭环 | 0/0 | Not started | - |

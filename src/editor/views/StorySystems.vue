@@ -30,6 +30,8 @@
         :variable-entry="selectedEntry"
         :usage-count="selectedVariable.usageCount"
         :focus-token="inspectorFocusToken"
+        @request-delete="openDeleteImpact"
+        @request-rename="openRenameImpact"
       />
 
       <div v-else class="detail-card detail-placeholder">
@@ -38,13 +40,25 @@
         <p>左侧列表会显示变量名称、内部 ID、默认值和引用次数。</p>
       </div>
     </section>
+
+    <VariableImpactModal
+      :visible="impactState.visible"
+      :mode="impactState.mode"
+      :variable-name="impactState.variableName"
+      :next-variable-id="impactState.nextVariableId"
+      :references="impactState.references"
+      :action-count="impactState.actionCount"
+      @cancel="closeImpactModal"
+      @confirm="confirmImpact"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
-import VariableRegistryList from '../components/story-systems/VariableRegistryList.vue';
+import { computed, reactive, ref, watch } from 'vue';
+import VariableImpactModal from '../components/story-systems/VariableImpactModal.vue';
 import VariableInspector from '../components/story-systems/VariableInspector.vue';
+import VariableRegistryList from '../components/story-systems/VariableRegistryList.vue';
 import { useScriptStore } from '../stores/script.js';
 import { collectVariableReferences } from '../../shared/variableRegistry.js';
 
@@ -53,6 +67,15 @@ const inspectorFocusToken = ref(0);
 const search = ref('');
 const typeFilter = ref('all');
 const groupFilter = ref('all');
+const impactState = reactive({
+  actionCount: 0,
+  mode: 'rename',
+  nextVariableId: '',
+  references: [],
+  variableId: null,
+  variableName: '',
+  visible: false,
+});
 
 function formatType(type) {
   return type === 'bool' ? '布尔' : '数值';
@@ -153,6 +176,45 @@ function onCreateVariable() {
   if (variableId) {
     inspectorFocusToken.value++;
   }
+}
+
+function openRenameImpact(payload) {
+  const preview = script.renameVariable(payload.variableId, payload.nextVariableId, {
+    previewOnly: true,
+  });
+  impactState.visible = true;
+  impactState.mode = 'rename';
+  impactState.variableId = payload.variableId;
+  impactState.variableName = selectedVariable.value?.name || payload.variableId;
+  impactState.nextVariableId = payload.nextVariableId;
+  impactState.references = preview.references || [];
+  impactState.actionCount = preview.rewriteCount || 0;
+}
+
+function openDeleteImpact(payload) {
+  const preview = script.deleteVariable(payload.variableId, { previewOnly: true });
+  const currentVariable = allVariables.value.find((item) => item.id === payload.variableId);
+  impactState.visible = true;
+  impactState.mode = 'delete';
+  impactState.variableId = payload.variableId;
+  impactState.variableName = currentVariable?.name || payload.variableId;
+  impactState.nextVariableId = '';
+  impactState.references = preview.references || [];
+  impactState.actionCount = preview.cleanupCount || 0;
+}
+
+function closeImpactModal() {
+  impactState.visible = false;
+}
+
+function confirmImpact() {
+  if (impactState.mode === 'rename') {
+    script.renameVariable(impactState.variableId, impactState.nextVariableId);
+  } else {
+    script.deleteVariable(impactState.variableId);
+  }
+
+  impactState.visible = false;
 }
 
 watch(allVariables, (items) => {

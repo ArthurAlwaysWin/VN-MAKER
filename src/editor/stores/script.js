@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia';
 import { computed, ref, nextTick } from 'vue';
-import { normalizeConditionPages } from '../../shared/branchingContract.js';
+import { normalizeConditionPage, normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 import { normalizeEffectContainer } from '../../shared/effectDsl.js';
 import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
-import { normalizeVariableRegistry } from '../../shared/variableRegistry.js';
+import { collectVariableReferences, normalizeVariableRegistry } from '../../shared/variableRegistry.js';
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 
@@ -15,6 +15,16 @@ function slugifyVariableId(value) {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '_')
     .replace(/^_+|_+$/g, '');
+}
+
+function formatVariableReferenceLocation(reference = {}) {
+  const sceneName = reference.sceneName || reference.sceneId || '未命名场景';
+  const pageLabel = `第 ${Number(reference.pageIndex ?? 0) + 1} 页`;
+  if (reference.source === 'choice-effect') {
+    return `${sceneName} > ${pageLabel} > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`;
+  }
+
+  return `${sceneName} > ${pageLabel} > 条件 ${reference.conditionIndex + 1}`;
 }
 
 function normalizeChoiceEffects(scriptData) {
@@ -217,6 +227,78 @@ export const useScriptStore = defineStore('script', () => {
       return { success: false, error: 'duplicate-id' };
     }
 
+    const references = findVariableReferences(variableId);
+    if (options.previewOnly) {
+      return {
+        success: true,
+        variableId: normalizedId,
+        references,
+        rewriteCount: references.length,
+      };
+    }
+
+    if (references.length > 0 && options.rewriteReferences === false) {
+      return {
+        success: false,
+        error: 'references-exist',
+        variableId,
+        nextVariableId: normalizedId,
+        references,
+        rewriteCount: references.length,
+      };
+    }
+
+    let rewriteCount = 0;
+    if (references.length > 0) {
+      for (const scene of Object.values(data.value?.scenes ?? {})) {
+        for (const page of scene.pages || []) {
+          if (page?.type === 'choice') {
+            page.options = (page.options || []).map((option) => {
+              const normalizedOption = normalizeEffectContainer(option);
+              if (!Array.isArray(normalizedOption.effects)) {
+                return normalizedOption;
+              }
+
+              normalizedOption.effects = normalizedOption.effects.map((effect) => {
+                if (effect.id !== variableId) {
+                  return effect;
+                }
+
+                rewriteCount++;
+                return {
+                  ...effect,
+                  id: normalizedId,
+                };
+              });
+              return normalizedOption;
+            });
+          }
+
+          if (page?.type === 'condition') {
+            const normalizedPage = normalizeConditionPage(page, { registry });
+            page.conditionMode = normalizedPage.conditionMode;
+            page.trueTarget = normalizedPage.trueTarget;
+            page.falseTarget = normalizedPage.falseTarget;
+            page.conditions = normalizedPage.conditions.map((condition) => {
+              if (condition.variableId !== variableId) {
+                return condition;
+              }
+
+              rewriteCount++;
+              return {
+                ...condition,
+                variableId: normalizedId,
+              };
+            });
+            delete page.variable;
+            delete page.operator;
+            delete page.value;
+            delete page.target;
+          }
+        }
+      }
+    }
+
     registry[normalizedId] = registry[variableId];
     delete registry[variableId];
     selectVariable(normalizedId);
@@ -224,7 +306,116 @@ export const useScriptStore = defineStore('script', () => {
     return {
       success: true,
       variableId: normalizedId,
-      referencesUpdated: options.rewriteReferences === false ? 0 : 0,
+      references,
+      rewriteCount,
+    };
+  }
+
+  function findVariableReferences(variableId) {
+    if (!variableId) {
+      return [];
+    }
+
+    return collectVariableReferences(data.value ?? {})
+      .filter((reference) => reference.variableId === variableId)
+      .map((reference) => ({
+        ...reference,
+        locationText: formatVariableReferenceLocation(reference),
+      }));
+  }
+
+  function deleteVariable(variableId, options = {}) {
+    const registry = ensureVariableRegistryState();
+    if (!registry || !registry[variableId]) {
+      return { success: false, error: 'missing-variable' };
+    }
+
+    const references = findVariableReferences(variableId);
+    if (options.previewOnly) {
+      return {
+        success: true,
+        references,
+        cleanupCount: references.length,
+      };
+    }
+
+    let deletedReferenceCount = 0;
+    let invalidConditionCount = 0;
+
+    for (const scene of Object.values(data.value?.scenes ?? {})) {
+      for (const page of scene.pages || []) {
+        if (page?.type === 'choice') {
+          page.options = (page.options || []).map((option) => {
+            const normalizedOption = normalizeEffectContainer(option);
+            const nextEffects = (normalizedOption.effects || []).filter((effect) => {
+              const keep = effect.id !== variableId;
+              if (!keep) {
+                deletedReferenceCount++;
+              }
+              return keep;
+            });
+
+            if (nextEffects.length > 0) {
+              normalizedOption.effects = nextEffects;
+            } else {
+              delete normalizedOption.effects;
+            }
+
+            return normalizedOption;
+          });
+        }
+
+        if (page?.type === 'condition') {
+          const normalizedPage = normalizeConditionPage(page, { registry });
+          const nextConditions = normalizedPage.conditions.filter((condition) => {
+            const keep = condition.variableId !== variableId;
+            if (!keep) {
+              deletedReferenceCount++;
+            }
+            return keep;
+          });
+
+          page.conditionMode = normalizedPage.conditionMode;
+          page.trueTarget = normalizedPage.trueTarget;
+          page.falseTarget = normalizedPage.falseTarget;
+          page.conditions = nextConditions;
+          delete page.variable;
+          delete page.operator;
+          delete page.value;
+          delete page.target;
+
+          if (normalizedPage.conditions.length > 0 && nextConditions.length === 0) {
+            page.unresolvedCondition = {
+              type: 'deleted-variable',
+              variableId,
+            };
+            invalidConditionCount++;
+          } else {
+            delete page.unresolvedCondition;
+          }
+        }
+      }
+    }
+
+    delete registry[variableId];
+    if (selectedVariableId.value === variableId) {
+      const remainingIds = Object.keys(registry);
+      selectVariable(remainingIds[0] ?? null);
+    }
+
+    if (invalidConditionCount > 0) {
+      requestStorySystemsRepair({
+        source: 'condition-save-gate',
+        issueId: 'condition-save-gate',
+      });
+    }
+
+    pushState();
+    return {
+      success: true,
+      references,
+      deletedReferenceCount,
+      invalidConditionCount,
     };
   }
 
@@ -626,6 +817,7 @@ export const useScriptStore = defineStore('script', () => {
     loadFromData, reset,
     selectVariable, requestStorySystemsRepair,
     createVariableDraft, updateVariableFields, renameVariable,
+    findVariableReferences, deleteVariable,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,

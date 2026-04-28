@@ -6,7 +6,15 @@
         <h2>{{ variableEntry.name || variableId }}</h2>
         <p class="helper">{{ usageCount }} 处引用</p>
       </div>
-      <span class="id-chip">{{ variableId }}</span>
+      <div class="header-actions">
+        <span class="id-chip">{{ variableId }}</span>
+        <button
+          data-test="variable-delete"
+          class="delete-btn"
+          type="button"
+          @click="emit('requestDelete', { variableId })"
+        >删除变量</button>
+      </div>
     </div>
 
     <div class="field-grid">
@@ -109,6 +117,7 @@ const props = defineProps({
   usageCount: { type: Number, default: 0 },
   focusToken: { type: Number, default: 0 },
 });
+const emit = defineEmits(['requestDelete', 'requestRename']);
 
 const script = useScriptStore();
 const nameInputRef = ref(null);
@@ -181,6 +190,15 @@ function onIdInput(event) {
     return;
   }
 
+  if (normalizedId !== props.variableId && props.usageCount > 0) {
+    validationMessage.value = '';
+    emit('requestRename', {
+      variableId: props.variableId,
+      nextVariableId: normalizedId,
+    });
+    return;
+  }
+
   const result = script.renameVariable(props.variableId, value, {
     rewriteReferences: false,
   });
@@ -232,6 +250,12 @@ function setBoolValue(value) {
   margin-bottom: 24px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: #007acc;
@@ -260,6 +284,16 @@ function setBoolValue(value) {
   font-family: Consolas, 'Courier New', monospace;
   font-size: 12px;
   padding: 6px 10px;
+}
+
+.delete-btn {
+  background: transparent;
+  border: 1px solid #6a2c2c;
+  border-radius: 6px;
+  color: #ffb3b3;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px 12px;
 }
 
 .field-grid {

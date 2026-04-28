@@ -30,7 +30,24 @@ export const BUILTIN_THEME_ASSETS = Object.freeze({
     },
   ]),
   wafuu: freezeEntries([]),
-  'modern-sky': freezeEntries([]),
+  'modern-sky': freezeEntries([
+    {
+      sourcePath: 'builtin-themes/modern-sky/dialogue-nameplate.svg',
+      targetPath: 'ui/themes/modern-sky/dialogue/nameplate.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/modern-sky/screen-chrome.svg',
+      targetPath: 'ui/themes/modern-sky/screens/chrome.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/modern-sky/title-background.svg',
+      targetPath: 'ui/themes/modern-sky/title/background.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/modern-sky/title-mark.svg',
+      targetPath: 'ui/themes/modern-sky/title/mark.svg',
+    },
+  ]),
   'fantasy-dark': freezeEntries([]),
   'minimal-white': freezeEntries([]),
 });

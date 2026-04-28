@@ -1,15 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" fill="none">
-  <rect width="480" height="270" rx="20" fill="#0F1823"/>
-  <rect x="24" y="24" width="432" height="222" rx="18" fill="url(#g1)" stroke="#73B5F4" stroke-opacity="0.45"/>
-  <rect x="54" y="58" width="140" height="154" rx="16" fill="#143046" fill-opacity="0.74"/>
-  <rect x="214" y="58" width="198" height="26" rx="13" fill="#D9F0FF" fill-opacity="0.16"/>
-  <rect x="214" y="98" width="170" height="14" rx="7" fill="#D9F0FF" fill-opacity="0.1"/>
-  <rect x="214" y="124" width="182" height="14" rx="7" fill="#D9F0FF" fill-opacity="0.1"/>
-  <rect x="214" y="156" width="124" height="40" rx="12" fill="#2D7FD1"/>
+  <rect width="480" height="270" rx="20" fill="#0C1521"/>
+  <rect x="24" y="24" width="432" height="222" rx="20" fill="url(#sky)" stroke="#8FD3FF" stroke-opacity="0.34"/>
+  <rect x="44" y="44" width="392" height="182" rx="24" fill="#A4DEFF" fill-opacity="0.06"/>
+  <rect x="62" y="62" width="158" height="146" rx="22" fill="#D5F2FF" fill-opacity="0.08" stroke="#C6EEFF" stroke-opacity="0.14"/>
+  <rect x="80" y="84" width="122" height="26" rx="13" fill="url(#plate)"/>
+  <rect x="248" y="74" width="148" height="54" rx="18" fill="url(#mark)" stroke="#D8F5FF" stroke-opacity="0.16"/>
+  <rect x="248" y="146" width="162" height="14" rx="7" fill="#E5F8FF" fill-opacity="0.14"/>
+  <rect x="248" y="170" width="174" height="14" rx="7" fill="#E5F8FF" fill-opacity="0.10"/>
+  <rect x="248" y="206" width="116" height="32" rx="16" fill="#3596E8" fill-opacity="0.62"/>
+  <rect x="376" y="206" width="76" height="32" rx="16" fill="#1F5A91" fill-opacity="0.46"/>
   <defs>
-    <linearGradient id="g1" x1="240" y1="24" x2="240" y2="246" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1A2D41"/>
-      <stop offset="1" stop-color="#101923"/>
+    <linearGradient id="sky" x1="240" y1="24" x2="240" y2="246" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#173049"/>
+      <stop offset="0.56" stop-color="#102131"/>
+      <stop offset="1" stop-color="#0B1620"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="80" y1="97" x2="202" y2="97" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFFFFF"/>
+      <stop offset="1" stop-color="#7EC9FF"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="248" y1="101" x2="396" y2="101" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F425F"/>
+      <stop offset="1" stop-color="#10283D"/>
     </linearGradient>
   </defs>
 </svg>

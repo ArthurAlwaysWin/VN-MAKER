@@ -21,7 +21,7 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 
 ## Phases
 
-- [ ] **Phase 83: 剧情系统契约与持久化护栏** - 冻结稳定 projectId、显式注册表、effect contract 与 save/profile 分层基础
+- [x] **Phase 83: 剧情系统契约与持久化护栏** - 冻结稳定 projectId、显式注册表、effect contract 与 save/profile 分层基础 (completed 2026-04-28)
 - [ ] **Phase 84: 变量注册表与条件分支 GUI** - 让作者能可视化管理变量、条件与跳转，而不是手写 key / scene ID
 - [ ] **Phase 85: 好感度预设与结局追踪** - 在变量系统之上补齐 route progression、ending registry 与 persistent ending unlock
 - [ ] **Phase 86: CG 图鉴与一致性验证闭环** - 完成 CG registry、显式解锁、最小 gallery 与 milestone 级兼容/导出闸门
@@ -112,7 +112,7 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 83. 剧情系统契约与持久化护栏 | 2/3 | In Progress|  |
+| 83. 剧情系统契约与持久化护栏 | 3/3 | Complete   | 2026-04-28 |
 | 84. 变量注册表与条件分支 GUI | 0/0 | Not started | - |
 | 85. 好感度预设与结局追踪 | 0/0 | Not started | - |
 | 86. CG 图鉴与一致性验证闭环 | 0/0 | Not started | - |

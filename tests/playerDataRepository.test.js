@@ -9,6 +9,7 @@ import {
 } from '../src/engine/PlayerDataRepository.js';
 import { ReadHistory } from '../src/engine/ReadHistory.js';
 import { SaveManager } from '../src/engine/SaveManager.js';
+import { ScriptEngine } from '../src/engine/ScriptEngine.js';
 import { WebSaveManager } from '../src/engine/WebSaveManager.js';
 
 function cloneJson(value) {
@@ -292,6 +293,64 @@ describe('player data runtime wiring', () => {
     expect(storage.calls.loadProfile).toEqual(['gm_runtime_story']);
     expect(storage.state.profiles.has('Mutable Title')).toBe(false);
     expect(storage.state.profiles.get('gm_runtime_story').readHistory.pages).toEqual(['start:1']);
+  });
+
+  it('unlock persistence flows through ScriptEngine choice effects into repository-backed profile truth', async () => {
+    vi.setSystemTime(1000);
+    const storage = createMemoryStorage();
+    const repository = new PlayerDataRepository('gm_unlocks', storage);
+    await repository.load();
+
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {},
+      scenes: {
+        start: {
+          name: 'Unlock Choice',
+          pages: [
+            {
+              type: 'choice',
+              prompt: 'Unlock it?',
+              options: [
+                {
+                  text: 'Yes',
+                  target: 'after',
+                  effects: [
+                    { type: 'unlock:ending', id: 'good_end' },
+                    { type: 'unlock:cg', id: 'cg_confession' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        after: {
+          name: 'After',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Done', voice: null }] }],
+        },
+      },
+    };
+    engine.setPlayerDataRepository(repository);
+    engine.startGame('start');
+    engine.selectChoice(0);
+    await Promise.resolve();
+
+    expect(storage.state.profiles.get('gm_unlocks').unlocks).toEqual({
+      endings: {
+        good_end: {
+          firstUnlockedAt: 1000,
+          lastUnlockedAt: 1000,
+          count: 1,
+        },
+      },
+      cg: {
+        cg_confession: {
+          firstUnlockedAt: 1000,
+          lastUnlockedAt: 1000,
+          count: 1,
+        },
+      },
+    });
   });
 
   it('save-slot, load-slot, delete-slot, and quicksave stay slot-only while reset and rebuild use the dedicated player-data IPC surface', async () => {

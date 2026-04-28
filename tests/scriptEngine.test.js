@@ -152,8 +152,15 @@ describe('selectChoice', () => {
               type: 'choice',
               prompt: 'Pick one',
               options: [
-                { text: 'Option A', target: 'sceneA', setVariable: { mood: 1 } },
-                { text: 'Option B', target: 'sceneB', setVariable: null },
+                {
+                  text: 'Option A',
+                  target: 'sceneA',
+                  effects: [
+                    { type: 'var:add', id: 'mood', value: 1 },
+                    { type: 'unlock:ending', id: 'good_end' },
+                  ],
+                },
+                { text: 'Option B', target: 'sceneB', setVariable: { mood: -2 } },
               ],
             },
           ],
@@ -189,8 +196,24 @@ describe('selectChoice', () => {
   it('applies setVariable on choice selection', () => {
     const engine = makeChoiceEngine();
     engine.startGame('start');
-    engine.selectChoice(0); // option A sets mood: 1
+    engine.selectChoice(1); // legacy option B sets mood: 0 - 2 = -2
+    strictEqual(engine.variables.get('mood'), -2);
+  });
+
+  it('executes canonical effects[] on choice selection and forwards unlocks through the injected repository seam', async () => {
+    const engine = makeChoiceEngine();
+    const unlockCalls = [];
+    engine.setPlayerDataRepository({
+      async unlockEnding(id) {
+        unlockCalls.push(id);
+      },
+    });
+    engine.startGame('start');
+    engine.selectChoice(0);
+
     strictEqual(engine.variables.get('mood'), 1);
+    await Promise.resolve();
+    deepStrictEqual(unlockCalls, ['good_end']);
   });
 
   it('accumulates variable values when the same choice is reached twice in a session', () => {
@@ -421,6 +444,35 @@ describe('getState / restoreState', () => {
     strictEqual(engine.pageIndex, 0);
     strictEqual(engine.dialogueIndex, 0);
     strictEqual(engine.variables.size, 0);
+  });
+
+  it('keeps restore and state snapshots tolerant when a player data repository is configured', () => {
+    const engine = makeEngine();
+    engine.setPlayerDataRepository({
+      async unlockEnding() {},
+      async unlockCg() {},
+    });
+    engine.restoreState({
+      currentScene: 'start',
+      pageIndex: 0,
+      dialogueIndex: 0,
+      variables: {
+        mood: 5,
+      },
+      history: [],
+      expressionState: {},
+    });
+
+    deepStrictEqual(engine.getState(), {
+      currentScene: 'start',
+      pageIndex: 0,
+      dialogueIndex: 0,
+      variables: {
+        mood: 5,
+      },
+      history: [],
+      expressionState: {},
+    });
   });
 });
 

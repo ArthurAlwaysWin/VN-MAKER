@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Galgame 标配系统补全
-status: defining_requirements
-stopped_at: Started milestone v1.7
-last_updated: "2026-04-28T19:05:00+10:00"
+status: roadmap_created
+stopped_at: Roadmap created; Phase 83 ready for planning
+last_updated: "2026-04-28T20:08:01.1253616+10:00"
 last_activity: 2026-04-28
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,20 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Milestone v1.7 — defining requirements
+**Current focus:** Milestone v1.7 — roadmap created, Phase 83 ready for planning
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 83 — 剧情系统契约与持久化护栏
 Plan: —
-Status: Defining requirements
-Next: write scoped requirements for v1.7
+Status: Roadmap created
+Next: /gsd-plan-phase 83
 Last activity: 2026-04-28
 
 ```
-v1.3 ████████████████████ 9/9 phases ✅ archived
 v1.4 ████████████████████ 10/10 phases ✅ archived
 v1.5 ████████████████████ 7/7 phases ✅ archived
+v1.6 ████████████████████ 5/5 phases ✅ archived
+v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (roadmap ready)
 ```
 
 ## Performance Metrics
@@ -57,6 +58,7 @@ v1.5 ████████████████████ 7/7 phases ✅
 | v1.3 | 9 | 21 | 27 ✅ |
 | v1.4 | 10 | 20 | 18 ✅ |
 | v1.5 | 7 | 16 | 17 ✅ |
+| v1.6 | 5 | 13 | 14 ✅ |
 | Phase 73-button-family-image-rollout P01 | 3min | 2 tasks | 5 files |
 | Phase 76 P01-02 | 35m | 4 tasks | 14 files |
 | Phase 77 P01 | 6 min | 4 tasks | 5 files |
@@ -126,6 +128,10 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 82]: Both final Phase 82 production themes stay on the shared built-in asset registry and canonical ui/themes/<id>/ install path.
 - [Phase 82-4]: Task 2 human review recorded approval with no follow-up code edits because the shared-pipeline build already met the final differentiation gate.
 - [Phase 82-4]: Phase 82 closes only after automated parity evidence and explicit human confirmation of the D-08 role mapping across all five shipped themes.
+- [Phase 83+]: v1.7 phase order is fixed as 83 contracts/persistence → 84 variable/branching GUI → 85 affection/endings → 86 CG/validation.
+- [Phase 83+]: Affection remains a tagged number-variable preset, not a separate runtime subsystem.
+- [Phase 83+]: Ending and CG progression must use explicit registries plus explicit unlock actions; v1.7 will not auto-detect unlocks from save state or asset usage.
+- [Phase 83+]: Save slots and persistent profile stay as separate truth sources; this contract is mandatory even if scope has to cut elsewhere.
 
 ### Blockers/Concerns
 
@@ -135,12 +141,13 @@ v1.5 ████████████████████ 7/7 phases ✅
 ## Session Continuity
 
 Last session: 2026-04-28T19:05:00+10:00
-Stopped at: Started milestone v1.7
+Stopped at: Roadmap created; Phase 83 ready for planning
 Resume file: None
 Resume hint: |
 
-  1. v1.7 方向已确认：Galgame 标配系统补全，主线是变量 / 好感度 / 结局追踪 / CG 鉴赏
-  2. 根目录当前没有活动中的 `REQUIREMENTS.md`；下一步需要先定义 v1.7 requirements，再生成 roadmap
-  3. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
+  1. v1.7 roadmap 已创建，Phase 83-86 顺序已冻结，下一步从 `/gsd-plan-phase 83` 开始
+  2. 先守住 stable projectId、effect contract、save/profile separation 与旧项目/旧存档兼容，再推进变量/结局/CG UI
+  3. 明确延期：flowchart、replay、BGM room、achievements、字符串变量 / 表达式语言、generic persistent vars、auto-detected unlocks、cloud sync
+  4. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: define v1.7 requirements
+Next action: /gsd-plan-phase 83

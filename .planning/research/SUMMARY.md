@@ -1,125 +1,193 @@
 # Project Research Summary
 
-**Project:** Galgame Maker — v1.5 UI 图片驱动体系  
-**Domain:** 图片驱动的 VN UI 主题化  
-**Researched:** 2026-04-22  
+**Project:** VN-MAKER — v1.7「Galgame 标配系统补全」  
+**Domain:** 变量/Flag、好感度预设、结局追踪、CG 鉴赏  
+**Researched:** 2026-04-28  
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v1.5 不是“重做 UI 引擎”，而是把现有 Electron + Vue + Pinia + DOM/CSS runtime 扩成一条完整的 **UI 图片资产通路**：项目内 `assets/ui/` 持有图片，编辑器用现有资产库与 iframe runtime 预览配置，运行时把图片应用到对话框、按钮、主要界面、光标与图标，导出链路再把这些资源完整带走。核心判断一致：**不加新依赖，不换渲染栈，只补 schema、runtime owner、预览消息和资产扫描。**
+v1.7 不该被做成“再塞几个逻辑字段”，而应被定义为：在现有 page-based runtime 和 `variables = new Map()` 基础上，补齐一套 **作者能看懂、运行时可验证、持久化不串档** 的剧情系统基础设施。研究结论高度一致：**变量系统是主轴，好感度只是变量预设，结局与 CG 必须走显式注册表 + 独立 persistent profile，不能靠 save slot 或运行时猜测。**
 
-本里程碑的正确切法是“固定槽位、可视化配置、真实预览、导出可用”。必须优先解决 shared contract、ThemeManager 扩面、DialogueBox/major screens 的图片层、以及 `scanAssets()` 对 UI 图片的覆盖；否则会出现编辑器能看、导出丢图，或 editor/runtime/schema 三套字段漂移的问题。
+本里程碑最稳的范围是：项目级变量注册表、页面内变量效果编辑、最小条件 GUI、ending registry + persistent unlock、CG registry + explicit unlock、以及对应的最小查看界面。最大风险不是功能点本身，而是把 run state、save state、persistent unlock state、editor authoring state 混在一起，导致旧项目/旧存档兼容性、解锁可信度和作者心智模型同时崩掉。
 
-最大风险不是实现不了，而是 **资产来源失控、预览与运行时分叉、覆盖面半完成**。缓解方式也很明确：所有图片只存项目相对路径；继续使用 runtime-backed iframe；先冻结按钮族/界面 coverage matrix；把“主题包重构、插件化、自由 selector、动画特效系统”明确留到后续版本。
+## Recommended v1.7 Scope
 
-## Key Findings
+### Must ship
 
-### Stack Additions
+1. **变量注册表**
+   - 项目级定义：`id` / 显示名 / 类型（bool、number）/ 默认值 / 分组 / 备注
+   - 页面和选项里使用变量选择器，不再依赖自由手输 key
+   - 最小运算集：`set` / `add` / `subtract` / `compare`
 
-- **新增 npm 依赖：无**
-- **新增栈迁移：无**
-- 需要的只是：
-  - 结构化 UI 图片 schema（theme / dialogue / screen chrome / cursor / icons）
-  - `ThemeManager` 扩展到更多 selector 与更多状态
-  - 小型图片预加载工具（内部模块即可）
-  - `scanAssets()` / export / themePackager 对 UI 图片路径的补齐
+2. **条件分支 GUI**
+   - 独立条件页
+   - 支持 `== != > >= < <=`
+   - 支持 1~3 条条件、全部满足/任一满足
+   - 跳转目标必须用场景选择器
 
-### Must-Have Feature Categories
+3. **好感度预设**
+   - 本质是带标签的 number 变量
+   - 提供快速创建、`+1/-1` 快捷入口、阈值检查建议
+   - 不引入单独 runtime 子系统
 
-1. **对话框图片化** — 主框图、名牌图、装饰层，且文本安全区不坏。  
-2. **主要按钮图片态扩面** — 覆盖 game menu、save/load、backlog、QAB、分页/标签、close 等按钮族。  
-3. **非标题主界面背景图与装饰层** — SaveLoad / Backlog / GameMenu / Settings 统一支持。  
-4. **主题光标与图标集** — 限定为 default/pointer cursor 与核心 action icon slots。  
-5. **编辑器图片资产管理 + 即时预览** — 必须走资产库、缩略图选择、runtime-backed iframe 预览。
+4. **结局注册表 + 持久化追踪**
+   - ending ID、标题、类型/分类、顺序、可选缩略图/说明
+   - `end` 或等效流程显式携带 `endingId`
+   - 持久化记录至少包含：是否解锁、首次到达时间、达成次数
 
-### Explicit Deferrals / Out of Scope
+5. **CG 注册表 + 显式解锁**
+   - CG item ID、标题、缩略图、锁定占位图、图片列表、顺序/分组
+   - 运行时通过 `unlock_cg(id)` 或等效 effect 解锁
+   - 玩家端最小图鉴：locked/unlocked + 简单查看器
 
-- 不引入 PixiJS / Canvas / WebGL / GSAP / icon font / 新预览框架
-- 不做 `.gmtheme` 格式升级或社区分享流
-- 不做任意 selector 注入、插件系统、通用 UI 组件注册
-- 不做 per-scene / per-page 主题切换
-- 不做动画装饰、视差、图片优化/压缩、编辑器内绘图工具
+6. **最小检查闭环**
+   - 引用计数/反向引用
+   - 重命名/删除安全检查
+   - 基础规则检查：未引用 ending、孤儿 CG、无兜底结局
 
-### Architecture Approach
+## Explicit Deferrals
 
-- **`ui.theme`**：放跨界面复用的按钮皮肤、cursor、icons  
-- **`ui.dialogueBox`**：新增 chrome/visuals，承载对话框图片层  
-- **`ui.<screen>.chrome`**：各 major screen 的背景图与 decorations  
-- **`ThemeManager`**：继续做统一 CSS skin 注入中心，不改成新引擎  
-- **iframe runtime preview**：继续做权威预览，不允许 editor-only 假预览
+- 不做流程图/分支图
+- 不做 replay scene system
+- 不做 BGM room
+- 不做成就系统
+- 不做通用 persistent variables
+- 不做字符串变量、表达式语言、复杂公式
+- 不做复杂 affection 公式、衰减、关系图
+- 不做自动识别 CG / 根据图片出现自动解锁
+- 不做复杂 gallery 分页、筛选、缩略图生成
+- 不做云同步/Steam 同步
 
-### Biggest Risks
+**If scope slips:** 先保 `变量系统 + 好感度预设 + 结局追踪`，CG 鉴赏 UI 可以后移，但 **save/profile contract 不能砍**。
 
-1. **资产来源混乱** — 文本路径、base64、项目资源并存；要求统一为 `assets/ui/` + 项目相对路径。  
-2. **导出漏图** — `scanAssets()` 目前覆盖不足；UI 图片扫描与 export 是本里程碑完成定义的一部分。  
-3. **预览/运行时分叉** — 对话框和按钮预览必须走真实 runtime owner。  
-4. **覆盖面半成品** — 必须先冻结按钮族与 screen coverage matrix，再按族验收。  
-5. **兼容性回退失守** — 所有图片字段都是可选增强；缺失时必须回退现有 CSS 外观。
+## Strongest Architectural Decisions
 
-## Implications for Roadmap
+1. **作者数据与玩家数据彻底分离**
+   - `script.json` 只存 definitions：variables / endings / gallery
+   - player progress 只存在 `profile + saves`
 
-### Recommended Build Order
+2. **引入稳定 `projectId/gameId`**
+   - 不能再用 title 作为 persistent key
+   - read history、ending unlock、CG unlock 都绑定稳定 ID
 
-**Phase 1 — Shared contract + export gate**  
-先统一 schema、slot registry、decor model、preview message、`scanAssets()` 框架。  
-交付：shared UI image contract、ThemeManager 状态扩面、UI asset scan registry。  
-避免：schema 漂移、导出漏图。
+3. **持久化分层**
+   - `save slot` = 当前跑团快照
+   - `profile` = 跨周目持久化进度（read history / endings / cg）
+   - 普通存档不作为 ending/CG 真相源
 
-**Phase 2 — Dialogue box first**  
-先做最显眼的主视觉区域，并把对话框预览切到真实 runtime。  
-交付：对话框主框图 / 名牌图 / 装饰层 / sample preview。  
-避免：本地假预览、文本区被图片破坏。
+4. **统一 effect DSL，而不是继续堆特例字段**
+   - 统一为 `var:set / var:add / var:sub / unlock:ending / unlock:cg`
+   - 取代单独的 `option.setVariable` 语义扩散
 
-**Phase 3 — Button family rollout**  
-以按钮族而非零散 selector 推进，统一 normal/hover/pressed，必要处加 selected/disabled。  
-交付：game-menu / save-load / backlog / QAB / tabs / close button 皮肤扩面。  
-避免：只做主按钮、次按钮漏掉。
+5. **显式注册、显式解锁**
+   - ending 用 canonical ID
+   - CG 用 registry item/group ID
+   - 绝不按图片路径、资源出现次数或 save 推断解锁
 
-**Phase 4 — Major screen chrome**  
-复用 screen config 与 decorations 思路，统一铺 SaveLoad / Backlog / GameMenu / Settings。  
-交付：每屏背景图 + decorations + 真实 screen preview。  
-避免：只做 SaveLoad 的 demo 化交付。
+## Strongest UX Decisions
 
-**Phase 5 — Cursor/icons + editor workflow polish**  
-最后收小而硬的 polish，并把资产管理、引用提示、导出回归补齐。  
-交付：cursor/icon slots、AssetPicker 接入、缺失资源预警、导出验证。  
-避免：小特性抢主线、图片路径继续靠手填。
+1. **新增顶层「剧情系统」工作区**
+   - 子区：变量 / 结局 / CG 图鉴
+   - 这些是项目级对象，不应全塞进页面 Inspector
 
-### Research Flags
+2. **页面只负责消费项目级定义**
+   - 选择页：附加变量变化
+   - 条件页：可视化条件 + 跳转
+   - 页面/场景：触发结局或 CG 解锁
 
-- **Likely needs deeper phase research:** Phase 1（shared schema / scan registry boundary）, Phase 5（themePackager 与引用校验收口）
-- **Standard patterns, can plan directly:** Phase 2-4（DOM image layers、CSS state skins、screen decorations、iframe preview 复用）
+3. **好感度只做“带标签数值变量”的编辑器糖层**
+   - 作者看到的是 `樱 +1 / 凛 -1`
+   - 不是一套新系统配置页面
+
+4. **自然语言摘要优先**
+   - 条件页、结局规则、CG 解锁规则都应显示为可读摘要
+   - 所有跳转显示场景名，内部再存 ID
+
+5. **就地创建与反向引用必须有**
+   - 在条件/选项里发现缺变量时可立即创建
+   - 变量、ending、CG 都要能查看引用位置和使用次数
+
+## Biggest Pitfalls
+
+1. **把 save state 和 persistent unlock state 混在一起**
+   - 后果：旧存档漂移、解锁丢失、删除存档影响收集进度
+   - 对策：独立 `profile`，`restoreState()` 对缺字段容错
+
+2. **继续沿用 title 作为持久化 key**
+   - 后果：改名即丢 read history / ending / CG
+   - 对策：新增稳定 `projectId`
+
+3. **编辑器 authoring flow 不闭环**
+   - 后果：runtime 有能力，但作者不会正确配置
+   - 对策：先做变量注册表、最小运算集、条件 builder，再上好感度糖层
+
+4. **试图自动推断 ending/CG**
+   - 后果：误判、漏判、资源重命名即失效
+   - 对策：endingId 和 CG unlock 都必须显式声明
+
+5. **把 v1.7 做成半个平台**
+   - 后果：变量、CG、BGM、成就、流程图一起膨胀，交付失焦
+   - 对策：坚持 cut line，只交付“变量/结局/CG 的可管理闭环”
+
+## Recommended Requirement Categories
+
+建议 requirements 直接按下面 6 类写，避免 roadmap 把“数据契约、编辑器、runtime、持久化、验证”拆散：
+
+1. **Data Contracts**
+   - `projectId`
+   - variable / ending / CG schema
+   - effect DSL
+   - save/profile separation rules
+
+2. **Variable Authoring**
+   - 变量注册表
+   - 类型/分组/默认值
+   - picker、就地创建、引用扫描
+
+3. **Branching Logic Authoring**
+   - 条件页 GUI
+   - 运算符范围
+   - scene picker
+   - 自然语言摘要
+
+4. **Affection + Ending Progression**
+   - affection preset
+   - ending registry
+   - ending unlock write path
+   - title/extras 最小 ending 展示
+
+5. **CG Gallery Progression**
+   - CG registry
+   - explicit unlock triggers
+   - locked/unlocked gallery viewer
+   - orphan/trigger validation
+
+6. **Compatibility, Persistence, Validation Gates**
+   - old project open
+   - old save load
+   - export parity
+   - rename/delete safety
+   - persistent separation
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | 基于仓库现状，结论明确为“无新依赖” |
-| Features | HIGH | 里程碑目标与 feature cut line 一致 |
-| Architecture | HIGH | 可复用主线清晰，改动集中 |
-| Pitfalls | HIGH | 主要来自仓库现状与既有缺口，风险具体 |
+| Systems scope | HIGH | 4 份研究对 cut line 高度一致 |
+| Architecture | HIGH | 直接基于当前 runtime/save/editor 结构 |
+| Authoring UX | MEDIUM | 方向明确，但具体工作区信息架构仍需设计收口 |
+| Pitfalls | HIGH | 多数来自现仓库真实缺口与兼容性约束 |
 
 **Overall confidence:** HIGH
 
-### Gaps to Address
-
-- 需要在 requirements 中先冻结 **按钮族 coverage matrix** 与 **screen slot 清单**
-- 需要明确旧 base64 / 旧路径字段的兼容读入与“重新选择后改写”为相对路径规则
-- 需要定义 editor 里哪些入口放在 Project Settings、哪些放在 screen sections，避免 UI 面板爆炸
-
 ## Sources
 
-- `.planning/research/STACK.md`
-- `.planning/research/FEATURES.md`
-- `.planning/research/ARCHITECTURE.md`
-- `.planning/research/PITFALLS.md`
-- `.planning/PROJECT.md`
+- `.planning/research/v1.7-systems.md`
+- `.planning/research/v1.7-architecture.md`
+- `.planning/research/v1.7-authoring-ux.md`
+- `.planning/research/v1.7-pitfalls.md`
 
 ---
-*Research completed: 2026-04-22*  
-*Ready for roadmap: yes*
-
-## Recommendation for Requirement Scoping
-
-把 v1.5 requirement 写成 **5 个固定能力包**：对话框图片化、按钮族图片态、major screen chrome、cursor/icon slots、编辑器资产管理与预览；每个 requirement 都必须同时写清 **配置槽位、runtime owner、预览入口、导出扫描、CSS fallback**，这样 roadmap 才不会把“能配”“能看”“能导出”拆成不闭环的半成品。
+*Research completed: 2026-04-28*  
+*Ready for requirements: yes*

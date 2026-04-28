@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
+import { BUILTIN_THEMES } from '../src/editor/builtinThemes.js';
 import { useScriptStore } from '../src/editor/stores/script.js';
 
 function makeScriptData() {
@@ -182,5 +183,31 @@ describe('script theme bundle apply flow', () => {
         },
       ],
     });
+  });
+
+  it('preserves project-owned titleScreen.bgm for every shipped built-in theme bundle', () => {
+    expect(BUILTIN_THEMES.map(theme => theme.id)).toEqual([
+      'default',
+      'wafuu',
+      'modern-sky',
+      'fantasy-dark',
+      'minimal-white',
+    ]);
+
+    for (const theme of BUILTIN_THEMES) {
+      const store = useScriptStore();
+      store.loadFromData(makeScriptData());
+      store.applyThemeBundle(theme.ui, {
+        source: 'builtin',
+        themeId: theme.id,
+        mode: 'full',
+        assetRoot: `ui/themes/${theme.id}/`,
+      });
+
+      expect(store.data.ui.titleScreen.bgm).toBe('audio/project-title.ogg');
+      expect(store.data.ui.titleScreen.background).toBe(theme.ui.titleScreen.background ?? null);
+      expect(store.data.ui.titleScreen.elements).toEqual(theme.ui.titleScreen.elements);
+      store.reset();
+    }
   });
 });

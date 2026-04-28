@@ -293,6 +293,54 @@ describe('theme browser service', () => {
     });
   });
 
+  it('reconstructs explicit preview and visual-signature metadata for the applied full package instead of falling back to synthetic browser hints', () => {
+    const items = buildThemeBrowserItems({
+      builtins: [],
+      importedEntries: [],
+      scriptData: {
+        ui: {
+          theme: {
+            packageMeta: {
+              source: 'file',
+              themeId: 'default',
+              mode: 'full',
+              assetRoot: 'ui/themes/default/',
+              preview: {
+                mode: 'asset',
+                src: '/builtin-themes/default/preview.svg',
+                background: '#151A22',
+                accent: '#B9C4DA',
+                text: '默认',
+                initials: '默认',
+              },
+              visualSignature: {
+                materialLanguage: '磨砂石墨面板、缎面冷灰描边与低饱和蓝灰高光',
+                contourLanguage: '克制的圆角矩形、稳定横向条带与均匀留白构成 polished neutral baseline',
+                styleDirection: 'polished neutral baseline',
+              },
+            },
+            tokens: {
+              primary: '#8593AD',
+            },
+          },
+        },
+      },
+    });
+
+    expect(items[0]).toMatchObject({
+      rawId: 'default',
+      source: 'imported',
+      lifecycle: 'applied',
+      preview: {
+        mode: 'asset',
+        src: '/builtin-themes/default/preview.svg',
+      },
+      visualSignature: {
+        styleDirection: 'polished neutral baseline',
+      },
+    });
+  });
+
   it('reflects explicit built-in coverage instead of assuming all built-ins are full themes', () => {
     const [item] = buildThemeBrowserItems({
       builtins: [

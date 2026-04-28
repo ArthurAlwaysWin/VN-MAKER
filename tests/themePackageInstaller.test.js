@@ -7,6 +7,8 @@ import path from 'node:path';
 import { zipSync, strToU8 } from 'fflate';
 
 import { installThemePackage } from '../electron/themePackageInstaller.js';
+import { getBuiltinThemeAssets } from '../src/editor/builtinThemeAssets.js';
+import { BUILTIN_THEMES } from '../src/editor/builtinThemes.js';
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -257,5 +259,38 @@ describe('theme package installer', () => {
         },
       ],
     });
+  });
+
+  it('covers the full shipped built-in roster and materializes each declared bundled asset set into the project namespace', async () => {
+    expect(BUILTIN_THEMES.map(theme => theme.id)).toEqual([
+      'default',
+      'wafuu',
+      'modern-sky',
+      'fantasy-dark',
+      'minimal-white',
+    ]);
+
+    for (const theme of BUILTIN_THEMES) {
+      const projectPath = await createProjectDir();
+      const result = await installThemePackage({
+        source: 'builtin',
+        themeId: theme.id,
+        projectPath,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.packageMeta).toEqual({
+        source: 'builtin',
+        themeId: theme.id,
+        mode: 'full',
+        assetRoot: `ui/themes/${theme.id}/`,
+      });
+
+      for (const asset of getBuiltinThemeAssets(theme.id)) {
+        await expect(
+          fs.readFile(path.join(projectPath, 'assets', ...asset.targetPath.split('/'))),
+        ).resolves.toBeInstanceOf(Uint8Array);
+      }
+    }
   });
 });

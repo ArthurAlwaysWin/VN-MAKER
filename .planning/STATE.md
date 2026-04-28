@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
 status: executing
-stopped_at: Completed 82-02-PLAN.md
-last_updated: "2026-04-28T04:47:03.934Z"
+stopped_at: Completed 82-03-PLAN.md
+last_updated: "2026-04-28T04:54:58.271Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 82 (剩余 4 套完整主题扩展) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Next: execute the 4 planned Phase 82 waves, starting with completeness hardening
 Last activity: 2026-04-28
@@ -67,6 +67,7 @@ v1.5 ████████████████████ 7/7 phases ✅
 | Phase 80 P02 | 8min | 2 tasks | 5 files |
 | Phase 82 P01 | 9 min | 2 tasks | 14 files |
 | Phase 82 P02 | 8 min | 2 tasks | 12 files |
+| Phase 82 P03 | 6 min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 82]: Default now ships as the polished neutral baseline by owning canonical dialogue, chrome, and title assets instead of behaving like an empty fallback.
 - [Phase 82]: Modern-sky expresses its airy glass-panel identity through slim-radii floating cards and shared canonical art refs instead of token-only recolors.
 - [Phase 82]: Both built-ins continue to install through the shared built-in asset registry so apply/export/browser behavior stays unified.
+- [Phase 82]: Fantasy-dark now differentiates through crest-led ceremonial chrome, parchment-plaque dialogue treatment, and canonical title/screen assets instead of recolored reuse.
+- [Phase 82]: Minimal-white now differentiates through typography-first paper layouts, thin-rule chrome, and quiet editorial buttons instead of a light-mode inversion of default.
+- [Phase 82]: Both final Phase 82 production themes stay on the shared built-in asset registry and canonical ui/themes/<id>/ install path.
 
 ### Blockers/Concerns
 
@@ -127,8 +131,8 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-28T04:47:03.928Z
-Stopped at: Completed 82-02-PLAN.md
+Last session: 2026-04-28T04:54:58.267Z
+Stopped at: Completed 82-03-PLAN.md
 Resume file: None
 Resume hint: |
 

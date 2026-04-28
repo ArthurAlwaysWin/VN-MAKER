@@ -13,8 +13,20 @@ function freezeEntries(entries = []) {
 export const BUILTIN_THEME_ASSETS = Object.freeze({
   default: freezeEntries([
     {
-      sourcePath: 'builtin-themes/default/chrome/frame.svg',
-      targetPath: 'ui/themes/default/chrome/frame.svg',
+      sourcePath: 'builtin-themes/default/dialogue-nameplate.svg',
+      targetPath: 'ui/themes/default/dialogue/nameplate.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/default/screen-chrome.svg',
+      targetPath: 'ui/themes/default/screens/chrome.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/default/title-background.svg',
+      targetPath: 'ui/themes/default/title/background.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/default/title-mark.svg',
+      targetPath: 'ui/themes/default/title/mark.svg',
     },
   ]),
   wafuu: freezeEntries([]),

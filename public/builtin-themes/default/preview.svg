@@ -1,15 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" fill="none">
-  <rect width="480" height="270" rx="20" fill="#1F2430"/>
-  <rect x="28" y="28" width="424" height="214" rx="16" fill="url(#g1)" stroke="#A7B4CF" stroke-opacity="0.5"/>
-  <rect x="58" y="62" width="148" height="118" rx="12" fill="#2B3242"/>
-  <rect x="228" y="68" width="194" height="20" rx="10" fill="#DDE5F2" fill-opacity="0.18"/>
-  <rect x="228" y="104" width="162" height="12" rx="6" fill="#DDE5F2" fill-opacity="0.12"/>
-  <rect x="228" y="126" width="178" height="12" rx="6" fill="#DDE5F2" fill-opacity="0.12"/>
-  <rect x="228" y="164" width="110" height="34" rx="10" fill="#6C7892"/>
+  <rect width="480" height="270" rx="20" fill="#151A22"/>
+  <rect x="22" y="22" width="436" height="226" rx="20" fill="url(#shell)" stroke="#BBC5DA" stroke-opacity="0.36"/>
+  <rect x="42" y="42" width="396" height="22" rx="11" fill="#CFD8E8" fill-opacity="0.08"/>
+  <rect x="42" y="80" width="170" height="112" rx="16" fill="#202735" stroke="#B9C4DA" stroke-opacity="0.18"/>
+  <rect x="58" y="98" width="94" height="26" rx="13" fill="#0F131A"/>
+  <rect x="62" y="102" width="86" height="18" rx="9" fill="url(#nameplate)"/>
+  <rect x="240" y="88" width="152" height="58" rx="18" fill="url(#mark)" stroke="#CFD8E8" stroke-opacity="0.18"/>
+  <rect x="240" y="162" width="168" height="14" rx="7" fill="#DFE6F2" fill-opacity="0.11"/>
+  <rect x="240" y="186" width="142" height="14" rx="7" fill="#DFE6F2" fill-opacity="0.08"/>
+  <rect x="240" y="214" width="108" height="34" rx="10" fill="#6D7A92"/>
+  <rect x="358" y="214" width="80" height="34" rx="10" fill="#394453"/>
   <defs>
-    <linearGradient id="g1" x1="240" y1="28" x2="240" y2="242" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2C3445"/>
-      <stop offset="1" stop-color="#171B24"/>
+    <linearGradient id="shell" x1="240" y1="22" x2="240" y2="248" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#252C3A"/>
+      <stop offset="1" stop-color="#121721"/>
+    </linearGradient>
+    <linearGradient id="nameplate" x1="62" y1="111" x2="148" y2="111" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0F4FB"/>
+      <stop offset="0.52" stop-color="#BAC6DA"/>
+      <stop offset="1" stop-color="#8896AE"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="240" y1="117" x2="392" y2="117" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2E3748"/>
+      <stop offset="1" stop-color="#1A212D"/>
     </linearGradient>
   </defs>
 </svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="220" viewBox="0 0 520 220" fill="none">
+  <rect x="18" y="24" width="484" height="172" rx="30" fill="#151B24" fill-opacity="0.72" stroke="#C7D1E2" stroke-opacity="0.22" stroke-width="2"/>
+  <rect x="54" y="54" width="412" height="24" rx="12" fill="#DDE5F2" fill-opacity="0.08"/>
+  <text x="260" y="126" fill="#F4F7FB" font-family="Segoe UI, sans-serif" font-size="54" font-weight="700" letter-spacing="16" text-anchor="middle">GM</text>
+  <text x="260" y="160" fill="#B9C4DA" font-family="Segoe UI, sans-serif" font-size="18" letter-spacing="8" text-anchor="middle">MAKER DEFAULT</text>
+</svg>

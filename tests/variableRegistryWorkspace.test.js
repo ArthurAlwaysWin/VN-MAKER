@@ -398,4 +398,29 @@ describe('variable registry workspace', () => {
 
     expect(harness.container.textContent).toContain('变量 ID 已存在，请改用未占用的 ID。');
   });
+
+  it('opens an impact modal before renaming an in-use variable id and applies the rewrite after confirm', async () => {
+    harness = await mountStorySystems();
+
+    const numberRow = harness.container.querySelectorAll('[data-test="variable-row"]')[1];
+    numberRow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    const idInput = harness.container.querySelector('[data-test="variable-id-input"]');
+    idInput.value = 'sakura_affection';
+    idInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushUi();
+
+    expect(harness.container.textContent).toContain('将同步更新 2 处引用，确认改为“sakura_affection”吗？');
+    expect(harness.container.textContent).toContain('开始 > 第 1 页 > 选项 1 > 效果 1');
+    expect(harness.container.textContent).toContain('开始 > 第 2 页 > 条件 2');
+
+    harness.container.querySelector('[data-test="impact-confirm"]')?.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+    }));
+    await flushUi();
+
+    expect(harness.script.data.systems.variables.sakura_affection).toBeTruthy();
+    expect(harness.container.textContent).toContain('sakura_affection');
+  });
 });

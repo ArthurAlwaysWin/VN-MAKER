@@ -41,6 +41,27 @@ function normalizeUnlockBucket(bucket) {
   return cloneJsonValue(bucket);
 }
 
+function normalizeUnlockRecord(record, unlockedAt) {
+  const existing = record && typeof record === 'object' && !Array.isArray(record)
+    ? record
+    : {};
+  const normalizedTimestamp = Number(unlockedAt);
+  const timestamp = Number.isFinite(normalizedTimestamp)
+    ? normalizedTimestamp
+    : Date.now();
+  const normalizedCount = Number(existing.count);
+
+  return {
+    firstUnlockedAt: Number.isFinite(Number(existing.firstUnlockedAt))
+      ? Number(existing.firstUnlockedAt)
+      : timestamp,
+    lastUnlockedAt: timestamp,
+    count: Number.isFinite(normalizedCount) && normalizedCount > 0
+      ? normalizedCount + 1
+      : 1,
+  };
+}
+
 export function createDefaultPlayerProfile(projectId) {
   return {
     version: PLAYER_PROFILE_VERSION,
@@ -248,6 +269,32 @@ export class PlayerDataRepository {
   async replaceReadHistoryPages(pages) {
     await this.load();
     this._profile.readHistory.pages = normalizePages(pages);
+    await this._storage.saveProfile(this.projectId, this._profile);
+    return this.getProfile();
+  }
+
+  async unlockEnding(endingId, unlockedAt = Date.now()) {
+    return this._unlock('endings', endingId, unlockedAt);
+  }
+
+  async unlockCg(cgId, unlockedAt = Date.now()) {
+    return this._unlock('cg', cgId, unlockedAt);
+  }
+
+  async _unlock(bucketName, entryId, unlockedAt = Date.now()) {
+    if (typeof entryId !== 'string' || !entryId.trim()) {
+      return this.getProfile();
+    }
+
+    if (!this._loaded) {
+      await this.load();
+    }
+
+    this._profile.unlocks[bucketName] ??= {};
+    this._profile.unlocks[bucketName][entryId] = normalizeUnlockRecord(
+      this._profile.unlocks[bucketName][entryId],
+      unlockedAt,
+    );
     await this._storage.saveProfile(this.projectId, this._profile);
     return this.getProfile();
   }

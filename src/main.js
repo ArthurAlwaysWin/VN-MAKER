@@ -1209,6 +1209,7 @@ async function init(env) {
       : createBrowserPlayerDataStorage({ saveManager });
     playerDataRepository = createPlayerDataRepositoryFromScript(engine.script, playerDataStorage);
     await playerDataRepository.load();
+    engine.setPlayerDataRepository(playerDataRepository);
     saveManager?.setPlayerDataRepository?.(playerDataRepository);
     readHistory = new ReadHistory(playerDataRepository);
 

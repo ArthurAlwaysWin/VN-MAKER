@@ -1,8 +1,33 @@
 import { defineStore } from 'pinia';
 import { ref, nextTick } from 'vue';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
+import { normalizeEffectContainer } from '../../shared/effectDsl.js';
 import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
+
+function normalizeChoiceEffects(scriptData) {
+  if (!scriptData?.scenes) {
+    return scriptData;
+  }
+
+  for (const scene of Object.values(scriptData.scenes)) {
+    if (!Array.isArray(scene?.pages)) {
+      continue;
+    }
+
+    for (const page of scene.pages) {
+      if (!page || page.type !== 'choice') {
+        continue;
+      }
+
+      page.options = Array.isArray(page.options)
+        ? page.options.map((option) => normalizeEffectContainer(option))
+        : [];
+    }
+  }
+
+  return scriptData;
+}
 
 export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
@@ -15,6 +40,7 @@ export const useScriptStore = defineStore('script', () => {
 
   function pushState() {
     if (!data.value) return;
+    normalizeChoiceEffects(data.value);
     const snapshot = JSON.parse(JSON.stringify(data.value));
     if (historyIndex.value < history.value.length - 1) {
       history.value = history.value.slice(0, historyIndex.value + 1);
@@ -46,7 +72,9 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function loadFromData(scriptData) {
-    data.value = ensureGalgameContract(migrateLegacyAppliedThemeData(scriptData).script);
+    data.value = normalizeChoiceEffects(
+      ensureGalgameContract(migrateLegacyAppliedThemeData(scriptData).script),
+    );
     history.value = [];
     historyIndex.value = -1;
     pushState();
@@ -263,8 +291,8 @@ export const useScriptStore = defineStore('script', () => {
       page.type = 'choice';
       page.prompt = '';
       page.options = [
-        { text: '', target: null, setVariable: null },
-        { text: '', target: null, setVariable: null },
+        { text: '', target: null, effects: [] },
+        { text: '', target: null, effects: [] },
       ];
     } else if (page.type === 'choice') {
       page.type = 'normal';

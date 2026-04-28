@@ -31,6 +31,7 @@ import {
   getPageCameraContract,
   getRuntimeTransitionType,
 } from '../shared/cinematicContract.js';
+import { applyEffects } from '../shared/effectDsl.js';
 
 export class ScriptEngine extends EventEmitter {
   constructor() {
@@ -72,6 +73,9 @@ export class ScriptEngine extends EventEmitter {
 
     /** @type {boolean} Preview mode — hides game menus when running inside editor iframe */
     this._previewMode = false;
+
+    /** @type {import('./PlayerDataRepository.js').PlayerDataRepository|null} */
+    this._playerDataRepository = null;
   }
 
   // ─── Loading ──────────────────────────────────────────────
@@ -146,13 +150,7 @@ export class ScriptEngine extends EventEmitter {
     const option = page.options[optionIndex];
     if (!option) return;
 
-    // Set variables from choice
-    if (option.setVariable) {
-      for (const [key, value] of Object.entries(option.setVariable)) {
-        const current = this.variables.get(key) || 0;
-        this.variables.set(key, current + value);
-      }
-    }
+    void this._applyOptionEffects(option);
 
     this.waiting = false;
 
@@ -162,6 +160,10 @@ export class ScriptEngine extends EventEmitter {
     } else {
       this._advancePage();
     }
+  }
+
+  setPlayerDataRepository(repository) {
+    this._playerDataRepository = repository ?? null;
   }
 
   // ─── Save / Restore state ────────────────────────────────
@@ -512,5 +514,16 @@ export class ScriptEngine extends EventEmitter {
   _execEnd() {
     this.ended = true;
     this.emit('end', {});
+  }
+
+  async _applyOptionEffects(option) {
+    try {
+      await applyEffects(option, {
+        variables: this.variables,
+        playerDataRepository: this._playerDataRepository,
+      });
+    } catch (error) {
+      console.error('[ScriptEngine] Failed to apply choice effects:', error);
+    }
   }
 }

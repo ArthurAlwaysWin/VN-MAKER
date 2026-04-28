@@ -234,6 +234,7 @@ export async function applyEffects(source = [], {
   playerDataRepository = null,
 } = {}) {
   const effects = normalizeEffects(source);
+  const persistenceWrites = [];
 
   for (const effect of effects) {
     switch (effect.type) {
@@ -248,17 +249,21 @@ export async function applyEffects(source = [], {
         break;
       case 'unlock:ending':
         if (typeof playerDataRepository?.unlockEnding === 'function') {
-          await playerDataRepository.unlockEnding(effect.id);
+          persistenceWrites.push(playerDataRepository.unlockEnding(effect.id));
         }
         break;
       case 'unlock:cg':
         if (typeof playerDataRepository?.unlockCg === 'function') {
-          await playerDataRepository.unlockCg(effect.id);
+          persistenceWrites.push(playerDataRepository.unlockCg(effect.id));
         }
         break;
       default:
         throw new Error(`Unsupported effect type: ${effect.type}`);
     }
+  }
+
+  if (persistenceWrites.length > 0) {
+    await Promise.all(persistenceWrites);
   }
 
   return {

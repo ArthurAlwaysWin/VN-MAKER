@@ -500,6 +500,10 @@ import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
 import {
+  getLegacySetVariableCompat,
+  setLegacySetVariableCompat,
+} from '../../../shared/effectDsl.js';
+import {
   CAMERA_INTENSITY_UI_OPTIONS,
   getCameraDirectionUiOptions,
   getCameraEffectUiOptions,
@@ -981,7 +985,7 @@ function setPrompt(text) {
 function addOption() {
   if (!page.value || page.value.type !== 'choice') return;
   if (!page.value.options) page.value.options = [];
-  page.value.options.push({ text: '', target: null, setVariable: null });
+  page.value.options.push({ text: '', target: null, effects: [] });
   script.pushState();
 }
 
@@ -1004,35 +1008,46 @@ function setOptionTarget(idx, target) {
 }
 
 function optionVarKey(opt) {
-  if (!opt.setVariable) return '';
-  const keys = Object.keys(opt.setVariable);
+  const compat = getLegacySetVariableCompat(opt);
+  if (!compat) return '';
+  const keys = Object.keys(compat);
   return keys.length > 0 ? keys[0] : '';
 }
 
 function optionVarValue(opt) {
-  if (!opt.setVariable) return '';
-  const keys = Object.keys(opt.setVariable);
-  return keys.length > 0 ? opt.setVariable[keys[0]] : '';
+  const compat = getLegacySetVariableCompat(opt);
+  if (!compat) return '';
+  const keys = Object.keys(compat);
+  return keys.length > 0 ? compat[keys[0]] : '';
+}
+
+function replaceOptionEffects(opt, variableId, value) {
+  const normalized = setLegacySetVariableCompat(opt, variableId, value);
+
+  for (const key of Object.keys(opt)) {
+    if (!(key in normalized)) {
+      delete opt[key];
+    }
+  }
+
+  Object.assign(opt, normalized);
 }
 
 function setOptionVarKey(idx, newKey) {
   if (!page.value?.options?.[idx]) return;
   const opt = page.value.options[idx];
-  const oldValue = opt.setVariable ? Object.values(opt.setVariable)[0] ?? 0 : 0;
-  if (newKey.trim()) {
-    opt.setVariable = { [newKey.trim()]: oldValue };
-  } else {
-    opt.setVariable = null;
-  }
+  const compat = getLegacySetVariableCompat(opt);
+  const oldValue = compat ? Object.values(compat)[0] ?? 0 : 0;
+  replaceOptionEffects(opt, newKey.trim(), oldValue);
   // Continuous typing — do NOT call pushState
 }
 
 function setOptionVarValue(idx, newVal) {
   if (!page.value?.options?.[idx]) return;
   const opt = page.value.options[idx];
-  const oldKey = opt.setVariable ? Object.keys(opt.setVariable)[0] : '';
+  const oldKey = optionVarKey(opt);
   if (oldKey) {
-    opt.setVariable = { [oldKey]: parseFloat(newVal) || 0 };
+    replaceOptionEffects(opt, oldKey, parseFloat(newVal) || 0);
     script.pushState();
   }
 }

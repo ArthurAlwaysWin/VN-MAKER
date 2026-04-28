@@ -91,9 +91,10 @@ describe('startGame', () => {
 
   it('logs error and does not throw for missing scene', () => {
     const engine = makeEngine();
-    // Should not throw — just log an error
+    // Should not throw — just log an error and fall back to the first scene.
     engine.startGame('nonexistent');
-    strictEqual(engine.waiting, false);
+    strictEqual(engine.currentScene, 'start');
+    strictEqual(engine.waiting, true);
   });
 });
 

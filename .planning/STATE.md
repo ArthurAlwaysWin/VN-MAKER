@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
-status: phase_planned
-stopped_at: Phase 84 planned; ready for execution
-last_updated: "2026-04-28T22:10:00+10:00"
+status: executing
+stopped_at: Completed 84-01-PLAN.md
+last_updated: "2026-04-28T12:53:12.493Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Milestone v1.7 — Phase 84 planned, ready for execution
+**Current focus:** Phase 84 — variable-registry-and-branching-gui
 
 ## Current Position
 
-Phase: 84 — 变量注册表与条件分支 GUI
-Plan: —
-Status: Planned
+Phase: 84 (variable-registry-and-branching-gui) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
 Next: /gsd-execute-phase 84
 Last activity: 2026-04-28
 
@@ -74,6 +74,7 @@ v1.7 ████░░░░░░░░░░░░░░ 1/4 phases (phase 83
 | Phase 83 P01 | 3m | 2 tasks | 4 files |
 | Phase 83 P02 | 5m | 2 tasks | 8 files |
 | Phase 83 P03 | 10m | 2 tasks | 9 files |
+| Phase 84 P01 | 4m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,8 @@ v1.7 ████░░░░░░░░░░░░░░ 1/4 phases (phase 83
 - [Phase 83]: Choice-side variable math and explicit unlock writes now share one shared effects[] executor instead of parallel runtime branches.
 - [Phase 83]: Legacy setVariable remains readable through compatibility helpers and UI shims, but editor normalization strips it from canonical saved data.
 - [Phase 83]: Unlock persistence stays behind PlayerDataRepository methods injected into ScriptEngine at runtime rather than hidden globals or slot payloads.
+- [Phase 84]: Runtime variable state now always seeds and restores through systems.variables via shared registry helpers.
+- [Phase 84]: Condition pages normalize to conditionMode + conditions[] + trueTarget/falseTarget at editor load/history and runtime execution, while legacy single-condition fields remain read-compatible.
 
 ### Blockers/Concerns
 
@@ -151,8 +154,8 @@ v1.7 ████░░░░░░░░░░░░░░ 1/4 phases (phase 83
 
 ## Session Continuity
 
-Last session: 2026-04-28T11:30:17.979Z
-Stopped at: Phase 84 planned; ready for execution
+Last session: 2026-04-28T12:53:12.487Z
+Stopped at: Completed 84-01-PLAN.md
 Resume file: None
 Resume hint: |
 

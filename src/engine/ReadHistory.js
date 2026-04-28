@@ -70,7 +70,9 @@ export class ReadHistory {
   /** @private Save read history to the repository profile */
   _save() {
     try {
-      void this._repository.replaceReadHistoryPages([...this._read]);
+      Promise.resolve(this._repository.replaceReadHistoryPages([...this._read])).catch((e) => {
+        console.warn('[ReadHistory] Failed to save:', e);
+      });
     } catch (e) {
       console.warn('[ReadHistory] Failed to save:', e);
     }

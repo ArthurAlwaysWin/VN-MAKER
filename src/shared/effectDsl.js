@@ -201,13 +201,15 @@ export function setLegacySetVariableCompat(container = {}, variableId, value) {
     })
     : [];
   const rebuiltEffects = [];
-  let inserted = false;
+  let replacedCompatEffect = false;
 
   for (const effect of normalized.effects ?? []) {
-    if (isVariableEffectType(effect.type)) {
-      if (!inserted) {
+    if (isLegacyVariableCompatEffect(effect)) {
+      if (!replacedCompatEffect) {
         rebuiltEffects.push(...nextVarEffects);
-        inserted = true;
+        replacedCompatEffect = true;
+      } else {
+        rebuiltEffects.push(effect);
       }
       continue;
     }
@@ -215,7 +217,7 @@ export function setLegacySetVariableCompat(container = {}, variableId, value) {
     rebuiltEffects.push(effect);
   }
 
-  if (!inserted) {
+  if (!replacedCompatEffect) {
     rebuiltEffects.push(...nextVarEffects);
   }
 

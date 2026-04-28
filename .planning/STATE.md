@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: ready_to_execute
-stopped_at: Phase 82 planned, ready to execute
-last_updated: "2026-04-28T14:00:02+10:00"
+status: executing
+stopped_at: Completed 82-01-PLAN.md
+last_updated: "2026-04-28T04:39:25.368Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 13
+  completed_plans: 10
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 ## Current Position
 
-Phase: 82
-Plan: Not started
+Phase: 82 (剩余 4 套完整主题扩展) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
 Next: execute the 4 planned Phase 82 waves, starting with completeness hardening
 Last activity: 2026-04-28
@@ -65,6 +65,7 @@ v1.5 ████████████████████ 7/7 phases ✅
 | Phase 78 P02 | 3min | 3 tasks | 7 files |
 | Phase 80 P01 | 3min | 2 tasks | 5 files |
 | Phase 80 P02 | 8min | 2 tasks | 5 files |
+| Phase 82 P01 | 9 min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,9 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 81]: Golden `wafuu` footer button coordinates are part of shipped baseline data, not runtime layout defaults.
 - [Phase 81]: Exported/fullscreen runtime keeps the existing 1280x720 coordinate space and scales the game container to the viewport instead of widening engine layout logic.
 - [Phase 81]: Legacy applied built-in `wafuu` data migrates on project load so approved fixes (simplified title text and latest footer layout) reach older projects without manual reapply.
+- [Phase 82]: Built-in theme truth now lives in explicit manifest coverage, preview, and visual-signature metadata instead of browser fallback.
+- [Phase 82]: Built-in bundled assets are declared in one registry and copied into assets/ui/themes/<id>/... before install returns.
+- [Phase 82]: Built-in preview metadata must resolve to real bundled preview SVGs so the static browser surface remains truthful.
 
 ### Blockers/Concerns
 
@@ -119,9 +123,9 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-28T14:00:02+10:00
-Stopped at: Phase 82 planned, ready to execute
-Resume file: .planning/phases/82-4/82-01-PLAN.md
+Last session: 2026-04-28T04:39:25.363Z
+Stopped at: Completed 82-01-PLAN.md
+Resume file: None
 Resume hint: |
 
   1. Phase 82 已产出 4 个执行计划：先做 completeness/built-in installer hardening，再分两批补齐剩余 4 套主题，最后做 5-theme parity + visual review closeout

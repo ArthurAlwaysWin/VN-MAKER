@@ -148,6 +148,43 @@ describe('theme package installer', () => {
     ).resolves.toBeInstanceOf(Uint8Array);
   });
 
+  it('copies declared built-in bundled files into the project namespace before reporting install success', async () => {
+    const projectPath = await createProjectDir();
+    const builtinSourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'gm-builtin-theme-source-'));
+    tempDirs.push(builtinSourceRoot);
+
+    const sourceRelativePath = path.join('builtin-themes', 'default', 'chrome', 'frame.svg');
+    const sourceAbsolutePath = path.join(builtinSourceRoot, sourceRelativePath);
+    await fs.mkdir(path.dirname(sourceAbsolutePath), { recursive: true });
+    await fs.writeFile(sourceAbsolutePath, new Uint8Array([9, 9, 9, 9]));
+
+    const result = await installThemePackage({
+      source: 'builtin',
+      themeId: 'default',
+      projectPath,
+      builtinThemeAssetRoot: builtinSourceRoot,
+      builtinThemeAssets: {
+        default: [
+          {
+            sourcePath: 'builtin-themes/default/chrome/frame.svg',
+            targetPath: 'ui/themes/default/chrome/frame.svg',
+          },
+        ],
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.packageMeta).toEqual({
+      source: 'builtin',
+      themeId: 'default',
+      mode: 'full',
+      assetRoot: 'ui/themes/default/',
+    });
+    await expect(
+      fs.readFile(path.join(projectPath, 'assets', 'ui', 'themes', 'default', 'chrome', 'frame.svg')),
+    ).resolves.toEqual(new Uint8Array([9, 9, 9, 9]));
+  });
+
   it('routes built-in themes through the same installed bundle shape without special-casing renderer apply', async () => {
     const projectPath = await createProjectDir();
 

@@ -7,6 +7,16 @@ import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
 import { normalizeVariableRegistry } from '../../shared/variableRegistry.js';
 
+const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
+
+function slugifyVariableId(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
 function normalizeChoiceEffects(scriptData) {
   if (!scriptData?.scenes) {
     return scriptData;
@@ -135,6 +145,87 @@ export const useScriptStore = defineStore('script', () => {
     selectedVariableId.value = typeof variableId === 'string' && variableId.trim()
       ? variableId.trim()
       : null;
+  }
+
+  function ensureVariableRegistryState() {
+    if (!data.value) {
+      return null;
+    }
+
+    data.value.systems ??= {};
+    data.value.systems.variables = normalizeVariableRegistry(data.value.systems.variables);
+    return data.value.systems.variables;
+  }
+
+  function createVariableDraft() {
+    const registry = ensureVariableRegistryState();
+    if (!registry) {
+      return null;
+    }
+
+    let index = 1;
+    let draftId = `${DRAFT_VARIABLE_PREFIX}${index}`;
+    while (registry[draftId]) {
+      index++;
+      draftId = `${DRAFT_VARIABLE_PREFIX}${index}`;
+    }
+
+    registry[draftId] = {
+      name: '',
+      type: 'bool',
+      initial: false,
+      group: '',
+      notes: '',
+    };
+    selectVariable(draftId);
+    pushState();
+    return draftId;
+  }
+
+  function updateVariableFields(variableId, changes = {}) {
+    const registry = ensureVariableRegistryState();
+    if (!registry || !registry[variableId]) {
+      return false;
+    }
+
+    registry[variableId] = normalizeVariableRegistry({
+      [variableId]: {
+        ...registry[variableId],
+        ...changes,
+      },
+    })[variableId];
+    pushState();
+    return true;
+  }
+
+  function renameVariable(variableId, nextVariableId, options = {}) {
+    const registry = ensureVariableRegistryState();
+    if (!registry || !registry[variableId]) {
+      return { success: false, error: 'missing-variable' };
+    }
+
+    const normalizedId = slugifyVariableId(nextVariableId);
+    if (!normalizedId) {
+      return { success: false, error: 'empty-id' };
+    }
+
+    if (normalizedId === variableId) {
+      return { success: true, variableId };
+    }
+
+    if (registry[normalizedId]) {
+      return { success: false, error: 'duplicate-id' };
+    }
+
+    registry[normalizedId] = registry[variableId];
+    delete registry[variableId];
+    selectVariable(normalizedId);
+    pushState();
+    return {
+      success: true,
+      variableId: normalizedId,
+      referencesUpdated: options.rewriteReferences === false ? 0 : 0,
+    };
   }
 
   function requestStorySystemsRepair(request = {}) {
@@ -534,6 +625,7 @@ export const useScriptStore = defineStore('script', () => {
     historyIndex, history,
     loadFromData, reset,
     selectVariable, requestStorySystemsRepair,
+    createVariableDraft, updateVariableFields, renameVariable,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,

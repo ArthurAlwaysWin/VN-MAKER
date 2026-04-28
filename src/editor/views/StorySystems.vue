@@ -24,31 +24,13 @@
         <p>{{ repairBanner }}</p>
       </div>
 
-      <div v-if="selectedVariable" class="detail-card">
-        <div class="detail-header">
-          <p class="eyebrow">剧情系统</p>
-          <h1>{{ selectedVariable.name }}</h1>
-          <p>{{ selectedVariable.id }}</p>
-        </div>
-        <dl class="detail-grid">
-          <div>
-            <dt>类型</dt>
-            <dd>{{ selectedVariable.typeLabel }}</dd>
-          </div>
-          <div>
-            <dt>默认值</dt>
-            <dd>{{ selectedVariable.defaultLabel }}</dd>
-          </div>
-          <div>
-            <dt>分组</dt>
-            <dd>{{ selectedVariable.group || '未分组' }}</dd>
-          </div>
-          <div>
-            <dt>引用</dt>
-            <dd>{{ selectedVariable.usageCount }} 处</dd>
-          </div>
-        </dl>
-      </div>
+      <VariableInspector
+        v-if="selectedVariable && selectedEntry"
+        :variable-id="selectedVariable.id"
+        :variable-entry="selectedEntry"
+        :usage-count="selectedVariable.usageCount"
+        :focus-token="inspectorFocusToken"
+      />
 
       <div v-else class="detail-card detail-placeholder">
         <p class="eyebrow">剧情系统</p>
@@ -62,11 +44,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import VariableRegistryList from '../components/story-systems/VariableRegistryList.vue';
+import VariableInspector from '../components/story-systems/VariableInspector.vue';
 import { useScriptStore } from '../stores/script.js';
 import { collectVariableReferences } from '../../shared/variableRegistry.js';
 
 const script = useScriptStore();
-
+const inspectorFocusToken = ref(0);
 const search = ref('');
 const typeFilter = ref('all');
 const groupFilter = ref('all');
@@ -143,6 +126,14 @@ const selectedVariable = computed(() => {
     || null;
 });
 
+const selectedEntry = computed(() => {
+  if (!script.selectedVariableId) {
+    return null;
+  }
+
+  return script.data?.systems?.variables?.[script.selectedVariableId] ?? null;
+});
+
 const repairBanner = computed(() => {
   if (script.storySystemsRepairRequest?.source === 'missing-variable-reference' && selectedVariable.value) {
     return `已定位到变量“${selectedVariable.value.name}”，请检查它的引用并完成修复。`;
@@ -158,8 +149,9 @@ function clearFilters() {
 }
 
 function onCreateVariable() {
-  if (allVariables.value[0]) {
-    script.selectVariable(allVariables.value[0].id);
+  const variableId = script.createVariableDraft();
+  if (variableId) {
+    inspectorFocusToken.value++;
   }
 }
 
@@ -218,14 +210,12 @@ watch(allVariables, (items) => {
 }
 
 .repair-banner p,
-.detail-header p,
 .detail-placeholder p {
   margin: 0;
   color: #9b9b9b;
   line-height: 1.6;
 }
 
-.detail-header h1,
 .detail-placeholder h1 {
   margin: 8px 0;
   color: #fff;
@@ -237,24 +227,6 @@ watch(allVariables, (items) => {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin: 24px 0 0;
-}
-
-.detail-grid dt {
-  margin-bottom: 6px;
-  color: #8e8e8e;
-  font-size: 12px;
-}
-
-.detail-grid dd {
-  margin: 0;
-  color: #f0f0f0;
 }
 
 .detail-placeholder {

@@ -3,8 +3,10 @@ import { deepStrictEqual, rejects, strictEqual, throws } from 'node:assert/stric
 
 import {
   applyEffects,
+  getLegacySetVariableCompat,
   normalizeEffectContainer,
   normalizeEffects,
+  setLegacySetVariableCompat,
 } from '../src/shared/effectDsl.js';
 
 describe('effect DSL', () => {
@@ -96,5 +98,29 @@ describe('effect DSL', () => {
       'ending:good_end',
       'cg:cg_confession',
     ]);
+  });
+
+  it('preserves unsupported effects when legacy variable compat edits rewrite the visible variable pair', () => {
+    const option = {
+      text: 'Option A',
+      effects: [
+        { type: 'var:add', id: 'mood', value: 1 },
+        { type: 'unlock:ending', id: 'good_end' },
+        { type: 'var:sub', id: 'stress', value: 2 },
+      ],
+    };
+
+    deepStrictEqual(getLegacySetVariableCompat(option), { mood: 1 });
+    deepStrictEqual(
+      setLegacySetVariableCompat(option, 'mood', 5),
+      {
+        text: 'Option A',
+        effects: [
+          { type: 'var:add', id: 'mood', value: 5 },
+          { type: 'unlock:ending', id: 'good_end' },
+          { type: 'var:sub', id: 'stress', value: 2 },
+        ],
+      },
+    );
   });
 });

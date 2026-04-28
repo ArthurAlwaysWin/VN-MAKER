@@ -295,6 +295,30 @@ describe('player data runtime wiring', () => {
     expect(storage.state.profiles.get('gm_runtime_story').readHistory.pages).toEqual(['start:1']);
   });
 
+  it('read history save attaches rejection handling when profile persistence fails', async () => {
+    const replaceReadHistoryPages = vi.fn().mockRejectedValue(new Error('disk full'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const repository = {
+      getProfile() {
+        return {
+          readHistory: {
+            pages: [],
+          },
+        };
+      },
+      replaceReadHistoryPages,
+    };
+    const readHistory = new ReadHistory(repository);
+
+    readHistory.markRead('start', 2);
+    await vi.runAllTimersAsync();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceReadHistoryPages).toHaveBeenCalledWith(['start:2']);
+    expect(warnSpy).toHaveBeenCalledWith('[ReadHistory] Failed to save:', expect.any(Error));
+  });
+
   it('unlock persistence flows through ScriptEngine choice effects into repository-backed profile truth', async () => {
     vi.setSystemTime(1000);
     const storage = createMemoryStorage();

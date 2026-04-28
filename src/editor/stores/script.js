@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, nextTick } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import { normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 import { normalizeEffectContainer } from '../../shared/effectDsl.js';
@@ -49,10 +49,37 @@ export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
   const isLoading = ref(false);
   const _skipWatch = ref(false);
+  const selectedVariableId = ref(null);
+  const storySystemsRepairRequest = ref(null);
 
   // Undo/Redo history
   const history = ref([]);
   const historyIndex = ref(-1);
+  const conditionPageIssues = computed(() => {
+    const issues = [];
+    if (!data.value?.scenes) {
+      return issues;
+    }
+
+    for (const [sceneId, scene] of Object.entries(data.value.scenes)) {
+      (scene.pages || []).forEach((page, pageIndex) => {
+        if (page?.type !== 'condition' || !page?.unresolvedCondition) {
+          return;
+        }
+
+        issues.push({
+          sceneId,
+          sceneName: scene.name || sceneId,
+          pageIndex,
+          variableId: page.unresolvedCondition.variableId ?? null,
+          message: `条件页“${scene.name || sceneId} / 第 ${pageIndex + 1} 页”仍需修复后才能保存。`,
+        });
+      });
+    }
+
+    return issues;
+  });
+  const canSaveConditionPages = computed(() => conditionPageIssues.value.length === 0);
 
   function pushState() {
     if (!data.value) return;
@@ -100,6 +127,27 @@ export const useScriptStore = defineStore('script', () => {
     data.value = null;
     history.value = [];
     historyIndex.value = -1;
+    selectedVariableId.value = null;
+    storySystemsRepairRequest.value = null;
+  }
+
+  function selectVariable(variableId) {
+    selectedVariableId.value = typeof variableId === 'string' && variableId.trim()
+      ? variableId.trim()
+      : null;
+  }
+
+  function requestStorySystemsRepair(request = {}) {
+    storySystemsRepairRequest.value = {
+      nonce: Date.now() + Math.random(),
+      source: request.source || null,
+      variableId: request.variableId || null,
+      issueId: request.issueId || null,
+    };
+
+    if (request.variableId) {
+      selectVariable(request.variableId);
+    }
   }
 
   /** Get or initialize the ui.settingsScreen section */
@@ -480,9 +528,12 @@ export const useScriptStore = defineStore('script', () => {
 
   return {
     data, isLoading, _skipWatch,
+    selectedVariableId, storySystemsRepairRequest,
+    conditionPageIssues, canSaveConditionPages,
     pushState, undo, redo,
     historyIndex, history,
     loadFromData, reset,
+    selectVariable, requestStorySystemsRepair,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,

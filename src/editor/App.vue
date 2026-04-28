@@ -59,6 +59,7 @@ import CreateProjectWizard from './views/CreateProjectWizard.vue';
 import CreateProjectQuick from './views/CreateProjectQuick.vue';
 import TabBar from './components/TabBar.vue';
 import PageEditor from './views/PageEditor.vue';
+import StorySystems from './views/StorySystems.vue';
 import TitleDesigner from './views/TitleDesigner.vue';
 import SettingsPageEditor from './views/SettingsPageEditor.vue';
 import GameMenuEditor from './views/GameMenuEditor.vue';
@@ -79,6 +80,7 @@ const showQuickCreate = ref(false);
 
 const tabs = [
   { id: 'scenes', icon: '🎬', label: '游戏内容' },
+  { id: 'story-systems', icon: '📊', label: '剧情系统' },
   { id: 'title', icon: '🖼️', label: '标题页' },
   { id: 'settings-page', icon: '⚙️', label: '设置页' },
   { id: 'game-menu', icon: '🎮', label: '游戏菜单' },
@@ -90,6 +92,7 @@ const tabs = [
 
 const tabComponents = {
   'scenes': markRaw(PageEditor),
+  'story-systems': markRaw(StorySystems),
   'title': markRaw(TitleDesigner),
   'settings-page': markRaw(SettingsPageEditor),
   'game-menu': markRaw(GameMenuEditor),
@@ -117,10 +120,18 @@ watch(() => script.data, () => {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     if (script.data && project.projectPath) {
-      project.saveProject(script.data);
+      void attemptSave({ silent: true, source: 'autosave' });
     }
   }, 2000);
 }, { deep: true });
+
+watch(() => script.storySystemsRepairRequest?.nonce, (nonce) => {
+  if (!nonce || currentView.value !== 'editing') {
+    return;
+  }
+
+  activeTab.value = 'story-systems';
+});
 
 // --- Keyboard Shortcuts ---
 function onKeyDown(e) {
@@ -135,7 +146,7 @@ function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
     if (project.projectPath && script.data) {
-      project.saveProject(script.data);
+      void attemptSave({ source: 'shortcut' });
     }
   }
 }
@@ -145,7 +156,9 @@ onMounted(async () => {
   await project.loadRecentProjects();
   // Expose for Electron close handler
   window.__hasDirtyProject = () => project.isDirty && !!script.data;
-  window.__saveCurrentProject = () => script.data ? project.saveProject(script.data) : Promise.resolve();
+  window.__saveCurrentProject = () => script.data
+    ? attemptSave({ source: 'electron-close' })
+    : Promise.resolve(false);
 });
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeyDown);
@@ -211,7 +224,7 @@ async function goHome() {
     const action = await window.ipcRenderer.invoke('show-save-dialog');
     if (action === 'cancel') return;
     if (action === 'save') {
-      const saved = await project.saveProject(script.data);
+      const saved = await attemptSave({ source: 'go-home' });
       if (!saved) return;
     }
   }
@@ -229,9 +242,32 @@ function openPreview() {
   }
 }
 
+async function attemptSave({ silent = false, source = 'manual' } = {}) {
+  if (!project.projectPath || !script.data) {
+    return false;
+  }
+
+  if (!script.canSaveConditionPages) {
+    script.requestStorySystemsRepair({
+      source,
+      issueId: script.conditionPageIssues[0]?.sceneId || 'condition-save-gate',
+      variableId: script.conditionPageIssues[0]?.variableId || script.selectedVariableId,
+    });
+    activeTab.value = 'story-systems';
+
+    if (!silent) {
+      alert('无法保存剧情系统设置，请检查变量 ID 是否重复、引用对象是否仍存在，然后重试。');
+    }
+
+    return false;
+  }
+
+  return project.saveProject(script.data);
+}
+
 function manualSave() {
   if (project.projectPath && script.data) {
-    project.saveProject(script.data);
+    void attemptSave();
   }
 }
 </script>

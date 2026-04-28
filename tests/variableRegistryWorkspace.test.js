@@ -212,6 +212,7 @@ async function mountApp(scriptData = makeScriptData()) {
     bubbles: true,
   }));
   await flushUi();
+  await flushUi();
 
   return {
     app,

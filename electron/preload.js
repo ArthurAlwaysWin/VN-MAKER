@@ -8,9 +8,10 @@ const ALLOWED_CHANNELS = [
   'get-recent-projects', 'update-recent-projects',
   'save-slot', 'load-slot', 'delete-slot', 'list-saves',
   'save-quickslot', 'load-quickslot',
+  'load-player-profile', 'save-player-profile', 'reset-player-data', 'rebuild-player-data',
   'capture-screenshot', 'migrate-legacy-saves',
   'set-window-mode', 'show-save-dialog', 'dialog-open-directory',
-  'open-preview', 'export-theme', 'import-theme', 'preflight-theme-package',
+  'open-preview', 'export-gmtheme', 'import-theme', 'preflight-theme-package', 'install-theme-package',
   'export-game', 'export-game-desktop', 'export-progress',
   'open-folder', 'dialog-open-file', 'read-file-base64',
 ];

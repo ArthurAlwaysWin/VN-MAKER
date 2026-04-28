@@ -9,6 +9,11 @@ import { ScriptEngine } from './engine/ScriptEngine.js';
 import { AudioManager } from './engine/AudioManager.js';
 import { SaveManager } from './engine/SaveManager.js';
 import { ConfigManager } from './engine/ConfigManager.js';
+import {
+  createBrowserPlayerDataStorage,
+  createIpcPlayerDataStorage,
+  createPlayerDataRepositoryFromScript,
+} from './engine/PlayerDataRepository.js';
 import { ReadHistory } from './engine/ReadHistory.js';
 import { applyTheme, applyNineSlice, applyButtonFamilies, applyScreenBackgrounds, applyCursors } from './engine/ThemeManager.js';
 import { detectEnvironment, ENV, BASE_PATH, SCRIPT_PATH, _capturedStartMsg } from './engine/assetPath.js';
@@ -95,6 +100,7 @@ let pageTransitionToken = 0;
 let backgroundTransitionPending = false;
 let activeEffectPreview = null;
 let previewRestorePending = false;
+let playerDataRepository = null;
 
 // ─── Toast notifications (D-11, D-12) ──────────────────
 let currentToast = null;
@@ -1187,20 +1193,24 @@ async function bootstrap() {
   if (env === 'preview') {
     initPreview();
   } else {
-    init();
+    init(env);
   }
 }
 
 // ─── Initialize ─────────────────────────────────────────
-async function init() {
+async function init(env) {
   console.log('[GalgameMaker] Initializing...');
 
   try {
     await engine.load(SCRIPT_PATH);
 
-    // ReadHistory — cross-save shared read tracking (D-03, D-12)
-    // Use optional chaining — script.json may not have a meta section (HIST-02)
-    readHistory = new ReadHistory(engine.script.meta?.title || 'untitled');
+    const playerDataStorage = env === 'electron' || env === 'desktop'
+      ? createIpcPlayerDataStorage(window.ipcRenderer)
+      : createBrowserPlayerDataStorage({ saveManager });
+    playerDataRepository = createPlayerDataRepositoryFromScript(engine.script, playerDataStorage);
+    await playerDataRepository.load();
+    saveManager?.setPlayerDataRepository?.(playerDataRepository);
+    readHistory = new ReadHistory(playerDataRepository);
 
     // Load custom fonts before any rendering (INFRA-02)
     if (engine.script.assets?.fonts?.length) {

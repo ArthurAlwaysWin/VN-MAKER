@@ -7,6 +7,7 @@
 import { GALGAME_RESET_SCOPES } from '../shared/galgameContract.js';
 
 export const PLAYER_PROFILE_VERSION = 1;
+export const PLAYER_PROFILE_STORAGE_PREFIX = 'playerProfile:';
 
 function cloneJsonValue(value) {
   return JSON.parse(JSON.stringify(value));
@@ -77,6 +78,87 @@ function defaultStorage() {
       return { success: true };
     },
     async reset() {
+      return { success: true };
+    },
+    async rebuild() {
+      return { success: true };
+    },
+  };
+}
+
+function getProfileStorageKey(projectId) {
+  return `${PLAYER_PROFILE_STORAGE_PREFIX}${projectId}`;
+}
+
+function resolveProjectId(scriptData) {
+  const projectId = scriptData?.projectId;
+  if (typeof projectId === 'string' && projectId.trim()) {
+    return projectId;
+  }
+
+  throw new Error('PlayerDataRepository requires a stable script.projectId');
+}
+
+export function createPlayerDataRepositoryFromScript(scriptData, storage) {
+  return new PlayerDataRepository(resolveProjectId(scriptData), storage);
+}
+
+export function createIpcPlayerDataStorage(ipcRenderer = globalThis.window?.ipcRenderer) {
+  return {
+    async loadProfile(projectId) {
+      const result = await ipcRenderer.invoke('load-player-profile', { projectId });
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load player profile');
+      }
+      return result.data ?? null;
+    },
+    async saveProfile(projectId, profile) {
+      const result = await ipcRenderer.invoke('save-player-profile', {
+        projectId,
+        profile: cloneJsonValue(profile),
+      });
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save player profile');
+      }
+      return result;
+    },
+    async reset(scope, projectId) {
+      const result = await ipcRenderer.invoke('reset-player-data', { scope, projectId });
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to reset player data');
+      }
+      return result;
+    },
+    async rebuild(projectId) {
+      const result = await ipcRenderer.invoke('rebuild-player-data', { projectId });
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to rebuild player data');
+      }
+      return result;
+    },
+  };
+}
+
+export function createBrowserPlayerDataStorage({
+  localStorage = globalThis.localStorage,
+  saveManager = null,
+} = {}) {
+  return {
+    async loadProfile(projectId) {
+      const raw = localStorage?.getItem?.(getProfileStorageKey(projectId));
+      return raw ? JSON.parse(raw) : null;
+    },
+    async saveProfile(projectId, profile) {
+      localStorage?.setItem?.(getProfileStorageKey(projectId), JSON.stringify(profile, null, 2));
+      return { success: true };
+    },
+    async reset(scope, projectId) {
+      if (scope === GALGAME_RESET_SCOPES.PROFILE || scope === GALGAME_RESET_SCOPES.ALL) {
+        localStorage?.removeItem?.(getProfileStorageKey(projectId));
+      }
+      if (scope === GALGAME_RESET_SCOPES.SAVES || scope === GALGAME_RESET_SCOPES.ALL) {
+        await saveManager?._clearAllSaves?.();
+      }
       return { success: true };
     },
     async rebuild() {
@@ -158,6 +240,15 @@ export class PlayerDataRepository {
 
   async rebuild() {
     await this._storage.rebuild(this.projectId);
-    return this.load(true);
+    await this.load(true);
+    await this._storage.saveProfile(this.projectId, this._profile);
+    return this.getProfile();
+  }
+
+  async replaceReadHistoryPages(pages) {
+    await this.load();
+    this._profile.readHistory.pages = normalizePages(pages);
+    await this._storage.saveProfile(this.projectId, this._profile);
+    return this.getProfile();
   }
 }

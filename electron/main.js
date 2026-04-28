@@ -9,6 +9,10 @@ import { exportDesktop } from './exportDesktop.js';
 import { preflightThemePackage } from './themePackagePreflight.js';
 import { installThemePackage } from './themePackageInstaller.js';
 import { exportThemePackage } from './themePackageExporter.js';
+import {
+  createDefaultPlayerProfile,
+  normalizePlayerProfile,
+} from '../src/engine/PlayerDataRepository.js';
 import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 
@@ -105,6 +109,77 @@ async function uniqueFilename(dir, originalName) {
 
 function defaultScript() {
   return createDefaultGalgameScript();
+}
+
+function getPlayerDataDir(projectPath = currentProjectPath) {
+  return path.join(projectPath, 'player-data');
+}
+
+function getPlayerProfilePath(projectPath = currentProjectPath) {
+  return path.join(getPlayerDataDir(projectPath), 'profile.json');
+}
+
+async function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function writeJsonAtomic(filePath, data) {
+  await atomicWrite(filePath, JSON.stringify(data, null, 2));
+}
+
+async function ensurePlayerProfile(projectId, projectPath = currentProjectPath) {
+  const playerDataDir = getPlayerDataDir(projectPath);
+  await fs.mkdir(playerDataDir, { recursive: true });
+  const profilePath = getPlayerProfilePath(projectPath);
+  const existingProfile = await readJsonIfExists(profilePath);
+  const normalizedProfile = normalizePlayerProfile(projectId, existingProfile);
+
+  if (JSON.stringify(existingProfile) !== JSON.stringify(normalizedProfile)) {
+    await writeJsonAtomic(profilePath, normalizedProfile);
+  }
+
+  return normalizedProfile;
+}
+
+async function resetSaveArtifacts(projectPath = currentProjectPath) {
+  const savesDir = path.join(projectPath, 'saves');
+  await fs.mkdir(savesDir, { recursive: true });
+  const files = await fs.readdir(savesDir);
+
+  await Promise.all(files.map(async (file) => {
+    if (
+      /^slot_\d{3}\.(json|jpg)$/.test(file)
+      || file === 'quicksave.json'
+      || file === 'quicksave.jpg'
+      || file === '.migrated'
+    ) {
+      await fs.unlink(path.join(savesDir, file)).catch(() => {});
+    }
+  }));
+}
+
+async function rebuildPlayerData(projectId, projectPath = currentProjectPath) {
+  const scriptPath = path.join(projectPath, 'script.json');
+  const rawScript = await readJsonIfExists(scriptPath);
+  const normalizedScript = ensureGalgameContract(rawScript ?? defaultScript());
+
+  if (JSON.stringify(rawScript) !== JSON.stringify(normalizedScript)) {
+    await writeJsonAtomic(scriptPath, normalizedScript);
+  }
+
+  const resolvedProjectId = projectId || normalizedScript.projectId;
+  const profile = await ensurePlayerProfile(resolvedProjectId, projectPath);
+  return {
+    script: normalizedScript,
+    profile,
+  };
 }
 
 // --- IPC Handlers ---
@@ -248,13 +323,14 @@ ipcMain.handle('load-project', async (event, projectPath) => {
     currentProjectPath = projectPath;
 
     // D-08: Auto-create fonts/ directory for legacy projects
-    await fs.mkdir(path.join(projectPath, 'assets', 'fonts'), { recursive: true });
+     await fs.mkdir(path.join(projectPath, 'assets', 'fonts'), { recursive: true });
 
-    // SAVE-08: Auto-create saves/ directory on project open
-    await fs.mkdir(path.join(projectPath, 'saves'), { recursive: true });
+     // SAVE-08: Auto-create saves/ directory on project open
+     await fs.mkdir(path.join(projectPath, 'saves'), { recursive: true });
+     await fs.mkdir(getPlayerDataDir(projectPath), { recursive: true });
 
-    await addToRecent(projectPath, projectData.name);
-    return { success: true, project: projectData, script: scriptData, path: projectPath };
+     await addToRecent(projectPath, projectData.name);
+     return { success: true, project: projectData, script: scriptData, path: projectPath };
   } catch (e) {
     console.error('Failed to load project:', e);
     return { success: false, error: e.message };
@@ -524,6 +600,37 @@ ipcMain.handle('close-project', () => {
 
 // ─── Save System IPC ──────────────────────────────────────────────────
 
+ipcMain.handle('load-player-profile', async (event, { projectId }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const profilePath = getPlayerProfilePath();
+    if (!isInsideProject(profilePath)) return { success: false, error: 'Invalid path' };
+    const profile = await readJsonIfExists(profilePath);
+    if (!profile) {
+      return { success: true, data: null };
+    }
+    return { success: true, data: normalizePlayerProfile(projectId || profile.projectId, profile) };
+  } catch (e) {
+    console.error('[load-player-profile] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('save-player-profile', async (event, { projectId, profile }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const profilePath = getPlayerProfilePath();
+    if (!isInsideProject(profilePath)) return { success: false, error: 'Invalid path' };
+    await fs.mkdir(getPlayerDataDir(), { recursive: true });
+    const normalizedProfile = normalizePlayerProfile(projectId, profile);
+    await writeJsonAtomic(profilePath, normalizedProfile);
+    return { success: true, data: normalizedProfile };
+  } catch (e) {
+    console.error('[save-player-profile] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('save-slot', async (event, { slot, state, previewText, thumbnail }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
@@ -707,6 +814,48 @@ ipcMain.handle('migrate-legacy-saves', async (event, { saves }) => {
     return { success: true, migrated: count };
   } catch (e) {
     console.error('[migrate-legacy-saves] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('reset-player-data', async (event, { scope, projectId }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    if (scope === 'contract') {
+      const rebuilt = await rebuildPlayerData(projectId, currentProjectPath);
+      return { success: true, data: rebuilt };
+    }
+
+    if (scope === 'profile' || scope === 'all') {
+      const profilePath = getPlayerProfilePath();
+      if (!isInsideProject(profilePath)) return { success: false, error: 'Invalid path' };
+      await fs.unlink(profilePath).catch(() => {});
+    }
+
+    if (scope === 'saves' || scope === 'all') {
+      await resetSaveArtifacts(currentProjectPath);
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.error('[reset-player-data] Failed:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('rebuild-player-data', async (event, { projectId }) => {
+  try {
+    if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    const rebuilt = await rebuildPlayerData(projectId, currentProjectPath);
+    return {
+      success: true,
+      data: {
+        projectId: rebuilt.script.projectId,
+        profile: rebuilt.profile,
+      },
+    };
+  } catch (e) {
+    console.error('[rebuild-player-data] Failed:', e);
     return { success: false, error: e.message };
   }
 });

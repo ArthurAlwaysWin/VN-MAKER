@@ -265,6 +265,15 @@ describe('player data repository', () => {
 });
 
 describe('player data runtime wiring', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    delete globalThis.window;
+  });
+
   it('runtime bootstrap repository uses script.projectId instead of title-derived keys', async () => {
     const storage = createMemoryStorage();
     const repository = createPlayerDataRepositoryFromScript({

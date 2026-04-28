@@ -24,6 +24,9 @@ export class WebSaveManager {
 
     /** @type {number} Compat with SaveManager */
     this._lastMigrationCount = 0;
+
+    /** @type {import('./PlayerDataRepository.js').PlayerDataRepository|null} */
+    this._playerDataRepository = null;
   }
 
   // ─── Public API (all async) ────────────────────────────────
@@ -258,6 +261,39 @@ export class WebSaveManager {
     }
   }
 
+  setPlayerDataRepository(repository) {
+    this._playerDataRepository = repository;
+  }
+
+  async resetPlayerData(scope) {
+    if (!this._playerDataRepository) {
+      return { success: false, error: 'No player data repository configured' };
+    }
+
+    return this._playerDataRepository.reset(scope);
+  }
+
+  async rebuildPlayerData() {
+    if (!this._playerDataRepository) {
+      return { success: false, error: 'No player data repository configured' };
+    }
+
+    return this._playerDataRepository.rebuild();
+  }
+
+  async _clearAllSaves() {
+    try {
+      const db = await this._getDb();
+      await this._clear(db, 'saves');
+      this._cache.clear();
+      this._hasQuickSave = false;
+      return { success: true };
+    } catch (e) {
+      console.error('[WebSaveManager] Clear saves failed:', e.message);
+      return { success: false, error: e.message };
+    }
+  }
+
   // ─── Private Helpers ───────────────────────────────────────
 
   /**
@@ -353,6 +389,15 @@ export class WebSaveManager {
       const request = tx.objectStore(storeName).getAll();
       request.onsuccess = () => resolve(request.result);
       request.onerror = (e) => reject(new Error(`getAll failed: ${e.target.error?.message || 'unknown'}`));
+    });
+  }
+
+  _clear(db, storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(new Error(`clear failed: ${e.target.error?.message || 'unknown'}`));
     });
   }
 }

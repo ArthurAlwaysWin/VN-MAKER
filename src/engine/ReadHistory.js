@@ -70,8 +70,7 @@ export class ReadHistory {
   /** @private Save read history to the repository profile */
   _save() {
     try {
-      this._repository._profile.readHistory.pages = [...this._read];
-      void this._repository._storage.saveProfile(this._repository.projectId, this._repository._profile);
+      void this._repository.replaceReadHistoryPages([...this._read]);
     } catch (e) {
       console.warn('[ReadHistory] Failed to save:', e);
     }

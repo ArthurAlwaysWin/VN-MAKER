@@ -21,6 +21,9 @@ export class SaveManager {
 
     /** @type {boolean|undefined} Whether a quicksave file exists (lazy-loaded) */
     this._hasQuickSave = undefined;
+
+    /** @type {import('./PlayerDataRepository.js').PlayerDataRepository|null} */
+    this._playerDataRepository = null;
   }
 
   // ─── Public API (all async) ────────────────────────────────
@@ -177,6 +180,26 @@ export class SaveManager {
     const result = await window.ipcRenderer.invoke('load-quickslot');
     this._hasQuickSave = result.success && result.data !== null;
     return this._hasQuickSave;
+  }
+
+  setPlayerDataRepository(repository) {
+    this._playerDataRepository = repository;
+  }
+
+  async resetPlayerData(scope) {
+    if (!this._playerDataRepository) {
+      return { success: false, error: 'No player data repository configured' };
+    }
+
+    return this._playerDataRepository.reset(scope);
+  }
+
+  async rebuildPlayerData() {
+    if (!this._playerDataRepository) {
+      return { success: false, error: 'No player data repository configured' };
+    }
+
+    return this._playerDataRepository.rebuild();
   }
 
   // ─── Legacy Migration (D-09, D-10, SAVE-05) ───────────────

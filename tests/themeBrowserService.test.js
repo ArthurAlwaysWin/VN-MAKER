@@ -287,4 +287,39 @@ describe('theme browser service', () => {
       assetRoot: 'ui/themes/moonlight/',
     });
   });
+
+  it('reflects explicit built-in coverage instead of assuming all built-ins are full themes', () => {
+    const [item] = buildThemeBrowserItems({
+      builtins: [
+        {
+          id: 'draft-builtin',
+          name: '草稿主题',
+          coverage: ['theme', 'widgetStyles', 'dialogueBox'],
+          missingCoverage: [
+            'saveLoadScreen',
+            'backlogScreen',
+            'gameMenu',
+            'settingsScreen',
+            'titleScreen',
+          ],
+          preview: {
+            mode: 'asset',
+            src: '/builtin-themes/draft-builtin/preview.svg',
+            background: '#223344',
+            accent: '#88aadd',
+          },
+        },
+      ],
+    });
+
+    expect(item.coverage).toEqual(['theme', 'widgetStyles', 'dialogueBox']);
+    expect(item.missingCoverage).toEqual([
+      'saveLoadScreen',
+      'backlogScreen',
+      'gameMenu',
+      'settingsScreen',
+      'titleScreen',
+    ]);
+    expect(item.coverageLabels).not.toContain('标题界面');
+  });
 });

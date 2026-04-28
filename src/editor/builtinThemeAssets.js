@@ -48,7 +48,24 @@ export const BUILTIN_THEME_ASSETS = Object.freeze({
       targetPath: 'ui/themes/modern-sky/title/mark.svg',
     },
   ]),
-  'fantasy-dark': freezeEntries([]),
+  'fantasy-dark': freezeEntries([
+    {
+      sourcePath: 'builtin-themes/fantasy-dark/dialogue-nameplate.svg',
+      targetPath: 'ui/themes/fantasy-dark/dialogue/nameplate.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/fantasy-dark/screen-chrome.svg',
+      targetPath: 'ui/themes/fantasy-dark/screens/chrome.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/fantasy-dark/title-background.svg',
+      targetPath: 'ui/themes/fantasy-dark/title/background.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/fantasy-dark/title-mark.svg',
+      targetPath: 'ui/themes/fantasy-dark/title/mark.svg',
+    },
+  ]),
   'minimal-white': freezeEntries([]),
 });
 

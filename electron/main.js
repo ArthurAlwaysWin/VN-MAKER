@@ -9,6 +9,7 @@ import { exportDesktop } from './exportDesktop.js';
 import { preflightThemePackage } from './themePackagePreflight.js';
 import { installThemePackage } from './themePackageInstaller.js';
 import { exportThemePackage } from './themePackageExporter.js';
+import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -103,10 +104,7 @@ async function uniqueFilename(dir, originalName) {
 // --- Default Script Template ---
 
 function defaultScript() {
-  return {
-    characters: {},
-    scenes: {}
-  };
+  return createDefaultGalgameScript();
 }
 
 // --- IPC Handlers ---
@@ -153,6 +151,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
         }
       }
     }
+    scriptData = ensureGalgameContract(scriptData);
     await fs.writeFile(path.join(projectDir, 'script.json'), JSON.stringify(scriptData, null, 2), 'utf-8');
 
     await addToRecent(projectDir, name);
@@ -185,6 +184,7 @@ ipcMain.handle('load-project', async (event, projectPath) => {
   try {
     let projectData;
     let scriptData;
+    let scriptChanged = false;
     const projectJsonPath = path.join(projectPath, 'project.json');
     const scriptJsonPath = path.join(projectPath, 'script.json');
 
@@ -193,16 +193,16 @@ ipcMain.handle('load-project', async (event, projectPath) => {
     }
 
      if (existsSync(scriptJsonPath)) {
-       scriptData = JSON.parse(await fs.readFile(scriptJsonPath, 'utf-8'));
-     } else {
-       scriptData = defaultScript();
-     }
+      scriptData = JSON.parse(await fs.readFile(scriptJsonPath, 'utf-8'));
+    } else {
+      scriptData = defaultScript();
+    }
 
-      const migratedThemeData = migrateLegacyAppliedThemeData(scriptData);
-      if (migratedThemeData.changed) {
-        scriptData = migratedThemeData.script;
-        await fs.writeFile(scriptJsonPath, JSON.stringify(scriptData, null, 2), 'utf-8');
-      }
+    const migratedThemeData = migrateLegacyAppliedThemeData(scriptData);
+    if (migratedThemeData.changed) {
+      scriptData = migratedThemeData.script;
+      scriptChanged = true;
+    }
 
     // Legacy migration: script.json has meta but no project.json
     if (!projectData && scriptData.meta) {
@@ -217,11 +217,21 @@ ipcMain.handle('load-project', async (event, projectPath) => {
         lastModified: new Date().toISOString()
       };
       delete scriptData.meta;
+      scriptChanged = true;
       await fs.writeFile(projectJsonPath, JSON.stringify(projectData, null, 2), 'utf-8');
-      await fs.writeFile(scriptJsonPath, JSON.stringify(scriptData, null, 2), 'utf-8');
       for (const sub of ['backgrounds', 'characters', 'audio', 'ui']) {
         await fs.mkdir(path.join(projectPath, 'assets', sub), { recursive: true });
       }
+    }
+
+    const normalizedScriptData = ensureGalgameContract(scriptData);
+    if (JSON.stringify(normalizedScriptData) !== JSON.stringify(scriptData)) {
+      scriptChanged = true;
+    }
+    scriptData = normalizedScriptData;
+
+    if (scriptChanged && existsSync(scriptJsonPath)) {
+      await fs.writeFile(scriptJsonPath, JSON.stringify(scriptData, null, 2), 'utf-8');
     }
 
     if (!projectData) {
@@ -255,8 +265,9 @@ ipcMain.handle('save-project', async (event, { project, script }) => {
   if (!currentProjectPath) return { success: false, error: 'No project loaded' };
   try {
     project.lastModified = new Date().toISOString();
+    const normalizedScript = ensureGalgameContract(script);
     await atomicWrite(path.join(currentProjectPath, 'project.json'), JSON.stringify(project, null, 2));
-    await atomicWrite(path.join(currentProjectPath, 'script.json'), JSON.stringify(script, null, 2));
+    await atomicWrite(path.join(currentProjectPath, 'script.json'), JSON.stringify(normalizedScript, null, 2));
     return { success: true };
   } catch (e) {
     console.error('Failed to save project:', e);

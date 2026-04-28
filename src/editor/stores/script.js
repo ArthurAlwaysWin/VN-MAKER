@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, nextTick } from 'vue';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
+import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
 
 export const useScriptStore = defineStore('script', () => {
@@ -45,7 +46,7 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function loadFromData(scriptData) {
-    data.value = migrateLegacyAppliedThemeData(scriptData).script;
+    data.value = ensureGalgameContract(migrateLegacyAppliedThemeData(scriptData).script);
     history.value = [];
     historyIndex.value = -1;
     pushState();

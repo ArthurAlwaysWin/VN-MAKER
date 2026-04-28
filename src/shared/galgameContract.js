@@ -70,3 +70,11 @@ export function ensureGalgameContract(scriptData = {}) {
 
   return normalizedScript;
 }
+
+export function createDefaultGalgameScript(scriptData = {}) {
+  return ensureGalgameContract({
+    characters: {},
+    scenes: {},
+    ...cloneJsonValue(scriptData),
+  });
+}

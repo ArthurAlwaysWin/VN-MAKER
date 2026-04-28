@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" fill="none">
+  <rect x="6" y="6" width="308" height="168" rx="14" fill="#1F2430" stroke="#A7B4CF" stroke-width="3"/>
+  <rect x="18" y="18" width="284" height="144" rx="10" fill="url(#panel)"/>
+  <path d="M44 42H276" stroke="#D7E0F0" stroke-opacity="0.55" stroke-width="2"/>
+  <path d="M44 138H276" stroke="#D7E0F0" stroke-opacity="0.18" stroke-width="2"/>
+  <defs>
+    <linearGradient id="panel" x1="160" y1="18" x2="160" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A3142"/>
+      <stop offset="1" stop-color="#181D28"/>
+    </linearGradient>
+  </defs>
+</svg>

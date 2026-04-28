@@ -181,8 +181,8 @@ describe('theme package installer', () => {
       assetRoot: 'ui/themes/default/',
     });
     await expect(
-      fs.readFile(path.join(projectPath, 'assets', 'ui', 'themes', 'default', 'chrome', 'frame.svg')),
-    ).resolves.toEqual(new Uint8Array([9, 9, 9, 9]));
+      fs.readFile(path.join(projectPath, 'assets', 'ui', 'themes', 'default', 'chrome', 'frame.svg')).then(Array.from),
+    ).resolves.toEqual([9, 9, 9, 9]);
   });
 
   it('routes built-in themes through the same installed bundle shape without special-casing renderer apply', async () => {

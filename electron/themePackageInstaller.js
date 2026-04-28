@@ -1,8 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { unzipSync } from 'fflate';
 
+import { getBuiltinThemeAssets } from '../src/editor/builtinThemeAssets.js';
 import { BUILTIN_THEMES } from '../src/editor/builtinThemes.js';
 import { parseThemeZip } from '../src/utils/themePackager.js';
 import { preflightThemePackage } from './themePackagePreflight.js';
@@ -17,6 +19,8 @@ const OWNED_UI_KEYS = Object.freeze([
   'settingsScreen',
   'titleScreen',
 ]);
+
+const BUILTIN_THEME_ASSET_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value ?? {}));
@@ -43,6 +47,19 @@ function normalizeInstalledBundle(ui = {}) {
 }
 
 function createBuiltInThemeUi(theme) {
+  if (theme?.ui && typeof theme.ui === 'object') {
+    return {
+      theme: clone(theme.ui.theme),
+      widgetStyles: clone(theme.ui.widgetStyles),
+      dialogueBox: clone(theme.ui.dialogueBox),
+      saveLoadScreen: clone(theme.ui.saveLoadScreen),
+      backlogScreen: clone(theme.ui.backlogScreen),
+      gameMenu: clone(theme.ui.gameMenu),
+      settingsScreen: clone(theme.ui.settingsScreen),
+      titleScreen: cloneThemeOwnedTitleScreen(theme.ui.titleScreen),
+    };
+  }
+
   const ui = {
     theme: {
       tokens: { ...(theme.tokens ?? {}) },
@@ -70,12 +87,72 @@ async function writeThemeAsset(projectPath, relativeUiPath, bytes) {
   await fs.writeFile(destination, bytes);
 }
 
+function isCanonicalBuiltInTargetPath(targetPath, themeId) {
+  return typeof targetPath === 'string'
+    && targetPath.startsWith(`ui/themes/${themeId}/`)
+    && !targetPath.includes('..');
+}
+
+async function materializeBuiltInAssets({
+  projectPath,
+  themeId,
+  builtinThemeAssetRoot = BUILTIN_THEME_ASSET_ROOT,
+  builtinThemeAssets = getBuiltinThemeAssets(themeId),
+} = {}) {
+  const actions = [];
+  const assetEntries = Array.isArray(builtinThemeAssets)
+    ? builtinThemeAssets
+    : builtinThemeAssets?.[themeId];
+
+  for (const entry of Array.isArray(assetEntries) ? assetEntries : []) {
+    const sourcePath = typeof entry?.sourcePath === 'string' ? entry.sourcePath.trim() : '';
+    const targetPath = typeof entry?.targetPath === 'string' ? entry.targetPath.trim() : '';
+
+    if (!sourcePath || !targetPath) {
+      return {
+        success: false,
+        error: `Built-in theme asset declaration is invalid for ${themeId}`,
+      };
+    }
+
+    if (!isCanonicalBuiltInTargetPath(targetPath, themeId)) {
+      return {
+        success: false,
+        error: `Built-in theme asset target must stay inside ui/themes/${themeId}/`,
+      };
+    }
+
+    const sourceAbsolutePath = path.resolve(builtinThemeAssetRoot, sourcePath);
+    const bytes = await fs.readFile(sourceAbsolutePath).catch(() => null);
+    if (!bytes) {
+      return {
+        success: false,
+        error: `Built-in theme asset missing from app bundle: ${sourcePath}`,
+      };
+    }
+
+    await writeThemeAsset(projectPath, targetPath, bytes);
+    actions.push({
+      type: 'copy',
+      path: targetPath,
+      sourcePath,
+    });
+  }
+
+  return {
+    success: true,
+    actions,
+  };
+}
+
 export async function installThemePackage({
   source,
   filePath,
   themeId,
   projectPath,
   builtinThemes = BUILTIN_THEMES,
+  builtinThemeAssetRoot = BUILTIN_THEME_ASSET_ROOT,
+  builtinThemeAssets,
 } = {}) {
   if (!projectPath) {
     return { success: false, error: 'No project loaded' };
@@ -87,6 +164,16 @@ export async function installThemePackage({
       return { success: false, error: `Unknown built-in theme: ${themeId}` };
     }
 
+    const materializedAssets = await materializeBuiltInAssets({
+      projectPath,
+      themeId: theme.id,
+      builtinThemeAssetRoot,
+      builtinThemeAssets: builtinThemeAssets ?? getBuiltinThemeAssets(theme.id),
+    });
+    if (!materializedAssets.success) {
+      return materializedAssets;
+    }
+
     return {
       success: true,
       bundle: normalizeInstalledBundle(createBuiltInThemeUi(theme)),
@@ -96,6 +183,7 @@ export async function installThemePackage({
         mode: 'full',
         assetRoot: `ui/themes/${theme.id}/`,
       },
+      actions: materializedAssets.actions,
     };
   }
 

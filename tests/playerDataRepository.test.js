@@ -4,8 +4,12 @@ import { GALGAME_RESET_SCOPES } from '../src/shared/galgameContract.js';
 import {
   PLAYER_PROFILE_VERSION,
   PlayerDataRepository,
+  createIpcPlayerDataStorage,
+  createPlayerDataRepositoryFromScript,
 } from '../src/engine/PlayerDataRepository.js';
 import { ReadHistory } from '../src/engine/ReadHistory.js';
+import { SaveManager } from '../src/engine/SaveManager.js';
+import { WebSaveManager } from '../src/engine/WebSaveManager.js';
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -257,5 +261,112 @@ describe('player data repository', () => {
         cg: {},
       },
     });
+  });
+});
+
+describe('player data runtime wiring', () => {
+  it('runtime bootstrap repository uses script.projectId instead of title-derived keys', async () => {
+    const storage = createMemoryStorage();
+    const repository = createPlayerDataRepositoryFromScript({
+      projectId: 'gm_runtime_story',
+      meta: {
+        title: 'Mutable Title',
+      },
+    }, storage);
+    await repository.load();
+    const readHistory = new ReadHistory(repository);
+
+    readHistory.markRead('start', 1);
+    await vi.runAllTimersAsync();
+    await Promise.resolve();
+
+    expect(storage.calls.loadProfile).toEqual(['gm_runtime_story']);
+    expect(storage.state.profiles.has('Mutable Title')).toBe(false);
+    expect(storage.state.profiles.get('gm_runtime_story').readHistory.pages).toEqual(['start:1']);
+  });
+
+  it('save-slot, load-slot, delete-slot, and quicksave stay slot-only while reset and rebuild use the dedicated player-data IPC surface', async () => {
+    const ipcCalls = [];
+    const profileState = new Map();
+    globalThis.window = {
+      ipcRenderer: {
+        invoke: vi.fn(async (channel, payload) => {
+          ipcCalls.push({ channel, payload: cloneJson(payload) });
+          switch (channel) {
+            case 'load-player-profile':
+              return {
+                success: true,
+                data: profileState.get(payload.projectId) ?? null,
+              };
+            case 'save-player-profile':
+              profileState.set(payload.projectId, cloneJson(payload.profile));
+              return { success: true };
+            case 'reset-player-data':
+            case 'rebuild-player-data':
+              return { success: true };
+            case 'save-slot':
+            case 'delete-slot':
+            case 'save-quickslot':
+              return { success: true };
+            case 'load-slot':
+            case 'load-quickslot':
+              return { success: true, data: null };
+            default:
+              throw new Error(`Unexpected IPC channel: ${channel}`);
+          }
+        }),
+      },
+    };
+
+    const repository = createPlayerDataRepositoryFromScript(
+      { projectId: 'gm_slots_only' },
+      createIpcPlayerDataStorage(window.ipcRenderer),
+    );
+    await repository.load();
+
+    const profileCallsAfterLoad = ipcCalls.filter((call) => call.channel.includes('player-profile')).length;
+
+    const saveManager = new SaveManager();
+    saveManager.setPlayerDataRepository(repository);
+
+    await saveManager.save(1, { currentScene: 'start', history: [] }, 'slot preview');
+    await saveManager.load(1);
+    await saveManager.delete(1);
+    await saveManager.quickSave({ currentScene: 'start', history: [] }, 'quick preview');
+
+    const profileCallsAfterSlots = ipcCalls.filter((call) => call.channel.includes('player-profile')).length;
+    expect(profileCallsAfterSlots).toBe(profileCallsAfterLoad);
+
+    await saveManager.resetPlayerData(GALGAME_RESET_SCOPES.PROFILE);
+    await saveManager.rebuildPlayerData();
+
+    expect(ipcCalls.map((call) => call.channel)).toEqual([
+      'load-player-profile',
+      'save-player-profile',
+      'save-slot',
+      'load-slot',
+      'delete-slot',
+      'save-quickslot',
+      'reset-player-data',
+      'save-player-profile',
+      'rebuild-player-data',
+      'load-player-profile',
+      'save-player-profile',
+    ]);
+  });
+
+  it('web save manager exposes named reset and rebuild entrypoints through the repository boundary', async () => {
+    const repository = {
+      reset: vi.fn(async () => ({ success: true })),
+      rebuild: vi.fn(async () => ({ success: true })),
+    };
+    const saveManager = new WebSaveManager();
+    saveManager.setPlayerDataRepository(repository);
+
+    await saveManager.resetPlayerData(GALGAME_RESET_SCOPES.ALL);
+    await saveManager.rebuildPlayerData();
+
+    expect(repository.reset).toHaveBeenCalledWith(GALGAME_RESET_SCOPES.ALL);
+    expect(repository.rebuild).toHaveBeenCalledTimes(1);
   });
 });

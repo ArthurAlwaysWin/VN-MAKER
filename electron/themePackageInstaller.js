@@ -26,6 +26,22 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value ?? {}));
 }
 
+function cloneBrowserMetadata(theme = {}) {
+  return {
+    preview: theme?.preview && typeof theme.preview === 'object'
+      ? { ...theme.preview }
+      : undefined,
+    visualSignature: theme?.visualSignature && typeof theme.visualSignature === 'object'
+      ? {
+        ...theme.visualSignature,
+        requiredTells: theme.visualSignature.requiredTells && typeof theme.visualSignature.requiredTells === 'object'
+          ? { ...theme.visualSignature.requiredTells }
+          : undefined,
+      }
+      : undefined,
+  };
+}
+
 function cloneThemeOwnedTitleScreen(value) {
   const titleScreen = value && typeof value === 'object' ? value : {};
   return {
@@ -182,6 +198,7 @@ export async function installThemePackage({
         themeId: theme.id,
         mode: 'full',
         assetRoot: `ui/themes/${theme.id}/`,
+        ...cloneBrowserMetadata(theme),
       },
       actions: materializedAssets.actions,
     };
@@ -232,6 +249,7 @@ export async function installThemePackage({
       themeId: parsed.themeId,
       mode: 'full',
       assetRoot: parsed.assetRoot,
+      ...cloneBrowserMetadata(parsed.theme),
     },
     actions: preflight.actions ?? [],
   };

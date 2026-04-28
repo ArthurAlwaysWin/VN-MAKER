@@ -64,6 +64,12 @@ function buildAppliedImportedEntry(scriptData = {}, importedEntries = []) {
     missingCoverage: [],
     tokens: scriptData?.ui?.theme?.tokens ?? {},
     primaryColor: scriptData?.ui?.theme?.tokens?.primary ?? '',
+    preview: packageMeta?.preview && typeof packageMeta.preview === 'object'
+      ? { ...packageMeta.preview }
+      : undefined,
+    visualSignature: packageMeta?.visualSignature && typeof packageMeta.visualSignature === 'object'
+      ? JSON.parse(JSON.stringify(packageMeta.visualSignature))
+      : undefined,
   };
 }
 
@@ -235,6 +241,9 @@ export function normalizeThemeBrowserItem(rawTheme = {}, {
     missingCoverageLabels: labelCoverage(missingCoverage),
     primaryColor: rawTheme.primaryColor ?? rawTheme.tokens?.primary ?? '',
     tokens: rawTheme.tokens && typeof rawTheme.tokens === 'object' ? { ...rawTheme.tokens } : {},
+    visualSignature: rawTheme.visualSignature && typeof rawTheme.visualSignature === 'object'
+      ? JSON.parse(JSON.stringify(rawTheme.visualSignature))
+      : undefined,
   };
 
   item.lifecycle = computeThemeBrowserLifecycle(item, scriptData);
@@ -324,6 +333,8 @@ export function createImportedThemeBrowserEntry(preflight = {}, scriptData = {})
     missingCoverage: preflight.missingCoverage ?? [],
     warnings: preflight.warnings ?? [],
     blockingErrors: preflight.blockingErrors ?? [],
+    preview: preflight.preview,
+    visualSignature: preflight.visualSignature,
   }, {
     source: 'imported',
     scriptData,

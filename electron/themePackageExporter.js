@@ -64,6 +64,7 @@ function replaceThemeUiRefs(node, rewrite) {
 }
 
 function extractThemeSnapshot(scriptData) {
+  const packageMeta = scriptData?.ui?.theme?.packageMeta ?? {};
   const snapshot = { ui: {} };
   for (const key of OWNED_UI_KEYS) {
     if (key === 'theme') {
@@ -79,6 +80,12 @@ function extractThemeSnapshot(scriptData) {
       continue;
     }
     snapshot.ui[key] = clone(scriptData?.ui?.[key]);
+  }
+  if (packageMeta.preview && typeof packageMeta.preview === 'object') {
+    snapshot.preview = clone(packageMeta.preview);
+  }
+  if (packageMeta.visualSignature && typeof packageMeta.visualSignature === 'object') {
+    snapshot.visualSignature = clone(packageMeta.visualSignature);
   }
   return snapshot;
 }

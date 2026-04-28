@@ -176,11 +176,18 @@ describe('theme package installer', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.packageMeta).toEqual({
+    expect(result.packageMeta).toMatchObject({
       source: 'builtin',
       themeId: 'default',
       mode: 'full',
       assetRoot: 'ui/themes/default/',
+      preview: {
+        mode: 'asset',
+        src: '/builtin-themes/default/preview.svg',
+      },
+      visualSignature: {
+        styleDirection: 'polished neutral baseline',
+      },
     });
     await expect(
       fs.readFile(path.join(projectPath, 'assets', 'ui', 'themes', 'default', 'chrome', 'frame.svg')).then(Array.from),
@@ -197,11 +204,18 @@ describe('theme package installer', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.packageMeta).toEqual({
+    expect(result.packageMeta).toMatchObject({
       source: 'builtin',
       themeId: 'wafuu',
       mode: 'full',
       assetRoot: 'ui/themes/wafuu/',
+      preview: {
+        mode: 'asset',
+        src: '/builtin-themes/wafuu/preview.svg',
+      },
+      visualSignature: {
+        styleDirection: 'warm ceremonial Japanese baseline',
+      },
     });
     expect(result.bundle.theme.tokens.primary).toBeTruthy();
     expect(result.bundle.settingsScreen).toBeTypeOf('object');
@@ -279,11 +293,13 @@ describe('theme package installer', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.packageMeta).toEqual({
+      expect(result.packageMeta).toMatchObject({
         source: 'builtin',
         themeId: theme.id,
         mode: 'full',
         assetRoot: `ui/themes/${theme.id}/`,
+        preview: theme.preview,
+        visualSignature: theme.visualSignature,
       });
 
       for (const asset of getBuiltinThemeAssets(theme.id)) {

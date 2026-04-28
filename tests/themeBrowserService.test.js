@@ -6,6 +6,7 @@ import {
   filterThemeBrowserItems,
   resolveThemeBrowserPreview,
 } from '../src/editor/services/themeBrowser.js';
+import { FULL_THEME_COVERAGE_KEYS } from '../src/shared/themePackageContract.js';
 
 describe('theme browser service', () => {
   it('builds one normalized browser item shape for built-in and imported themes', () => {
@@ -16,6 +17,7 @@ describe('theme browser service', () => {
           name: '和风',
           description: '日式主题',
           primaryColor: '#C8A882',
+          coverage: FULL_THEME_COVERAGE_KEYS,
           tokens: { primary: '#c98683' },
           widgetStyles: {},
           screens: {},
@@ -68,7 +70,7 @@ describe('theme browser service', () => {
       mode: 'full',
       lifecycle: 'available',
       canApply: true,
-      missingCoverage: [],
+      missingCoverage: ['saveLoadScreen', 'backlogScreen', 'gameMenu', 'settingsScreen', 'titleScreen'],
     });
   });
 
@@ -78,6 +80,7 @@ describe('theme browser service', () => {
         {
           id: 'default',
           name: '默认',
+          coverage: FULL_THEME_COVERAGE_KEYS,
           tokens: {},
           widgetStyles: {},
           screens: {},
@@ -188,6 +191,7 @@ describe('theme browser service', () => {
         {
           id: 'wafuu',
           name: '和风',
+          coverage: FULL_THEME_COVERAGE_KEYS,
           tokens: {},
           widgetStyles: {},
           screens: {},
@@ -248,6 +252,7 @@ describe('theme browser service', () => {
         {
           id: 'default',
           name: '默认',
+          coverage: FULL_THEME_COVERAGE_KEYS,
           tokens: {},
           widgetStyles: {},
           screens: {},

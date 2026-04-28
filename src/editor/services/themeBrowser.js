@@ -207,12 +207,11 @@ export function normalizeThemeBrowserItem(rawTheme = {}, {
   const isBuiltin = source === 'builtin';
   const rawId = rawTheme.rawId ?? rawTheme.themeId ?? rawTheme.id ?? '';
   const mode = rawTheme.mode ?? (rawTheme.status === 'legacy-partial' ? 'legacy-partial' : 'full');
-  const coverage = isBuiltin
-    ? normalizeCoverageList(rawTheme.coverage, FULL_THEME_COVERAGE_KEYS)
-    : normalizeCoverageList(rawTheme.coverage);
-  const missingCoverage = isBuiltin
-    ? []
-    : normalizeCoverageList(rawTheme.missingCoverage);
+  const coverage = normalizeCoverageList(rawTheme.coverage);
+  const derivedMissingCoverage = mode === 'full'
+    ? FULL_THEME_COVERAGE_KEYS.filter(key => !coverage.includes(key))
+    : [];
+  const missingCoverage = normalizeCoverageList(rawTheme.missingCoverage, derivedMissingCoverage);
 
   const item = {
     id: `${source}:${rawId}`,

@@ -112,7 +112,7 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 83. 剧情系统契约与持久化护栏 | 1/3 | In Progress|  |
+| 83. 剧情系统契约与持久化护栏 | 2/3 | In Progress|  |
 | 84. 变量注册表与条件分支 GUI | 0/0 | Not started | - |
 | 85. 好感度预设与结局追踪 | 0/0 | Not started | - |
 | 86. CG 图鉴与一致性验证闭环 | 0/0 | Not started | - |

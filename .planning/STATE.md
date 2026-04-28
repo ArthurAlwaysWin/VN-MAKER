@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
 status: executing
-stopped_at: Completed 83-01-PLAN.md
-last_updated: "2026-04-28T11:08:18.633Z"
+stopped_at: Completed 83-02-PLAN.md
+last_updated: "2026-04-28T11:18:03.691Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 83 (galgame-core-contract-persistence) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Next: /gsd-execute-phase 83
 Last activity: 2026-04-28
@@ -72,6 +72,7 @@ v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (phase 83
 | Phase 82 P03 | 6 min | 2 tasks | 12 files |
 | Phase 82-4 P04 | 4 min | 2 tasks | 10 files |
 | Phase 83 P01 | 3m | 2 tasks | 4 files |
+| Phase 83 P02 | 5m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,9 @@ v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (phase 83
 - [Phase 83+]: Save slots and persistent profile stay as separate truth sources; this contract is mandatory even if scope has to cut elsewhere.
 - [Phase 83]: Stable project identity now lives in top-level script.json.projectId and is seeded additively through a shared helper.
 - [Phase 83]: Phase 83 registries stay author-owned under systems.variables/endings/gallery.cg and Electron/editor load paths normalize through the same helper.
+- [Phase 83]: Runtime player progress now loads through PlayerDataRepository before ReadHistory is constructed.
+- [Phase 83]: Electron now separates player-data/profile.json from saves/ slot files through dedicated profile IPC handlers.
+- [Phase 83]: Named resetPlayerData(scope) and rebuildPlayerData() entrypoints own persistence resets instead of manual file edits.
 
 ### Blockers/Concerns
 
@@ -143,8 +147,8 @@ v1.7 ░░░░░░░░░░░░░░░░░░ 0/4 phases (phase 83
 
 ## Session Continuity
 
-Last session: 2026-04-28T11:08:18.630Z
-Stopped at: Completed 83-01-PLAN.md
+Last session: 2026-04-28T11:18:03.688Z
+Stopped at: Completed 83-02-PLAN.md
 Resume file: None
 Resume hint: |
 

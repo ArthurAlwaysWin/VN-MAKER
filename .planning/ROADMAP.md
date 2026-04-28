@@ -103,8 +103,14 @@ Plans:
   1. 用户最终可以在主题浏览器中看到 5 套完整图片主题，且这 5 套都达到与 golden theme 相同的 coverage standard。
   2. 用户应用其中任意一套 shipped theme 时，都能得到完整、统一、可直接使用的主题结果，而不是局部覆盖或半成品。
   3. 用户可以清楚分辨这 5 套主题在材质语言、轮廓语言和整体风格倾向上的差异，而不只是配色不同。
-**Plans**: 0 plans  
+**Plans**: 4 plans  
 **UI hint**: yes
+
+Plans:
+- [ ] `82-01-PLAN.md` — Harden built-in completeness truth, browser honesty, and shared built-in asset materialization before theme production
+- [ ] `82-02-PLAN.md` — Promote `default` and `modern-sky` into explicit full themes with canonical assets and distinct preview/signature metadata
+- [ ] `82-03-PLAN.md` — Promote `fantasy-dark` and `minimal-white` into explicit full themes with canonical assets and distinct preview/signature metadata
+- [ ] `82-04-PLAN.md` — Prove 5-theme parity across the shared pipeline and run the final shipped-theme visual review
 
 ## Coverage Map
 
@@ -136,4 +142,4 @@ Plans:
 | 79. 统一安装 / 应用 / 导出链路 | 2/2 | Complete   | 2026-04-27 |
 | 80. 主题浏览器与选择 UX | 2/2 | Complete   | 2026-04-27 |
 | 81. Golden Theme 验收样板 | 3/3 | Complete   | 2026-04-28 |
-| 82. 剩余 4 套完整主题扩展 | 0/0 | ⏳ Pending | - |
+| 82. 剩余 4 套完整主题扩展 | 0/4 | ⏳ Pending | - |

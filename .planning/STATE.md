@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 82 context gathered
+status: ready_to_execute
+stopped_at: Phase 82 planned, ready to execute
 last_updated: "2026-04-28T14:00:02+10:00"
 last_activity: 2026-04-28
 progress:
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 Phase: 82
 Plan: Not started
-Status: Ready to plan
-Next: create the Phase 82 plan around the four remaining shipped themes and their shared completeness gate
+Status: Ready to execute
+Next: execute the 4 planned Phase 82 waves, starting with completeness hardening
 Last activity: 2026-04-28
 
 ```
@@ -120,12 +120,12 @@ v1.5 ████████████████████ 7/7 phases ✅
 ## Session Continuity
 
 Last session: 2026-04-28T14:00:02+10:00
-Stopped at: Phase 82 context gathered
-Resume file: .planning/phases/82-4/82-CONTEXT.md
+Stopped at: Phase 82 planned, ready to execute
+Resume file: .planning/phases/82-4/82-01-PLAN.md
 Resume hint: |
 
-  1. Phase 82 context 已冻结：`default`、`modern-sky`、`fantasy-dark`、`minimal-white` 需要升格到与 `wafuu` 相同的 8-surface full-theme 标准
-  2. 差异化标准已锁定为材质语言 / 轮廓语言 / 整体风格倾向，而不是 token-only recolor
-  3. 当前 worktree 仍有与本次 phase-discuss 无关的用户改动；继续工作时不要自动清理或重置它们
+  1. Phase 82 已产出 4 个执行计划：先做 completeness/built-in installer hardening，再分两批补齐剩余 4 套主题，最后做 5-theme parity + visual review closeout
+  2. Nyquist `82-VALIDATION.md` 已补齐，plan checker 已通过；Phase 82 现在可直接进入执行
+  3. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: plan Phase 82 in auto mode
+Next action: execute Phase 82 in auto mode

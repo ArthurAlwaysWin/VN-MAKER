@@ -2,33 +2,33 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: active
-stopped_at: Awaiting Phase 81 human verification after exported settings fixes
-last_updated: "2026-04-27T22:41:00.000Z"
-last_activity: 2026-04-27
+status: ready_to_plan
+stopped_at: Phase 82 context gathered
+last_updated: "2026-04-28T14:00:02+10:00"
+last_activity: 2026-04-28
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-27)
+See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 81 automated implementation and exported-settings regression fixes are complete; human acceptance remains
+**Current focus:** Phase 82 — 剩余 4 套完整主题扩展
 
 ## Current Position
 
-Phase: 81 — Golden Theme 验收样板
-Plan: 03
-Status: Automated evidence green; waiting on final human visual/exported-output acceptance
-Next: human verify exported/playtest parity, then close Phase 81
-Last activity: 2026-04-27
+Phase: 82
+Plan: Not started
+Status: Ready to plan
+Next: create the Phase 82 plan around the four remaining shipped themes and their shared completeness gate
+Last activity: 2026-04-28
 
 ```
 v1.3 ████████████████████ 9/9 phases ✅ archived
@@ -109,6 +109,8 @@ v1.5 ████████████████████ 7/7 phases ✅
 - [Phase 81]: Golden `wafuu` is the first title-inclusive shipped baseline and must travel through the same install/apply/export/import pipeline as imported themes.
 - [Phase 81]: Structured settings tabs must treat glyph/emoji `tab.icon` values as text, not asset paths.
 - [Phase 81]: Golden `wafuu` footer button coordinates are part of shipped baseline data, not runtime layout defaults.
+- [Phase 81]: Exported/fullscreen runtime keeps the existing 1280x720 coordinate space and scales the game container to the viewport instead of widening engine layout logic.
+- [Phase 81]: Legacy applied built-in `wafuu` data migrates on project load so approved fixes (simplified title text and latest footer layout) reach older projects without manual reapply.
 
 ### Blockers/Concerns
 
@@ -117,13 +119,13 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-27T22:41:00+10:00
-Stopped at: Phase 81 automated evidence green; awaiting human verification
-Resume file: .planning/phases/81-golden-theme/81-03-PLAN.md
+Last session: 2026-04-28T14:00:02+10:00
+Stopped at: Phase 82 context gathered
+Resume file: .planning/phases/82-4/82-CONTEXT.md
 Resume hint: |
 
-  1. Phase 81 代码与 focused gate 已完成：titleScreen 已进入 full-theme contract，golden `wafuu` 可 apply/save-reopen/export/reimport，并保持 `titleScreen.bgm` 项目所有权
-  2. 用户提供的导出设置页截图问题已定位并修复：emoji/glyph tab icon 不再被当作图片路径，`wafuu` footer 不再使用 0/0 占位坐标
-  3. 当前剩余 gate 是 81-03 的人工验收：playtest 与 exported output 的肉眼一致性，以及整体 UI coherence
-  4. 若人工验收通过，补最终 phase closeout/commit；若仍有视觉偏差，继续从 `src/ui/SettingsScreen.js` 与 `src/editor/builtinThemes.js` 方向追
-Next action: complete the final human verification for Phase 81
+  1. Phase 82 context 已冻结：`default`、`modern-sky`、`fantasy-dark`、`minimal-white` 需要升格到与 `wafuu` 相同的 8-surface full-theme 标准
+  2. 差异化标准已锁定为材质语言 / 轮廓语言 / 整体风格倾向，而不是 token-only recolor
+  3. 当前 worktree 仍有与本次 phase-discuss 无关的用户改动；继续工作时不要自动清理或重置它们
+
+Next action: plan Phase 82 in auto mode

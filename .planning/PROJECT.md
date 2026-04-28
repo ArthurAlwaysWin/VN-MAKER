@@ -116,9 +116,9 @@
 
 **v1.5 已完成：** 对话框 / 按钮族 / major screens / cursor / icons 的图片化闭环全部交付，补齐了 Phase 76-77 gap closure 后达到 17/17 requirements、7/7 phases、2/2 integrations、5/5 flows。
 
-**当前进行中：** v1.6「完整主题包与图片主题产出」已启动，正在定义 requirements 与 roadmap。
+**当前进行中：** v1.6「完整主题包与图片主题产出」已完成 Phase 78-81，当前剩余 Phase 82「剩余 4 套完整主题扩展」。
 
-**下一步：** 明确 v1.6 requirements，判断是否先做 research，再拆解为继续编号的 phase roadmap。
+**下一步：** 先冻结剩余 4 套 shipped themes 的风格差异与 coverage 标准，再拆解 Phase 82 计划并进入执行。
 
 ## Next Milestone Goals
 
@@ -315,6 +315,10 @@ P1 编辑器 + 内置主题 — ✅ 已在 v1.2 完成
 | runtime-backed effect preview | 预览必须走真实 runtime owner，确保编辑器/运行时一致 | ✓ Good |
 | stage-layer-only camera scope | 镜头效果只作用于舞台，保护对话与 overlay 可读性 | ✓ Good |
 | focused PREV-05 gate + verification backfill | 用聚焦回归门证明清理路径，并用 docs-only closeout 补齐审计证据链 | ✓ Good |
+| `titleScreen` 纳入 full-theme 第 8 个覆盖面，但 `titleScreen.bgm` 继续项目拥有 | 主题只拥有视觉外观，不接管项目内容音频 | ✓ Good |
+| golden `wafuu` 作为首个 title-inclusive shipped baseline，且必须走共享 install/apply/export/import 管线 | built-in 与 imported 主题必须保持同一交付路径 | ✓ Good |
+| structured settings 的 glyph/emoji `tab.icon` 一律按文本渲染，不当作图片路径 | 修复导出运行时误判图标资源导致的 settings regressions | ✓ Good |
+| exported/fullscreen runtime 继续保持 1280x720 坐标系，仅缩放 game container 到视口 | 修复黑边/缩放问题，同时避免改动整体运行时布局逻辑 | ✓ Good |
 
 ## Evolution
 
@@ -346,4 +350,4 @@ This document evolves at phase transitions and milestone boundaries.
 - ⚠ repo-wide `npx vitest run` 仍包含与 v1.4 无关的 legacy test collection / `tests/mainConfigRouting.test.js` 债务
 
 ---
-*Last updated: 2026-04-27 after starting v1.6 milestone*
+*Last updated: 2026-04-28 after Phase 81 completion*

@@ -1,19 +1,19 @@
 /**
  * ReadHistory — Tracks which pages have been read by the player.
  *
- * Uses localStorage with key format `readHistory:{projectId}`.
+ * Uses PlayerDataRepository profile truth keyed by `projectId`.
  * Cross-save shared — all save slots share the same read history.
  * Stores entries as `"sceneId:pageIndex"` strings in a Set.
  */
 export class ReadHistory {
   /**
-   * @param {string} projectId — unique project identifier
+   * @param {import('./PlayerDataRepository.js').PlayerDataRepository} repository
    */
-  constructor(projectId) {
-    this._storageKey = `readHistory:${projectId}`;
+  constructor(repository) {
+    this._repository = repository;
     this._read = new Set();
     this._saveTimer = null;
-    this._load();
+    this._loadFromRepository();
   }
 
   /**
@@ -61,23 +61,17 @@ export class ReadHistory {
     }, 500);
   }
 
-  /** @private Load read history from localStorage */
-  _load() {
-    try {
-      const raw = localStorage.getItem(this._storageKey);
-      if (raw) {
-        const arr = JSON.parse(raw);
-        this._read = new Set(arr);
-      }
-    } catch (e) {
-      console.warn('[ReadHistory] Failed to load:', e);
-    }
+  /** @private Load read history from the repository profile */
+  _loadFromRepository() {
+    const pages = this._repository?.getProfile?.().readHistory?.pages ?? [];
+    this._read = new Set(pages);
   }
 
-  /** @private Save read history to localStorage */
+  /** @private Save read history to the repository profile */
   _save() {
     try {
-      localStorage.setItem(this._storageKey, JSON.stringify([...this._read]));
+      this._repository._profile.readHistory.pages = [...this._read];
+      void this._repository._storage.saveProfile(this._repository.projectId, this._repository._profile);
     } catch (e) {
       console.warn('[ReadHistory] Failed to save:', e);
     }

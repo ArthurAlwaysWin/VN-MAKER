@@ -317,4 +317,85 @@ describe('variable registry workspace', () => {
     const selectedRow = harness.container.querySelector('[data-test="variable-row"].selected');
     expect(selectedRow?.textContent).toContain('樱好感');
   });
+
+  it('creates a draft variable, focuses display name, and auto-generates the first internal id from that name', async () => {
+    harness = await mountStorySystems();
+
+    harness.container.querySelector('.create-btn')?.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+    }));
+    await flushUi();
+
+    const nameInput = harness.container.querySelector('[data-test="variable-name-input"]');
+    expect(document.activeElement).toBe(nameInput);
+
+    nameInput.value = 'Route Flag';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushUi();
+
+    const idInput = harness.container.querySelector('[data-test="variable-id-input"]');
+    expect(idInput.value).toBe('route_flag');
+  });
+
+  it('persists inspector edits for name, type, default value, group, and notes under systems.variables', async () => {
+    harness = await mountStorySystems();
+
+    harness.container.querySelectorAll('[data-test="variable-row"]')[1]?.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+    }));
+    await flushUi();
+
+    const nameInput = harness.container.querySelector('[data-test="variable-name-input"]');
+    const numberInput = harness.container.querySelector('[data-test="variable-default-number"]');
+    const groupInput = harness.container.querySelector('[data-test="variable-group-input"]');
+    const notesInput = harness.container.querySelector('[data-test="variable-notes-input"]');
+
+    nameInput.value = '新樱好感';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    numberInput.value = '9';
+    numberInput.dispatchEvent(new Event('input', { bubbles: true }));
+    groupInput.value = '主角';
+    groupInput.dispatchEvent(new Event('input', { bubbles: true }));
+    notesInput.value = '主线关键数值';
+    notesInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushUi();
+
+    expect(harness.script.data.systems.variables.affection).toMatchObject({
+      name: '新樱好感',
+      type: 'number',
+      initial: 9,
+      group: '主角',
+      notes: '主线关键数值',
+    });
+  });
+
+  it('renders type-aware defaults and shows the locked duplicate-id error copy', async () => {
+    harness = await mountStorySystems();
+
+    const boolRow = harness.container.querySelectorAll('[data-test="variable-row"]')[0];
+    boolRow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(harness.container.textContent).toContain('是');
+    expect(harness.container.textContent).toContain('否');
+
+    const falseToggle = harness.container.querySelector('[data-test="variable-bool-false"]');
+    falseToggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+    expect(harness.script.data.systems.variables.route_locked.initial).toBe(false);
+
+    const numberRow = harness.container.querySelectorAll('[data-test="variable-row"]')[1];
+    numberRow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    const numberInput = harness.container.querySelector('[data-test="variable-default-number"]');
+    expect(numberInput?.getAttribute('type')).toBe('number');
+
+    const idInput = harness.container.querySelector('[data-test="variable-id-input"]');
+    idInput.value = 'route_locked';
+    idInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushUi();
+
+    expect(harness.container.textContent).toContain('变量 ID 已存在，请改用未占用的 ID。');
+  });
 });

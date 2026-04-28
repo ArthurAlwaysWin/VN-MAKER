@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: milestone
-status: milestone_archived
-stopped_at: Archived v1.6 milestone
-last_updated: "2026-04-28T15:15:00+08:00"
+milestone: v1.7
+milestone_name: Galgame 标配系统补全
+status: defining_requirements
+stopped_at: Started milestone v1.7
+last_updated: "2026-04-28T19:05:00+10:00"
 last_activity: 2026-04-28
 progress:
   total_phases: 5
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** No active milestone — ready for `/gsd-new-milestone`
+**Current focus:** Milestone v1.7 — defining requirements
 
 ## Current Position
 
-Phase: —
+Phase: Not started (defining requirements)
 Plan: —
-Status: v1.6 archived; no active milestone is currently open
-Next: start the next milestone with `/gsd-new-milestone`
+Status: Defining requirements
+Next: write scoped requirements for v1.7
 Last activity: 2026-04-28
 
 ```
@@ -134,13 +134,13 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-28T15:15:00+08:00
-Stopped at: Archived v1.6 milestone
+Last session: 2026-04-28T19:05:00+10:00
+Stopped at: Started milestone v1.7
 Resume file: None
 Resume hint: |
 
-  1. v1.6 已归档到 `milestones/v1.6-ROADMAP.md`、`milestones/v1.6-REQUIREMENTS.md` 与 `milestones/v1.6-MILESTONE-AUDIT.md`
-  2. 根目录当前不再保留活动中的 `REQUIREMENTS.md`；下一轮 milestone 需要重新定义 requirements / roadmap
+  1. v1.7 方向已确认：Galgame 标配系统补全，主线是变量 / 好感度 / 结局追踪 / CG 鉴赏
+  2. 根目录当前没有活动中的 `REQUIREMENTS.md`；下一步需要先定义 v1.7 requirements，再生成 roadmap
   3. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: start the next milestone definition
+Next action: define v1.7 requirements

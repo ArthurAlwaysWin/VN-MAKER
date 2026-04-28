@@ -93,10 +93,18 @@
 
 ### Active
 
-- [x] **THEMEPACK-01**: 用户可以把包含 `theme.json + assets/` 的完整图片主题导入到项目中，并自动落盘所需素材
-- [x] **THEMEPACK-02**: 用户可以将当前项目主题导出为可复用的 `.gmtheme` 包，并保留全部图片 UI 资产
-- [x] **THEMEPACK-03**: 用户可以一键应用 5 套完整图片主题，让对话框、按钮、major screens、cursor、icons 形成统一风格
-- [x] **THEMEPACK-04**: 用户在编辑器里可以预览并选择完整主题包，而不是只调单个图片槽位
+- [ ] **GALSYS-01**: 用户可以可视化管理项目变量 / flag，并在剧情流程中配置数值运算与条件判断
+- [ ] **GALSYS-02**: 用户可以配置角色好感度、结局条件与解锁追踪，而不需要手写逻辑脚本
+- [ ] **GALSYS-03**: 用户通关后可以在游戏内查看已解锁的 CG 内容，形成 Galgame 标配的二周目回看动力
+
+## Current Milestone: v1.7 Galgame 标配系统补全
+
+**Goal:** 把当前项目从“视觉和编辑体验很强的 VN 制作器”推进到“具备基础 Galgame 标配玩法闭环”的阶段。
+
+**Target features:**
+- 变量 / Flag 系统强化：可视化变量管理、数值运算、条件判断配置
+- 好感度与结局追踪：基于变量系统做角色好感度、结局条件与解锁记录
+- CG 鉴赏室：基于 persistent / unlock tracking 做通关后回看能力
 
 ## Current State
 
@@ -352,4 +360,4 @@ This document evolves at phase transitions and milestone boundaries.
 - ⚠ repo-wide `npx vitest run` 仍包含与 v1.4 无关的 legacy test collection / `tests/mainConfigRouting.test.js` 债务
 
 ---
-*Last updated: 2026-04-28 after Phase 81 completion*
+*Last updated: 2026-04-28 after starting milestone v1.7*

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 82-04-PLAN.md
-last_updated: "2026-04-28T05:02:53.830Z"
+status: milestone_archived
+stopped_at: Archived v1.6 milestone
+last_updated: "2026-04-28T15:15:00+08:00"
 last_activity: 2026-04-28
 progress:
   total_phases: 5
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Phase 82 — 剩余 4 套完整主题扩展
+**Current focus:** No active milestone — ready for `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 82 (剩余 4 套完整主题扩展) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Next: execute the 4 planned Phase 82 waves, starting with completeness hardening
+Phase: —
+Plan: —
+Status: v1.6 archived; no active milestone is currently open
+Next: start the next milestone with `/gsd-new-milestone`
 Last activity: 2026-04-28
 
 ```
@@ -134,13 +134,13 @@ v1.5 ████████████████████ 7/7 phases ✅
 
 ## Session Continuity
 
-Last session: 2026-04-28T05:02:53.826Z
-Stopped at: Completed 82-04-PLAN.md
+Last session: 2026-04-28T15:15:00+08:00
+Stopped at: Archived v1.6 milestone
 Resume file: None
 Resume hint: |
 
-  1. Phase 82 已产出 4 个执行计划：先做 completeness/built-in installer hardening，再分两批补齐剩余 4 套主题，最后做 5-theme parity + visual review closeout
-  2. Nyquist `82-VALIDATION.md` 已补齐，plan checker 已通过；Phase 82 现在可直接进入执行
+  1. v1.6 已归档到 `milestones/v1.6-ROADMAP.md`、`milestones/v1.6-REQUIREMENTS.md` 与 `milestones/v1.6-MILESTONE-AUDIT.md`
+  2. 根目录当前不再保留活动中的 `REQUIREMENTS.md`；下一轮 milestone 需要重新定义 requirements / roadmap
   3. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: execute Phase 82 in auto mode
+Next action: start the next milestone definition

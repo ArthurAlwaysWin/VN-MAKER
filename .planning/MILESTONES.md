@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.6 完整主题包与图片主题产出 (Shipped: 2026-04-28)
+
+**Phases completed:** 5 phases, 13 plans, 17 tasks
+**Git range:** v1.5..v1.6 (~46 commits)
+**Files:** 108 changed, +13912/-452 lines
+**Timeline:** 2026-04-27 → 2026-04-28
+**Milestone audit:** 14/14 requirements passed, 5/5 phases complete, 11/11 integrations, 4/4 flows
+
+**Key accomplishments:**
+
+- 冻结 `.gmtheme` / legacy `.theme` 契约、canonical `ui/themes/<themeId>/` namespace 与 fail-closed preflight 边界。
+- 打通 built-in / imported 共用的 install / apply / export 闭环，让主题资源真正落到项目内并在保存、重开、导出中保持一致。
+- 交付统一 Theme Browser：应用前即可查看静态预览、覆盖范围、覆盖影响、来源与 lifecycle 状态，而不引入未应用主题的 live iframe preview。
+- 先以 `wafuu` 验证 golden theme 标准，再补齐 `default`、`modern-sky`、`fantasy-dark`、`minimal-white`，最终形成 5 套 shipped 完整图片主题。
+
+**Archives:** milestones/v1.6-ROADMAP.md, milestones/v1.6-REQUIREMENTS.md, milestones/v1.6-MILESTONE-AUDIT.md
+
+---
+
 ## v1.5 UI 图片驱动体系 (Shipped: 2026-04-27)
 
 **Phases completed:** 7 phases, 16 plans, 16 tasks

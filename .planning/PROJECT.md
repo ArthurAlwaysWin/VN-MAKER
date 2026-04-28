@@ -93,20 +93,10 @@
 
 ### Active
 
-- [ ] **THEMEPACK-01**: 用户可以把包含 `theme.json + assets/` 的完整图片主题导入到项目中，并自动落盘所需素材
-- [ ] **THEMEPACK-02**: 用户可以将当前项目主题导出为可复用的 `.gmtheme` 包，并保留全部图片 UI 资产
-- [ ] **THEMEPACK-03**: 用户可以一键应用 5 套完整图片主题，让对话框、按钮、major screens、cursor、icons 形成统一风格
-- [ ] **THEMEPACK-04**: 用户在编辑器里可以预览并选择完整主题包，而不是只调单个图片槽位
-
-## Current Milestone: v1.6 完整主题包与图片主题产出
-
-**Goal:** 把 v1.5 已打通的图片 UI 能力升级成可分发、可复用、开箱即用的完整主题包体系。
-
-**Target features:**
-- `.gmtheme` 升级为包含 `theme.json + assets/` 的完整主题包
-- 主题导入/导出时自动携带并落盘图片素材
-- 产出 5 套完整图片主题（现代简约、日式传统、奇幻、以及另外 2 套完整风格）
-- Theme 选择/预览体验升级，让用户能一键套用整套图片主题
+- [x] **THEMEPACK-01**: 用户可以把包含 `theme.json + assets/` 的完整图片主题导入到项目中，并自动落盘所需素材
+- [x] **THEMEPACK-02**: 用户可以将当前项目主题导出为可复用的 `.gmtheme` 包，并保留全部图片 UI 资产
+- [x] **THEMEPACK-03**: 用户可以一键应用 5 套完整图片主题，让对话框、按钮、major screens、cursor、icons 形成统一风格
+- [x] **THEMEPACK-04**: 用户在编辑器里可以预览并选择完整主题包，而不是只调单个图片槽位
 
 ## Current State
 
@@ -116,15 +106,27 @@
 
 **v1.5 已完成：** 对话框 / 按钮族 / major screens / cursor / icons 的图片化闭环全部交付，补齐了 Phase 76-77 gap closure 后达到 17/17 requirements、7/7 phases、2/2 integrations、5/5 flows。
 
-**当前进行中：** v1.6「完整主题包与图片主题产出」已完成 Phase 78-81，当前剩余 Phase 82「剩余 4 套完整主题扩展」。
+**最新已交付：** v1.6「完整主题包与图片主题产出」已归档；完整 `.gmtheme` 主题包体系、统一 browser/install/apply/export 通路与 5 套 shipped 完整主题均已交付。14/14 requirements、5/5 phases、13 plans、17 tasks 全部完成。
 
-**下一步：** 先冻结剩余 4 套 shipped themes 的风格差异与 coverage 标准，再拆解 Phase 82 计划并进入执行。
+**归档位置：** `milestones/v1.6-ROADMAP.md`、`milestones/v1.6-REQUIREMENTS.md`、`milestones/v1.6-MILESTONE-AUDIT.md`
+
+<details>
+<summary>v1.6 target features (shipped)</summary>
+
+- ✅ `.gmtheme` 升级为包含 `theme.json + assets/` 的完整主题包
+- ✅ 主题导入/导出时自动携带并落盘图片素材
+- ✅ built-in / imported themes 走同一条 install / apply / export path
+- ✅ Theme Browser 在应用前展示静态预览、覆盖范围、覆盖影响与 lifecycle 状态
+- ✅ 最终交付 5 套 shipped 完整图片主题，而不是 1 套完整 + 4 套换色变体
+
+</details>
 
 ## Next Milestone Goals
 
-- `.gmtheme` 从纯配置包升级为带 assets 的完整主题包
-- 用完整图片素材而不是单点参数调节，交付 5 套真正可开箱即用的主题
-- 把 Theme 选择体验从“调配置”升级到“选整套风格”
+- 每场景 / 每页面主题切换
+- 主题包字体内嵌与兼容 / 许可证提示
+- 社区主题市场 / 主题库能力
+- 更高级的未应用主题预览体验（仅在复杂度收益成立时考虑）
 
 ## Previous Milestone: ✅ v1.5 UI 图片驱动体系 (Shipped 2026-04-27)
 
@@ -194,7 +196,7 @@ P0 引擎配置化 — ✅ 已在 v1.1 完成
 P1 编辑器 + 内置主题 — ✅ 已在 v1.2 完成
 
 推迟项（P2/P3 — 后续里程碑）：
-- [ ] **.gmtheme 主题包格式**：ZIP 打包 theme.json + assets/，导入/导出/社区共享
+- [x] **.gmtheme 主题包格式（v1.6 已交付）**：ZIP 打包 theme.json + assets/，已支持导入 / 导出 / 项目间复用
 - [ ] **Tab ribbon/trapezoid clip-path 精细实现**
 - [ ] **编辑器 UI 设计器合并标签页** — 现有 6 标签已稳定，不急于合并，新功能可作为子页添加
 

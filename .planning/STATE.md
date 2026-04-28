@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
-status: ready_for_planning
-stopped_at: Phase 83 complete; Phase 84 ready for planning
-last_updated: "2026-04-28T21:55:00+10:00"
+status: phase_planned
+stopped_at: Phase 84 planned; ready for execution
+last_updated: "2026-04-28T22:10:00+10:00"
 last_activity: 2026-04-28
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
+  total_plans: 8
   completed_plans: 3
 ---
 
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** 开发者不碰逻辑 — 只做视觉设计，引擎处理一切游戏逻辑  
-**Current focus:** Milestone v1.7 — Phase 83 complete, Phase 84 ready for planning
+**Current focus:** Milestone v1.7 — Phase 84 planned, ready for execution
 
 ## Current Position
 
 Phase: 84 — 变量注册表与条件分支 GUI
 Plan: —
-Status: Phase 83 complete
-Next: /gsd-plan-phase 84
+Status: Planned
+Next: /gsd-execute-phase 84
 Last activity: 2026-04-28
 
 ```
@@ -152,13 +152,13 @@ v1.7 ████░░░░░░░░░░░░░░ 1/4 phases (phase 83
 ## Session Continuity
 
 Last session: 2026-04-28T11:30:17.979Z
-Stopped at: Phase 83 complete; Phase 84 ready for planning
+Stopped at: Phase 84 planned; ready for execution
 Resume file: None
 Resume hint: |
 
   1. Phase 83 已完成 execution + verification + review follow-up，闭环包括 stable `projectId`、`systems.*` registries、profile/save separation、canonical `effects[]`
-  2. 下一步从 `/gsd-plan-phase 84` 开始，聚焦变量注册表、变量写入 GUI、条件页 GUI 与分支跳转摘要
+  2. Phase 84 已完成 planning，拆为 `84-01` shared contracts、`84-02` workspace+safety、`84-03` choice effects、`84-04` condition GUI、`84-05` surface audit
   3. 明确延期：flowchart、replay、BGM room、achievements、字符串变量 / 表达式语言、generic persistent vars、auto-detected unlocks、cloud sync
   4. 当前 worktree 仍有与本次 GSD planning 无关的用户改动；执行时不要自动清理或重置它们
 
-Next action: /gsd-plan-phase 84
+Next action: /gsd-execute-phase 84

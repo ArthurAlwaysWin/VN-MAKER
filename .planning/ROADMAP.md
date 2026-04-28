@@ -53,7 +53,12 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
   3. 作者可以通过条件页 GUI 配置 1~3 条比较条件，支持 `== != > >= < <=` 与“全部满足 / 任一满足”。
   4. 作者配置条件分流时可以通过场景选择器指定跳转目标，并看到可读的自然语言摘要，而不是裸 scene ID。
   5. 作者重命名或删除变量时，可以看到引用次数、反向引用位置以及明确的安全提示或阻止行为。
-**Plans**: TBD
+**Plans**:
+- `84-01` Shared contracts: variable registry helpers, canonical condition shape, runtime default seeding, reference scanner
+- `84-02` Story Systems workspace: variable registry UI, CRUD, repair routing, rename/delete safety, invalid-condition save gate
+- `84-03` Choice authoring: picker-backed `effects[]` editor for variable writes
+- `84-04` Condition GUI: condition-page builder, scene picker, derived summaries, repair UI
+- `84-05` Surface audit: patch remaining normal-page assumptions outside the main inspector flow
 **UI hint**: yes
 
 ### Phase 85: 好感度预设与结局追踪
@@ -113,6 +118,6 @@ v1.7 的目标不是“继续塞逻辑字段”，而是把当前 page-based VN 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 83. 剧情系统契约与持久化护栏 | 3/3 | Complete   | 2026-04-28 |
-| 84. 变量注册表与条件分支 GUI | 0/0 | Not started | - |
+| 84. 变量注册表与条件分支 GUI | 0/5 | Planned | - |
 | 85. 好感度预设与结局追踪 | 0/0 | Not started | - |
 | 86. CG 图鉴与一致性验证闭环 | 0/0 | Not started | - |

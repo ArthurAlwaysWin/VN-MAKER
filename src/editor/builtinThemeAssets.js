@@ -66,7 +66,24 @@ export const BUILTIN_THEME_ASSETS = Object.freeze({
       targetPath: 'ui/themes/fantasy-dark/title/mark.svg',
     },
   ]),
-  'minimal-white': freezeEntries([]),
+  'minimal-white': freezeEntries([
+    {
+      sourcePath: 'builtin-themes/minimal-white/dialogue-nameplate.svg',
+      targetPath: 'ui/themes/minimal-white/dialogue/nameplate.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/minimal-white/screen-chrome.svg',
+      targetPath: 'ui/themes/minimal-white/screens/chrome.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/minimal-white/title-background.svg',
+      targetPath: 'ui/themes/minimal-white/title/background.svg',
+    },
+    {
+      sourcePath: 'builtin-themes/minimal-white/title-mark.svg',
+      targetPath: 'ui/themes/minimal-white/title/mark.svg',
+    },
+  ]),
 });
 
 export function getBuiltinThemeAssets(themeId) {

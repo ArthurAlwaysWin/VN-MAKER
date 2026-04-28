@@ -1,9 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" fill="none">
-  <rect width="480" height="270" rx="20" fill="#F3F4EF"/>
-  <rect x="24" y="24" width="432" height="222" rx="18" fill="#FCFCF8" stroke="#5BA87E" stroke-opacity="0.24"/>
-  <rect x="52" y="60" width="152" height="146" rx="16" fill="#F2F5EE" stroke="#5BA87E" stroke-opacity="0.14"/>
-  <rect x="226" y="66" width="180" height="18" rx="9" fill="#2F4338" fill-opacity="0.1"/>
-  <rect x="226" y="98" width="150" height="12" rx="6" fill="#2F4338" fill-opacity="0.08"/>
-  <rect x="226" y="120" width="168" height="12" rx="6" fill="#2F4338" fill-opacity="0.08"/>
-  <rect x="226" y="156" width="120" height="38" rx="12" fill="#B8DEC7"/>
+  <rect width="480" height="270" rx="20" fill="#F6F3EC"/>
+  <rect x="20" y="20" width="440" height="230" rx="18" fill="#FCFAF5" stroke="#313730" stroke-opacity="0.12" stroke-width="2"/>
+  <rect x="44" y="44" width="392" height="182" rx="8" fill="#FFFDF8" stroke="#313730" stroke-opacity="0.08"/>
+  <path d="M220 44V226" stroke="#313730" stroke-opacity="0.08" stroke-width="2"/>
+  <path d="M44 88H436" stroke="#313730" stroke-opacity="0.08" stroke-width="2"/>
+  <rect x="60" y="62" width="128" height="12" rx="6" fill="#879E90" fill-opacity="0.26"/>
+  <rect x="72" y="108" width="118" height="18" rx="3" fill="#F1EEE6" stroke="#313730" stroke-opacity="0.12"/>
+  <rect x="246" y="68" width="152" height="56" rx="6" fill="#F8F5EE" stroke="#313730" stroke-opacity="0.12"/>
+  <rect x="246" y="146" width="168" height="12" rx="6" fill="#313730" fill-opacity="0.08"/>
+  <rect x="246" y="168" width="152" height="12" rx="6" fill="#313730" fill-opacity="0.06"/>
+  <rect x="246" y="198" width="124" height="32" rx="4" fill="#FFFFFF" stroke="#313730" stroke-opacity="0.14"/>
+  <defs />
 </svg>

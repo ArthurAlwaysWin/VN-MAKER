@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="220" viewBox="0 0 620 220" fill="none">
+  <rect x="20" y="26" width="580" height="168" rx="8" fill="#FCFAF5" stroke="#313730" stroke-opacity="0.10" stroke-width="2"/>
+  <path d="M48 60H572" stroke="#313730" stroke-opacity="0.08" stroke-width="2"/>
+  <text x="310" y="116" fill="#222522" font-family="Segoe UI, sans-serif" font-size="46" font-weight="700" letter-spacing="12" text-anchor="middle">STORY NOTE</text>
+  <text x="310" y="152" fill="#879E90" font-family="Segoe UI, sans-serif" font-size="18" letter-spacing="8" text-anchor="middle">EDITORIAL WHITE</text>
+</svg>

@@ -27,11 +27,21 @@
 
 import { EventEmitter } from './EventEmitter.js';
 import {
+  CONDITION_OPERATORS,
+  evaluateConditionPage,
+  normalizeConditionPage,
+} from '../shared/branchingContract.js';
+import {
   getCharacterAnimationValue,
   getPageCameraContract,
   getRuntimeTransitionType,
 } from '../shared/cinematicContract.js';
 import { applyEffects } from '../shared/effectDsl.js';
+import {
+  mergeRuntimeVariables,
+  normalizeVariableRegistry,
+  seedRuntimeVariablesFromRegistry,
+} from '../shared/variableRegistry.js';
 
 export class ScriptEngine extends EventEmitter {
   constructor() {
@@ -99,7 +109,7 @@ export class ScriptEngine extends EventEmitter {
    * @param {string} [sceneId='start']
    */
   startGame(sceneId = 'start') {
-    this.variables.clear();
+    this.variables = seedRuntimeVariablesFromRegistry(this.script?.systems?.variables);
     this.history = [];
     this.ended = false;
     this._resetRenderState();
@@ -190,7 +200,7 @@ export class ScriptEngine extends EventEmitter {
     this.currentScene = state.currentScene;
     this.pageIndex = state.pageIndex ?? 0;
     this.dialogueIndex = state.dialogueIndex ?? 0;
-    this.variables = new Map(Object.entries(state.variables || {}));
+    this.variables = mergeRuntimeVariables(this.script?.systems?.variables, state.variables || {});
     this.history = state.history || [];
     this._expressionState = new Map(Object.entries(state.expressionState || {}));
     this.ended = false;
@@ -485,22 +495,23 @@ export class ScriptEngine extends EventEmitter {
    * @private
    */
   _execCondition(page) {
-    const val = this.variables.get(page.variable) ?? 0;
-    let result = false;
+    const registry = normalizeVariableRegistry(this.script?.systems?.variables);
+    const operators = Array.isArray(page?.conditions) && page.conditions.length > 0
+      ? page.conditions.map((condition) => condition?.operator)
+      : [page?.operator];
+    const unknownOperator = operators.find((operator) => !CONDITION_OPERATORS.includes(operator));
+    const normalizedPage = normalizeConditionPage(page, { registry });
 
-    switch (page.operator) {
-      case '==':  result = val === page.value; break;
-      case '!=':  result = val !== page.value; break;
-      case '>':   result = val > page.value;   break;
-      case '>=':  result = val >= page.value;  break;
-      case '<':   result = val < page.value;   break;
-      case '<=':  result = val <= page.value;  break;
-      default:
-        console.warn(`[ScriptEngine] Unknown operator: ${page.operator}`);
-        this.emit('error', { type: 'unknown_operator', operator: page.operator, page });
+    if (unknownOperator) {
+      console.warn(`[ScriptEngine] Unknown operator: ${unknownOperator}`);
+      this.emit('error', { type: 'unknown_operator', operator: unknownOperator, page });
     }
 
-    const target = result ? page.trueTarget : page.falseTarget;
+    const result = !unknownOperator && evaluateConditionPage(normalizedPage, {
+      variables: this.variables,
+      registry,
+    });
+    const target = result ? normalizedPage.trueTarget : normalizedPage.falseTarget;
     if (target) {
       this._enterScene(target);
     } else {

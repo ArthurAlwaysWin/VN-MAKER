@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia';
 import { ref, nextTick } from 'vue';
+import { normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 import { normalizeEffectContainer } from '../../shared/effectDsl.js';
 import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
+import { normalizeVariableRegistry } from '../../shared/variableRegistry.js';
 
 function normalizeChoiceEffects(scriptData) {
   if (!scriptData?.scenes) {
@@ -29,6 +31,20 @@ function normalizeChoiceEffects(scriptData) {
   return scriptData;
 }
 
+function normalizeStoryContracts(scriptData) {
+  if (!scriptData) {
+    return scriptData;
+  }
+
+  scriptData.systems ??= {};
+  scriptData.systems.variables = normalizeVariableRegistry(scriptData.systems.variables);
+  normalizeChoiceEffects(scriptData);
+  normalizeConditionPages(scriptData, {
+    registry: scriptData.systems.variables,
+  });
+  return scriptData;
+}
+
 export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
   const isLoading = ref(false);
@@ -40,7 +56,7 @@ export const useScriptStore = defineStore('script', () => {
 
   function pushState() {
     if (!data.value) return;
-    normalizeChoiceEffects(data.value);
+    normalizeStoryContracts(data.value);
     const snapshot = JSON.parse(JSON.stringify(data.value));
     if (historyIndex.value < history.value.length - 1) {
       history.value = history.value.slice(0, historyIndex.value + 1);
@@ -72,7 +88,7 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function loadFromData(scriptData) {
-    data.value = normalizeChoiceEffects(
+    data.value = normalizeStoryContracts(
       ensureGalgameContract(migrateLegacyAppliedThemeData(scriptData).script),
     );
     history.value = [];

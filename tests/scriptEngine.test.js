@@ -96,6 +96,27 @@ describe('startGame', () => {
     strictEqual(engine.currentScene, 'start');
     strictEqual(engine.waiting, true);
   });
+
+  it('seeds registered bool and number defaults before scene execution starts', () => {
+    const engine = makeEngine();
+    engine.script.systems = {
+      variables: {
+        route_locked: {
+          type: 'bool',
+          initial: true,
+        },
+        affection: {
+          type: 'number',
+          initial: 2,
+        },
+      },
+    };
+
+    engine.startGame('start');
+
+    strictEqual(engine.variables.get('route_locked'), true);
+    strictEqual(engine.variables.get('affection'), 2);
+  });
 });
 
 // ─── next() — dialogue advancement ────────────────────────
@@ -308,6 +329,84 @@ describe('condition pages', () => {
     strictEqual(errors.length, 1);
     strictEqual(errors[0].type, 'unknown_operator');
     strictEqual(errors[0].operator, '???');
+  });
+
+  it('evaluates canonical multi-row condition pages through the shared contract helper', () => {
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {},
+      systems: {
+        variables: {
+          route_locked: { type: 'bool', initial: false },
+          affection: { type: 'number', initial: 0 },
+        },
+      },
+      scenes: {
+        start: {
+          name: 'Condition Test',
+          pages: [
+            {
+              type: 'condition',
+              conditionMode: 'all',
+              conditions: [
+                { variableId: 'route_locked', operator: '==', value: true },
+                { variableId: 'affection', operator: '>=', value: 3 },
+              ],
+              trueTarget: 'goodEnd',
+              falseTarget: 'badEnd',
+            },
+          ],
+        },
+        goodEnd: {
+          name: 'Good End',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Good!', voice: null }] }],
+        },
+        badEnd: {
+          name: 'Bad End',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Bad!', voice: null }] }],
+        },
+      },
+    };
+    engine.variables.set('route_locked', true);
+    engine.variables.set('affection', 3);
+    engine.currentScene = 'start';
+
+    const events = capture(engine, 'scene_enter', () => engine._processCurrentPage());
+    strictEqual(events[0]?.sceneId, 'goodEnd');
+  });
+});
+
+describe('restoreState', () => {
+  it('overlays saved values over registry defaults and preserves unknown legacy save keys', () => {
+    const engine = makeEngine();
+    engine.script.systems = {
+      variables: {
+        route_locked: {
+          type: 'bool',
+          initial: true,
+        },
+        affection: {
+          type: 'number',
+          initial: 4,
+        },
+      },
+    };
+
+    engine.restoreState({
+      currentScene: 'start',
+      pageIndex: 0,
+      dialogueIndex: 0,
+      variables: {
+        affection: 9,
+        old_flag: 'legacy',
+      },
+      history: [],
+      expressionState: {},
+    });
+
+    strictEqual(engine.variables.get('route_locked'), true);
+    strictEqual(engine.variables.get('affection'), 9);
+    strictEqual(engine.variables.get('old_flag'), 'legacy');
   });
 });
 

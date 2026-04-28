@@ -1,11 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 
 import {
   evaluateConditionPage,
   normalizeConditionPage,
 } from '../src/shared/branchingContract.js';
+import { useScriptStore } from '../src/editor/stores/script.js';
 
 describe('branching contract', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
   it('normalizes legacy single-condition pages into the canonical shape while leaving canonical pages unchanged', () => {
     const legacy = normalizeConditionPage({
       type: 'condition',
@@ -95,5 +101,89 @@ describe('branching contract', () => {
         { variableId: 'affection', operator: '>', value: 10 },
       ],
     }, { variables })).toBe(false);
+  });
+
+  it('normalizes incoming choice effects and condition pages before the first history snapshot is saved', () => {
+    const store = useScriptStore();
+
+    store.loadFromData({
+      characters: {},
+      systems: {
+        variables: {
+          route_locked: {
+            type: 'bool',
+            initial: false,
+          },
+        },
+      },
+      scenes: {
+        start: {
+          name: '开始',
+          pages: [
+            {
+              type: 'choice',
+              prompt: '去哪里？',
+              options: [
+                {
+                  text: '去天台',
+                  target: 'roof',
+                  setVariable: {
+                    affection: 2,
+                  },
+                },
+              ],
+            },
+            {
+              type: 'condition',
+              variable: 'route_locked',
+              operator: '==',
+              value: false,
+              trueTarget: 'roof',
+              falseTarget: null,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(store.data.scenes.start.pages[0].options).toEqual([
+      {
+        text: '去天台',
+        target: 'roof',
+        effects: [
+          {
+            type: 'var:add',
+            id: 'affection',
+            value: 2,
+          },
+        ],
+      },
+    ]);
+    expect(store.data.scenes.start.pages[1]).toEqual({
+      type: 'condition',
+      conditionMode: 'all',
+      conditions: [
+        {
+          variableId: 'route_locked',
+          operator: '==',
+          value: false,
+        },
+      ],
+      trueTarget: 'roof',
+      falseTarget: null,
+    });
+    expect(store.history[0].scenes.start.pages[1]).toEqual({
+      type: 'condition',
+      conditionMode: 'all',
+      conditions: [
+        {
+          variableId: 'route_locked',
+          operator: '==',
+          value: false,
+        },
+      ],
+      trueTarget: 'roof',
+      falseTarget: null,
+    });
   });
 });

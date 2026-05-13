@@ -4,6 +4,23 @@
       <!-- Background -->
       <div class="canvas-bg" :style="bgStyle"></div>
 
+      <!-- Grid overlay -->
+      <svg v-if="editor.gridVisible.value" class="canvas-grid-overlay" :width="GAME_W" :height="GAME_H">
+        <line v-for="gx in gridLinesX" :key="'gx-'+gx" :x1="gx" y1="0" :x2="gx" :y2="GAME_H" />
+        <line v-for="gy in gridLinesY" :key="'gy-'+gy" x1="0" :y1="gy" :x2="GAME_W" :y2="gy" />
+      </svg>
+
+      <!-- Snap guide overlay -->
+      <svg class="canvas-guide-overlay" :width="GAME_W" :height="GAME_H" v-if="localGuides.length">
+        <line v-for="(g, i) in localGuides" :key="'g-'+i"
+          :x1="g.axis === 'x' ? g.at : 0"
+          :y1="g.axis === 'y' ? g.at : 0"
+          :x2="g.axis === 'x' ? g.at : GAME_W"
+          :y2="g.axis === 'y' ? g.at : GAME_H"
+          class="guide-line"
+        />
+      </svg>
+
       <!-- Characters -->
       <DraggableElement
         v-for="(char, idx) in page.characters"
@@ -14,9 +31,13 @@
         :is-selected="editor.selectedCharIndex.value === idx"
         :canvas-scale="canvasScale"
         :scalable="true"
+        :snap-fn="buildCharSnapFn(idx)"
         @select="editor.selectCharacter(idx)"
         @move="onCharMove(idx, $event)"
-        @scale="onCharScale(idx, $event)">
+        @move-end="onCharMoveCommit(idx, $event)"
+        @scale="onCharScale(idx, $event)"
+        @scale-end="onCharScaleCommit(idx, $event)"
+        @guides="onGuidesUpdate">
         <div class="canvas-character">
           <img v-if="getCharImage(char)" :src="getCharImage(char)" class="char-sprite" />
           <div v-else class="char-placeholder">
@@ -27,7 +48,7 @@
       </DraggableElement>
 
       <!-- Dialogue box -->
-      <div v-if="currentDialogue" class="canvas-dialogue"
+      <div v-if="page && page.type === 'normal' && currentDialogue" class="canvas-dialogue"
         :style="dialogueBoxStyle"
         :class="{ editing: isEditingDialogue }"
         @dblclick.stop="startInlineEdit"
@@ -49,7 +70,7 @@
       </div>
 
       <!-- Dialogue index navigation pills -->
-      <div v-if="page && page.dialogues && page.dialogues.length > 1" class="dialogue-nav">
+      <div v-if="page && page.type === 'normal' && page.dialogues && page.dialogues.length > 1" class="dialogue-nav">
         <button v-for="(dlg, i) in page.dialogues" :key="i"
           class="dlg-nav-btn" :class="{ active: editor.selectedDialogueIndex.value === i }"
           @click.stop="editor.selectDialogue(i)"
@@ -67,6 +88,10 @@
           {{ opt.text || `选项 ${idx + 1}` }}
         </button>
       </div>
+
+      <div v-if="page && page.type === 'condition'" class="canvas-condition-hint">
+        条件页不显示对白画布预览
+      </div>
     </div>
 
     <!-- Empty state -->
@@ -82,6 +107,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import DraggableElement from '../canvas/DraggableElement.vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import { getElementBounds, computeSnap } from '../../utils/snapGuides.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -89,6 +115,7 @@ const wrapperRef = ref(null);
 const canvasScale = ref(1);
 const isEditingDialogue = ref(false);
 const inlineTextarea = ref(null);
+const localGuides = ref([]); // guide lines during drag
 
 const GAME_W = 1280;
 const GAME_H = 720;
@@ -99,6 +126,19 @@ let resizeObserver = null;
 
 const page = computed(() => editor.currentPage.value);
 const currentDialogue = computed(() => editor.currentDialogue.value);
+
+const gridLinesX = computed(() => {
+  const gs = editor.gridSize.value;
+  const lines = [];
+  for (let x = gs; x < GAME_W; x += gs) lines.push(x);
+  return lines;
+});
+const gridLinesY = computed(() => {
+  const gs = editor.gridSize.value;
+  const lines = [];
+  for (let y = gs; y < GAME_H; y += gs) lines.push(y);
+  return lines;
+});
 
 const artboardStyle = computed(() => ({
   width: GAME_W + 'px',
@@ -181,6 +221,71 @@ function getCharName(charId) {
   return script.data?.characters?.[charId]?.name || charId || '';
 }
 
+// ─── Snap computation ──────────────────────────────────────
+function buildCharSnapFn(charIndex) {
+  return (rawX, rawY) => {
+    if (!editor.snapEnabled.value) return null;
+    const char = page.value?.characters?.[charIndex];
+    if (!char) return null;
+
+    // Estimate character bounding box
+    const charW = char._width || 120;
+    const charH = char._height || 200;
+    const sc = char.scale || 1;
+    const activeBounds = {
+      left: rawX,
+      top: rawY,
+      right: rawX + charW * sc,
+      bottom: rawY + charH * sc,
+      centerX: rawX + (charW * sc) / 2,
+      centerY: rawY + (charH * sc) / 2,
+      width: charW * sc,
+      height: charH * sc,
+    };
+
+    // Build peer bounds from other characters
+    const peerBounds = [];
+    for (let i = 0; i < (page.value?.characters?.length || 0); i++) {
+      if (i === charIndex) continue;
+      const peer = page.value.characters[i];
+      const pw = peer._width || 120;
+      const ph = peer._height || 200;
+      const ps = peer.scale || 1;
+      peerBounds.push({
+        id: peer.id + '-' + i,
+        x: getCharX(peer),
+        y: getCharY(peer),
+        width: pw * ps,
+        height: ph * ps,
+        scale: 1,
+      });
+    }
+
+    const result = computeSnap({
+      activeBounds,
+      canvasBounds: { width: GAME_W, height: GAME_H },
+      peerBounds,
+      threshold: 6,
+      zoom: canvasScale.value,
+      enableCanvas: true,
+      enablePeers: true,
+      enableGrid: editor.gridVisible.value,
+      gridSize: editor.gridSize.value,
+    });
+
+    return {
+      x: rawX + result.deltaX,
+      y: rawY + result.deltaY,
+      guides: result.guides,
+    };
+  };
+}
+
+function onGuidesUpdate(guides) {
+  localGuides.value = guides;
+  editor.activeGuides.value = guides;
+}
+
 function onCharMove(charIndex, { x, y }) {
   const char = page.value?.characters?.[charIndex];
   if (!char) return;
@@ -190,11 +295,29 @@ function onCharMove(charIndex, { x, y }) {
   // Continuous drag — do NOT call pushState (Pitfall 4)
 }
 
+function onCharMoveCommit(charIndex, { x, y }) {
+  const char = page.value?.characters?.[charIndex];
+  if (!char) return;
+  char.x = x;
+  char.y = y;
+  char.position = 'custom';
+  // Drag ended — commit one undo state
+  script.pushState();
+}
+
 function onCharScale(charIndex, newScale) {
   const char = page.value?.characters?.[charIndex];
   if (!char) return;
   char.scale = newScale;
   // Continuous drag — do NOT call pushState (Pitfall 4)
+}
+
+function onCharScaleCommit(charIndex, newScale) {
+  const char = page.value?.characters?.[charIndex];
+  if (!char) return;
+  char.scale = newScale;
+  // Scale ended — commit one undo state
+  script.pushState();
 }
 
 function onCanvasClick() {
@@ -294,6 +417,33 @@ const speakerStyle = computed(() => {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+.canvas-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.canvas-grid-overlay line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.canvas-guide-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.guide-line {
+  stroke: #00e5ff;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
 }
 
 .canvas-character {
@@ -461,5 +611,19 @@ const speakerStyle = computed(() => {
   border-radius: 6px;
   text-align: center;
   pointer-events: none;
+}
+
+.canvas-condition-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: #c9c9c9;
+  font-size: 13px;
+  padding: 10px 14px;
+  z-index: 3;
 }
 </style>

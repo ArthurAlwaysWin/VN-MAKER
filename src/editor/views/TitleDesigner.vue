@@ -26,6 +26,15 @@
           <button class="toolbar-btn" @click="pickBackground" title="选择背景图片">🖼️ 背景</button>
           <button class="toolbar-btn" v-if="layout.background" @click="clearBackground" title="清除背景图片">✕ 清除背景</button>
           <span class="toolbar-sep"></span>
+          <button class="toolbar-btn" :class="{ active: snapEnabled }" @click="snapEnabled = !snapEnabled" title="吸附对齐 (Alt 拖动临时禁用)">🧲</button>
+          <button class="toolbar-btn" :class="{ active: gridVisible }" @click="gridVisible = !gridVisible" title="网格显示">▦</button>
+          <select v-if="gridVisible" class="grid-size-select" :value="gridSize" @change="gridSize = +$event.target.value" title="网格大小">
+            <option value="8">8px</option>
+            <option value="16">16px</option>
+            <option value="24">24px</option>
+            <option value="32">32px</option>
+          </select>
+          <span class="toolbar-sep"></span>
           <button class="toolbar-btn" @click="pickBgm" title="选择背景音乐">🎵 BGM</button>
           <template v-if="layout.bgm">
             <span class="toolbar-info">{{ bgmFilename }}</span>
@@ -45,6 +54,23 @@
         <div class="canvas-artboard" ref="artboardRef" :style="artboardStyle">
           <div class="canvas-bg" :style="bgStyle"></div>
 
+          <!-- Grid overlay -->
+          <svg v-if="gridVisible" class="canvas-grid-overlay" :width="GAME_W" :height="GAME_H">
+            <line v-for="gx in titleGridLinesX" :key="'gx-'+gx" :x1="gx" y1="0" :x2="gx" :y2="GAME_H" />
+            <line v-for="gy in titleGridLinesY" :key="'gy-'+gy" x1="0" :y1="gy" :x2="GAME_W" :y2="gy" />
+          </svg>
+
+          <!-- Snap guide overlay -->
+          <svg class="canvas-guide-overlay" :width="GAME_W" :height="GAME_H" v-if="localGuides.length">
+            <line v-for="(g, i) in localGuides" :key="'g-'+i"
+              :x1="g.axis === 'x' ? g.at : 0"
+              :y1="g.axis === 'y' ? g.at : 0"
+              :x2="g.axis === 'x' ? g.at : GAME_W"
+              :y2="g.axis === 'y' ? g.at : GAME_H"
+              class="guide-line"
+            />
+          </svg>
+
           <DraggableElement
             v-for="elem in layout.elements"
             :key="elem.id"
@@ -55,9 +81,13 @@
             :is-selected="selectedId === elem.id"
             :resizable="elem.type !== 'text'"
             :canvas-scale="canvasScale"
+            :snap-fn="buildTitleSnapFn(elem.id)"
             @select="selectedId = elem.id"
             @move="onElementMove(elem, $event)"
-            @resize="onElementResize(elem, $event)">
+            @move-end="onElementMoveCommit(elem, $event)"
+            @resize="onElementResize(elem, $event)"
+            @resize-end="onElementResizeCommit(elem, $event)"
+            @guides="onGuidesUpdate">
             <!-- Button preview -->
             <div v-if="elem.type === 'button'" class="elem-preview elem-button-title"
               :class="{ 'continue-disabled': elem.action === 'continue' }"
@@ -254,6 +284,7 @@ import { useScriptStore } from '../stores/script.js';
 import { useAssetStore } from '../stores/assets.js';
 import DraggableElement from '../components/canvas/DraggableElement.vue';
 import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
+import { computeSnap } from '../utils/snapGuides.js';
 import HelpTip from '../components/HelpTip.vue';
 import { HELP_DESIGNER } from '../helpTexts.js';
 import { useTitlePreview } from '../composables/useTitlePreview.js';
@@ -327,6 +358,12 @@ const wrapperRef = ref(null);
 const artboardRef = ref(null);
 let resizeObs = null;
 
+// ─── Snap / Guide state ────────────────────────────────────
+const snapEnabled = ref(true);
+const gridVisible = ref(false);
+const gridSize = ref(16);
+const localGuides = ref([]);
+
 const artboardStyle = computed(() => ({
   transform: `scale(${canvasScale.value})`,
   transformOrigin: 'top center',
@@ -339,6 +376,19 @@ const bgStyle = computed(() => {
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   };
+});
+
+const titleGridLinesX = computed(() => {
+  const gs = gridSize.value;
+  const lines = [];
+  for (let x = gs; x < GAME_W; x += gs) lines.push(x);
+  return lines;
+});
+const titleGridLinesY = computed(() => {
+  const gs = gridSize.value;
+  const lines = [];
+  for (let y = gs; y < GAME_H; y += gs) lines.push(y);
+  return lines;
 });
 
 function updateScale() {
@@ -482,16 +532,85 @@ function onCanvasDrop(e) {
 }
 
 // ─── Element Manipulation ───────────────────────────────
+function buildTitleSnapFn(elemId) {
+  return (rawX, rawY) => {
+    if (!snapEnabled.value) return null;
+
+    // Find the element to get its dimensions
+    const elem = layout.elements.find(e => e.id === elemId);
+    if (!elem) return null;
+
+    const ew = elem.width || 0;
+    const eh = elem.height || 0;
+    const activeBounds = {
+      left: rawX,
+      top: rawY,
+      right: rawX + ew,
+      bottom: rawY + eh,
+      centerX: rawX + ew / 2,
+      centerY: rawY + eh / 2,
+      width: ew,
+      height: eh,
+    };
+
+    // Peer bounds: all other elements
+    const peerBounds = layout.elements
+      .filter(e => e.id !== elemId)
+      .map(e => ({
+        id: e.id,
+        x: e.x,
+        y: e.y,
+        width: e.width || 0,
+        height: e.height || 0,
+        scale: 1,
+      }));
+
+    const result = computeSnap({
+      activeBounds,
+      canvasBounds: { width: GAME_W, height: GAME_H },
+      peerBounds,
+      threshold: 6,
+      zoom: canvasScale.value,
+      enableCanvas: true,
+      enablePeers: true,
+      enableGrid: gridVisible.value,
+      gridSize: gridSize.value,
+    });
+
+    return {
+      x: rawX + result.deltaX,
+      y: rawY + result.deltaY,
+      guides: result.guides,
+    };
+  };
+}
+
 function onElementMove(elem, { x, y }) {
   elem.x = x;
   elem.y = y;
-  saveLayout();
+  // Continuous drag — do NOT call saveLayout/pushState here
+}
+
+function onElementMoveCommit(elem, { x, y }) {
+  elem.x = x;
+  elem.y = y;
+  saveLayout(); // single commit on drag end
+}
+
+function onGuidesUpdate(guides) {
+  localGuides.value = guides;
 }
 
 function onElementResize(elem, { width, height }) {
   elem.width = width;
   elem.height = height;
-  saveLayout();
+  // Continuous drag — do NOT call saveLayout/pushState here
+}
+
+function onElementResizeCommit(elem, { width, height }) {
+  elem.width = width;
+  elem.height = height;
+  saveLayout(); // single commit on resize end
 }
 
 function deleteSelected() {
@@ -837,6 +956,44 @@ function rgbaToHex(rgba) {
   position: absolute;
   inset: 0;
   z-index: 0;
+}
+
+.canvas-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.canvas-grid-overlay line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.canvas-guide-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.guide-line {
+  stroke: #00e5ff;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.grid-size-select {
+  background: #3c3c3c;
+  color: #ccc;
+  border: 1px solid #555;
+  border-radius: 3px;
+  height: 22px;
+  font-size: 11px;
+  padding: 0 2px;
+  cursor: pointer;
 }
 
 /* ─── Element Previews ─── */

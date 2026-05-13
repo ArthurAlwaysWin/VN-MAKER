@@ -17,6 +17,12 @@ export function createPageEditor() {
   const showAudioPicker = ref(false);
   const audioPickerTab = ref('bgm');
 
+  // ─── Snap / Grid / Guides state ──────────────────────────────────
+  const snapEnabled = ref(true);
+  const gridVisible = ref(false);
+  const gridSize = ref(16);
+  const activeGuides = ref([]); // [{axis, at, kind}] — populated during drag
+
   // ─── Preview mode state ─────────────────────────────────
   const previewSessionType = ref(null);
   const isPreviewMode = computed(() => previewSessionType.value !== null);
@@ -372,6 +378,11 @@ export function createPageEditor() {
     stopActiveEffectPreview,
     toggleMute,
     onEngineMessage,
+    // Snap / Grid / Guides
+    snapEnabled,
+    gridVisible,
+    gridSize,
+    activeGuides,
   };
 
   provide(PAGE_EDITOR_KEY, editor);

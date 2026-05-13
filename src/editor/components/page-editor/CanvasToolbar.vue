@@ -2,18 +2,76 @@
   <div class="canvas-toolbar">
     <template v-if="editor.previewSessionType.value === null">
       <button class="add-char-btn" @click="editor.showCharPicker.value = true"
-        :disabled="!editor.currentPage.value" title="添加角色到当前页面">
+        :disabled="editor.currentPage.value?.type === 'normal' ? false : true" title="添加角色到当前页面">
         + 添加角色
       </button>
       <HelpTip :text="HELP_SCRIPT.addCharacter" />
       <span class="toolbar-sep"></span>
       <span class="toolbar-info" v-if="editor.currentPage.value">
         页面 {{ editor.selectedPageIndex.value + 1 }}
-        <template v-if="editor.currentPage.value.type !== 'normal'">
-          ({{ editor.currentPage.value.type === 'choice' ? '选择页' : '条件页' }})
-        </template>
+        <template v-if="editor.currentPage.value?.type === 'choice'">(选择页)</template>
+        <template v-else-if="editor.currentPage.value?.type === 'condition'">(条件页)</template>
       </span>
       <span class="toolbar-info" v-else>未选中页面</span>
+
+      <!-- Snap / Grid / Align controls -->
+      <span class="toolbar-sep"></span>
+      <button class="toolbar-btn icon-btn" :class="{ active: editor.snapEnabled.value }"
+        @click="editor.snapEnabled.value = !editor.snapEnabled.value"
+        title="吸附对齐 (Alt 拖动临时禁用)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+          <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </button>
+      <button class="toolbar-btn icon-btn" :class="{ active: editor.gridVisible.value }"
+        @click="editor.gridVisible.value = !editor.gridVisible.value"
+        title="网格显示">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <line x1="7" y1="0" x2="7" y2="14" stroke="currentColor" stroke-width="1"/>
+          <line x1="0" y1="7" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+          <line x1="3.5" y1="0" x2="3.5" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+          <line x1="10.5" y1="0" x2="10.5" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+          <line x1="0" y1="3.5" x2="14" y2="3.5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+          <line x1="0" y1="10.5" x2="14" y2="10.5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+        </svg>
+      </button>
+      <select v-if="editor.gridVisible.value" class="grid-size-select" :value="editor.gridSize.value"
+        @change="editor.gridSize.value = +$event.target.value" title="网格大小">
+        <option value="8">8px</option>
+        <option value="16">16px</option>
+        <option value="24">24px</option>
+        <option value="32">32px</option>
+      </select>
+
+      <!-- Alignment commands — disabled until multi-select is implemented -->
+      <span class="toolbar-sep"></span>
+      <button class="toolbar-btn icon-btn" disabled title="左对齐（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="2" y1="2" x2="2" y2="12" stroke="currentColor" stroke-width="1.2"/><rect x="4" y="3" width="8" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="4" y="8" width="5" height="3" rx="0.5" fill="currentColor" opacity="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="水平居中（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 1"/><rect x="2" y="3" width="10" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="3" y="8" width="8" height="3" rx="0.5" fill="currentColor" opacity="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="右对齐（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="12" y1="2" x2="12" y2="12" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="3" width="8" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="5" y="8" width="5" height="3" rx="0.5" fill="currentColor" opacity="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="顶对齐（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="2" y1="2" x2="12" y2="2" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="4" width="4" height="8" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="8" y="4" width="4" height="5" rx="0.5" fill="currentColor" opacity="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="垂直居中（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 1"/><rect x="2" y="2" width="4" height="10" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="8" y="3" width="4" height="8" rx="0.5" fill="currentColor" opacity="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="底对齐（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="2" y1="12" x2="12" y2="12" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="2" width="4" height="8" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="8" y="5" width="4" height="5" rx="0.5" fill="currentColor" opacity="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="水平均匀分布（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="3" height="8" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="5.5" y="3" width="3" height="8" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="10" y="3" width="3" height="8" rx="0.5" fill="currentColor" opacity="0.6"/><line x1="2.5" y1="12" x2="11.5" y2="12" stroke="currentColor" stroke-width="0.8"/><path d="M4 12L3 11.5L4 11" stroke="currentColor" stroke-width="0.6"/><path d="M10 12L11 11.5L10 11" stroke="currentColor" stroke-width="0.6"/></svg>
+      </button>
+      <button class="toolbar-btn icon-btn" disabled title="垂直均匀分布（需要多选）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="1" width="8" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="3" y="5.5" width="8" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="3" y="10" width="8" height="3" rx="0.5" fill="currentColor" opacity="0.6"/><line x1="12" y1="2.5" x2="12" y2="11.5" stroke="currentColor" stroke-width="0.8"/><path d="M12 4L11.5 3L11 4" stroke="currentColor" stroke-width="0.6"/><path d="M12 10L11.5 11L11 10" stroke="currentColor" stroke-width="0.6"/></svg>
+      </button>
     </template>
     <template v-else>
       <span class="toolbar-info preview-label">🎮 {{ editor.previewModeLabel.value }}</span>
@@ -47,6 +105,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import HelpTip from '../HelpTip.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
@@ -123,6 +182,27 @@ const editor = usePageEditor();
 .toolbar-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.toolbar-btn.active {
+  background: #264f78;
+  border-color: #007acc;
+  color: #9cdcfe;
+}
+
+.icon-btn {
+  padding: 0 5px;
+}
+
+.grid-size-select {
+  background: #3c3c3c;
+  color: #ccc;
+  border: 1px solid #555;
+  border-radius: 3px;
+  height: 22px;
+  font-size: 11px;
+  padding: 0 2px;
+  cursor: pointer;
 }
 
 .play-btn {

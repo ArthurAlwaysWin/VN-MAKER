@@ -34,12 +34,19 @@ const props = defineProps({
   resizable: { type: Boolean, default: false },
   scalable: { type: Boolean, default: false },
   canvasScale: { type: Number, default: 1 },
+  /**
+   * Optional snap calculator: (rawX, rawY) => { x, y, guides }
+   * Called during drag to adjust position and produce guide lines.
+   * Return null/undefined to skip snapping.
+   */
+  snapFn: { type: Function, default: null },
 });
 
-const emit = defineEmits(['select', 'move', 'resize', 'scale']);
+const emit = defineEmits(['select', 'move', 'resize', 'scale', 'guides', 'move-end', 'resize-end', 'scale-end']);
 
 const isDragging = ref(false);
 const dragStart = ref({ mx: 0, my: 0, ex: 0, ey: 0 });
+let lastMoveResult = null;
 
 const positionStyle = computed(() => {
   const s = {};
@@ -64,14 +71,32 @@ function onMouseDown(e) {
   const onMove = (ev) => {
     const dx = (ev.clientX - dragStart.value.mx) / props.canvasScale;
     const dy = (ev.clientY - dragStart.value.my) / props.canvasScale;
-    emit('move', {
-      x: Math.round(dragStart.value.ex + dx),
-      y: Math.round(dragStart.value.ey + dy),
-    });
+    let rawX = Math.round(dragStart.value.ex + dx);
+    let rawY = Math.round(dragStart.value.ey + dy);
+    let guides = [];
+
+    // Apply snap if available and Alt is not held
+    if (props.snapFn && !ev.altKey) {
+      const snapped = props.snapFn(rawX, rawY);
+      if (snapped) {
+        rawX = snapped.x;
+        rawY = snapped.y;
+        guides = snapped.guides || [];
+      }
+    }
+
+    emit('move', { x: rawX, y: rawY });
+    emit('guides', guides);
+    lastMoveResult = { x: rawX, y: rawY };
   };
 
   const onUp = () => {
     isDragging.value = false;
+    emit('guides', []); // clear guides on drag end
+    if (lastMoveResult) {
+      emit('move-end', lastMoveResult);
+      lastMoveResult = null;
+    }
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
   };
@@ -88,6 +113,7 @@ function onResizeStart(e) {
   const startX = e.clientX;
   const startY = e.clientY;
   const aspectRatio = startW / startH;
+  let lastResize = null;
 
   const onMove = (ev) => {
     const dw = (ev.clientX - startX) / props.canvasScale;
@@ -102,9 +128,11 @@ function onResizeStart(e) {
       }
     }
     emit('resize', { width: newW, height: newH });
+    lastResize = { width: newW, height: newH };
   };
 
   const onUp = () => {
+    if (lastResize) emit('resize-end', lastResize);
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
   };
@@ -118,15 +146,18 @@ function onScaleStart(e) {
   e.stopPropagation();
   const startScale = props.scale || 1;
   const startY = e.clientY;
+  let lastScale = null;
 
   const onMove = (ev) => {
     const dy = -(ev.clientY - startY) / props.canvasScale;
     const delta = dy / 200;
     const newScale = Math.min(3, Math.max(0.2, +(startScale + delta).toFixed(2)));
     emit('scale', newScale);
+    lastScale = newScale;
   };
 
   const onUp = () => {
+    if (lastScale != null) emit('scale-end', lastScale);
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
   };

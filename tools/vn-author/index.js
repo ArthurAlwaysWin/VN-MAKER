@@ -237,6 +237,8 @@ function getMutationTarget(result = {}) {
     'characterId',
     'variableId',
     'sceneId',
+    'newSceneId',
+    'deletedSceneId',
     'pageIndex',
     'dialogueIndex',
     'optionIndex',
@@ -263,6 +265,9 @@ function getChangedPaths(result = {}) {
   }
 
   const scenePath = `scenes.${result.sceneId}`;
+  if (result.newSceneId) {
+    return [scenePath, `scenes.${result.newSceneId}`];
+  }
   if (result.pageIndex === undefined) {
     return [scenePath];
   }
@@ -794,6 +799,52 @@ async function setSceneNext(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function renameScene(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--id', null));
+  const newSceneId = getArgValue(args, '--new-id', getArgValue(args, '--to', null));
+  if (!sceneId || !newSceneId) {
+    throw new Error('rename-scene requires --scene and --new-id');
+  }
+
+  const output = await mutateScript(args, (session) => session.renameScene({
+    sceneId,
+    newSceneId,
+    name: getOptionalArgValue(args, '--name'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Renamed scene: ${output.result.sceneId}->${output.result.newSceneId}\n`);
+    printMutationResult('Updated references', {
+      ...output,
+      result: { updatedReferenceCount: output.result.updatedReferenceCount },
+    });
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function deleteScene(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--id', null));
+  if (!sceneId) {
+    throw new Error('delete-scene requires --scene');
+  }
+
+  const output = await mutateScript(args, (session) => session.deleteScene({
+    sceneId,
+    forceReferences: hasFlag(args, '--force-references'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Deleted scene', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function addCharacter(args) {
   const characterId = getArgValue(args, '--id', null);
   if (!characterId) {
@@ -921,6 +972,57 @@ async function addPage(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removePage(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'remove-page');
+  const output = await mutateScript(args, (session) => session.removePage({
+    sceneId,
+    pageIndex,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Removed page: ${output.result.sceneId}#${output.result.pageIndex}\n`);
+    printMutationResult('Removed page type', {
+      ...output,
+      result: { removedPageType: output.result.removedPageType },
+    });
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function movePage(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
+  if (!sceneId) {
+    throw new Error('move-page requires --scene');
+  }
+
+  const fromIndex = getIntArg(args, '--from', null);
+  const toIndex = getIntArg(args, '--to', null);
+  if (fromIndex == null || toIndex == null) {
+    throw new Error('move-page requires --from and --to');
+  }
+
+  const output = await mutateScript(args, (session) => session.movePage({
+    sceneId,
+    fromIndex,
+    toIndex,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Moved page: ${output.result.sceneId}#${output.result.fromIndex}->${output.result.toIndex}\n`);
+    printMutationResult('Moved page', {
+      ...output,
+      result: { sceneId: output.result.sceneId },
+    });
   }
 
   return output.validation.ok ? 0 : 1;
@@ -1601,10 +1703,14 @@ function printHelp() {
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  rename-scene --scene scene_id --new-id scene_id [--name name] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  delete-scene --scene scene_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-scene-next --scene scene_id [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-character --id character_id [--name name] [--color hex] [--expression name=path] [--expressions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-variable --id variable_id [--type number|bool] [--initial value] [--label label] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-page --scene scene_id [--type normal|choice|condition] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-page --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  move-page --scene scene_id --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-dialogue --scene scene_id --page index [--speaker character_id] [--text text] [--expression expression] [--dialogue json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-dialogue --scene scene_id --page index --dialogue-index index [--speaker character_id] [--text text] [--expression expression] [--voice path] [--dialogue-json json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-dialogue --scene scene_id --page index --dialogue-index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -1674,6 +1780,16 @@ async function main() {
       return;
     }
 
+    if (command === 'rename-scene') {
+      process.exitCode = await renameScene(args);
+      return;
+    }
+
+    if (command === 'delete-scene') {
+      process.exitCode = await deleteScene(args);
+      return;
+    }
+
     if (command === 'add-character') {
       process.exitCode = await addCharacter(args);
       return;
@@ -1686,6 +1802,16 @@ async function main() {
 
     if (command === 'add-page') {
       process.exitCode = await addPage(args);
+      return;
+    }
+
+    if (command === 'remove-page') {
+      process.exitCode = await removePage(args);
+      return;
+    }
+
+    if (command === 'move-page') {
+      process.exitCode = await movePage(args);
       return;
     }
 

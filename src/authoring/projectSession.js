@@ -101,6 +101,100 @@ function getPage(script, sceneId, pageIndex) {
   return scene.pages[pageIndex];
 }
 
+function assertPageIndexInRange(scene, sceneId, pageIndex) {
+  if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= scene.pages.length) {
+    throw new Error(`Page index ${pageIndex} is out of range for scene "${sceneId}"`);
+  }
+}
+
+function collectSceneReferences(script, targetSceneId) {
+  const references = [];
+  for (const [sceneId, scene] of Object.entries(script.scenes ?? {})) {
+    if (scene?.next === targetSceneId) {
+      references.push({
+        kind: 'scene-next',
+        sceneId,
+        path: ['scenes', sceneId, 'next'],
+        pathString: `scenes.${sceneId}.next`,
+      });
+    }
+
+    for (const [pageIndex, page] of (scene?.pages ?? []).entries()) {
+      if (page?.type === 'choice') {
+        for (const [optionIndex, option] of (page.options ?? []).entries()) {
+          if (option?.target === targetSceneId) {
+            references.push({
+              kind: 'choice-option',
+              sceneId,
+              pageIndex,
+              optionIndex,
+              path: ['scenes', sceneId, 'pages', pageIndex, 'options', optionIndex, 'target'],
+              pathString: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.target`,
+            });
+          }
+        }
+      }
+
+      if (page?.type === 'condition') {
+        if (page.trueTarget === targetSceneId) {
+          references.push({
+            kind: 'condition-true-target',
+            sceneId,
+            pageIndex,
+            path: ['scenes', sceneId, 'pages', pageIndex, 'trueTarget'],
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.trueTarget`,
+          });
+        }
+        if (page.falseTarget === targetSceneId) {
+          references.push({
+            kind: 'condition-false-target',
+            sceneId,
+            pageIndex,
+            path: ['scenes', sceneId, 'pages', pageIndex, 'falseTarget'],
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.falseTarget`,
+          });
+        }
+      }
+    }
+  }
+
+  return references;
+}
+
+function replaceSceneReferences(script, fromSceneId, toSceneId) {
+  let updatedReferenceCount = 0;
+  for (const scene of Object.values(script.scenes ?? {})) {
+    if (scene?.next === fromSceneId) {
+      scene.next = toSceneId;
+      updatedReferenceCount += 1;
+    }
+
+    for (const page of scene?.pages ?? []) {
+      if (page?.type === 'choice') {
+        for (const option of page.options ?? []) {
+          if (option?.target === fromSceneId) {
+            option.target = toSceneId;
+            updatedReferenceCount += 1;
+          }
+        }
+      }
+
+      if (page?.type === 'condition') {
+        if (page.trueTarget === fromSceneId) {
+          page.trueTarget = toSceneId;
+          updatedReferenceCount += 1;
+        }
+        if (page.falseTarget === fromSceneId) {
+          page.falseTarget = toSceneId;
+          updatedReferenceCount += 1;
+        }
+      }
+    }
+  }
+
+  return updatedReferenceCount;
+}
+
 function normalizePageTransitionInput(transition) {
   if (transition == null) {
     return null;
@@ -184,6 +278,9 @@ export function createProjectSession(input = {}) {
 
     addScene(scene) {
       const id = assertNonEmptyString(scene?.id, 'scene.id');
+      if (script.scenes[id]) {
+        throw new Error(`Scene "${id}" already exists`);
+      }
       script.scenes[id] = {
         name: scene.name ?? id,
         pages: Array.isArray(scene.pages) ? cloneJsonValue(scene.pages) : [],
@@ -196,6 +293,43 @@ export function createProjectSession(input = {}) {
       }
       script = normalizeScriptForAuthoring(script);
       return { sceneId: id };
+    },
+
+    renameScene({ sceneId, newSceneId, name }) {
+      const fromId = assertNonEmptyString(sceneId, 'sceneId');
+      const toId = assertNonEmptyString(newSceneId, 'newSceneId');
+      if (fromId === toId) {
+        const scene = getScene(script, fromId);
+        if (name !== undefined) {
+          scene.name = name || toId;
+        }
+        return { sceneId: fromId, newSceneId: toId, updatedReferenceCount: 0 };
+      }
+      const scene = getScene(script, fromId);
+      if (script.scenes[toId]) {
+        throw new Error(`Scene "${toId}" already exists`);
+      }
+
+      script.scenes[toId] = {
+        ...scene,
+        name: name ?? scene.name ?? toId,
+      };
+      delete script.scenes[fromId];
+      const updatedReferenceCount = replaceSceneReferences(script, fromId, toId);
+      return { sceneId: fromId, newSceneId: toId, updatedReferenceCount };
+    },
+
+    deleteScene({ sceneId, forceReferences = false } = {}) {
+      const id = assertNonEmptyString(sceneId, 'sceneId');
+      getScene(script, id);
+      const references = collectSceneReferences(script, id).filter((reference) => reference.sceneId !== id);
+      if (references.length > 0 && !forceReferences) {
+        const paths = references.map((reference) => reference.pathString).join(', ');
+        throw new Error(`Scene "${id}" is still referenced by: ${paths}`);
+      }
+
+      delete script.scenes[id];
+      return { sceneId: id, deletedSceneId: id, removedReferenceCount: references.length };
     },
 
     setSceneNext({ sceneId, next }) {
@@ -223,6 +357,26 @@ export function createProjectSession(input = {}) {
       const nextPage = createDefaultConditionPage({ ...page, ...pageFields }, script.systems.variables);
       scene.pages.push(nextPage);
       return { sceneId, pageIndex: scene.pages.length - 1 };
+    },
+
+    removePage({ sceneId, pageIndex }) {
+      const scene = getScene(script, sceneId);
+      assertPageIndexInRange(scene, sceneId, pageIndex);
+      const [removedPage] = scene.pages.splice(pageIndex, 1);
+      return {
+        sceneId,
+        pageIndex,
+        removedPageType: removedPage?.type ?? null,
+      };
+    },
+
+    movePage({ sceneId, fromIndex, toIndex }) {
+      const scene = getScene(script, sceneId);
+      assertPageIndexInRange(scene, sceneId, fromIndex);
+      assertPageIndexInRange(scene, sceneId, toIndex);
+      const [page] = scene.pages.splice(fromIndex, 1);
+      scene.pages.splice(toIndex, 0, page);
+      return { sceneId, fromIndex, toIndex };
     },
 
     addDialogue({ sceneId, pageIndex, dialogue }) {

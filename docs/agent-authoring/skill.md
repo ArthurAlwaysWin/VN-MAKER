@@ -74,9 +74,13 @@ For small changes, prefer incremental commands:
 
 ```bash
 node tools/vn-author/index.js add-scene --id chapter_1 --name "Chapter 1" --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js rename-scene --scene chapter_1 --new-id chapter_01 --name "Chapter 01" --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js delete-scene --scene unused_branch --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-character --id sakura --name "Sakura" --expression normal=characters/sakura_normal.svg --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-variable --id sakura_affection --type number --initial 0 --label "Sakura Affection" --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-page --scene chapter_1 --type normal --preset solo-center --character sakura:normal --dialogues '[{"speaker":"sakura","text":"Hello."}]' --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js move-page --scene chapter_1 --from 2 --to 0 --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js remove-page --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Welcome back." --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-background --scene chapter_1 --page 0 --background backgrounds/classroom.svg --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-characters --scene chapter_1 --page 0 --preset speaker-emphasis --character sakura:smile --script public/game/script.json --force --backup --json
@@ -85,6 +89,8 @@ node tools/vn-author/index.js set-page-transition --scene chapter_1 --page 0 --t
 node tools/vn-author/index.js set-character-animation --scene chapter_1 --page 0 --character sakura --animation breathe --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script public/game/script.json --force --backup --json
 ```
+
+Use `rename-scene` instead of direct JSON edits when a scene id changes; it updates scene flow, choice targets, and condition targets. `delete-scene` is guarded against deleting externally referenced scenes unless `--force-references` is explicitly used.
 
 Use `--dry-run` to inspect the validation result without writing:
 

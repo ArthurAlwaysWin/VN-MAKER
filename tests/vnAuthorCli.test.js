@@ -829,6 +829,147 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('renames and deletes scenes through safe structure commands', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_test',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            next: 'old_end',
+            pages: [
+              {
+                type: 'choice',
+                prompt: 'Go?',
+                options: [{ text: 'Yes', target: 'old_end' }],
+              },
+            ],
+          },
+          old_end: { name: 'Old End', pages: [] },
+          unused: { name: 'Unused', pages: [] },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'rename-scene',
+        '--script',
+        scriptPath,
+        '--scene',
+        'old_end',
+        '--new-id',
+        'good_end',
+        '--name',
+        'Good End',
+        '--force',
+        '--json',
+      ]);
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'delete-scene',
+        '--script',
+        scriptPath,
+        '--scene',
+        'good_end',
+        '--force',
+        '--json',
+      ])).rejects.toMatchObject({ code: 1 });
+
+      const deleteResult = await execFileAsync('node', [
+        cliPath,
+        'delete-scene',
+        '--script',
+        scriptPath,
+        '--scene',
+        'unused',
+        '--force',
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      const deleted = JSON.parse(deleteResult.stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.result).toMatchObject({
+        sceneId: 'old_end',
+        newSceneId: 'good_end',
+        updatedReferenceCount: 2,
+      });
+      expect(result.changeSummary.changedPaths).toEqual(['scenes.old_end', 'scenes.good_end']);
+      expect(deleted.result).toMatchObject({
+        sceneId: 'unused',
+        deletedSceneId: 'unused',
+      });
+      expect(script.scenes.old_end).toBeUndefined();
+      expect(script.scenes.unused).toBeUndefined();
+      expect(script.scenes.good_end.name).toBe('Good End');
+      expect(script.scenes.start.next).toBe('good_end');
+      expect(script.scenes.start.pages[0].options[0].target).toBe('good_end');
+    });
+  });
+
+  it('moves and removes pages through structure commands', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_test',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              { type: 'normal', dialogues: [{ text: 'First' }] },
+              { type: 'choice', prompt: 'Pick', options: [{ text: 'Stay' }] },
+              { type: 'normal', dialogues: [{ text: 'Last' }] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const movedResult = await execFileAsync('node', [
+        cliPath,
+        'move-page',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--from',
+        '2',
+        '--to',
+        '0',
+        '--force',
+        '--json',
+      ]);
+
+      const removedResult = await execFileAsync('node', [
+        cliPath,
+        'remove-page',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '1',
+        '--force',
+        '--json',
+      ]);
+
+      const moved = JSON.parse(movedResult.stdout);
+      const removed = JSON.parse(removedResult.stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(moved.result).toEqual({ sceneId: 'start', fromIndex: 2, toIndex: 0 });
+      expect(removed.result).toEqual({ sceneId: 'start', pageIndex: 1, removedPageType: 'normal' });
+      expect(script.scenes.start.pages).toEqual([
+        { type: 'normal', dialogues: [{ text: 'Last' }] },
+        { type: 'choice', prompt: 'Pick', options: [{ text: 'Stay' }] },
+      ]);
+    });
+  });
+
   it('updates condition pages for branch revision workflows', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

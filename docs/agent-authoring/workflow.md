@@ -63,9 +63,13 @@ For small edits:
 
 ```bash
 node tools/vn-author/index.js add-scene --id chapter_1 --name "Chapter 1" --script public/game/script.json --force --checkpoint --json
+node tools/vn-author/index.js rename-scene --scene chapter_1 --new-id chapter_01 --name "Chapter 01" --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js delete-scene --scene unused_branch --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-character --id sakura --name "Sakura" --expression normal=characters/sakura_normal.svg --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-variable --id affection --type number --initial 0 --label "Affection" --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-page --scene chapter_1 --type choice --prompt "Answer?" --options '[{"text":"Continue","target":"chapter_2"}]' --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js move-page --scene chapter_1 --from 2 --to 0 --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js remove-page --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Hello." --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-dialogue --scene chapter_1 --page 0 --dialogue-index 0 --text "Hello again." --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js move-dialogue --scene chapter_1 --page 0 --from 2 --to 1 --script public/game/script.json --force --backup --json
@@ -79,6 +83,8 @@ node tools/vn-author/index.js set-scene-next --scene chapter_1 --next chapter_2 
 node tools/vn-author/index.js set-page-characters --scene chapter_1 --page 0 --preset duo-left-right --character sakura:smile --character haruki:normal --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
 ```
+
+`rename-scene` updates scene references in `next`, choice option targets, and condition targets. `delete-scene` refuses to delete scenes referenced from other scenes unless `--force-references` is present.
 
 ## 5. Validate Again
 

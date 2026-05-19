@@ -278,4 +278,91 @@ describe('project authoring session', () => {
       ],
     });
   });
+
+  it('renames and deletes scenes safely while preserving scene references', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_scene_structure',
+        characters: {},
+        scenes: {
+          start: {
+            next: 'old_end',
+            pages: [
+              {
+                type: 'choice',
+                options: [{ text: 'Go', target: 'old_end' }],
+              },
+              {
+                type: 'condition',
+                trueTarget: 'old_end',
+                falseTarget: 'retry',
+                conditions: [],
+              },
+            ],
+          },
+          old_end: { name: 'Old End', pages: [] },
+          retry: { name: 'Retry', pages: [] },
+        },
+      },
+    });
+
+    expect(session.renameScene({
+      sceneId: 'old_end',
+      newSceneId: 'good_end',
+      name: 'Good End',
+    })).toEqual({
+      sceneId: 'old_end',
+      newSceneId: 'good_end',
+      updatedReferenceCount: 3,
+    });
+
+    const renamed = session.toJSON();
+    expect(renamed.scenes.old_end).toBeUndefined();
+    expect(renamed.scenes.good_end.name).toBe('Good End');
+    expect(renamed.scenes.start.next).toBe('good_end');
+    expect(renamed.scenes.start.pages[0].options[0].target).toBe('good_end');
+    expect(renamed.scenes.start.pages[1].trueTarget).toBe('good_end');
+
+    expect(() => session.deleteScene({ sceneId: 'retry' })).toThrow(/still referenced/);
+    expect(session.deleteScene({ sceneId: 'retry', forceReferences: true })).toEqual({
+      sceneId: 'retry',
+      deletedSceneId: 'retry',
+      removedReferenceCount: 1,
+    });
+    expect(session.toJSON().scenes.retry).toBeUndefined();
+  });
+
+  it('removes and reorders pages without editing page payloads', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_page_structure',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              { type: 'normal', dialogues: [{ text: 'A' }] },
+              { type: 'choice', prompt: 'Pick', options: [] },
+              { type: 'normal', dialogues: [{ text: 'B' }] },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(session.movePage({ sceneId: 'start', fromIndex: 2, toIndex: 0 })).toEqual({
+      sceneId: 'start',
+      fromIndex: 2,
+      toIndex: 0,
+    });
+    expect(session.removePage({ sceneId: 'start', pageIndex: 1 })).toEqual({
+      sceneId: 'start',
+      pageIndex: 1,
+      removedPageType: 'normal',
+    });
+
+    expect(session.toJSON().scenes.start.pages).toEqual([
+      { type: 'normal', dialogues: [{ text: 'B' }] },
+      expect.objectContaining({ type: 'choice', prompt: 'Pick' }),
+    ]);
+  });
 });

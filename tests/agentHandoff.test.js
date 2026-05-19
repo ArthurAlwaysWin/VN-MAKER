@@ -9,8 +9,14 @@ describe('agent handoff report', () => {
       characters: {},
       scenes: {
         start: {
+          next: 'reviewed_scene',
           pages: [
             { type: 'normal', dialogues: [] },
+          ],
+        },
+        reviewed_scene: {
+          pages: [
+            { type: 'normal', background: 'bg/room.png', dialogues: [] },
           ],
         },
       },
@@ -37,7 +43,7 @@ describe('agent handoff report', () => {
         operations: [{ command: 'add-scene' }, { command: 'add-page' }],
         changeSummary: {
           operationCount: 2,
-          changedPaths: ['scenes.start', 'scenes.start.pages.0'],
+          changedPaths: ['scenes.reviewed_scene', 'scenes.reviewed_scene.pages.0'],
           validation: { ok: true, errorCount: 0, warningCount: 0 },
         },
       },
@@ -63,7 +69,7 @@ describe('agent handoff report', () => {
         wrote: true,
         operationCount: 2,
         changedPathCount: 2,
-        changedPaths: ['scenes.start', 'scenes.start.pages.0'],
+        changedPaths: ['scenes.reviewed_scene', 'scenes.reviewed_scene.pages.0'],
       },
       checkpoints: [
         {
@@ -81,6 +87,12 @@ describe('agent handoff report', () => {
       expect.objectContaining({
         source: 'readiness',
         code: 'layout-blank-page',
+      }),
+      expect.objectContaining({
+        source: 'scene-references',
+        code: 'scene-incoming-references',
+        sceneId: 'reviewed_scene',
+        referenceCount: 1,
       }),
     ]));
   });

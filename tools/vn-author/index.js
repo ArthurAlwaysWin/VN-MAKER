@@ -11,6 +11,7 @@ import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
 import { createCharacterBlocking, LAYOUT_PRESETS } from '../../src/authoring/layoutPresets.js';
 import { createProjectSession } from '../../src/authoring/projectSession.js';
 import { createProjectReport } from '../../src/authoring/projectReport.js';
+import { collectSceneReferenceDiagnostics } from '../../src/authoring/sceneReferenceDiagnostics.js';
 import { validateProject } from '../../src/shared/projectValidator.js';
 import { collectSceneReferences } from '../../src/shared/sceneGraph.js';
 import {
@@ -773,7 +774,7 @@ function summarizeIssues(source, issues = []) {
   }));
 }
 
-function collectAuthorCheckSuggestions({ validation, layout, readiness, preview }) {
+function collectAuthorCheckSuggestions({ validation, layout, readiness, preview, referenceDiagnostics }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
     if (warning.suggestedAction) {
@@ -806,6 +807,15 @@ function collectAuthorCheckSuggestions({ validation, layout, readiness, preview 
       source: 'preview',
       code: suggestion.code,
       suggestedAction: suggestion.suggestedAction,
+    });
+  }
+
+  for (const diagnostic of referenceDiagnostics ?? []) {
+    suggestions.push({
+      source: diagnostic.source,
+      code: diagnostic.code,
+      pathString: diagnostic.pathString,
+      suggestedAction: diagnostic.suggestedAction,
     });
   }
 
@@ -1496,10 +1506,13 @@ async function authorCheck(args) {
     knownAssets,
     requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
   });
+  const sceneId = getArgValue(args, '--scene', 'start');
+  const referenceDiagnostics = collectSceneReferenceDiagnostics(script, {
+    sceneIds: [sceneId],
+  });
 
   let preview = null;
   if (!hasFlag(args, '--skip-preview')) {
-    const sceneId = getArgValue(args, '--scene', 'start');
     const pageIndex = getIntArg(args, '--page', 0);
     const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
     const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
@@ -1539,8 +1552,14 @@ async function authorCheck(args) {
       layoutWarnings: layout.warnings.length,
       readinessBlockers: readiness.blockers.length,
       readinessWarnings: readiness.warnings.length,
+      sceneReferenceDiagnostics: referenceDiagnostics.length,
       previewPlanned: Boolean(preview),
     },
+    sceneReferences: {
+      checkedSceneIds: script.scenes?.[sceneId] ? [sceneId] : [],
+      diagnostics: referenceDiagnostics,
+    },
+    referenceDiagnostics,
     validation,
     layout,
     readiness,
@@ -1551,6 +1570,7 @@ async function authorCheck(args) {
       ...summarizeIssues('layout', layout.warnings),
       ...summarizeIssues('readiness', readiness.blockers),
       ...summarizeIssues('readiness', readiness.warnings),
+      ...referenceDiagnostics,
     ],
   };
   output.suggestions = collectAuthorCheckSuggestions(output);

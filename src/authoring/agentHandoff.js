@@ -1,6 +1,7 @@
 import { createExportReadiness } from './exportReadiness.js';
 import { lintProjectLayout } from './layoutLint.js';
 import { createProjectReport } from './projectReport.js';
+import { collectSceneReferenceDiagnostics } from './sceneReferenceDiagnostics.js';
 
 function summarizeCheckpoint(entry = {}) {
   return {
@@ -35,7 +36,7 @@ function summarizeTransaction(transaction = null) {
   };
 }
 
-function collectReviewItems({ validation, layout, readiness }) {
+function collectReviewItems({ validation, layout, readiness, referenceDiagnostics }) {
   return [
     ...(validation.errors ?? []).map((issue) => ({
       source: 'validation',
@@ -75,6 +76,7 @@ function collectReviewItems({ validation, layout, readiness }) {
       message: issue.message,
       suggestedAction: issue.suggestedAction,
     })),
+    ...(referenceDiagnostics ?? []),
   ];
 }
 
@@ -89,9 +91,17 @@ export function createAgentHandoff(script = {}, options = {}) {
   const validation = projectReport.validation;
   const layout = projectReport.layout;
   const readiness = projectReport.readiness ?? createExportReadiness(script, readinessOptions);
-  const reviewItems = collectReviewItems({ validation, layout, readiness });
   const checkpoints = (options.checkpoints ?? []).map(summarizeCheckpoint);
   const transactionSummary = summarizeTransaction(options.transaction);
+  const referenceDiagnostics = collectSceneReferenceDiagnostics(script, {
+    changedPaths: transactionSummary?.changedPaths ?? [],
+  });
+  const reviewItems = collectReviewItems({
+    validation,
+    layout,
+    readiness,
+    referenceDiagnostics,
+  });
   const gates = {
     validation: validation.ok,
     layout: layout.ok,

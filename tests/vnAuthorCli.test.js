@@ -1782,6 +1782,7 @@ describe('vn-author CLI', () => {
         characters: {},
         scenes: {
           start: {
+            next: 'unused_checkpoint_scene',
             pages: [
               { type: 'normal', dialogues: [] },
             ],
@@ -1857,6 +1858,78 @@ describe('vn-author CLI', () => {
       });
       expect(handoff.reviewItems).toEqual(expect.arrayContaining([
         expect.objectContaining({ source: 'layout', code: 'layout-blank-page' }),
+        expect.objectContaining({
+          source: 'scene-references',
+          code: 'scene-incoming-references',
+          sceneId: 'unused_checkpoint_scene',
+          referenceCount: 1,
+        }),
+      ]));
+    });
+  });
+
+  it('adds selected scene reference diagnostics to author check review output', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_references',
+        characters: {},
+        scenes: {
+          start: {
+            next: 'ending',
+            pages: [
+              { type: 'normal', background: 'bg/room.png', dialogues: [] },
+            ],
+          },
+          ending: {
+            pages: [
+              { type: 'normal', background: 'bg/end.png', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--scene',
+        'ending',
+        '--skip-preview',
+        '--skip-asset-check',
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      expect(result.ok).toBe(true);
+      expect(result.summary.sceneReferenceDiagnostics).toBe(1);
+      expect(result.sceneReferences.diagnostics).toEqual([
+        expect.objectContaining({
+          source: 'scene-references',
+          code: 'scene-incoming-references',
+          sceneId: 'ending',
+          referenceCount: 1,
+        }),
+      ]);
+      expect(result.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'scene-references',
+          severity: 'info',
+          pathString: 'scenes.ending',
+        }),
+      ]));
+      expect(result.suggestions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'scene-references',
+          code: 'scene-incoming-references',
+          suggestedAction: expect.objectContaining({
+            commands: expect.arrayContaining([
+              expect.objectContaining({ command: 'scene-references' }),
+              expect.objectContaining({ command: 'retarget-scene' }),
+            ]),
+          }),
+        }),
       ]));
     });
   });

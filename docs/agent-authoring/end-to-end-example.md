@@ -52,7 +52,7 @@ If this returns issues or suggestions, repair with another small plan or direct 
 ## Handoff
 
 ```bash
-npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --out public/game/agent-handoff.json --note "Review Sakura opening branch and placeholder assets." --json
+npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review Sakura opening branch and placeholder assets." --json
 ```
 
 Open the project in the desktop editor. Project Settings will show the external-agent handoff panel when `agent-handoff.json` exists at the project root.

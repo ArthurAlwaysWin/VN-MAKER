@@ -1304,7 +1304,13 @@ async function handoffReport(args) {
     transaction,
     notes: getArgValues(args, '--note'),
   });
-  const outPathArg = getArgValue(args, '--out', null);
+  const outPathArg = getArgValue(
+    args,
+    '--out',
+    hasFlag(args, '--write-editor-handoff')
+      ? path.join(path.dirname(scriptPath), 'agent-handoff.json')
+      : null,
+  );
   if (outPathArg) {
     const outPath = path.resolve(repoRoot, outPathArg);
     await mkdir(path.dirname(outPath), { recursive: true });
@@ -2658,7 +2664,7 @@ function printHelp() {
   author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
-  handoff-report [--script path] [--out path] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
+  handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]

@@ -1751,7 +1751,7 @@ describe('vn-author CLI', () => {
   it('writes an editor handoff report with recent checkpoints', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
-      const outPath = path.join(dir, 'handoff.json');
+      const outPath = path.join(dir, 'agent-handoff.json');
       const transactionPath = path.join(dir, 'transaction.json');
       const checkpointDir = path.join(dir, '.checkpoints');
       await writeFile(scriptPath, JSON.stringify({
@@ -1802,8 +1802,7 @@ describe('vn-author CLI', () => {
         transactionPath,
         '--checkpoint-dir',
         checkpointDir,
-        '--out',
-        outPath,
+        '--write-editor-handoff',
         '--skip-asset-check',
         '--note',
         'Review the agent-authored changes.',

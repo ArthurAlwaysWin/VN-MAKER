@@ -133,7 +133,7 @@ The command aggregates validation, layout lint, export readiness, preview dry-ru
 Generate a handoff report when returning work to the no-code editor or a human reviewer:
 
 ```bash
-node tools/vn-author/index.js handoff-report --script public/game/script.json --transaction .tmp/apply-plan-result.json --out public/game/agent-handoff.json --note "Review newly authored branch." --json
+node tools/vn-author/index.js handoff-report --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review newly authored branch." --json
 ```
 
 ## Draft Shape

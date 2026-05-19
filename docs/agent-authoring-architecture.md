@@ -277,7 +277,7 @@ node tools/vn-author/index.js restore-checkpoint public/game/.checkpoints/script
 node tools/vn-author/index.js scene-references --scene old_route --json
 node tools/vn-author/index.js retarget-scene --from old_route --to new_route --force --checkpoint --json
 node tools/vn-author/index.js author-check --scene start --page 0 --write-preview-plan --json
-node tools/vn-author/index.js handoff-report --out public/game/agent-handoff.json --json
+node tools/vn-author/index.js handoff-report --write-editor-handoff --json
 ```
 
 CLI output should support:

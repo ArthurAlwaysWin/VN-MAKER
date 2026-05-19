@@ -172,13 +172,13 @@ npm run vn:render-preview -- --scene start --page 0 --out .tmp/preview.png --dry
 Generate a handoff artifact for the no-code editor or human reviewer:
 
 ```bash
-npm run vn:handoff-report -- --script public/game/script.json --out public/game/agent-handoff.json --note "Review newly authored route and placeholder assets." --json
+npm run vn:handoff-report -- --script public/game/script.json --write-editor-handoff --note "Review newly authored route and placeholder assets." --json
 ```
 
 If you saved a previous mutation result, attach it so the editor can show changed paths:
 
 ```bash
-npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --out public/game/agent-handoff.json --json
+npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --json
 ```
 
 The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability, recent checkpoints from `.checkpoints/`, transaction summaries, and review items with suggested actions where available. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel for human review.

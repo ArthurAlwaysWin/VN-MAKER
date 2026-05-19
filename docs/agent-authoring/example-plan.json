@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "title": "Example branch polish plan",
+  "operations": [
+    {
+      "id": "add-sakura",
+      "command": "add-character",
+      "params": {
+        "id": "sakura",
+        "name": "Sakura",
+        "color": "#ff99aa",
+        "expressions": {
+          "normal": "characters/sakura_normal.svg",
+          "smile": "characters/sakura_smile.svg"
+        }
+      }
+    },
+    {
+      "id": "add-affection",
+      "command": "add-variable",
+      "params": {
+        "id": "sakura_affection",
+        "type": "number",
+        "initial": 0,
+        "label": "Sakura Affection"
+      }
+    },
+    {
+      "id": "add-start",
+      "command": "add-scene",
+      "params": {
+        "id": "start",
+        "name": "Start",
+        "next": "good_route"
+      }
+    },
+    {
+      "id": "add-good-route",
+      "command": "add-scene",
+      "params": {
+        "id": "good_route",
+        "name": "Good Route"
+      }
+    },
+    {
+      "id": "opening-page",
+      "command": "add-page",
+      "params": {
+        "scene": "start",
+        "type": "normal",
+        "background": "backgrounds/school_gate.svg",
+        "characters": [
+          {
+            "id": "sakura",
+            "expression": "smile",
+            "position": "center",
+            "scale": 1
+          }
+        ],
+        "dialogues": [
+          {
+            "speaker": null,
+            "text": "Spring wind moves through the school gate."
+          },
+          {
+            "speaker": "sakura",
+            "text": "You came.",
+            "expression": "smile"
+          }
+        ]
+      }
+    },
+    {
+      "id": "opening-camera",
+      "command": "set-page-camera",
+      "params": {
+        "scene": "start",
+        "page": 0,
+        "camera": {
+          "effect": "zoom",
+          "intensity": "low",
+          "durationMs": 500
+        }
+      }
+    },
+    {
+      "id": "route-choice",
+      "command": "add-page",
+      "params": {
+        "scene": "start",
+        "type": "choice",
+        "prompt": "How do you answer?",
+        "options": [
+          {
+            "text": "Smile back",
+            "target": "good_route",
+            "effects": [
+              {
+                "type": "var:add",
+                "id": "sakura_affection",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "text": "Stay quiet",
+            "target": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "good-route-page",
+      "command": "add-page",
+      "params": {
+        "scene": "good_route",
+        "type": "normal",
+        "background": "backgrounds/school_gate.svg",
+        "characters": [
+          {
+            "id": "sakura",
+            "expression": "normal",
+            "position": "center"
+          }
+        ],
+        "dialogues": [
+          {
+            "speaker": "sakura",
+            "text": "Then walk with me."
+          }
+        ]
+      }
+    }
+  ]
+}

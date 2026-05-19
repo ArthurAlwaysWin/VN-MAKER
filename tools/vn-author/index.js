@@ -5,12 +5,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
+import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
 import { createExportReadiness } from '../../src/authoring/exportReadiness.js';
 import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
 import { createCharacterBlocking, LAYOUT_PRESETS } from '../../src/authoring/layoutPresets.js';
 import { createProjectSession } from '../../src/authoring/projectSession.js';
 import { createProjectReport } from '../../src/authoring/projectReport.js';
 import { validateProject } from '../../src/shared/projectValidator.js';
+import { collectSceneReferences } from '../../src/shared/sceneGraph.js';
 import {
   PREVIEW_BROWSER_UNAVAILABLE,
   PREVIEW_QUALITY_FAILED,
@@ -85,6 +87,14 @@ function parseScalarValue(value, fallback = null) {
 
   const numeric = Number(trimmed);
   return Number.isFinite(numeric) && trimmed !== '' ? numeric : value;
+}
+
+function cloneJsonValue(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return JSON.parse(JSON.stringify(value));
 }
 
 function dropUndefinedFields(value) {
@@ -203,6 +213,33 @@ async function collectKnownAssets(rootDir) {
   return assets;
 }
 
+async function collectCheckpointEntries(checkpointDir, limit = 5) {
+  if (!await pathExists(checkpointDir)) {
+    return [];
+  }
+
+  const entries = await readdir(checkpointDir, { withFileTypes: true });
+  const checkpoints = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) {
+      continue;
+    }
+
+    const checkpointPath = path.join(checkpointDir, entry.name);
+    const checkpointStat = await stat(checkpointPath);
+    checkpoints.push({
+      path: checkpointPath,
+      name: entry.name,
+      createdAt: checkpointStat.mtime.toISOString(),
+      size: checkpointStat.size,
+    });
+  }
+
+  return checkpoints
+    .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)))
+    .slice(0, limit);
+}
+
 async function getValidationOptions(args, scriptPath) {
   if (!hasFlag(args, '--check-assets')) {
     return {};
@@ -272,6 +309,12 @@ function getMutationTarget(result = {}) {
 }
 
 function getChangedPaths(result = {}) {
+  if (Array.isArray(result.references) && result.references.length > 0) {
+    return result.references
+      .map((reference) => reference.pathString)
+      .filter(Boolean);
+  }
+
   if (result.characterId) {
     return [`characters.${result.characterId}`];
   }
@@ -302,6 +345,10 @@ function getChangedPaths(result = {}) {
   }
 
   return [pagePath];
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function createMutationChangeSummary({
@@ -339,6 +386,345 @@ function createMutationChangeSummary({
     checkpointPath: writeResult?.checkpointPath ?? null,
     backupPath: writeResult?.backupPath ?? null,
   };
+}
+
+function normalizePlanCommand(command) {
+  return String(command ?? '').trim();
+}
+
+function getOperationParams(operation = {}) {
+  return operation.params ?? operation.args ?? {};
+}
+
+function getParam(params, ...names) {
+  for (const name of names) {
+    if (params[name] !== undefined) {
+      return params[name];
+    }
+  }
+  return undefined;
+}
+
+function requireParam(params, command, ...names) {
+  const value = getParam(params, ...names);
+  if (value === undefined || value === null || value === '') {
+    throw new Error(`${command} requires ${names[0]}`);
+  }
+  return value;
+}
+
+function buildPlanPage(command, params) {
+  const type = getParam(params, 'type') ?? 'normal';
+  const page = {
+    id: getParam(params, 'id'),
+    background: getParam(params, 'background'),
+    characters: getParam(params, 'characters'),
+    bgm: getParam(params, 'bgm'),
+    se: getParam(params, 'se'),
+    transition: getParam(params, 'transition'),
+    ...cloneJsonValue(getParam(params, 'page') ?? {}),
+  };
+  dropUndefinedFields(page);
+
+  if (type === 'choice') {
+    page.prompt = getParam(params, 'prompt') ?? page.prompt ?? '';
+    page.options = getParam(params, 'options') ?? page.options ?? [];
+    return { type, page };
+  }
+
+  if (type === 'condition') {
+    page.conditionMode = getParam(params, 'conditionMode', 'condition-mode') ?? page.conditionMode ?? 'all';
+    page.conditions = getParam(params, 'conditions') ?? page.conditions ?? [];
+    page.trueTarget = getParam(params, 'trueTarget', 'true-target') ?? page.trueTarget ?? null;
+    page.falseTarget = getParam(params, 'falseTarget', 'false-target') ?? page.falseTarget ?? null;
+    return { type, page };
+  }
+
+  page.dialogues = getParam(params, 'dialogues') ?? page.dialogues ?? [];
+  return { type: 'normal', page };
+}
+
+function applyPlanOperation(session, operation = {}, index = 0) {
+  const command = normalizePlanCommand(operation.command ?? operation.op);
+  const params = getOperationParams(operation);
+  if (!command) {
+    throw new Error(`Operation ${index} is missing command`);
+  }
+
+  if (command === 'add-scene') {
+    const id = requireParam(params, command, 'id', 'sceneId', 'scene');
+    return session.addScene({
+      id,
+      name: getParam(params, 'name') ?? id,
+      next: getParam(params, 'next') ?? null,
+    });
+  }
+
+  if (command === 'rename-scene') {
+    return session.renameScene({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      newSceneId: requireParam(params, command, 'newSceneId', 'newId', 'new-id', 'to'),
+      name: getParam(params, 'name'),
+    });
+  }
+
+  if (command === 'delete-scene') {
+    return session.deleteScene({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }
+
+  if (command === 'set-scene-next') {
+    return session.setSceneNext({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      next: getParam(params, 'next') ?? null,
+    });
+  }
+
+  if (command === 'retarget-scene') {
+    return session.retargetSceneReferences({
+      fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
+      toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
+    });
+  }
+
+  if (command === 'clear-scene-references') {
+    return session.clearSceneReferences({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+    });
+  }
+
+  if (command === 'add-character') {
+    const id = requireParam(params, command, 'id', 'characterId', 'character');
+    return session.addCharacter({
+      id,
+      name: getParam(params, 'name') ?? id,
+      color: getParam(params, 'color') ?? '#ffffff',
+      expressions: getParam(params, 'expressions') ?? {},
+    });
+  }
+
+  if (command === 'add-variable') {
+    const id = requireParam(params, command, 'id', 'variableId', 'variable');
+    const type = getParam(params, 'type') ?? 'number';
+    return session.addVariable({
+      id,
+      type,
+      initial: getParam(params, 'initial') ?? (type === 'bool' ? false : 0),
+      label: getParam(params, 'label', 'name') ?? id,
+    });
+  }
+
+  if (command === 'add-page') {
+    const sceneId = requireParam(params, command, 'sceneId', 'scene');
+    const { type, page } = buildPlanPage(command, params);
+    if (type === 'choice') {
+      return session.addChoicePage({ sceneId, page });
+    }
+    if (type === 'condition') {
+      return session.addConditionPage({ sceneId, page });
+    }
+    return session.addNormalPage({ sceneId, page });
+  }
+
+  if (command === 'remove-page') {
+    return session.removePage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }
+
+  if (command === 'move-page') {
+    return session.movePage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
+      toIndex: requireParam(params, command, 'toIndex', 'to'),
+    });
+  }
+
+  if (command === 'add-dialogue') {
+    return session.addDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      dialogue: getParam(params, 'dialogue') ?? {
+        speaker: getParam(params, 'speaker') ?? null,
+        text: getParam(params, 'text') ?? '',
+        expression: getParam(params, 'expression') ?? null,
+        voice: getParam(params, 'voice') ?? null,
+      },
+    });
+  }
+
+  if (command === 'set-dialogue') {
+    return session.setDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      dialogueIndex: requireParam(params, command, 'dialogueIndex', 'dialogue'),
+      dialogue: dropUndefinedFields(getParam(params, 'dialogue') ?? {
+        speaker: getParam(params, 'speaker'),
+        text: getParam(params, 'text'),
+        expression: getParam(params, 'expression'),
+        voice: getParam(params, 'voice'),
+      }),
+    });
+  }
+
+  if (command === 'remove-dialogue') {
+    return session.removeDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      dialogueIndex: requireParam(params, command, 'dialogueIndex', 'dialogue'),
+    });
+  }
+
+  if (command === 'move-dialogue') {
+    return session.moveDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
+      toIndex: requireParam(params, command, 'toIndex', 'to'),
+    });
+  }
+
+  if (command === 'add-choice-option') {
+    return session.addChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      option: getParam(params, 'option') ?? {
+        text: getParam(params, 'text') ?? '',
+        target: getParam(params, 'target') ?? null,
+        effects: getParam(params, 'effects') ?? [],
+      },
+    });
+  }
+
+  if (command === 'set-choice-page') {
+    return session.setChoicePage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      prompt: getParam(params, 'prompt'),
+      options: getParam(params, 'options'),
+    });
+  }
+
+  if (command === 'set-choice-option') {
+    return session.setChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      option: getParam(params, 'option') ?? dropUndefinedFields({
+        text: getParam(params, 'text'),
+        target: getParam(params, 'clearTarget', 'clear-target') ? null : getParam(params, 'target'),
+        effects: getParam(params, 'effects'),
+      }),
+    });
+  }
+
+  if (command === 'remove-choice-option') {
+    return session.removeChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+    });
+  }
+
+  if (command === 'move-choice-option') {
+    return session.moveChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
+      toIndex: requireParam(params, command, 'toIndex', 'to'),
+    });
+  }
+
+  if (command === 'set-condition-page') {
+    return session.setConditionPage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      condition: getParam(params, 'condition') ?? dropUndefinedFields({
+        conditionMode: getParam(params, 'conditionMode', 'condition-mode'),
+        conditions: getParam(params, 'conditions'),
+        trueTarget: getParam(params, 'clearTrueTarget', 'clear-true-target') ? null : getParam(params, 'trueTarget', 'true-target'),
+        falseTarget: getParam(params, 'clearFalseTarget', 'clear-false-target') ? null : getParam(params, 'falseTarget', 'false-target'),
+      }),
+    });
+  }
+
+  if (command === 'set-page-background') {
+    return session.setPageBackground({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      background: getParam(params, 'background') ?? '',
+    });
+  }
+
+  if (command === 'set-page-characters') {
+    return session.setPageCharacters({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      characters: getParam(params, 'characters') ?? [],
+    });
+  }
+
+  if (command === 'set-page-audio') {
+    return session.setPageAudio({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      bgm: getParam(params, 'bgm'),
+      se: getParam(params, 'se'),
+    });
+  }
+
+  if (command === 'set-page-media') {
+    return session.setPageMedia({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      background: getParam(params, 'clearBackground', 'clear-background') ? '' : getParam(params, 'background'),
+      bgm: getParam(params, 'bgm'),
+      se: getParam(params, 'se'),
+    });
+  }
+
+  if (command === 'set-page-camera') {
+    return session.setPageCamera({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      camera: getParam(params, 'clearCamera', 'clear-camera') ? null : getParam(params, 'camera'),
+    });
+  }
+
+  if (command === 'set-page-transition') {
+    return session.setPageTransition({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      transition: getParam(params, 'clearTransition', 'clear-transition') ? null : getParam(params, 'transition'),
+    });
+  }
+
+  if (command === 'set-character-animation') {
+    return session.setCharacterAnimation({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      characterId: requireParam(params, command, 'characterId', 'character'),
+      animation: getParam(params, 'animation') ?? 'none',
+    });
+  }
+
+  if (command === 'add-choice-effect') {
+    return session.addChoiceEffect({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      effect: getParam(params, 'effect') ?? {
+        type: getParam(params, 'effectType', 'effect-type') ?? 'var:add',
+        id: getParam(params, 'effectId', 'effect-id', 'variable'),
+        value: getParam(params, 'value') ?? 1,
+      },
+    });
+  }
+
+  throw new Error(`Unsupported apply-plan command: ${command}`);
 }
 
 async function writeScriptFile(filePath, script, { force = false, backup = false, checkpoint = false } = {}) {
@@ -514,6 +900,130 @@ async function mutateScript(args, mutator) {
   };
 }
 
+async function applyPlan(args) {
+  const planPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!planPathArg) {
+    throw new Error('apply-plan requires a plan JSON path');
+  }
+
+  const planPath = path.resolve(repoRoot, planPathArg);
+  const plan = JSON.parse(await readFile(planPath, 'utf8'));
+  const operations = Array.isArray(plan) ? plan : plan.operations;
+  if (!Array.isArray(operations) || operations.length === 0) {
+    throw new Error('apply-plan requires operations[]');
+  }
+
+  const { scriptPath, script } = await readScript(args);
+  const session = createProjectSession({ script });
+  const operationResults = operations.map((operation, index) => {
+    const command = normalizePlanCommand(operation.command ?? operation.op);
+    const result = applyPlanOperation(session, operation, index);
+    return {
+      index,
+      id: operation.id ?? null,
+      command,
+      result,
+      changedPaths: getChangedPaths(result),
+    };
+  });
+  const nextScript = session.toJSON();
+  const validation = session.validate();
+  const outputPath = path.resolve(repoRoot, getArgValue(args, '--out', scriptPath));
+  const dryRun = hasFlag(args, '--dry-run');
+  const allowInvalid = hasFlag(args, '--allow-invalid');
+  const blockedByValidation = !validation.ok && !allowInvalid;
+
+  let writeResult = null;
+  if (!dryRun && !blockedByValidation) {
+    writeResult = await writeScriptFile(outputPath, nextScript, {
+      force: hasFlag(args, '--force') || outputPath === scriptPath,
+      backup: hasFlag(args, '--backup'),
+      checkpoint: hasFlag(args, '--checkpoint'),
+    });
+  }
+
+  const beforeCounts = summarizeScriptShape(script);
+  const afterCounts = summarizeScriptShape(nextScript);
+  const status = dryRun
+    ? 'planned'
+    : blockedByValidation
+      ? 'blocked'
+      : 'written';
+  const changedPaths = uniqueValues(operationResults.flatMap((operation) => operation.changedPaths));
+  const changeSummary = {
+    command: 'apply-plan',
+    dryRun,
+    writeStatus: status,
+    scriptPath,
+    outPath: dryRun || blockedByValidation ? null : outputPath,
+    planPath,
+    operationCount: operationResults.length,
+    changedPaths,
+    counts: {
+      before: beforeCounts,
+      after: afterCounts,
+      delta: subtractCounts(afterCounts, beforeCounts),
+    },
+    validation: {
+      ok: validation.ok,
+      errorCount: validation.errors.length,
+      warningCount: validation.warnings.length,
+    },
+    checkpointPath: writeResult?.checkpointPath ?? null,
+    backupPath: writeResult?.backupPath ?? null,
+  };
+
+  const output = {
+    scriptPath,
+    outPath: changeSummary.outPath,
+    dryRun,
+    planPath,
+    transaction: {
+      command: 'apply-plan',
+      status,
+      wrote: status === 'written',
+      blockedByValidation,
+      checkpointPath: writeResult?.checkpointPath ?? null,
+      backupPath: writeResult?.backupPath ?? null,
+      rollback: writeResult?.checkpointPath
+        ? {
+          command: 'restore-checkpoint',
+          checkpointPath: writeResult.checkpointPath,
+          scriptPath: outputPath,
+        }
+        : null,
+    },
+    operations: operationResults,
+    changeSummary,
+    validation,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`${dryRun ? 'Prepared' : status === 'written' ? 'Applied' : 'Blocked'} plan: ${planPath}\n`);
+    process.stdout.write(`Operations: ${operationResults.length}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    if (output.transaction.checkpointPath) {
+      process.stdout.write(`Checkpoint: ${output.transaction.checkpointPath}\n`);
+    }
+    if (changedPaths.length) {
+      process.stdout.write(`Changed: ${changedPaths.join(', ')}\n`);
+    }
+    process.stdout.write(`Validation: ${validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return validation.ok || allowInvalid ? 0 : 1;
+}
+
 function printMutationResult(label, output) {
   process.stdout.write(`${label}: ${Object.values(output.result)[0]}\n`);
   if (output.outPath) {
@@ -651,6 +1161,72 @@ async function importDraft(args) {
   return result.validation.ok ? 0 : 1;
 }
 
+async function restoreCheckpoint(args) {
+  const checkpointPathArg = getArgValue(args, '--checkpoint', args.find((arg) => !arg.startsWith('--')));
+  if (!checkpointPathArg) {
+    throw new Error('restore-checkpoint requires a checkpoint path or --checkpoint');
+  }
+
+  const checkpointPath = path.resolve(repoRoot, checkpointPathArg);
+  const scriptPath = path.resolve(repoRoot, getArgValue(args, '--script', defaultScriptPath));
+  const restoredScript = JSON.parse(await readFile(checkpointPath, 'utf8'));
+  const validation = validateProject(restoredScript);
+  const beforeScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+  const writeResult = await writeScriptFile(scriptPath, restoredScript, {
+    force: hasFlag(args, '--force'),
+    backup: hasFlag(args, '--backup'),
+    checkpoint: hasFlag(args, '--checkpoint-current'),
+  });
+  const changeSummary = createMutationChangeSummary({
+    command: 'restore-checkpoint',
+    scriptPath,
+    outPath: scriptPath,
+    dryRun: false,
+    beforeScript,
+    afterScript: restoredScript,
+    result: {},
+    validation,
+    writeResult,
+  });
+  changeSummary.checkpointSourcePath = checkpointPath;
+
+  const output = {
+    scriptPath,
+    checkpointSourcePath: checkpointPath,
+    transaction: {
+      command: 'restore-checkpoint',
+      status: 'written',
+      wrote: true,
+      checkpointPath: writeResult.checkpointPath,
+      backupPath: writeResult.backupPath,
+    },
+    changeSummary,
+    validation,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Restored checkpoint: ${checkpointPath}\n`);
+    process.stdout.write(`Wrote script: ${scriptPath}\n`);
+    if (writeResult.checkpointPath) {
+      process.stdout.write(`Checkpoint before restore: ${writeResult.checkpointPath}\n`);
+    }
+    if (writeResult.backupPath) {
+      process.stdout.write(`Backup before restore: ${writeResult.backupPath}\n`);
+    }
+    process.stdout.write(`Validation: ${validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return validation.ok ? 0 : 1;
+}
+
 async function exportReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -690,6 +1266,50 @@ async function exportReport(args) {
     printIssue(issue);
   }
   return report.validation.ok ? 0 : 1;
+}
+
+async function handoffReport(args) {
+  const { scriptPath, script } = await readScript(args);
+  const validationOptions = await getValidationOptions(args, scriptPath);
+  const knownAssets = hasFlag(args, '--skip-asset-check')
+    ? null
+    : await getKnownAssetsForReadiness(args, scriptPath);
+  const checkpointDir = path.resolve(
+    repoRoot,
+    getArgValue(args, '--checkpoint-dir', path.join(path.dirname(scriptPath), '.checkpoints')),
+  );
+  const checkpointLimit = getIntArg(args, '--checkpoint-limit', 5);
+  const handoff = createAgentHandoff(script, {
+    scriptPath,
+    validation: validationOptions,
+    readiness: {
+      knownAssets,
+      requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
+    },
+    checkpoints: await collectCheckpointEntries(checkpointDir, checkpointLimit),
+    notes: getArgValues(args, '--note'),
+  });
+  const outPathArg = getArgValue(args, '--out', null);
+  if (outPathArg) {
+    const outPath = path.resolve(repoRoot, outPathArg);
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(handoff, null, 2)}\n`, 'utf8');
+    handoff.outPath = outPath;
+  }
+
+  if (hasFlag(args, '--json')) {
+    writeJson(handoff);
+  } else {
+    process.stdout.write(`Agent handoff: ${handoff.ok ? 'OK' : 'NEEDS REVIEW'}\n`);
+    process.stdout.write(`Script: ${scriptPath}\n`);
+    if (handoff.outPath) {
+      process.stdout.write(`Wrote handoff: ${handoff.outPath}\n`);
+    }
+    process.stdout.write(`Checkpoints: ${handoff.checkpoints.length}\n`);
+    process.stdout.write(`Review items: ${handoff.reviewItemCount}\n`);
+  }
+
+  return handoff.ok ? 0 : 1;
 }
 
 async function exportReadiness(args) {
@@ -972,6 +1592,103 @@ async function setSceneNext(args) {
     writeJson(output);
   } else {
     printMutationResult('Set scene next', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function sceneReferences(args) {
+  const { scriptPath, script } = await readScript(args);
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--id', null));
+  if (!sceneId) {
+    throw new Error('scene-references requires --scene');
+  }
+
+  if (!script.scenes?.[sceneId]) {
+    throw new Error(`Scene "${sceneId}" does not exist`);
+  }
+
+  const references = collectSceneReferences(script, sceneId);
+  const output = {
+    scriptPath,
+    sceneId,
+    referenceCount: references.length,
+    references,
+    suggestions: references.length > 0
+      ? [
+        {
+          summary: 'Retarget references before renaming or deleting this scene.',
+          commands: [
+            {
+              command: 'retarget-scene',
+              args: { from: sceneId, to: '<target-scene-id>' },
+            },
+            {
+              command: 'clear-scene-references',
+              args: { scene: sceneId },
+            },
+          ],
+        },
+      ]
+      : [],
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Scene references: ${sceneId}\n`);
+    process.stdout.write(`References: ${references.length}\n`);
+    for (const reference of references) {
+      process.stdout.write(`- ${reference.kind} ${reference.pathString}\n`);
+    }
+  }
+
+  return 0;
+}
+
+async function retargetScene(args) {
+  const fromSceneId = getArgValue(args, '--from', getArgValue(args, '--scene', null));
+  const toSceneId = getArgValue(args, '--to', getArgValue(args, '--target', null));
+  if (!fromSceneId || !toSceneId) {
+    throw new Error('retarget-scene requires --from and --to');
+  }
+
+  const output = await mutateScript(args, (session) => session.retargetSceneReferences({
+    fromSceneId,
+    toSceneId,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Retargeted scene references: ${fromSceneId}->${toSceneId}\n`);
+    printMutationResult('Updated references', {
+      ...output,
+      result: { updatedReferenceCount: output.result.updatedReferenceCount },
+    });
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function clearSceneReferencesCommand(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--id', null));
+  if (!sceneId) {
+    throw new Error('clear-scene-references requires --scene');
+  }
+
+  const output = await mutateScript(args, (session) => session.clearSceneReferences({
+    sceneId,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Cleared scene references: ${sceneId}\n`);
+    printMutationResult('Cleared references', {
+      ...output,
+      result: { clearedReferenceCount: output.result.clearedReferenceCount },
+    });
   }
 
   return output.validation.ok ? 0 : 1;
@@ -1926,9 +2643,15 @@ function printHelp() {
   author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
+  handoff-report [--script path] [--out path] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
+  apply-plan plan.json [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
+  restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  scene-references --scene scene_id [--script path] [--json]
+  retarget-scene --from scene_id --to scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  clear-scene-references --scene scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   rename-scene --scene scene_id --new-id scene_id [--name name] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   delete-scene --scene scene_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-scene-next --scene scene_id [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -1983,6 +2706,16 @@ async function main() {
       return;
     }
 
+    if (command === 'apply-plan') {
+      process.exitCode = await applyPlan(args);
+      return;
+    }
+
+    if (command === 'restore-checkpoint') {
+      process.exitCode = await restoreCheckpoint(args);
+      return;
+    }
+
     if (command === 'export-report') {
       process.exitCode = await exportReport(args);
       return;
@@ -1990,6 +2723,11 @@ async function main() {
 
     if (command === 'export-readiness') {
       process.exitCode = await exportReadiness(args);
+      return;
+    }
+
+    if (command === 'handoff-report') {
+      process.exitCode = await handoffReport(args);
       return;
     }
 
@@ -2010,6 +2748,21 @@ async function main() {
 
     if (command === 'set-scene-next') {
       process.exitCode = await setSceneNext(args);
+      return;
+    }
+
+    if (command === 'scene-references') {
+      process.exitCode = await sceneReferences(args);
+      return;
+    }
+
+    if (command === 'retarget-scene') {
+      process.exitCode = await retargetScene(args);
+      return;
+    }
+
+    if (command === 'clear-scene-references') {
+      process.exitCode = await clearSceneReferencesCommand(args);
       return;
     }
 

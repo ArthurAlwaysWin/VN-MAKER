@@ -7,6 +7,7 @@ import {
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
 import { ensureGalgameContract } from '../shared/galgameContract.js';
 import { validateProject } from '../shared/projectValidator.js';
+import { collectSceneReferences } from '../shared/sceneGraph.js';
 import { normalizeVariableRegistry } from '../shared/variableRegistry.js';
 
 function cloneJsonValue(value) {
@@ -107,60 +108,6 @@ function assertPageIndexInRange(scene, sceneId, pageIndex) {
   }
 }
 
-function collectSceneReferences(script, targetSceneId) {
-  const references = [];
-  for (const [sceneId, scene] of Object.entries(script.scenes ?? {})) {
-    if (scene?.next === targetSceneId) {
-      references.push({
-        kind: 'scene-next',
-        sceneId,
-        path: ['scenes', sceneId, 'next'],
-        pathString: `scenes.${sceneId}.next`,
-      });
-    }
-
-    for (const [pageIndex, page] of (scene?.pages ?? []).entries()) {
-      if (page?.type === 'choice') {
-        for (const [optionIndex, option] of (page.options ?? []).entries()) {
-          if (option?.target === targetSceneId) {
-            references.push({
-              kind: 'choice-option',
-              sceneId,
-              pageIndex,
-              optionIndex,
-              path: ['scenes', sceneId, 'pages', pageIndex, 'options', optionIndex, 'target'],
-              pathString: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.target`,
-            });
-          }
-        }
-      }
-
-      if (page?.type === 'condition') {
-        if (page.trueTarget === targetSceneId) {
-          references.push({
-            kind: 'condition-true-target',
-            sceneId,
-            pageIndex,
-            path: ['scenes', sceneId, 'pages', pageIndex, 'trueTarget'],
-            pathString: `scenes.${sceneId}.pages.${pageIndex}.trueTarget`,
-          });
-        }
-        if (page.falseTarget === targetSceneId) {
-          references.push({
-            kind: 'condition-false-target',
-            sceneId,
-            pageIndex,
-            path: ['scenes', sceneId, 'pages', pageIndex, 'falseTarget'],
-            pathString: `scenes.${sceneId}.pages.${pageIndex}.falseTarget`,
-          });
-        }
-      }
-    }
-  }
-
-  return references;
-}
-
 function replaceSceneReferences(script, fromSceneId, toSceneId) {
   let updatedReferenceCount = 0;
   for (const scene of Object.values(script.scenes ?? {})) {
@@ -193,6 +140,40 @@ function replaceSceneReferences(script, fromSceneId, toSceneId) {
   }
 
   return updatedReferenceCount;
+}
+
+function clearSceneReferenceTargets(script, targetSceneId) {
+  let clearedReferenceCount = 0;
+  for (const scene of Object.values(script.scenes ?? {})) {
+    if (scene?.next === targetSceneId) {
+      scene.next = null;
+      clearedReferenceCount += 1;
+    }
+
+    for (const page of scene?.pages ?? []) {
+      if (page?.type === 'choice') {
+        for (const option of page.options ?? []) {
+          if (option?.target === targetSceneId) {
+            option.target = null;
+            clearedReferenceCount += 1;
+          }
+        }
+      }
+
+      if (page?.type === 'condition') {
+        if (page.trueTarget === targetSceneId) {
+          page.trueTarget = null;
+          clearedReferenceCount += 1;
+        }
+        if (page.falseTarget === targetSceneId) {
+          page.falseTarget = null;
+          clearedReferenceCount += 1;
+        }
+      }
+    }
+  }
+
+  return clearedReferenceCount;
 }
 
 function normalizePageTransitionInput(transition) {
@@ -336,6 +317,43 @@ export function createProjectSession(input = {}) {
       const scene = getScene(script, sceneId);
       scene.next = next || null;
       return { sceneId, next: scene.next };
+    },
+
+    inspectSceneReferences({ sceneId }) {
+      const id = assertNonEmptyString(sceneId, 'sceneId');
+      getScene(script, id);
+      return {
+        sceneId: id,
+        references: collectSceneReferences(script, id),
+      };
+    },
+
+    retargetSceneReferences({ fromSceneId, toSceneId }) {
+      const fromId = assertNonEmptyString(fromSceneId, 'fromSceneId');
+      const toId = assertNonEmptyString(toSceneId, 'toSceneId');
+      getScene(script, fromId);
+      getScene(script, toId);
+      const references = collectSceneReferences(script, fromId);
+      const updatedReferenceCount = replaceSceneReferences(script, fromId, toId);
+      return {
+        sceneId: fromId,
+        fromSceneId: fromId,
+        toSceneId: toId,
+        updatedReferenceCount,
+        references,
+      };
+    },
+
+    clearSceneReferences({ sceneId }) {
+      const id = assertNonEmptyString(sceneId, 'sceneId');
+      getScene(script, id);
+      const references = collectSceneReferences(script, id);
+      const clearedReferenceCount = clearSceneReferenceTargets(script, id);
+      return {
+        sceneId: id,
+        clearedReferenceCount,
+        references,
+      };
     },
 
     addNormalPage({ sceneId, page = {}, ...pageFields }) {

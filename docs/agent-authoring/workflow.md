@@ -60,6 +60,36 @@ node tools/vn-author/index.js import-draft draft.json --fresh --out public/game/
 
 Use `--checkpoint` before larger edits. It writes a timestamped copy under `.checkpoints/` before the script is changed. `--backup` still writes the latest `.bak` copy for quick manual recovery. JSON output includes `transaction` and `changeSummary` blocks so external agents can report the exact target, changed paths, count deltas, validation status, and checkpoint path.
 
+For multi-step edits, prefer an atomic plan manifest:
+
+```json
+{
+  "version": 1,
+  "operations": [
+    { "id": "scene", "command": "add-scene", "params": { "id": "chapter_1", "name": "Chapter 1" } },
+    { "id": "page", "command": "add-page", "params": { "scene": "chapter_1", "type": "normal", "dialogues": [{ "speaker": null, "text": "The bell rang." }] } },
+    { "id": "media", "command": "set-page-media", "params": { "scene": "chapter_1", "page": 0, "background": "backgrounds/classroom.svg" } }
+  ]
+}
+```
+
+Then dry-run and apply it:
+
+```bash
+npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json
+npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --json
+```
+
+`apply-plan` reads the script once, applies operations in order, validates the final result, and writes once. If validation has errors it refuses to write unless `--allow-invalid` is present. JSON output includes each operation result plus one aggregate `transaction` and `changeSummary`.
+
+See [plan-manifest.md](./plan-manifest.md) for the full manifest shape and supported commands.
+
+When `--checkpoint` is used, the transaction includes a rollback descriptor. To restore it:
+
+```bash
+npm run vn:restore-checkpoint -- public/game/.checkpoints/script.2026-05-19T10-00-00-000Z.json --script public/game/script.json --force --backup --json
+```
+
 For small edits:
 
 ```bash
@@ -88,6 +118,16 @@ node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --opt
 ```
 
 `rename-scene` updates scene references in `next`, choice option targets, and condition targets. `delete-scene` refuses to delete scenes referenced from other scenes unless `--force-references` is present.
+
+Before deleting or merging branch scenes, inspect references:
+
+```bash
+npm run vn:scene-references -- --scene chapter_1_old_route --script public/game/script.json --json
+node tools/vn-author/index.js retarget-scene --from chapter_1_old_route --to chapter_1_new_route --script public/game/script.json --force --checkpoint --json
+node tools/vn-author/index.js clear-scene-references --scene unused_branch --script public/game/script.json --force --checkpoint --json
+```
+
+`scene-references` reports exact `pathString` values for scene `next`, choice targets, and condition targets, plus suggested repair commands. Use `retarget-scene` when preserving branch flow; use `clear-scene-references` only when those jumps should become terminal or intentionally unset.
 
 ## 5. Validate Again
 
@@ -127,6 +167,14 @@ npm run vn:render-preview -- --scene start --page 0 --out .tmp/preview.png --dry
 ```
 
 ## 7. Summarize
+
+Generate a handoff artifact for the no-code editor or human reviewer:
+
+```bash
+npm run vn:handoff-report -- --script public/game/script.json --out public/game/agent-handoff.json --note "Review newly authored route and placeholder assets." --json
+```
+
+The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability, recent checkpoints from `.checkpoints/`, and review items with suggested actions where available. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel for human review.
 
 Tell the human creator:
 

@@ -393,6 +393,67 @@ describe('project authoring session', () => {
     expect(session.toJSON().scenes.retry).toBeUndefined();
   });
 
+  it('inspects, retargets, and clears scene references for branch repair', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_scene_references',
+        characters: {},
+        scenes: {
+          start: {
+            next: 'old_route',
+            pages: [
+              {
+                type: 'choice',
+                options: [{ text: 'Go', target: 'old_route' }],
+              },
+              {
+                type: 'condition',
+                trueTarget: 'old_route',
+                falseTarget: 'fallback',
+                conditions: [],
+              },
+            ],
+          },
+          old_route: { name: 'Old Route', pages: [] },
+          new_route: { name: 'New Route', pages: [] },
+          fallback: { name: 'Fallback', pages: [] },
+        },
+      },
+    });
+
+    expect(session.inspectSceneReferences({ sceneId: 'old_route' })).toMatchObject({
+      sceneId: 'old_route',
+      references: [
+        { kind: 'scene-next', pathString: 'scenes.start.next' },
+        { kind: 'choice-option', pathString: 'scenes.start.pages.0.options.0.target' },
+        { kind: 'condition-true-target', pathString: 'scenes.start.pages.1.trueTarget' },
+      ],
+    });
+
+    expect(session.retargetSceneReferences({
+      fromSceneId: 'old_route',
+      toSceneId: 'new_route',
+    })).toMatchObject({
+      fromSceneId: 'old_route',
+      toSceneId: 'new_route',
+      updatedReferenceCount: 3,
+    });
+
+    const retargeted = session.toJSON();
+    expect(retargeted.scenes.start.next).toBe('new_route');
+    expect(retargeted.scenes.start.pages[0].options[0].target).toBe('new_route');
+    expect(retargeted.scenes.start.pages[1].trueTarget).toBe('new_route');
+
+    expect(session.clearSceneReferences({ sceneId: 'new_route' })).toMatchObject({
+      sceneId: 'new_route',
+      clearedReferenceCount: 3,
+    });
+    const cleared = session.toJSON();
+    expect(cleared.scenes.start.next).toBeNull();
+    expect(cleared.scenes.start.pages[0].options[0].target).toBeNull();
+    expect(cleared.scenes.start.pages[1].trueTarget).toBeNull();
+  });
+
   it('removes and reorders pages without editing page payloads', () => {
     const session = createProjectSession({
       script: {

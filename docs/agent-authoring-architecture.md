@@ -57,6 +57,15 @@ src/editor           human GUI using shared contract and, where practical, autho
 src/engine           runtime playback and preview authority
 ```
 
+The current external-agent surface includes:
+
+- Single-command mutations for small edits.
+- `apply-plan` for atomic multi-operation manifests with one validation/write/checkpoint boundary.
+- `restore-checkpoint` for rollback through the same authoring layer.
+- `scene-references`, `retarget-scene`, and `clear-scene-references` for branch graph repair.
+- `author-check` for aggregate validation, layout lint, readiness, and preview dry-run planning.
+- `handoff-report` for structured review artifacts consumed by humans and surfaced in Project Settings when saved as project-root `agent-handoff.json`.
+
 ## Existing Foundations
 
 Keep and extend these modules:
@@ -257,6 +266,18 @@ node tools/vn-author/index.js inspect
 node tools/vn-author/index.js validate
 node tools/vn-author/index.js add-scene --id chapter_1 --name 第一章
 node tools/vn-author/index.js import-draft draft.json
+```
+
+Production workflow commands now also include:
+
+```bash
+node tools/vn-author/index.js apply-plan plan.json --dry-run --json
+node tools/vn-author/index.js apply-plan plan.json --force --checkpoint --json
+node tools/vn-author/index.js restore-checkpoint public/game/.checkpoints/script.timestamp.json --force --backup --json
+node tools/vn-author/index.js scene-references --scene old_route --json
+node tools/vn-author/index.js retarget-scene --from old_route --to new_route --force --checkpoint --json
+node tools/vn-author/index.js author-check --scene start --page 0 --write-preview-plan --json
+node tools/vn-author/index.js handoff-report --out public/game/agent-handoff.json --json
 ```
 
 CLI output should support:
@@ -567,6 +588,10 @@ Goal: make external agent products reliable day-to-day authoring clients for Gal
 Tasks:
 
 - Add transactional CLI workflows: inspect current project, apply planned changes, validate, and write only when gates pass.
+- Add `apply-plan` manifests for ordered multi-operation edits with dry-run support, aggregate summaries, and validation-blocked writes.
+- Add `restore-checkpoint` rollback using timestamped `.checkpoints/` files.
+- Add scene reference diagnostics and retarget/clear helpers so agents can safely merge, rename, or delete branch scenes.
+- Add `handoff-report` artifacts containing gates, project counts, scene graph reachability, recent checkpoints, and review items.
 - Add machine-readable change summaries so agents can explain what changed to the user. Initial CLI mutation output now includes `transaction` and `changeSummary` objects for dry-run and write paths.
 - Add checkpoint/backup guidance before larger agent edits. Initial CLI support uses `--checkpoint` for timestamped `.checkpoints/` copies and keeps `--backup` for the latest `.bak` copy.
 - Expand render-preview output with screenshot paths, quality checks, and layout lint findings.

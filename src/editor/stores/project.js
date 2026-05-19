@@ -5,6 +5,8 @@ export const useProjectStore = defineStore('project', () => {
   const projectPath = ref(null);
   const projectData = ref(null);
   const recentProjects = ref([]);
+  const agentHandoff = ref(null);
+  const agentHandoffPath = ref(null);
   const hasCreatedProject = ref(false);
   const isDirty = ref(false);
   const _saving = ref(false);
@@ -38,7 +40,21 @@ export const useProjectStore = defineStore('project', () => {
     if (result.success) {
       projectPath.value = result.path;
       projectData.value = result.project;
+      await loadAgentHandoff();
       isDirty.value = false;
+    }
+    return result;
+  }
+
+  async function loadAgentHandoff() {
+    agentHandoff.value = null;
+    agentHandoffPath.value = null;
+    if (!window.ipcRenderer) return null;
+
+    const result = await window.ipcRenderer.invoke('read-agent-handoff');
+    if (result?.success) {
+      agentHandoff.value = result.handoff || null;
+      agentHandoffPath.value = result.path || null;
     }
     return result;
   }
@@ -63,6 +79,8 @@ export const useProjectStore = defineStore('project', () => {
   function closeProject() {
     projectPath.value = null;
     projectData.value = null;
+    agentHandoff.value = null;
+    agentHandoffPath.value = null;
     isDirty.value = false;
     if (window.ipcRenderer) window.ipcRenderer.invoke('close-project');
   }
@@ -72,9 +90,9 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   return {
-    projectPath, projectData, recentProjects, hasCreatedProject, isDirty,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, hasCreatedProject, isDirty,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    closeProject, markDirty
+    loadAgentHandoff, closeProject, markDirty
   };
 });

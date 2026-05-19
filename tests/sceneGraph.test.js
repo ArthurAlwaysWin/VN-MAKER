@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectSceneGraph, resolveEntrySceneId, traceReachableScenes } from '../src/shared/sceneGraph.js';
+import {
+  collectSceneGraph,
+  collectSceneReferences,
+  resolveEntrySceneId,
+  traceReachableScenes,
+} from '../src/shared/sceneGraph.js';
 
 describe('scene graph helpers', () => {
   it('collects scene next, choice, and condition targets', () => {
@@ -71,5 +76,52 @@ describe('scene graph helpers', () => {
       reachableSceneIds: ['intro', 'ending'],
       unreachableSceneIds: ['start'],
     });
+  });
+
+  it('collects scene reference locations for diagnostics', () => {
+    const script = {
+      scenes: {
+        start: {
+          next: 'ending',
+          pages: [
+            {
+              type: 'choice',
+              options: [
+                { text: 'Go', target: 'ending' },
+                { text: 'Stay', target: null },
+              ],
+            },
+            {
+              type: 'condition',
+              trueTarget: 'ending',
+              falseTarget: 'retry',
+            },
+          ],
+        },
+        ending: { pages: [] },
+      },
+    };
+
+    expect(collectSceneReferences(script, 'ending')).toEqual([
+      expect.objectContaining({
+        kind: 'scene-next',
+        sceneId: 'start',
+        pageIndex: null,
+        pathString: 'scenes.start.next',
+      }),
+      expect.objectContaining({
+        kind: 'choice-option',
+        sceneId: 'start',
+        pageIndex: 0,
+        optionIndex: 0,
+        pathString: 'scenes.start.pages.0.options.0.target',
+      }),
+      expect.objectContaining({
+        kind: 'condition-true-target',
+        sceneId: 'start',
+        pageIndex: 1,
+        pathString: 'scenes.start.pages.1.trueTarget',
+      }),
+    ]);
   });
 });

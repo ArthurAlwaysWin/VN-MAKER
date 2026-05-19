@@ -255,6 +255,209 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('applies multi-operation authoring plans atomically with one checkpoint', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            id: 'character',
+            command: 'add-character',
+            params: {
+              id: 'sakura',
+              name: 'Sakura',
+              expressions: { normal: 'characters/sakura_normal.svg' },
+            },
+          },
+          {
+            id: 'scene',
+            command: 'add-scene',
+            params: { id: 'start', name: 'Start' },
+          },
+          {
+            id: 'page',
+            command: 'add-page',
+            params: {
+              scene: 'start',
+              type: 'normal',
+              background: 'backgrounds/school.svg',
+              characters: [{ id: 'sakura', expression: 'normal', position: 'center' }],
+              dialogues: [{ speaker: 'sakura', text: 'Hello from a plan.' }],
+            },
+          },
+          {
+            id: 'camera',
+            command: 'set-page-camera',
+            params: {
+              scene: 'start',
+              page: 0,
+              camera: { effect: 'shake', direction: 'both', intensity: 'low', durationMs: 250 },
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const dryRunResult = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--dry-run',
+        '--json',
+      ]);
+
+      const dryRun = JSON.parse(dryRunResult.stdout);
+      expect(dryRun.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'planned',
+        wrote: false,
+      });
+      expect(dryRun.operations).toHaveLength(4);
+      expect(dryRun.changeSummary).toMatchObject({
+        command: 'apply-plan',
+        dryRun: true,
+        operationCount: 4,
+        changedPaths: expect.arrayContaining([
+          'characters.sakura',
+          'scenes.start',
+          'scenes.start.pages.0',
+        ]),
+        counts: {
+          before: { characters: 0, scenes: 0, pages: 0, variables: 0 },
+          after: { characters: 1, scenes: 1, pages: 1, variables: 0 },
+          delta: { characters: 1, scenes: 1, pages: 1, variables: 0 },
+        },
+      });
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).scenes).toEqual({});
+
+      const applyResult = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--checkpoint',
+        '--json',
+      ]);
+
+      const applied = JSON.parse(applyResult.stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      const checkpoint = JSON.parse(await readFile(applied.transaction.checkpointPath, 'utf8'));
+
+      expect(applied.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'written',
+        wrote: true,
+        blockedByValidation: false,
+        rollback: {
+          command: 'restore-checkpoint',
+          checkpointPath: applied.transaction.checkpointPath,
+          scriptPath,
+        },
+      });
+      expect(path.dirname(applied.transaction.checkpointPath)).toBe(path.join(dir, '.checkpoints'));
+      expect(checkpoint.scenes).toEqual({});
+      expect(script.characters.sakura.name).toBe('Sakura');
+      expect(script.scenes.start.pages[0]).toMatchObject({
+        type: 'normal',
+        background: 'backgrounds/school.svg',
+        dialogues: [{ speaker: 'sakura', text: 'Hello from a plan.' }],
+        camera: { effect: 'shake', direction: 'both', intensity: 'low', durationMs: 250 },
+      });
+
+      const restoreResult = await execFileAsync('node', [
+        cliPath,
+        'restore-checkpoint',
+        applied.transaction.checkpointPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--backup',
+        '--json',
+      ]);
+      const restored = JSON.parse(restoreResult.stdout);
+      const restoredScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+      const backupScript = JSON.parse(await readFile(restored.transaction.backupPath, 'utf8'));
+
+      expect(restored.transaction).toMatchObject({
+        command: 'restore-checkpoint',
+        status: 'written',
+        wrote: true,
+      });
+      expect(restoredScript.scenes).toEqual({});
+      expect(backupScript.scenes.start.pages).toHaveLength(1);
+    });
+  });
+
+  it('does not write invalid authoring plans unless explicitly allowed', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'invalid-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_plan_invalid',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          { command: 'add-scene', params: { id: 'start' } },
+          {
+            command: 'add-page',
+            params: {
+              scene: 'start',
+              type: 'normal',
+              dialogues: [{ speaker: 'missing_character', text: 'Oops.' }],
+            },
+          },
+        ],
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.any(String),
+      });
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'apply-plan',
+          planPath,
+          '--script',
+          scriptPath,
+          '--force',
+          '--json',
+        ]);
+      } catch (error) {
+        const result = JSON.parse(error.stdout);
+        const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+        expect(result.transaction).toMatchObject({
+          status: 'blocked',
+          wrote: false,
+          blockedByValidation: true,
+        });
+        expect(result.validation.ok).toBe(false);
+        expect(script.scenes).toEqual({});
+      }
+    });
+  });
+
   it('adds a character incrementally with expression shortcuts', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -999,6 +1202,106 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('diagnoses, retargets, and clears scene references from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_refs',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            next: 'old_route',
+            pages: [
+              {
+                type: 'choice',
+                prompt: 'Go?',
+                options: [{ text: 'Yes', target: 'old_route' }],
+              },
+              {
+                type: 'condition',
+                conditions: [],
+                trueTarget: 'old_route',
+                falseTarget: 'fallback',
+              },
+            ],
+          },
+          old_route: { name: 'Old Route', pages: [] },
+          new_route: { name: 'New Route', pages: [] },
+          fallback: { name: 'Fallback', pages: [] },
+        },
+      }), 'utf8');
+
+      const refsResult = await execFileAsync('node', [
+        cliPath,
+        'scene-references',
+        '--script',
+        scriptPath,
+        '--scene',
+        'old_route',
+        '--json',
+      ]);
+      const refs = JSON.parse(refsResult.stdout);
+      expect(refs).toMatchObject({
+        sceneId: 'old_route',
+        referenceCount: 3,
+        references: [
+          { kind: 'scene-next', pathString: 'scenes.start.next' },
+          { kind: 'choice-option', pathString: 'scenes.start.pages.0.options.0.target' },
+          { kind: 'condition-true-target', pathString: 'scenes.start.pages.1.trueTarget' },
+        ],
+      });
+      expect(refs.suggestions[0].commands).toEqual(expect.arrayContaining([
+        expect.objectContaining({ command: 'retarget-scene' }),
+        expect.objectContaining({ command: 'clear-scene-references' }),
+      ]));
+
+      const retargetResult = await execFileAsync('node', [
+        cliPath,
+        'retarget-scene',
+        '--script',
+        scriptPath,
+        '--from',
+        'old_route',
+        '--to',
+        'new_route',
+        '--force',
+        '--json',
+      ]);
+      const retarget = JSON.parse(retargetResult.stdout);
+      expect(retarget.result).toMatchObject({
+        fromSceneId: 'old_route',
+        toSceneId: 'new_route',
+        updatedReferenceCount: 3,
+      });
+      expect(retarget.changeSummary.changedPaths).toEqual([
+        'scenes.start.next',
+        'scenes.start.pages.0.options.0.target',
+        'scenes.start.pages.1.trueTarget',
+      ]);
+
+      const clearResult = await execFileAsync('node', [
+        cliPath,
+        'clear-scene-references',
+        '--script',
+        scriptPath,
+        '--scene',
+        'new_route',
+        '--force',
+        '--json',
+      ]);
+      const clear = JSON.parse(clearResult.stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(clear.result).toMatchObject({
+        sceneId: 'new_route',
+        clearedReferenceCount: 3,
+      });
+      expect(script.scenes.start.next).toBeNull();
+      expect(script.scenes.start.pages[0].options[0].target).toBeNull();
+      expect(script.scenes.start.pages[1].trueTarget).toBeNull();
+    });
+  });
+
   it('moves and removes pages through structure commands', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -1393,6 +1696,75 @@ describe('vn-author CLI', () => {
         sceneId: 'start',
         pageIndex: 0,
       });
+    });
+  });
+
+  it('writes an editor handoff report with recent checkpoints', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const outPath = path.join(dir, 'handoff.json');
+      const checkpointDir = path.join(dir, '.checkpoints');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_handoff',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              { type: 'normal', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const checkpointResult = await execFileAsync('node', [
+        cliPath,
+        'add-scene',
+        '--script',
+        scriptPath,
+        '--id',
+        'unused_checkpoint_scene',
+        '--force',
+        '--checkpoint',
+        '--json',
+      ]);
+      const checkpoint = JSON.parse(checkpointResult.stdout).transaction.checkpointPath;
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'handoff-report',
+        '--script',
+        scriptPath,
+        '--checkpoint-dir',
+        checkpointDir,
+        '--out',
+        outPath,
+        '--skip-asset-check',
+        '--note',
+        'Review the agent-authored changes.',
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.any(String),
+      });
+
+      const handoff = JSON.parse(await readFile(outPath, 'utf8'));
+      expect(handoff).toMatchObject({
+        kind: 'agent-authoring-handoff',
+        projectId: 'gm_cli_handoff',
+        gates: {
+          validation: true,
+          layout: false,
+          readiness: false,
+        },
+        checkpoints: [
+          expect.objectContaining({ path: checkpoint }),
+        ],
+        latestCheckpointPath: checkpoint,
+        notes: ['Review the agent-authored changes.'],
+      });
+      expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+        expect.objectContaining({ source: 'layout', code: 'layout-blank-page' }),
+      ]));
     });
   });
 

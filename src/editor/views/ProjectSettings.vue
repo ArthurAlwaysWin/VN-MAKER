@@ -34,6 +34,36 @@
           <div class="export-section">
             <button class="export-btn" @click="showExport = true" title="打开导出设置">📦 导出游戏</button>
           </div>
+          <div class="agent-handoff-section" v-if="project.agentHandoff">
+            <div class="agent-handoff-header">
+              <h4>外部 Agent 交接</h4>
+              <button class="agent-refresh-btn" @click="project.loadAgentHandoff()" title="重新读取 agent-handoff.json">刷新</button>
+            </div>
+            <div class="agent-gates">
+              <span
+                v-for="gate in agentGateRows"
+                :key="gate.key"
+                class="agent-gate"
+                :class="{ ok: gate.ok, blocked: !gate.ok }"
+              >
+                {{ gate.label }} {{ gate.ok ? 'OK' : '待处理' }}
+              </span>
+            </div>
+            <div class="agent-meta">
+              <span>Review items {{ project.agentHandoff.reviewItemCount ?? agentReviewItems.length }}</span>
+              <span v-if="project.agentHandoff.latestCheckpointPath" class="agent-path">{{ project.agentHandoff.latestCheckpointPath }}</span>
+            </div>
+            <ul class="agent-review-list" v-if="agentReviewItems.length">
+              <li v-for="item in agentReviewItems" :key="`${item.source}-${item.code}-${item.pathString}`">
+                <span class="agent-review-code">{{ item.code }}</span>
+                <span class="agent-review-text">{{ item.pathString || item.message }}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="agent-handoff-empty" v-else>
+            <span>外部 Agent 交接</span>
+            <button class="agent-refresh-btn" @click="project.loadAgentHandoff()" title="读取 agent-handoff.json">检查</button>
+          </div>
           <DialogueBoxSettings />
         </div>
 
@@ -76,7 +106,7 @@
 </template>
 
 <script setup>
-import { provide, ref, onMounted, onActivated, onBeforeUnmount } from 'vue';
+import { provide, ref, computed, onMounted, onActivated, onBeforeUnmount } from 'vue';
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
@@ -99,6 +129,19 @@ const themeEditor = createThemeEditor();
 const showExport = ref(false);
 const showThemeBrowser = ref(false);
 const themeExportStatus = ref('');
+const agentGateRows = computed(() => {
+  const gates = project.agentHandoff?.gates ?? {};
+  return [
+    { key: 'validation', label: 'Validation', ok: gates.validation !== false },
+    { key: 'layout', label: 'Layout', ok: gates.layout !== false },
+    { key: 'readiness', label: 'Readiness', ok: gates.readiness !== false },
+  ];
+});
+const agentReviewItems = computed(() => (
+  Array.isArray(project.agentHandoff?.reviewItems)
+    ? project.agentHandoff.reviewItems.slice(0, 5)
+    : []
+));
 const DIALOGUE_PREVIEW_SAMPLE = {
   type: 'show-dialogue-preview',
   speakerName: '预览角色',
@@ -191,6 +234,7 @@ function onMessage(event) {
 
 onMounted(() => {
   window.addEventListener('message', onMessage);
+  project.loadAgentHandoff();
 });
 
 onActivated(() => {
@@ -262,6 +306,90 @@ onBeforeUnmount(() => {
   border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 500;
 }
 .export-btn:hover { background: #0098ff; }
+.agent-handoff-section,
+.agent-handoff-empty {
+  margin: 14px 0 16px;
+  padding: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  background: #202020;
+  color: #cfcfcf;
+  font-size: 12px;
+}
+.agent-handoff-empty {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.agent-handoff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.agent-handoff-header h4 {
+  margin: 0;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+.agent-refresh-btn {
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #2f2f2f;
+  color: #ccc;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.agent-refresh-btn:hover { background: #3a3a3a; color: #eee; }
+.agent-gates {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.agent-gate {
+  border-radius: 4px;
+  padding: 3px 6px;
+  border: 1px solid #4a4a4a;
+  color: #d5d5d5;
+}
+.agent-gate.ok { border-color: #2f7d50; color: #8fe3ad; }
+.agent-gate.blocked { border-color: #8a5a20; color: #ffc06a; }
+.agent-meta {
+  display: grid;
+  gap: 4px;
+  color: #999;
+  margin-bottom: 8px;
+}
+.agent-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-review-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 5px;
+}
+.agent-review-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px;
+  align-items: center;
+}
+.agent-review-code {
+  color: #f0c674;
+}
+.agent-review-text {
+  color: #aaa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* Theme toolbar */
 .theme-toolbar {
   display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;

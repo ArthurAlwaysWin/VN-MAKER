@@ -351,6 +351,25 @@ ipcMain.handle('save-project', async (event, { project, script }) => {
   }
 });
 
+ipcMain.handle('read-agent-handoff', async () => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+
+    const handoffPath = path.join(currentProjectPath, 'agent-handoff.json');
+    if (!isInsideProject(handoffPath) || !existsSync(handoffPath)) {
+      return { success: true, handoff: null, path: handoffPath };
+    }
+
+    const handoff = JSON.parse(await fs.readFile(handoffPath, 'utf-8'));
+    return { success: true, handoff, path: handoffPath };
+  } catch (e) {
+    console.error('Failed to read agent handoff:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('read-dir', async (event, relativePath) => {
   try {
     if (!currentProjectPath) return [];

@@ -49,6 +49,74 @@ export function collectSceneGraph(script = {}) {
   return graph;
 }
 
+export function collectSceneReferences(script = {}, targetSceneId = null) {
+  const scenes = isPlainObject(script?.scenes) ? script.scenes : {};
+  const references = [];
+  if (!isNonEmptyString(targetSceneId)) {
+    return references;
+  }
+
+  for (const [sceneId, scene] of Object.entries(scenes)) {
+    if (scene?.next === targetSceneId) {
+      references.push({
+        kind: 'scene-next',
+        sceneId,
+        pageIndex: null,
+        optionIndex: null,
+        targetField: 'next',
+        path: ['scenes', sceneId, 'next'],
+        pathString: `scenes.${sceneId}.next`,
+      });
+    }
+
+    for (const [pageIndex, page] of (scene?.pages ?? []).entries()) {
+      if (page?.type === 'choice') {
+        for (const [optionIndex, option] of (page.options ?? []).entries()) {
+          if (option?.target === targetSceneId) {
+            references.push({
+              kind: 'choice-option',
+              sceneId,
+              pageIndex,
+              optionIndex,
+              targetField: 'target',
+              path: ['scenes', sceneId, 'pages', pageIndex, 'options', optionIndex, 'target'],
+              pathString: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.target`,
+            });
+          }
+        }
+      }
+
+      if (page?.type === 'condition') {
+        const normalized = normalizeConditionPage(page);
+        if (normalized.trueTarget === targetSceneId) {
+          references.push({
+            kind: 'condition-true-target',
+            sceneId,
+            pageIndex,
+            optionIndex: null,
+            targetField: 'trueTarget',
+            path: ['scenes', sceneId, 'pages', pageIndex, 'trueTarget'],
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.trueTarget`,
+          });
+        }
+        if (normalized.falseTarget === targetSceneId) {
+          references.push({
+            kind: 'condition-false-target',
+            sceneId,
+            pageIndex,
+            optionIndex: null,
+            targetField: 'falseTarget',
+            path: ['scenes', sceneId, 'pages', pageIndex, 'falseTarget'],
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.falseTarget`,
+          });
+        }
+      }
+    }
+  }
+
+  return references;
+}
+
 export function resolveEntrySceneId(script = {}, preferredEntrySceneId = null) {
   const scenes = isPlainObject(script?.scenes) ? script.scenes : {};
   const sceneIds = Object.keys(scenes);

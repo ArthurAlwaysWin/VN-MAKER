@@ -18,6 +18,7 @@ Build editable visual novel drafts for human creators. The human creator remains
 8. Register endings and CG before unlock effects reference them.
 9. Validate after every meaningful change.
 10. Treat runtime preview as the visual source of truth when preview is available.
+11. Use `apply-plan` for multi-step edits so checkpoint, validation, and summary are atomic.
 
 See also:
 
@@ -68,6 +69,17 @@ Mutation JSON includes:
 - `transaction`: whether the command wrote, plus `checkpointPath` / `backupPath`.
 - `changeSummary`: target identifiers, changed contract paths, before/after/delta counts, and validation counts.
 
+## Plan Manifests
+
+For multi-step changes, create a plan manifest and dry-run it before writing:
+
+```bash
+node tools/vn-author/index.js apply-plan plan.json --script public/game/script.json --dry-run --json
+node tools/vn-author/index.js apply-plan plan.json --script public/game/script.json --force --checkpoint --json
+```
+
+See `docs/agent-authoring/plan-manifest.md` for the manifest shape. If validation fails, `apply-plan` does not write unless `--allow-invalid` is present. When `--checkpoint` is used, JSON output includes a rollback descriptor for `restore-checkpoint`.
+
 ## Incremental Edits
 
 For small changes, prefer incremental commands:
@@ -94,6 +106,14 @@ node tools/vn-author/index.js set-choice-page --scene chapter_1 --page 1 --promp
 
 Use `rename-scene` instead of direct JSON edits when a scene id changes; it updates scene flow, choice targets, and condition targets. `delete-scene` is guarded against deleting externally referenced scenes unless `--force-references` is explicitly used.
 
+Inspect and repair scene references before deleting or merging branch scenes:
+
+```bash
+node tools/vn-author/index.js scene-references --scene old_route --script public/game/script.json --json
+node tools/vn-author/index.js retarget-scene --from old_route --to new_route --script public/game/script.json --force --checkpoint --json
+node tools/vn-author/index.js clear-scene-references --scene unused_route --script public/game/script.json --force --checkpoint --json
+```
+
 Use `--dry-run` to inspect the validation result without writing:
 
 ```bash
@@ -107,6 +127,12 @@ node tools/vn-author/index.js author-check --script public/game/script.json --sc
 ```
 
 The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload.
+
+Generate a handoff report when returning work to the no-code editor or a human reviewer:
+
+```bash
+node tools/vn-author/index.js handoff-report --script public/game/script.json --out public/game/agent-handoff.json --note "Review newly authored branch." --json
+```
 
 ## Draft Shape
 

@@ -24,7 +24,7 @@ const IMPORTED_THEME_AUTHOR = '外部主题包';
 const IMPORTED_THEME_VERSION = '导入主题';
 
 function normalizeCoverageList(list, fallback = []) {
-  const source = Array.isArray(list) && list.length > 0 ? list : fallback;
+  const source = Array.isArray(list) ? list : fallback;
   return [...new Set(source.filter(item => typeof item === 'string' && item.trim()))];
 }
 
@@ -330,7 +330,7 @@ export function createImportedThemeBrowserEntry(preflight = {}, scriptData = {})
     fileName: preflight.fileName ?? '',
     assetRoot: preflight.assetRoot ?? '',
     coverage: preflight.coverage ?? [],
-    missingCoverage: preflight.missingCoverage ?? [],
+    missingCoverage: preflight.missingCoverage,
     warnings: preflight.warnings ?? [],
     blockingErrors: preflight.blockingErrors ?? [],
     preview: preflight.preview,

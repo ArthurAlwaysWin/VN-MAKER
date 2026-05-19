@@ -115,6 +115,7 @@ describe('project report', () => {
     expect(report.layout).toEqual({
       ok: true,
       warnings: [],
+      suggestions: [],
     });
   });
 });

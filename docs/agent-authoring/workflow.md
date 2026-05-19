@@ -90,6 +90,8 @@ npm run vn:readiness -- --json
 
 Do not finish with validation errors or readiness blockers.
 
+When `lint-layout --json` returns warnings, read `suggestions[]` before editing again. Each suggestion carries the page location and repair command templates where the CLI can express the fix.
+
 ## 6. Preview When Available
 
 Use runtime screenshot rendering when Playwright is installed in the workspace:
@@ -99,6 +101,8 @@ npm run vn:render-preview -- --scene start --page 0 --out .tmp/preview.png --jso
 ```
 
 The command starts a lightweight Vite runtime server, captures a PNG with Chromium, and returns a `quality` object in JSON output. Quality checks currently verify screenshot dimensions, transparent coverage, and blank/near-solid captures so agents do not treat an empty frame as a successful visual review.
+
+If preview quality fails, inspect `quality.suggestions[]`. Blank or near-solid screenshots usually mean the wrong scene/page was rendered or the page needs visible background/character staging.
 
 If Playwright is installed but Chromium is missing, install the browser once:
 

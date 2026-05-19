@@ -10,6 +10,52 @@ export const PREVIEW_QUALITY_FAILED = 'preview-quality-failed';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+function createPreviewSuggestedAction(code) {
+  if (code === 'preview-width-mismatch' || code === 'preview-height-mismatch') {
+    return {
+      summary: 'Render again with the project resolution or update the preview width and height.',
+      commands: [
+        { command: 'render-preview', args: ['--width', '<project-width>', '--height', '<project-height>'] },
+      ],
+    };
+  }
+
+  if (code === 'preview-low-color-variety' || code === 'preview-dominant-color') {
+    return {
+      summary: 'Verify the target scene/page and add visible background, character, or dialogue content before rerendering.',
+      commands: [
+        { command: 'lint-layout', args: ['--json'] },
+        { command: 'set-page-background', args: ['--scene', '<scene-id>', '--page', '<index>', '--background', '<asset-path>'] },
+        { command: 'set-page-characters', args: ['--scene', '<scene-id>', '--page', '<index>', '--preset', 'solo-center', '--character', '<character-id>'] },
+      ],
+    };
+  }
+
+  if (code === 'preview-mostly-transparent') {
+    return {
+      summary: 'Check transparent assets and stage coverage; add an opaque background or visible character art.',
+      commands: [
+        { command: 'set-page-background', args: ['--scene', '<scene-id>', '--page', '<index>', '--background', '<asset-path>'] },
+      ],
+    };
+  }
+
+  return {
+    summary: 'Inspect the preview target and rerun render-preview after correcting the scene.',
+    commands: [],
+  };
+}
+
+function createPreviewWarning(code, message, details = {}) {
+  return {
+    severity: 'warning',
+    code,
+    message,
+    suggestedAction: createPreviewSuggestedAction(code),
+    ...details,
+  };
+}
+
 function normalizePreviewTarget({ sceneId, pageIndex, outPath }) {
   return {
     sceneId: sceneId || 'start',
@@ -281,34 +327,39 @@ export function analyzePreviewScreenshot(buffer, {
   const warnings = [];
 
   if (expectedWidth != null && width !== expectedWidth) {
-    warnings.push({
-      code: 'preview-width-mismatch',
-      message: `Screenshot width is ${width}, expected ${expectedWidth}.`,
-    });
+    warnings.push(createPreviewWarning(
+      'preview-width-mismatch',
+      `Screenshot width is ${width}, expected ${expectedWidth}.`,
+      { actual: width, expected: expectedWidth },
+    ));
   }
   if (expectedHeight != null && height !== expectedHeight) {
-    warnings.push({
-      code: 'preview-height-mismatch',
-      message: `Screenshot height is ${height}, expected ${expectedHeight}.`,
-    });
+    warnings.push(createPreviewWarning(
+      'preview-height-mismatch',
+      `Screenshot height is ${height}, expected ${expectedHeight}.`,
+      { actual: height, expected: expectedHeight },
+    ));
   }
   if (colorCounts.size < minDistinctColors) {
-    warnings.push({
-      code: 'preview-low-color-variety',
-      message: `Screenshot has only ${colorCounts.size} distinct colors.`,
-    });
+    warnings.push(createPreviewWarning(
+      'preview-low-color-variety',
+      `Screenshot has only ${colorCounts.size} distinct colors.`,
+      { distinctColors: colorCounts.size, minimum: minDistinctColors },
+    ));
   }
   if (dominantColorRatio > maxDominantColorRatio) {
-    warnings.push({
-      code: 'preview-dominant-color',
-      message: `Screenshot is ${(dominantColorRatio * 100).toFixed(1)}% one color.`,
-    });
+    warnings.push(createPreviewWarning(
+      'preview-dominant-color',
+      `Screenshot is ${(dominantColorRatio * 100).toFixed(1)}% one color.`,
+      { dominantColorRatio: Number(dominantColorRatio.toFixed(6)), maximum: maxDominantColorRatio },
+    ));
   }
   if (nonTransparentRatio < minNonTransparentRatio) {
-    warnings.push({
-      code: 'preview-mostly-transparent',
-      message: `Screenshot is only ${(nonTransparentRatio * 100).toFixed(1)}% non-transparent.`,
-    });
+    warnings.push(createPreviewWarning(
+      'preview-mostly-transparent',
+      `Screenshot is only ${(nonTransparentRatio * 100).toFixed(1)}% non-transparent.`,
+      { nonTransparentRatio: Number(nonTransparentRatio.toFixed(6)), minimum: minNonTransparentRatio },
+    ));
   }
 
   return {
@@ -320,6 +371,10 @@ export function analyzePreviewScreenshot(buffer, {
     dominantColorRatio: Number(dominantColorRatio.toFixed(6)),
     nonTransparentRatio: Number(nonTransparentRatio.toFixed(6)),
     warnings,
+    suggestions: warnings.map((warning) => ({
+      code: warning.code,
+      suggestedAction: warning.suggestedAction,
+    })),
   };
 }
 

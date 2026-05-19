@@ -17,7 +17,11 @@ export const UI_CURSOR_SLOT_KEYS = Object.freeze(['default', 'pointer']);
 
 /** Locked icon slot keys (Phase 75 — ICO-01). */
 export const UI_ICON_SLOT_KEYS = Object.freeze(['gameMenu', 'qab', 'close', 'voiceReplay']);
-const UI_BUTTON_FAMILY_STATE_KEYS = Object.freeze({
+
+/** Locked choice badge slot keys. */
+export const UI_CHOICE_BADGE_SLOT_KEYS = Object.freeze(['a', 'b', 'c']);
+
+export const UI_BUTTON_FAMILY_STATE_KEYS = Object.freeze({
   gameMenuButton: Object.freeze(['normal', 'hover', 'pressed']),
   qab: Object.freeze(['normal', 'hover', 'pressed']),
   closeButton: Object.freeze(['normal', 'hover', 'pressed']),

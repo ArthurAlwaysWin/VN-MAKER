@@ -29,6 +29,7 @@ describe('agent layout lint', () => {
     expect(report).toEqual({
       ok: true,
       warnings: [],
+      suggestions: [],
     });
   });
 
@@ -57,10 +58,25 @@ describe('agent layout lint', () => {
       expect.objectContaining({
         code: 'layout-too-many-characters',
         pathString: 'scenes.start.pages.0.characters',
+        location: { sceneId: 'start', pageIndex: 0 },
+        suggestedAction: expect.objectContaining({
+          summary: expect.stringContaining('Restage'),
+        }),
       }),
       expect.objectContaining({
         code: 'layout-overlapping-character-position',
         pathString: 'scenes.start.pages.0.characters.1.position',
+        suggestedAction: expect.objectContaining({
+          commands: [
+            expect.objectContaining({ command: 'set-page-characters' }),
+          ],
+        }),
+      }),
+    ]));
+    expect(report.suggestions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'layout-overlapping-character-position',
+        location: { sceneId: 'start', pageIndex: 0 },
       }),
     ]));
   });
@@ -92,10 +108,31 @@ describe('agent layout lint', () => {
     expect(report.ok).toBe(false);
     expect(report.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: 'layout-dialogue-on-blank-stage' }),
-      expect.objectContaining({ code: 'layout-dialogue-text-overflow-risk' }),
-      expect.objectContaining({ code: 'layout-choice-missing-prompt' }),
+      expect.objectContaining({
+        code: 'layout-dialogue-text-overflow-risk',
+        dialogueIndex: 0,
+        suggestedAction: expect.objectContaining({
+          commands: expect.arrayContaining([
+            expect.objectContaining({ command: 'set-dialogue' }),
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        code: 'layout-choice-missing-prompt',
+        suggestedAction: expect.objectContaining({
+          note: expect.stringContaining('not yet covered'),
+        }),
+      }),
       expect.objectContaining({ code: 'layout-too-many-choice-options' }),
-      expect.objectContaining({ code: 'layout-choice-text-overflow-risk' }),
+      expect.objectContaining({
+        code: 'layout-choice-text-overflow-risk',
+        optionIndex: 0,
+        suggestedAction: expect.objectContaining({
+          commands: [
+            expect.objectContaining({ command: 'set-choice-option' }),
+          ],
+        }),
+      }),
     ]));
   });
 });

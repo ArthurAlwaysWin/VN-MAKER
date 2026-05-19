@@ -10,13 +10,98 @@ function pathToString(path) {
   return path.map((part) => String(part)).join('.');
 }
 
+function createSuggestedAction(code, details = {}) {
+  const pageArgs = details.sceneId && Number.isInteger(details.pageIndex)
+    ? ['--scene', details.sceneId, '--page', String(details.pageIndex)]
+    : [];
+
+  if (code === 'layout-blank-page') {
+    return {
+      summary: 'Add visible page content before previewing.',
+      commands: [
+        { command: 'set-page-background', args: [...pageArgs, '--background', '<asset-path>'] },
+        { command: 'set-page-characters', args: [...pageArgs, '--preset', 'solo-center', '--character', '<character-id>'] },
+        { command: 'add-dialogue', args: [...pageArgs, '--text', '<dialogue>'] },
+      ],
+    };
+  }
+
+  if (code === 'layout-dialogue-on-blank-stage') {
+    return {
+      summary: 'Stage the dialogue with a background or at least one character.',
+      commands: [
+        { command: 'set-page-background', args: [...pageArgs, '--background', '<asset-path>'] },
+        { command: 'set-page-characters', args: [...pageArgs, '--preset', 'solo-center', '--character', '<character-id>'] },
+      ],
+    };
+  }
+
+  if (code === 'layout-too-many-characters' || code === 'layout-overlapping-character-position') {
+    return {
+      summary: 'Restage the page with a named blocking preset or explicit non-overlapping coordinates.',
+      commands: [
+        { command: 'set-page-characters', args: [...pageArgs, '--preset', 'duo-left-right', '--character', '<left-id>', '--character', '<right-id>'] },
+      ],
+    };
+  }
+
+  if (code === 'layout-dialogue-text-overflow-risk') {
+    return {
+      summary: 'Shorten this dialogue line or split it into multiple dialogue entries.',
+      commands: [
+        { command: 'set-dialogue', args: [...pageArgs, '--dialogue-index', String(details.dialogueIndex ?? '<index>'), '--text', '<shorter text>'] },
+        { command: 'add-dialogue', args: [...pageArgs, '--text', '<continued text>'] },
+      ],
+    };
+  }
+
+  if (code === 'layout-choice-missing-prompt') {
+    return {
+      summary: 'Add prompt text to explain what the player is choosing.',
+      commands: [],
+      note: 'Choice prompt editing is not yet covered by a dedicated CLI mutation; use add-page for new choices or projectSession for existing pages.',
+    };
+  }
+
+  if (code === 'layout-too-many-choice-options') {
+    return {
+      summary: 'Reduce the visible choice count or split the choice into another page.',
+      commands: [
+        { command: 'remove-choice-option', args: [...pageArgs, '--option', '<index>'] },
+        { command: 'move-choice-option', args: [...pageArgs, '--from', '<index>', '--to', '<index>'] },
+      ],
+    };
+  }
+
+  if (code === 'layout-choice-text-overflow-risk') {
+    return {
+      summary: 'Shorten this option label so it scans cleanly in the choice menu.',
+      commands: [
+        { command: 'set-choice-option', args: [...pageArgs, '--option', String(details.optionIndex ?? '<index>'), '--text', '<shorter label>'] },
+      ],
+    };
+  }
+
+  return {
+    summary: 'Review this page in the editor or preview and adjust the layout.',
+    commands: [],
+  };
+}
+
 function createWarning(code, message, path = [], details = {}) {
+  const location = {
+    sceneId: details.sceneId ?? null,
+    pageIndex: Number.isInteger(details.pageIndex) ? details.pageIndex : null,
+  };
+
   return {
     severity: 'warning',
     code,
     message,
     path,
     pathString: pathToString(path),
+    location,
+    suggestedAction: createSuggestedAction(code, details),
     ...details,
   };
 }
@@ -46,7 +131,7 @@ function lintCharacterLayout(page, context, warnings) {
       'layout-too-many-characters',
       'Page stages more than 3 characters; use a simpler blocking preset or custom coordinates.',
       [...pagePath, 'characters'],
-      { characterCount: characters.length },
+      { sceneId: context.sceneId, pageIndex: context.pageIndex, characterCount: characters.length },
     ));
   }
 
@@ -64,6 +149,8 @@ function lintCharacterLayout(page, context, warnings) {
         `Characters share the same stage position "${key.replace(/^position:/, '')}".`,
         [...pagePath, 'characters', characterIndex, 'position'],
         {
+          sceneId: context.sceneId,
+          pageIndex: context.pageIndex,
           characterId: character.id ?? null,
           previousCharacterIndex: previous,
           positionKey: key,
@@ -86,6 +173,7 @@ function lintNormalPage(page, context, warnings, options) {
       'layout-blank-page',
       'Normal page has no background, characters, or dialogue.',
       pagePath,
+      { sceneId: context.sceneId, pageIndex: context.pageIndex },
     ));
   }
 
@@ -94,6 +182,7 @@ function lintNormalPage(page, context, warnings, options) {
       'layout-dialogue-on-blank-stage',
       'Normal page has dialogue but no background or staged characters.',
       pagePath,
+      { sceneId: context.sceneId, pageIndex: context.pageIndex },
     ));
   }
 
@@ -107,6 +196,9 @@ function lintNormalPage(page, context, warnings, options) {
         {
           length: text.length,
           limit: options.dialogueTextLimit,
+          sceneId: context.sceneId,
+          pageIndex: context.pageIndex,
+          dialogueIndex,
         },
       ));
     }
@@ -122,6 +214,7 @@ function lintChoicePage(page, context, warnings, options) {
       'layout-choice-missing-prompt',
       'Choice page has options but no prompt text.',
       [...pagePath, 'prompt'],
+      { sceneId: context.sceneId, pageIndex: context.pageIndex },
     ));
   }
 
@@ -130,7 +223,7 @@ function lintChoicePage(page, context, warnings, options) {
       'layout-too-many-choice-options',
       'Choice page has more than 4 options; the choice menu may need visual review.',
       [...pagePath, 'options'],
-      { optionCount: optionsList.length },
+      { sceneId: context.sceneId, pageIndex: context.pageIndex, optionCount: optionsList.length },
     ));
   }
 
@@ -144,6 +237,9 @@ function lintChoicePage(page, context, warnings, options) {
         {
           length: text.length,
           limit: options.choiceTextLimit,
+          sceneId: context.sceneId,
+          pageIndex: context.pageIndex,
+          optionIndex,
         },
       ));
     }
@@ -184,5 +280,11 @@ export function lintProjectLayout(script = {}, options = {}) {
   return {
     ok: warnings.length === 0,
     warnings,
+    suggestions: warnings.map((warning) => ({
+      code: warning.code,
+      pathString: warning.pathString,
+      location: warning.location,
+      suggestedAction: warning.suggestedAction,
+    })),
   };
 }

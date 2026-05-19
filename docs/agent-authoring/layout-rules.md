@@ -51,6 +51,15 @@ node tools/vn-author/index.js export-report --script public/game/script.json --j
 
 Layout lint is heuristic. Runtime preview remains the visual source of truth once screenshot rendering is available.
 
+JSON output includes machine-readable repair hints:
+
+- `warnings[].location.sceneId` and `warnings[].location.pageIndex` identify the page to repair.
+- `warnings[].suggestedAction.summary` describes the next edit in natural language.
+- `warnings[].suggestedAction.commands[]` lists CLI command names and argument templates when a safe command exists.
+- Top-level `suggestions[]` mirrors the compact repair plan for agents that do not need the full issue details.
+
+Treat placeholders like `<asset-path>` and `<character-id>` as inputs to fill from the project contract before running a command.
+
 ## Runtime Preview
 
 Render a specific scene/page when Playwright is available:
@@ -75,3 +84,5 @@ npx playwright install chromium
 ```
 
 Use `--dry-run --write-plan` to confirm the target and output path without launching a browser.
+
+Preview quality failures also include `quality.warnings[].suggestedAction` and `quality.suggestions[]`. Use them to decide whether to rerun `lint-layout`, fix the preview target, add visible stage content, or render with the expected project resolution.

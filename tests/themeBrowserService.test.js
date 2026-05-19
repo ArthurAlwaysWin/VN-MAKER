@@ -30,7 +30,6 @@ describe('theme browser service', () => {
           mode: 'full',
           status: 'ready',
           coverage: ['theme', 'widgetStyles', 'dialogueBox'],
-          missingCoverage: [],
           filePath: 'E:/themes/moonlight.gmtheme',
         },
       ],

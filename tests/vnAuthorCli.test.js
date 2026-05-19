@@ -93,6 +93,22 @@ describe('vn-author CLI', () => {
 
     expect(result.ok).toBe(false);
     expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: 'preview-low-color-variety',
+        suggestedAction: expect.objectContaining({
+          commands: expect.arrayContaining([
+            expect.objectContaining({ command: 'lint-layout' }),
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        code: 'preview-dominant-color',
+        suggestedAction: expect.objectContaining({
+          summary: expect.stringContaining('visible background'),
+        }),
+      }),
+    ]);
+    expect(result.suggestions).toEqual([
       expect.objectContaining({ code: 'preview-low-color-variety' }),
       expect.objectContaining({ code: 'preview-dominant-color' }),
     ]);
@@ -1059,6 +1075,18 @@ describe('vn-author CLI', () => {
         expect.objectContaining({
           code: 'layout-blank-page',
           pathString: 'scenes.start.pages.0',
+          location: { sceneId: 'start', pageIndex: 0 },
+          suggestedAction: expect.objectContaining({
+            commands: expect.arrayContaining([
+              expect.objectContaining({ command: 'set-page-background' }),
+            ]),
+          }),
+        }),
+      ]);
+      expect(result.suggestions).toEqual([
+        expect.objectContaining({
+          code: 'layout-blank-page',
+          location: { sceneId: 'start', pageIndex: 0 },
         }),
       ]);
     });

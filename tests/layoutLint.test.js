@@ -120,7 +120,9 @@ describe('agent layout lint', () => {
       expect.objectContaining({
         code: 'layout-choice-missing-prompt',
         suggestedAction: expect.objectContaining({
-          note: expect.stringContaining('not yet covered'),
+          commands: [
+            expect.objectContaining({ command: 'set-choice-page' }),
+          ],
         }),
       }),
       expect.objectContaining({ code: 'layout-too-many-choice-options' }),

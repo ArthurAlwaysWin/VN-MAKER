@@ -83,11 +83,13 @@ node tools/vn-author/index.js move-page --scene chapter_1 --from 2 --to 0 --scri
 node tools/vn-author/index.js remove-page --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Welcome back." --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-background --scene chapter_1 --page 0 --background backgrounds/classroom.svg --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-characters --scene chapter_1 --page 0 --preset speaker-emphasis --character sakura:smile --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-camera --scene chapter_1 --page 0 --effect shake --direction both --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-transition --scene chapter_1 --page 0 --type dissolve --duration 500 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-character-animation --scene chapter_1 --page 0 --character sakura --animation breathe --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json
 ```
 
 Use `rename-scene` instead of direct JSON edits when a scene id changes; it updates scene flow, choice targets, and condition targets. `delete-scene` is guarded against deleting externally referenced scenes unless `--force-references` is explicitly used.

@@ -463,6 +463,26 @@ export function createProjectSession(input = {}) {
       };
     },
 
+    setPageMedia({ sceneId, pageIndex, background, bgm, se }) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (background !== undefined) {
+        page.background = background ?? '';
+      }
+      if (bgm !== undefined) {
+        page.bgm = cloneJsonValue(bgm);
+      }
+      if (se !== undefined) {
+        page.se = cloneJsonValue(se);
+      }
+      return {
+        sceneId,
+        pageIndex,
+        background: page.background ?? '',
+        bgm: cloneJsonValue(page.bgm ?? null),
+        se: cloneJsonValue(page.se ?? null),
+      };
+    },
+
     setPageCamera({ sceneId, pageIndex, camera }) {
       const page = getPage(script, sceneId, pageIndex);
       page.camera = camera == null ? null : getPageCameraContract(camera);
@@ -536,6 +556,28 @@ export function createProjectSession(input = {}) {
         ...cloneJsonValue(option ?? {}),
       });
       return { sceneId, pageIndex, optionIndex };
+    },
+
+    setChoicePage({ sceneId, pageIndex, prompt, options }) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type !== 'choice') {
+        throw new Error('Choice page data can only be edited on choice pages');
+      }
+      if (prompt !== undefined) {
+        page.prompt = prompt ?? '';
+      }
+      if (options !== undefined) {
+        if (!Array.isArray(options)) {
+          throw new Error('Choice page options must be an array');
+        }
+        page.options = options.map((option) => normalizeEffectContainer(option));
+      }
+      return {
+        sceneId,
+        pageIndex,
+        prompt: page.prompt ?? '',
+        optionCount: Array.isArray(page.options) ? page.options.length : 0,
+      };
     },
 
     addChoiceOption({ sceneId, pageIndex, option }) {

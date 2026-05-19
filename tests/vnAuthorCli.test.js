@@ -685,6 +685,94 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('edits choice page prompt/options and unified page media from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_test',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              {
+                type: 'choice',
+                prompt: '',
+                options: [{ text: 'Old', target: null }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const choiceResult = await execFileAsync('node', [
+        cliPath,
+        'set-choice-page',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--prompt',
+        'Choose a route',
+        '--options',
+        '[{"text":"Stay","target":null},{"text":"Leave","target":null,"effects":[{"type":"var:add","id":"courage","value":1}]}]',
+        '--force',
+        '--json',
+      ]);
+
+      const mediaResult = await execFileAsync('node', [
+        cliPath,
+        'set-page-media',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--background',
+        'backgrounds/menu.svg',
+        '--bgm',
+        'audio/menu.ogg',
+        '--bgm-volume',
+        '0.7',
+        '--clear-se',
+        '--force',
+        '--json',
+      ]);
+
+      const choice = JSON.parse(choiceResult.stdout);
+      const media = JSON.parse(mediaResult.stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(choice.result).toEqual({
+        sceneId: 'start',
+        pageIndex: 0,
+        prompt: 'Choose a route',
+        optionCount: 2,
+      });
+      expect(media.result).toMatchObject({
+        sceneId: 'start',
+        pageIndex: 0,
+        background: 'backgrounds/menu.svg',
+        bgm: { file: 'audio/menu.ogg', volume: 0.7 },
+        se: null,
+      });
+      expect(script.scenes.start.pages[0]).toMatchObject({
+        type: 'choice',
+        prompt: 'Choose a route',
+        background: 'backgrounds/menu.svg',
+        bgm: { file: 'audio/menu.ogg', volume: 0.7 },
+        se: null,
+        options: [
+          { text: 'Stay', target: null },
+          { text: 'Leave', target: null, effects: [{ type: 'var:add', id: 'courage', value: 1 }] },
+        ],
+      });
+    });
+  });
+
   it('updates scene flow and appends choice options for revision workflows', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

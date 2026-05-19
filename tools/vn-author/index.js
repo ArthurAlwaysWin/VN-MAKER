@@ -145,6 +145,24 @@ function parsePresetCharacters(args) {
   return { ids, expressionHints };
 }
 
+function parsePageAudioArgs(args) {
+  const bgm = hasFlag(args, '--clear-bgm')
+    ? null
+    : getArgValue(args, '--bgm', null) == null
+      ? undefined
+      : {
+        file: getArgValue(args, '--bgm'),
+        volume: parseScalarValue(getArgValue(args, '--bgm-volume', '0.6')),
+      };
+  const se = hasFlag(args, '--clear-se')
+    ? null
+    : getArgValue(args, '--se', null) == null
+      ? undefined
+      : { file: getArgValue(args, '--se') };
+
+  return { bgm, se };
+}
+
 async function readScript(args) {
   const scriptPath = path.resolve(repoRoot, getArgValue(args, '--script', defaultScriptPath));
   const raw = await readFile(scriptPath, 'utf8');
@@ -1294,6 +1312,35 @@ async function setChoiceOption(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setChoicePage(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'set-choice-page');
+  const options = parseJsonArg(args, '--options', undefined);
+  const output = await mutateScript(args, (session) => session.setChoicePage({
+    sceneId,
+    pageIndex,
+    prompt: getOptionalArgValue(args, '--prompt'),
+    options,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Set choice page: ${output.result.sceneId}#${output.result.pageIndex}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function setConditionPage(args) {
   const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
   if (!sceneId) {
@@ -1478,19 +1525,7 @@ async function setPageAudio(args) {
     throw new Error('set-page-audio requires --page');
   }
 
-  const bgm = hasFlag(args, '--clear-bgm')
-    ? null
-    : getArgValue(args, '--bgm', null) == null
-      ? undefined
-      : {
-        file: getArgValue(args, '--bgm'),
-        volume: parseScalarValue(getArgValue(args, '--bgm-volume', '0.6')),
-      };
-  const se = hasFlag(args, '--clear-se')
-    ? null
-    : getArgValue(args, '--se', null) == null
-      ? undefined
-      : { file: getArgValue(args, '--se') };
+  const { bgm, se } = parsePageAudioArgs(args);
 
   const output = await mutateScript(args, (session) => session.setPageAudio({
     sceneId,
@@ -1503,6 +1538,36 @@ async function setPageAudio(args) {
     writeJson(output);
   } else {
     process.stdout.write(`Set page audio: ${output.result.sceneId}#${output.result.pageIndex}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function setPageMedia(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'set-page-media');
+  const { bgm, se } = parsePageAudioArgs(args);
+  const output = await mutateScript(args, (session) => session.setPageMedia({
+    sceneId,
+    pageIndex,
+    background: hasFlag(args, '--clear-background') ? '' : getOptionalArgValue(args, '--background'),
+    bgm,
+    se,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Set page media: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
     }
@@ -1716,11 +1781,13 @@ function printHelp() {
   remove-dialogue --scene scene_id --page index --dialogue-index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-dialogue --scene scene_id --page index --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-choice-option --scene scene_id --page index [--text text] [--target scene_id] [--effects json] [--option-json json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-choice-page --scene scene_id --page index [--prompt text] [--options json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-choice-option --scene scene_id --page index --option index [--text text] [--target scene_id] [--clear-target] [--effects json] [--option-json json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-choice-option --scene scene_id --page index --option index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-choice-option --scene scene_id --page index --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-condition-page --scene scene_id --page index [--condition-mode all|any] [--conditions json] [--true-target scene_id] [--false-target scene_id] [--clear-true-target] [--clear-false-target] [--condition-json json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-background --scene scene_id --page index --background path [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-page-media --scene scene_id --page index [--background path] [--clear-background] [--bgm path] [--bgm-volume number] [--se path] [--clear-bgm] [--clear-se] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-characters --scene scene_id --page index [--preset preset] [--character id[:expression]] [--characters json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-audio --scene scene_id --page index [--bgm path] [--bgm-volume number] [--se path] [--clear-bgm] [--clear-se] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-camera --scene scene_id --page index [--effect shake|zoom|pan|flash] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--camera json] [--clear-camera] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -1845,6 +1912,11 @@ async function main() {
       return;
     }
 
+    if (command === 'set-choice-page') {
+      process.exitCode = await setChoicePage(args);
+      return;
+    }
+
     if (command === 'remove-choice-option') {
       process.exitCode = await removeChoiceOption(args);
       return;
@@ -1862,6 +1934,11 @@ async function main() {
 
     if (command === 'set-page-background') {
       process.exitCode = await setPageBackground(args);
+      return;
+    }
+
+    if (command === 'set-page-media') {
+      process.exitCode = await setPageMedia(args);
       return;
     }
 

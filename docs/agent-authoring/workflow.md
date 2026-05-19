@@ -75,12 +75,14 @@ node tools/vn-author/index.js set-dialogue --scene chapter_1 --page 0 --dialogue
 node tools/vn-author/index.js move-dialogue --scene chapter_1 --page 0 --from 2 --to 1 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js remove-dialogue --scene chapter_1 --page 0 --dialogue-index 3 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-choice-option --scene chapter_1 --page 1 --text "Ask about the letter" --target chapter_2 --effects '[{"type":"var:add","id":"affection","value":1}]' --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-choice-option --scene chapter_1 --page 1 --option 0 --text "Ask about the envelope" --target chapter_2 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js move-choice-option --scene chapter_1 --page 1 --from 2 --to 0 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js remove-choice-option --scene chapter_1 --page 1 --option 3 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-condition-page --scene chapter_1 --page 2 --condition-mode any --conditions '[{"variableId":"affection","operator":">=","value":3}]' --true-target chapter_2 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-scene-next --scene chapter_1 --next chapter_2 --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js set-page-characters --scene chapter_1 --page 0 --preset duo-left-right --character sakura:smile --character haruki:normal --script public/game/script.json --force --backup --json
+node tools/vn-author/index.js set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
 node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
 ```
 

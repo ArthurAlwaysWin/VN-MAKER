@@ -58,8 +58,9 @@ function createSuggestedAction(code, details = {}) {
   if (code === 'layout-choice-missing-prompt') {
     return {
       summary: 'Add prompt text to explain what the player is choosing.',
-      commands: [],
-      note: 'Choice prompt editing is not yet covered by a dedicated CLI mutation; use add-page for new choices or projectSession for existing pages.',
+      commands: [
+        { command: 'set-choice-page', args: [...pageArgs, '--prompt', '<prompt text>'] },
+      ],
     };
   }
 

@@ -218,6 +218,67 @@ describe('project authoring session', () => {
     });
   });
 
+  it('edits choice page data and page media through unified authoring methods', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_choice_media',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'choice',
+                prompt: '',
+                options: [{ text: 'Old', target: null }],
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(session.setChoicePage({
+      sceneId: 'start',
+      pageIndex: 0,
+      prompt: 'Choose a path',
+      options: [
+        { text: 'Stay', target: null },
+        { text: 'Go', target: null, setVariable: { courage: 1 } },
+      ],
+    })).toEqual({
+      sceneId: 'start',
+      pageIndex: 0,
+      prompt: 'Choose a path',
+      optionCount: 2,
+    });
+
+    expect(session.setPageMedia({
+      sceneId: 'start',
+      pageIndex: 0,
+      background: 'backgrounds/menu.svg',
+      bgm: { file: 'audio/menu.ogg', volume: 0.7 },
+      se: null,
+    })).toEqual({
+      sceneId: 'start',
+      pageIndex: 0,
+      background: 'backgrounds/menu.svg',
+      bgm: { file: 'audio/menu.ogg', volume: 0.7 },
+      se: null,
+    });
+
+    expect(session.toJSON().scenes.start.pages[0]).toMatchObject({
+      type: 'choice',
+      prompt: 'Choose a path',
+      background: 'backgrounds/menu.svg',
+      bgm: { file: 'audio/menu.ogg', volume: 0.7 },
+      se: null,
+      options: [
+        { text: 'Stay', target: null },
+        { text: 'Go', target: null, effects: [{ type: 'var:add', id: 'courage', value: 1 }] },
+      ],
+    });
+  });
+
   it('authors advanced staging fields through shared runtime contracts', () => {
     const session = createProjectSession({
       script: {

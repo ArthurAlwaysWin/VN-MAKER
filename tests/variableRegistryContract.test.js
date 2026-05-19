@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collectVariableReferences,
   getVariableInitialValue,
+  mergeRuntimeVariables,
   normalizeVariableRegistry,
   seedRuntimeVariablesFromRegistry,
 } from '../src/shared/variableRegistry.js';
@@ -135,6 +136,29 @@ describe('variableRegistry contract', () => {
       ['fallback_bool', false],
       ['fallback_number', 0],
       ['coerced_invalid', 0],
+    ]));
+  });
+
+  it('parses string boolean values by meaning instead of JavaScript truthiness', () => {
+    const registry = normalizeVariableRegistry({
+      route_locked: {
+        type: 'bool',
+        initial: 'false',
+      },
+      route_open: {
+        type: 'bool',
+        initial: '1',
+      },
+    });
+
+    expect(registry.route_locked.initial).toBe(false);
+    expect(registry.route_open.initial).toBe(true);
+    expect(mergeRuntimeVariables(registry, {
+      route_locked: 'false',
+      route_open: '0',
+    })).toEqual(new Map([
+      ['route_locked', false],
+      ['route_open', false],
     ]));
   });
 });

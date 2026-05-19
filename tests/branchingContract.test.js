@@ -103,6 +103,28 @@ describe('branching contract', () => {
     }, { variables })).toBe(false);
   });
 
+  it('keeps string false as false for bool condition rows', () => {
+    const registry = {
+      route_locked: {
+        type: 'bool',
+        initial: false,
+      },
+    };
+
+    const page = normalizeConditionPage({
+      type: 'condition',
+      conditions: [
+        { variableId: 'route_locked', operator: '==', value: 'false' },
+      ],
+    }, { registry });
+
+    expect(page.conditions[0].value).toBe(false);
+    expect(evaluateConditionPage(page, {
+      registry,
+      variables: new Map([['route_locked', false]]),
+    })).toBe(true);
+  });
+
   it('normalizes incoming choice effects and condition pages before the first history snapshot is saved', () => {
     const store = useScriptStore();
 

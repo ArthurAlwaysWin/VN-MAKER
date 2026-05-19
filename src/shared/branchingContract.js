@@ -69,6 +69,24 @@ function inferConditionValueType(row = {}, registry = {}) {
 }
 
 function normalizeBooleanValue(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') {
+      return false;
+    }
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') {
+      return true;
+    }
+  }
+
   return Boolean(value);
 }
 
@@ -220,12 +238,20 @@ export function formatConditionSummary(page = {}, {
 } = {}) {
   const normalized = normalizeConditionPage(page, { registry });
   const joiner = normalized.conditionMode === 'any' ? ' 或 ' : ' 且 ';
+  const formatSummaryValue = (row) => {
+    const valueType = inferConditionValueType(row, registry);
+    if (valueType === 'bool') {
+      return row.value ? '是' : '否';
+    }
+
+    return String(row.value);
+  };
   const rows = normalized.conditions.map((row) => {
     const label = registry?.[row.variableId]?.label
       || registry?.[row.variableId]?.name
       || row.variableId
       || '未选择变量';
-    return `${label} ${row.operator} ${String(row.value)}`;
+    return `${label} ${row.operator} ${formatSummaryValue(row)}`;
   });
   const successLabel = sceneLabels?.[normalized.trueTarget]
     || normalized.trueTarget

@@ -1,0 +1,71 @@
+{
+  "projectId": "gm_example_agent_draft",
+  "title": "Spring Promise",
+  "characters": [
+    {
+      "id": "sakura",
+      "name": "Sakura",
+      "expressionHints": ["normal", "smile", "sad"]
+    },
+    {
+      "id": "haruki",
+      "name": "Haruki",
+      "expressionHints": ["normal", "smile"]
+    }
+  ],
+  "variables": [
+    {
+      "id": "sakura_affection",
+      "type": "number",
+      "initial": 0,
+      "label": "Sakura Affection"
+    }
+  ],
+  "locations": [
+    {
+      "id": "school_gate",
+      "name": "School Gate",
+      "backgroundHint": "backgrounds/school_gate.svg"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "start",
+      "name": "Spring Encounter",
+      "beats": [
+        {
+          "id": "p1",
+          "location": "school_gate",
+          "characters": [
+            { "id": "sakura", "expression": "smile" },
+            { "id": "haruki", "expression": "normal" }
+          ],
+          "dialogues": [
+            { "speaker": null, "text": "Spring wind moved through the school gate." },
+            { "speaker": "sakura", "text": "You came earlier than I expected.", "expression": "smile" },
+            { "speaker": "haruki", "text": "I did not want to miss the first day." }
+          ],
+          "choice": {
+            "prompt": "How should Haruki answer?",
+            "options": [
+              {
+                "text": "I wanted to see you.",
+                "target": "start",
+                "effects": [
+                  { "type": "var:add", "id": "sakura_affection", "value": 1 }
+                ]
+              },
+              {
+                "text": "I just woke up early.",
+                "target": "start",
+                "effects": [
+                  { "type": "var:sub", "id": "sakura_affection", "value": 1 }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

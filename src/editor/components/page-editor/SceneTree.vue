@@ -7,7 +7,10 @@
 
       <div v-for="[sceneId, scene] in sceneEntries" :key="sceneId" class="scene-node">
         <div class="scene-header"
-          :class="{ 'scene-active': selectedSceneId === sceneId }"
+          :class="{
+            'scene-active': selectedSceneId === sceneId,
+            'agent-changed': hasAgentSceneChange(sceneId)
+          }"
           @click.stop="onSelectScene(sceneId)"
           @dblclick.stop="startRenameScene(sceneId, scene.name)"
           @contextmenu.prevent.stop="showSceneMenu(sceneId, $event)">
@@ -22,6 +25,17 @@
             @blur="confirmRename"
             @click.stop />
           <span v-else class="scene-name">{{ scene.name }}</span>
+          <span v-if="hasAgentSceneChange(sceneId)" class="agent-badge" title="外部 Agent 修改了这个场景">AI</span>
+          <span
+            v-if="agentIncomingReferenceCount(sceneId)"
+            class="agent-badge reference"
+            :title="agentIncomingReferenceTitle(sceneId)"
+          >引用 {{ agentIncomingReferenceCount(sceneId) }}</span>
+          <span
+            v-if="agentReviewCount(sceneId)"
+            class="agent-badge review"
+            :title="agentReviewTitle(sceneId)"
+          >审阅 {{ agentReviewCount(sceneId) }}</span>
           <span v-if="scene.next" class="scene-jump-badge" :title="'跳转到: ' + getSceneName(scene.next)">🔗</span>
           <button class="scene-voice-btn" @click.stop="onBatchMatchScene(sceneId)" title="批量语音匹配">🔊</button>
           <button class="scene-menu-btn" @click.stop="showSceneMenu(sceneId, $event)" title="场景操作">⋯</button>
@@ -49,6 +63,7 @@
             @dragend="onDragEnd">
             <span class="page-icon">{{ pageIcon(page.type) }}</span>
             <span class="page-number">{{ idx + 1 }}</span>
+            <span v-if="hasAgentPageChange(sceneId, idx)" class="agent-page-dot" title="外部 Agent 修改了这个页面"></span>
             <input v-if="renamingPageSceneId === sceneId && renamingPageIndex === idx"
               ref="renamePageInputRef"
               class="rename-input page-rename-input"
@@ -109,8 +124,10 @@
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
+import { useProjectStore } from '../../stores/project.js';
 import { useVoiceMatch } from '../../composables/useVoiceMatch.js';
 import { useAssetStore } from '../../stores/assets.js';
+import { summarizeHandoffByScene } from '../../utils/agentHandoff.js';
 import VoiceMatchPreview from './VoiceMatchPreview.vue';
 import HelpTip from '../HelpTip.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
@@ -118,6 +135,7 @@ import { HELP_SCRIPT } from '../../helpTexts.js';
 const editor = usePageEditor();
 const { selectedSceneId, selectedPageIndex, selectPage } = editor;
 const script = useScriptStore();
+const project = useProjectStore();
 
 const assetStore = useAssetStore();
 const { buildMatches, applyMatches } = useVoiceMatch();
@@ -154,6 +172,7 @@ watch(renamingPageSceneId, async (val) => {
 });
 
 const sceneEntries = computed(() => Object.entries(script.data?.scenes || {}));
+const agentSceneSummaries = computed(() => summarizeHandoffByScene(project.agentHandoff));
 
 const contextMenuStyle = computed(() => ({
   left: contextMenu.x + 'px',
@@ -176,6 +195,36 @@ const contextSceneNext = computed(() => {
 
 function getSceneName(sceneId) {
   return script.data?.scenes?.[sceneId]?.name || sceneId;
+}
+
+function getAgentSceneSummary(sceneId) {
+  return agentSceneSummaries.value[sceneId] ?? null;
+}
+
+function hasAgentSceneChange(sceneId) {
+  return (getAgentSceneSummary(sceneId)?.changedPaths.length ?? 0) > 0;
+}
+
+function hasAgentPageChange(sceneId, pageIndex) {
+  return getAgentSceneSummary(sceneId)?.changedPages.includes(pageIndex) ?? false;
+}
+
+function agentIncomingReferenceCount(sceneId) {
+  return getAgentSceneSummary(sceneId)?.incomingReferenceCount ?? 0;
+}
+
+function agentReviewCount(sceneId) {
+  return getAgentSceneSummary(sceneId)?.reviewItems.length ?? 0;
+}
+
+function agentIncomingReferenceTitle(sceneId) {
+  const count = agentIncomingReferenceCount(sceneId);
+  return `外部 Agent 交接提示：这个场景有 ${count} 个入站引用`;
+}
+
+function agentReviewTitle(sceneId) {
+  const items = getAgentSceneSummary(sceneId)?.reviewItems ?? [];
+  return items.map((item) => item.code || item.message).slice(0, 3).join('\n');
 }
 
 onMounted(() => {
@@ -539,6 +588,10 @@ function onMatchApply(overwrite) {
   padding-left: 5px;
 }
 
+.scene-header.agent-changed {
+  box-shadow: inset 3px 0 0 #c9a227;
+}
+
 .expand-icon {
   width: 16px;
   font-size: 10px;
@@ -711,6 +764,39 @@ function onMatchApply(overwrite) {
 .scene-jump-badge {
   font-size: 12px;
   margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.agent-badge {
+  border: 1px solid #6b5a22;
+  border-radius: 4px;
+  color: #f0c674;
+  background: rgba(201, 162, 39, 0.12);
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 4px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.agent-badge.reference {
+  border-color: #3a6a7e;
+  color: #83c6e6;
+  background: rgba(65, 139, 168, 0.12);
+}
+
+.agent-badge.review {
+  border-color: #7a5a28;
+  color: #ffc06a;
+  background: rgba(170, 112, 35, 0.12);
+}
+
+.agent-page-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f0c674;
+  margin-right: 6px;
   flex-shrink: 0;
 }
 

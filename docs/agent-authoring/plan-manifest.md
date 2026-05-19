@@ -4,7 +4,7 @@ External agents can batch related authoring edits into a single JSON manifest an
 
 ```bash
 npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json
-npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --json
+npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
 See `docs/agent-authoring/example-plan.json` for a complete small visual novel branch plan.
@@ -116,6 +116,8 @@ When writing, use `--checkpoint` for multi-step edits:
 ```bash
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --json
 ```
+
+Use `--result-out` to save the transaction result for `handoff-report --transaction`.
 
 If validation fails, `apply-plan` returns non-zero and does not write unless `--allow-invalid` is present. Use `--allow-invalid` only for deliberate intermediate states that a follow-up plan will immediately repair.
 

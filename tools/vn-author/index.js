@@ -997,6 +997,13 @@ async function applyPlan(args) {
     changeSummary,
     validation,
   };
+  const resultOutPathArg = getArgValue(args, '--result-out', null);
+  if (resultOutPathArg) {
+    const resultOutPath = path.resolve(repoRoot, resultOutPathArg);
+    await mkdir(path.dirname(resultOutPath), { recursive: true });
+    output.resultOutPath = resultOutPath;
+    await writeFile(resultOutPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+  }
 
   if (hasFlag(args, '--json')) {
     writeJson(output);
@@ -1008,6 +1015,9 @@ async function applyPlan(args) {
     }
     if (output.transaction.checkpointPath) {
       process.stdout.write(`Checkpoint: ${output.transaction.checkpointPath}\n`);
+    }
+    if (output.resultOutPath) {
+      process.stdout.write(`Result: ${output.resultOutPath}\n`);
     }
     if (changedPaths.length) {
       process.stdout.write(`Changed: ${changedPaths.join(', ')}\n`);
@@ -2651,7 +2661,7 @@ function printHelp() {
   handoff-report [--script path] [--out path] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
-  apply-plan plan.json [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
+  apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   scene-references --scene scene_id [--script path] [--json]

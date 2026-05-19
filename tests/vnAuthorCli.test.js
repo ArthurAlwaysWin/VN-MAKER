@@ -259,6 +259,7 @@ describe('vn-author CLI', () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
       const planPath = path.join(dir, 'plan.json');
+      const resultPath = path.join(dir, 'apply-result.json');
       await writeFile(scriptPath, JSON.stringify({
         projectId: 'gm_cli_plan',
         characters: {},
@@ -346,13 +347,21 @@ describe('vn-author CLI', () => {
         scriptPath,
         '--force',
         '--checkpoint',
+        '--result-out',
+        resultPath,
         '--json',
       ]);
 
       const applied = JSON.parse(applyResult.stdout);
+      const savedResult = JSON.parse(await readFile(resultPath, 'utf8'));
       const script = JSON.parse(await readFile(scriptPath, 'utf8'));
       const checkpoint = JSON.parse(await readFile(applied.transaction.checkpointPath, 'utf8'));
 
+      expect(applied.resultOutPath).toBe(resultPath);
+      expect(savedResult.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'written',
+      });
       expect(applied.transaction).toMatchObject({
         command: 'apply-plan',
         status: 'written',

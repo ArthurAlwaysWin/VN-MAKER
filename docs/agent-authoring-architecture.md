@@ -272,7 +272,7 @@ Production workflow commands now also include:
 
 ```bash
 node tools/vn-author/index.js apply-plan plan.json --dry-run --json
-node tools/vn-author/index.js apply-plan plan.json --force --checkpoint --json
+node tools/vn-author/index.js apply-plan plan.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 node tools/vn-author/index.js restore-checkpoint public/game/.checkpoints/script.timestamp.json --force --backup --json
 node tools/vn-author/index.js scene-references --scene old_route --json
 node tools/vn-author/index.js retarget-scene --from old_route --to new_route --force --checkpoint --json

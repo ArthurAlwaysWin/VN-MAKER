@@ -77,7 +77,7 @@ Then dry-run and apply it:
 
 ```bash
 npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json
-npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --json
+npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
 `apply-plan` reads the script once, applies operations in order, validates the final result, and writes once. If validation has errors it refuses to write unless `--allow-invalid` is present. JSON output includes each operation result plus one aggregate `transaction` and `changeSummary`.

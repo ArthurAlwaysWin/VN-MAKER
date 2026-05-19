@@ -601,6 +601,62 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('returns structured apply-plan operation failures for missing params', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'missing-param-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_plan_missing_param',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          { id: 'bad-page', command: 'add-page', params: { type: 'normal' } },
+        ],
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.any(String),
+      });
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'apply-plan',
+          planPath,
+          '--script',
+          scriptPath,
+          '--json',
+        ]);
+      } catch (error) {
+        const result = JSON.parse(error.stdout);
+        expect(result.operationFailure).toMatchObject({
+          index: 0,
+          id: 'bad-page',
+          command: 'add-page',
+          code: 'missing-apply-plan-param',
+          message: 'add-page requires sceneId',
+          missingParam: 'sceneId',
+          acceptedParams: ['sceneId', 'scene'],
+        });
+        expect(result.changeSummary).toMatchObject({
+          completedOperationCount: 0,
+          failedOperationIndex: 0,
+          changedPaths: [],
+        });
+      }
+    });
+  });
+
   it('adds a character incrementally with expression shortcuts', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

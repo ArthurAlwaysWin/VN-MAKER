@@ -448,7 +448,14 @@ function getParam(params, ...names) {
 function requireParam(params, command, ...names) {
   const value = getParam(params, ...names);
   if (value === undefined || value === null || value === '') {
-    throw new Error(`${command} requires ${names[0]}`);
+    throw createPlanOperationError(
+      'missing-apply-plan-param',
+      `${command} requires ${names[0]}`,
+      {
+        missingParam: names[0],
+        acceptedParams: names,
+      },
+    );
   }
   return value;
 }
@@ -1008,6 +1015,8 @@ async function applyPlan(args) {
         status: 'failed',
         code: error.code ?? 'apply-plan-operation-failed',
         message: error.message,
+        missingParam: error.missingParam ?? undefined,
+        acceptedParams: error.acceptedParams ?? undefined,
         supportedCommands: error.supportedCommands ?? undefined,
       };
       const output = {

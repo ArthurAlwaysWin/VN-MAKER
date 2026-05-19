@@ -146,6 +146,8 @@ If an operation cannot be executed, for example because the command is unsupport
 }
 ```
 
+For missing parameters, `operationFailure.code` is `"missing-apply-plan-param"` and includes `missingParam` plus any accepted aliases in `acceptedParams`, for example `["sceneId", "scene"]`.
+
 When using `--result-out`, the same failure payload is saved for later handoff/debugging.
 
 When a checkpoint is created, output includes:

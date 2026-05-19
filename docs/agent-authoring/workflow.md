@@ -80,7 +80,7 @@ npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
-`apply-plan` reads the script once, applies operations in order, validates the final result, and writes once. If validation has errors it refuses to write unless `--allow-invalid` is present. JSON output includes each operation result plus one aggregate `transaction` and `changeSummary`.
+`apply-plan` reads the script once, applies operations in order, validates the final result, and writes once. If validation has errors it refuses to write unless `--allow-invalid` is present. JSON output includes each operation result plus one aggregate `transaction` and `changeSummary`. If an operation itself fails, JSON output includes `operationFailure` with the failed index, id, command, diagnostic code, and supported commands when available; `--result-out` saves that failure payload too.
 
 See [plan-manifest.md](./plan-manifest.md) for the full manifest shape and supported commands.
 See [end-to-end-example.md](./end-to-end-example.md) for a complete prose-to-plan-to-handoff walkthrough.

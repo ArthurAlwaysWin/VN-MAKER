@@ -121,6 +121,33 @@ Use `--result-out` to save the transaction result for `handoff-report --transact
 
 If validation fails, `apply-plan` returns non-zero and does not write unless `--allow-invalid` is present. Use `--allow-invalid` only for deliberate intermediate states that a follow-up plan will immediately repair.
 
+If an operation cannot be executed, for example because the command is unsupported or required parameters are missing, `apply-plan --json` returns a structured failure without writing the script:
+
+```json
+{
+  "transaction": { "status": "failed", "wrote": false },
+  "operationFailure": {
+    "index": 1,
+    "id": "bad-op",
+    "command": "paint-scene",
+    "code": "unsupported-apply-plan-command",
+    "message": "Unsupported apply-plan command: paint-scene",
+    "supportedCommands": ["add-scene", "add-page", "set-dialogue"]
+  },
+  "operations": [
+    { "index": 0, "id": "create-start", "command": "add-scene", "status": "applied" },
+    { "index": 1, "id": "bad-op", "command": "paint-scene", "status": "failed" }
+  ],
+  "changeSummary": {
+    "writeStatus": "failed",
+    "completedOperationCount": 1,
+    "failedOperationIndex": 1
+  }
+}
+```
+
+When using `--result-out`, the same failure payload is saved for later handoff/debugging.
+
 When a checkpoint is created, output includes:
 
 ```json

@@ -507,6 +507,100 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('returns structured apply-plan operation failures for unsupported commands', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'unsupported-plan.json');
+      const resultOutPath = path.join(dir, 'apply-result.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_plan_unsupported',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          { id: 'create-start', command: 'add-scene', params: { id: 'start' } },
+          { id: 'bad-op', command: 'paint-scene', params: { scene: 'start' } },
+        ],
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--result-out',
+        resultOutPath,
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.any(String),
+      });
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'apply-plan',
+          planPath,
+          '--script',
+          scriptPath,
+          '--result-out',
+          resultOutPath,
+          '--json',
+        ]);
+      } catch (error) {
+        const result = JSON.parse(error.stdout);
+        const saved = JSON.parse(await readFile(resultOutPath, 'utf8'));
+        const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+        expect(result).toMatchObject({
+          ok: false,
+          transaction: {
+            command: 'apply-plan',
+            status: 'failed',
+            wrote: false,
+          },
+          operationFailure: {
+            index: 1,
+            id: 'bad-op',
+            command: 'paint-scene',
+            status: 'failed',
+            code: 'unsupported-apply-plan-command',
+          },
+          changeSummary: {
+            writeStatus: 'failed',
+            operationCount: 2,
+            completedOperationCount: 1,
+            failedOperationIndex: 1,
+            changedPaths: ['scenes.start'],
+          },
+        });
+        expect(result.operations).toEqual([
+          expect.objectContaining({
+            index: 0,
+            id: 'create-start',
+            command: 'add-scene',
+            status: 'applied',
+            changedPaths: ['scenes.start'],
+          }),
+          expect.objectContaining({
+            index: 1,
+            id: 'bad-op',
+            status: 'failed',
+          }),
+        ]);
+        expect(result.operationFailure.supportedCommands).toEqual(expect.arrayContaining([
+          'add-scene',
+          'set-dialogue',
+          'retarget-scene',
+        ]));
+        expect(saved.operationFailure).toEqual(result.operationFailure);
+        expect(script.scenes).toEqual({});
+      }
+    });
+  });
+
   it('adds a character incrementally with expression shortcuts', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

@@ -393,6 +393,45 @@ function normalizePlanCommand(command) {
   return String(command ?? '').trim();
 }
 
+const SUPPORTED_APPLY_PLAN_COMMANDS = [
+  'add-scene',
+  'rename-scene',
+  'delete-scene',
+  'set-scene-next',
+  'retarget-scene',
+  'clear-scene-references',
+  'add-character',
+  'add-variable',
+  'add-page',
+  'remove-page',
+  'move-page',
+  'add-dialogue',
+  'set-dialogue',
+  'remove-dialogue',
+  'move-dialogue',
+  'add-choice-option',
+  'set-choice-page',
+  'set-choice-option',
+  'remove-choice-option',
+  'move-choice-option',
+  'set-condition-page',
+  'set-page-background',
+  'set-page-characters',
+  'set-page-audio',
+  'set-page-media',
+  'set-page-camera',
+  'set-page-transition',
+  'set-character-animation',
+  'add-choice-effect',
+];
+
+function createPlanOperationError(code, message, details = {}) {
+  const error = new Error(message);
+  error.code = code;
+  Object.assign(error, details);
+  return error;
+}
+
 function getOperationParams(operation = {}) {
   return operation.params ?? operation.args ?? {};
 }
@@ -449,7 +488,11 @@ function applyPlanOperation(session, operation = {}, index = 0) {
   const command = normalizePlanCommand(operation.command ?? operation.op);
   const params = getOperationParams(operation);
   if (!command) {
-    throw new Error(`Operation ${index} is missing command`);
+    throw createPlanOperationError(
+      'missing-apply-plan-command',
+      `Operation ${index} is missing command`,
+      { supportedCommands: SUPPORTED_APPLY_PLAN_COMMANDS },
+    );
   }
 
   if (command === 'add-scene') {
@@ -725,7 +768,11 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
-  throw new Error(`Unsupported apply-plan command: ${command}`);
+  throw createPlanOperationError(
+    'unsupported-apply-plan-command',
+    `Unsupported apply-plan command: ${command}`,
+    { supportedCommands: SUPPORTED_APPLY_PLAN_COMMANDS },
+  );
 }
 
 async function writeScriptFile(filePath, script, { force = false, backup = false, checkpoint = false } = {}) {
@@ -910,6 +957,19 @@ async function mutateScript(args, mutator) {
   };
 }
 
+async function writeApplyPlanResultOut(args, output) {
+  const resultOutPathArg = getArgValue(args, '--result-out', null);
+  if (!resultOutPathArg) {
+    return null;
+  }
+
+  const resultOutPath = path.resolve(repoRoot, resultOutPathArg);
+  await mkdir(path.dirname(resultOutPath), { recursive: true });
+  output.resultOutPath = resultOutPath;
+  await writeFile(resultOutPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+  return resultOutPath;
+}
+
 async function applyPlan(args) {
   const planPathArg = args.find((arg) => !arg.startsWith('--'));
   if (!planPathArg) {
@@ -925,21 +985,84 @@ async function applyPlan(args) {
 
   const { scriptPath, script } = await readScript(args);
   const session = createProjectSession({ script });
-  const operationResults = operations.map((operation, index) => {
+  const operationResults = [];
+  const dryRun = hasFlag(args, '--dry-run');
+  for (const [index, operation] of operations.entries()) {
     const command = normalizePlanCommand(operation.command ?? operation.op);
-    const result = applyPlanOperation(session, operation, index);
-    return {
-      index,
-      id: operation.id ?? null,
-      command,
-      result,
-      changedPaths: getChangedPaths(result),
-    };
-  });
+    try {
+      const result = applyPlanOperation(session, operation, index);
+      operationResults.push({
+        index,
+        id: operation.id ?? null,
+        command,
+        status: 'applied',
+        result,
+        changedPaths: getChangedPaths(result),
+      });
+    } catch (error) {
+      const changedPaths = uniqueValues(operationResults.flatMap((entry) => entry.changedPaths));
+      const failure = {
+        index,
+        id: operation.id ?? null,
+        command: command || null,
+        status: 'failed',
+        code: error.code ?? 'apply-plan-operation-failed',
+        message: error.message,
+        supportedCommands: error.supportedCommands ?? undefined,
+      };
+      const output = {
+        ok: false,
+        scriptPath,
+        outPath: null,
+        dryRun,
+        planPath,
+        transaction: {
+          command: 'apply-plan',
+          status: 'failed',
+          wrote: false,
+          blockedByValidation: false,
+          checkpointPath: null,
+          backupPath: null,
+          rollback: null,
+        },
+        operations: [
+          ...operationResults,
+          failure,
+        ],
+        operationFailure: failure,
+        changeSummary: {
+          command: 'apply-plan',
+          dryRun,
+          writeStatus: 'failed',
+          scriptPath,
+          outPath: null,
+          planPath,
+          operationCount: operations.length,
+          completedOperationCount: operationResults.length,
+          failedOperationIndex: index,
+          changedPaths,
+          validation: null,
+          checkpointPath: null,
+          backupPath: null,
+        },
+        validation: null,
+      };
+      await writeApplyPlanResultOut(args, output);
+
+      if (hasFlag(args, '--json')) {
+        writeJson(output);
+      } else {
+        process.stderr.write(`Apply plan failed at operation ${index}: ${error.message}\n`);
+        if (failure.supportedCommands) {
+          process.stderr.write(`Supported commands: ${failure.supportedCommands.join(', ')}\n`);
+        }
+      }
+      return 1;
+    }
+  }
   const nextScript = session.toJSON();
   const validation = session.validate();
   const outputPath = path.resolve(repoRoot, getArgValue(args, '--out', scriptPath));
-  const dryRun = hasFlag(args, '--dry-run');
   const allowInvalid = hasFlag(args, '--allow-invalid');
   const blockedByValidation = !validation.ok && !allowInvalid;
 
@@ -1007,13 +1130,7 @@ async function applyPlan(args) {
     changeSummary,
     validation,
   };
-  const resultOutPathArg = getArgValue(args, '--result-out', null);
-  if (resultOutPathArg) {
-    const resultOutPath = path.resolve(repoRoot, resultOutPathArg);
-    await mkdir(path.dirname(resultOutPath), { recursive: true });
-    output.resultOutPath = resultOutPath;
-    await writeFile(resultOutPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
-  }
+  await writeApplyPlanResultOut(args, output);
 
   if (hasFlag(args, '--json')) {
     writeJson(output);

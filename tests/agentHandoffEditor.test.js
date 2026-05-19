@@ -71,6 +71,8 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('外部 Agent 交接');
     expect(source).toContain('agentGateRows');
     expect(source).toContain('agentReviewItems');
+    expect(source).toContain('agentChangedPaths');
+    expect(source).toContain('transactionSummary');
     expect(source).toContain('project.loadAgentHandoff()');
     expect(source).toContain('latestCheckpointPath');
   });

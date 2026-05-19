@@ -50,9 +50,20 @@
               </span>
             </div>
             <div class="agent-meta">
+              <span v-if="project.agentHandoff.transactionSummary">
+                {{ project.agentHandoff.transactionSummary.command || 'transaction' }}
+                · {{ project.agentHandoff.transactionSummary.operationCount ?? 1 }} ops
+                · {{ project.agentHandoff.transactionSummary.changedPathCount ?? 0 }} paths
+              </span>
               <span>Review items {{ project.agentHandoff.reviewItemCount ?? agentReviewItems.length }}</span>
               <span v-if="project.agentHandoff.latestCheckpointPath" class="agent-path">{{ project.agentHandoff.latestCheckpointPath }}</span>
             </div>
+            <ul class="agent-review-list" v-if="agentChangedPaths.length">
+              <li v-for="pathString in agentChangedPaths" :key="pathString">
+                <span class="agent-review-code">changed</span>
+                <span class="agent-review-text">{{ pathString }}</span>
+              </li>
+            </ul>
             <ul class="agent-review-list" v-if="agentReviewItems.length">
               <li v-for="item in agentReviewItems" :key="`${item.source}-${item.code}-${item.pathString}`">
                 <span class="agent-review-code">{{ item.code }}</span>
@@ -140,6 +151,11 @@ const agentGateRows = computed(() => {
 const agentReviewItems = computed(() => (
   Array.isArray(project.agentHandoff?.reviewItems)
     ? project.agentHandoff.reviewItems.slice(0, 5)
+    : []
+));
+const agentChangedPaths = computed(() => (
+  Array.isArray(project.agentHandoff?.transactionSummary?.changedPaths)
+    ? project.agentHandoff.transactionSummary.changedPaths.slice(0, 5)
     : []
 ));
 const DIALOGUE_PREVIEW_SAMPLE = {

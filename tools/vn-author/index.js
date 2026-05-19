@@ -1279,6 +1279,10 @@ async function handoffReport(args) {
     getArgValue(args, '--checkpoint-dir', path.join(path.dirname(scriptPath), '.checkpoints')),
   );
   const checkpointLimit = getIntArg(args, '--checkpoint-limit', 5);
+  const transactionPath = getArgValue(args, '--transaction', null);
+  const transaction = transactionPath
+    ? JSON.parse(await readFile(path.resolve(repoRoot, transactionPath), 'utf8'))
+    : null;
   const handoff = createAgentHandoff(script, {
     scriptPath,
     validation: validationOptions,
@@ -1287,6 +1291,7 @@ async function handoffReport(args) {
       requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
     },
     checkpoints: await collectCheckpointEntries(checkpointDir, checkpointLimit),
+    transaction,
     notes: getArgValues(args, '--note'),
   });
   const outPathArg = getArgValue(args, '--out', null);
@@ -2643,7 +2648,7 @@ function printHelp() {
   author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
-  handoff-report [--script path] [--out path] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
+  handoff-report [--script path] [--out path] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   apply-plan plan.json [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]

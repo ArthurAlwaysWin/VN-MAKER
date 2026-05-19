@@ -1703,6 +1703,7 @@ describe('vn-author CLI', () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
       const outPath = path.join(dir, 'handoff.json');
+      const transactionPath = path.join(dir, 'transaction.json');
       const checkpointDir = path.join(dir, '.checkpoints');
       await writeFile(scriptPath, JSON.stringify({
         projectId: 'gm_cli_handoff',
@@ -1728,12 +1729,28 @@ describe('vn-author CLI', () => {
         '--json',
       ]);
       const checkpoint = JSON.parse(checkpointResult.stdout).transaction.checkpointPath;
+      await writeFile(transactionPath, JSON.stringify({
+        dryRun: false,
+        transaction: {
+          command: 'apply-plan',
+          status: 'written',
+          wrote: true,
+          checkpointPath: checkpoint,
+        },
+        changeSummary: {
+          operationCount: 3,
+          changedPaths: ['scenes.start', 'scenes.unused_checkpoint_scene'],
+          validation: { ok: true, errorCount: 0, warningCount: 0 },
+        },
+      }), 'utf8');
 
       await expect(execFileAsync('node', [
         cliPath,
         'handoff-report',
         '--script',
         scriptPath,
+        '--transaction',
+        transactionPath,
         '--checkpoint-dir',
         checkpointDir,
         '--out',
@@ -1760,6 +1777,11 @@ describe('vn-author CLI', () => {
           expect.objectContaining({ path: checkpoint }),
         ],
         latestCheckpointPath: checkpoint,
+        transactionSummary: {
+          command: 'apply-plan',
+          operationCount: 3,
+          changedPathCount: 2,
+        },
         notes: ['Review the agent-authored changes.'],
       });
       expect(handoff.reviewItems).toEqual(expect.arrayContaining([

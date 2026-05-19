@@ -26,6 +26,21 @@ describe('agent handoff report', () => {
           size: 120,
         },
       ],
+      transaction: {
+        dryRun: false,
+        transaction: {
+          command: 'apply-plan',
+          status: 'written',
+          wrote: true,
+          checkpointPath: 'public/game/.checkpoints/script.2026.json',
+        },
+        operations: [{ command: 'add-scene' }, { command: 'add-page' }],
+        changeSummary: {
+          operationCount: 2,
+          changedPaths: ['scenes.start', 'scenes.start.pages.0'],
+          validation: { ok: true, errorCount: 0, warningCount: 0 },
+        },
+      },
       notes: ['Review the newly authored branch in the editor.'],
     });
 
@@ -42,6 +57,14 @@ describe('agent handoff report', () => {
       },
       ok: false,
       latestCheckpointPath: 'public/game/.checkpoints/script.2026.json',
+      transactionSummary: {
+        command: 'apply-plan',
+        status: 'written',
+        wrote: true,
+        operationCount: 2,
+        changedPathCount: 2,
+        changedPaths: ['scenes.start', 'scenes.start.pages.0'],
+      },
       checkpoints: [
         {
           path: 'public/game/.checkpoints/script.2026.json',

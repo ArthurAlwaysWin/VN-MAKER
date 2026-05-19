@@ -11,6 +11,30 @@ function summarizeCheckpoint(entry = {}) {
   };
 }
 
+function summarizeTransaction(transaction = null) {
+  if (!transaction) {
+    return null;
+  }
+
+  const changeSummary = transaction.changeSummary ?? {};
+  return {
+    command: transaction.transaction?.command ?? changeSummary.command ?? transaction.command ?? null,
+    status: transaction.transaction?.status ?? changeSummary.writeStatus ?? null,
+    wrote: transaction.transaction?.wrote ?? null,
+    dryRun: transaction.dryRun ?? changeSummary.dryRun ?? null,
+    operationCount: changeSummary.operationCount ?? transaction.operations?.length ?? null,
+    changedPaths: Array.isArray(changeSummary.changedPaths)
+      ? changeSummary.changedPaths.slice(0, 20)
+      : [],
+    changedPathCount: Array.isArray(changeSummary.changedPaths)
+      ? changeSummary.changedPaths.length
+      : 0,
+    checkpointPath: transaction.transaction?.checkpointPath ?? changeSummary.checkpointPath ?? null,
+    backupPath: transaction.transaction?.backupPath ?? changeSummary.backupPath ?? null,
+    validation: changeSummary.validation ?? transaction.validation ?? null,
+  };
+}
+
 function collectReviewItems({ validation, layout, readiness }) {
   return [
     ...(validation.errors ?? []).map((issue) => ({
@@ -67,6 +91,7 @@ export function createAgentHandoff(script = {}, options = {}) {
   const readiness = projectReport.readiness ?? createExportReadiness(script, readinessOptions);
   const reviewItems = collectReviewItems({ validation, layout, readiness });
   const checkpoints = (options.checkpoints ?? []).map(summarizeCheckpoint);
+  const transactionSummary = summarizeTransaction(options.transaction);
   const gates = {
     validation: validation.ok,
     layout: layout.ok,
@@ -86,6 +111,7 @@ export function createAgentHandoff(script = {}, options = {}) {
     sceneGraph: projectReport.sceneGraph,
     checkpoints,
     latestCheckpointPath: checkpoints[0]?.path ?? null,
+    transactionSummary,
     reviewItems,
     reviewItemCount: reviewItems.length,
     notes: options.notes ?? [],

@@ -64,7 +64,7 @@ The current external-agent surface includes:
 - `restore-checkpoint` for rollback through the same authoring layer.
 - `scene-references`, `retarget-scene`, and `clear-scene-references` for branch graph repair.
 - `author-check` for aggregate validation, layout lint, readiness, and preview dry-run planning.
-- `handoff-report` for structured review artifacts consumed by humans and surfaced in Project Settings when saved as project-root `agent-handoff.json`.
+- `handoff-report` for structured review artifacts with optional transaction summaries, consumed by humans and surfaced in Project Settings when saved as project-root `agent-handoff.json`.
 
 ## Existing Foundations
 

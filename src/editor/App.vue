@@ -133,6 +133,14 @@ watch(() => script.storySystemsRepairRequest?.nonce, (nonce) => {
   activeTab.value = 'story-systems';
 });
 
+watch(() => project.sceneNavigationRequest?.nonce, (nonce) => {
+  if (!nonce || currentView.value !== 'editing') {
+    return;
+  }
+
+  activeTab.value = 'scenes';
+});
+
 // --- Keyboard Shortcuts ---
 function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {

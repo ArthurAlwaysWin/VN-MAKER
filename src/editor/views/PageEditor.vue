@@ -53,8 +53,9 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { useScriptStore } from '../stores/script.js';
+import { useProjectStore } from '../stores/project.js';
 import { createPageEditor } from '../composables/usePageEditor.js';
 import SceneTree from '../components/page-editor/SceneTree.vue';
 import CanvasToolbar from '../components/page-editor/CanvasToolbar.vue';
@@ -65,6 +66,7 @@ import AudioPicker from '../components/page-editor/AudioPicker.vue';
 import PageInspector from '../components/page-editor/PageInspector.vue';
 
 const script = useScriptStore();
+const project = useProjectStore();
 const editor = createPageEditor();
 
 const iframeRef = ref(null);
@@ -95,8 +97,29 @@ function onAudioSelect(path) {
   editor.showAudioPicker.value = false;
 }
 
+function applySceneNavigationRequest(request = project.sceneNavigationRequest) {
+  if (!request?.sceneId || !script.data?.scenes?.[request.sceneId]) {
+    return;
+  }
+
+  const scene = script.data.scenes[request.sceneId];
+  const pageCount = scene.pages?.length ?? 0;
+  let pageIndex = 0;
+  if (pageCount === 0) {
+    pageIndex = -1;
+  } else if (Number.isInteger(request.pageIndex)) {
+    pageIndex = Math.max(0, Math.min(request.pageIndex, pageCount - 1));
+  }
+  editor.selectPage(request.sceneId, pageIndex);
+}
+
+watch(() => project.sceneNavigationRequest?.nonce, () => {
+  applySceneNavigationRequest();
+});
+
 onMounted(() => {
   editor.initSelection();
+  applySceneNavigationRequest();
   window.addEventListener('message', editor.onEngineMessage);
 });
 

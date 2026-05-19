@@ -62,12 +62,24 @@
               <li v-for="pathString in agentChangedPaths" :key="pathString">
                 <span class="agent-review-code">changed</span>
                 <span class="agent-review-text">{{ pathString }}</span>
+                <button
+                  v-if="canNavigateAgentPath(pathString)"
+                  class="agent-locate-btn"
+                  @click="openAgentPath(pathString)"
+                  title="在游戏内容中定位"
+                >定位</button>
               </li>
             </ul>
             <ul class="agent-review-list" v-if="agentReviewItems.length">
               <li v-for="item in agentReviewItems" :key="`${item.source}-${item.code}-${item.pathString}`">
                 <span class="agent-review-code">{{ item.code }}</span>
                 <span class="agent-review-text">{{ item.pathString || item.message }}</span>
+                <button
+                  v-if="canNavigateAgentPath(item.pathString)"
+                  class="agent-locate-btn"
+                  @click="openAgentPath(item.pathString)"
+                  title="在游戏内容中定位"
+                >定位</button>
               </li>
             </ul>
           </div>
@@ -133,6 +145,7 @@ import ThemeBrowserModal from '../components/theme/ThemeBrowserModal.vue';
 import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
 import CursorIconSettings from '../components/theme/CursorIconSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
+import { parseScenePath } from '../utils/agentHandoff.js';
 
 const project = useProjectStore();
 const script = useScriptStore();
@@ -163,6 +176,14 @@ const DIALOGUE_PREVIEW_SAMPLE = {
   speakerName: '预览角色',
   text: '这是一段用于检查对话框图片层、文字层和继续指示的稳定示例台词。',
 };
+
+function canNavigateAgentPath(pathString) {
+  return Boolean(parseScenePath(pathString));
+}
+
+function openAgentPath(pathString) {
+  project.requestSceneNavigation(pathString);
+}
 
 function onIframeRef(el) {
   themeEditor.iframeRef.value = el;
@@ -393,7 +414,7 @@ onBeforeUnmount(() => {
 }
 .agent-review-list li {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 6px;
   align-items: center;
 }
@@ -406,6 +427,16 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.agent-locate-btn {
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #2f2f2f;
+  color: #ccc;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.agent-locate-btn:hover { background: #3a3a3a; color: #eee; }
 /* Theme toolbar */
 .theme-toolbar {
   display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;

@@ -171,6 +171,12 @@ watch(renamingPageSceneId, async (val) => {
   }
 });
 
+watch(selectedSceneId, (sceneId) => {
+  if (sceneId) {
+    expanded[sceneId] = true;
+  }
+});
+
 const sceneEntries = computed(() => Object.entries(script.data?.scenes || {}));
 const agentSceneSummaries = computed(() => summarizeHandoffByScene(project.agentHandoff));
 

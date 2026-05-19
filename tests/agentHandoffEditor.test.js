@@ -53,6 +53,20 @@ describe('agent handoff editor integration', () => {
     project.closeProject();
     expect(project.agentHandoff).toBeNull();
     expect(project.agentHandoffPath).toBeNull();
+    expect(project.sceneNavigationRequest).toBeNull();
+  });
+
+  it('creates scene navigation requests from handoff paths', () => {
+    setActivePinia(createPinia());
+    const project = useProjectStore();
+
+    expect(project.requestSceneNavigation('scenes.start.pages.2.dialogues.0.text')).toBe(true);
+    expect(project.sceneNavigationRequest).toMatchObject({
+      pathString: 'scenes.start.pages.2.dialogues.0.text',
+      sceneId: 'start',
+      pageIndex: 2,
+    });
+    expect(project.requestSceneNavigation('characters.sakura')).toBe(false);
   });
 
   it('exposes the safe handoff IPC channel through preload', () => {
@@ -73,6 +87,9 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('agentGateRows');
     expect(source).toContain('agentReviewItems');
     expect(source).toContain('agentChangedPaths');
+    expect(source).toContain('openAgentPath');
+    expect(source).toContain('requestSceneNavigation');
+    expect(source).toContain('agent-locate-btn');
     expect(source).toContain('transactionSummary');
     expect(source).toContain('project.loadAgentHandoff()');
     expect(source).toContain('latestCheckpointPath');
@@ -132,5 +149,20 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('agentIncomingReferenceCount');
     expect(source).toContain('agentReviewCount');
     expect(source).toContain('agent-page-dot');
+  });
+
+  it('wires scene navigation requests through App and PageEditor', () => {
+    const appSource = readFileSync(resolve(process.cwd(), 'src', 'editor', 'App.vue'), 'utf8');
+    const pageEditorSource = readFileSync(resolve(process.cwd(), 'src', 'editor', 'views', 'PageEditor.vue'), 'utf8');
+    const sceneTreeSource = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'page-editor', 'SceneTree.vue'),
+      'utf8',
+    );
+
+    expect(appSource).toContain('project.sceneNavigationRequest');
+    expect(appSource).toContain("activeTab.value = 'scenes'");
+    expect(pageEditorSource).toContain('applySceneNavigationRequest');
+    expect(pageEditorSource).toContain('editor.selectPage(request.sceneId, pageIndex)');
+    expect(sceneTreeSource).toContain('watch(selectedSceneId');
   });
 });

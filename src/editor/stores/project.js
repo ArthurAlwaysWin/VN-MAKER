@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { parseScenePath } from '../utils/agentHandoff.js';
 
 export const useProjectStore = defineStore('project', () => {
   const projectPath = ref(null);
@@ -7,9 +8,11 @@ export const useProjectStore = defineStore('project', () => {
   const recentProjects = ref([]);
   const agentHandoff = ref(null);
   const agentHandoffPath = ref(null);
+  const sceneNavigationRequest = ref(null);
   const hasCreatedProject = ref(false);
   const isDirty = ref(false);
   const _saving = ref(false);
+  let sceneNavigationRequestCounter = 0;
 
   const projectName = computed(() => projectData.value?.name || '');
 
@@ -81,6 +84,7 @@ export const useProjectStore = defineStore('project', () => {
     projectData.value = null;
     agentHandoff.value = null;
     agentHandoffPath.value = null;
+    sceneNavigationRequest.value = null;
     isDirty.value = false;
     if (window.ipcRenderer) window.ipcRenderer.invoke('close-project');
   }
@@ -89,10 +93,26 @@ export const useProjectStore = defineStore('project', () => {
     isDirty.value = true;
   }
 
+  function requestSceneNavigation(pathString) {
+    const parsed = parseScenePath(pathString);
+    if (!parsed) {
+      return false;
+    }
+
+    sceneNavigationRequestCounter += 1;
+    sceneNavigationRequest.value = {
+      nonce: sceneNavigationRequestCounter,
+      pathString,
+      sceneId: parsed.sceneId,
+      pageIndex: parsed.pageIndex,
+    };
+    return true;
+  }
+
   return {
-    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, hasCreatedProject, isDirty,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, sceneNavigationRequest, hasCreatedProject, isDirty,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    loadAgentHandoff, closeProject, markDirty
+    loadAgentHandoff, closeProject, markDirty, requestSceneNavigation
   };
 });

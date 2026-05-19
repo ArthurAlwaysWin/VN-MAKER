@@ -13,6 +13,7 @@ Read the current project shape before changing anything.
 
 ```bash
 npm run validate:project -- --json
+npm run vn:author-check -- --json
 npm run validate:project -- --check-assets --json
 npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
@@ -92,11 +93,12 @@ node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --opt
 
 ```bash
 npm run validate:project -- --json
+npm run vn:author-check -- --scene start --page 0 --write-preview-plan --json
 npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-Do not finish with validation errors or readiness blockers.
+Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and a preview dry-run plan into one JSON payload.
 
 When `lint-layout --json` returns warnings, read `suggestions[]` before editing again. Each suggestion carries the page location and repair command templates where the CLI can express the fix.
 

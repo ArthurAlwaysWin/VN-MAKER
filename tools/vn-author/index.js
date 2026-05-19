@@ -373,6 +373,73 @@ function printIssue(issue) {
   process.stdout.write(`[${issue.severity}] ${issue.code} ${issue.pathString ? `(${issue.pathString}) ` : ''}${issue.message}\n`);
 }
 
+function summarizeIssues(source, issues = []) {
+  return issues.map((issue) => ({
+    source,
+    severity: issue.severity ?? 'warning',
+    code: issue.code,
+    message: issue.message,
+    pathString: issue.pathString ?? '',
+    location: issue.location ?? (
+      issue.sceneId ? { sceneId: issue.sceneId, pageIndex: issue.pageIndex ?? null } : undefined
+    ),
+    suggestedAction: issue.suggestedAction,
+  }));
+}
+
+function collectAuthorCheckSuggestions({ validation, layout, readiness, preview }) {
+  const suggestions = [];
+  for (const warning of layout.warnings ?? []) {
+    if (warning.suggestedAction) {
+      suggestions.push({
+        source: 'layout',
+        code: warning.code,
+        pathString: warning.pathString,
+        location: warning.location,
+        suggestedAction: warning.suggestedAction,
+      });
+    }
+  }
+
+  for (const issue of [...(readiness.blockers ?? []), ...(readiness.warnings ?? [])]) {
+    suggestions.push({
+      source: issue.source ?? 'readiness',
+      code: issue.code,
+      pathString: issue.pathString ?? '',
+      suggestedAction: issue.suggestedAction ?? {
+        summary: issue.severity === 'error'
+          ? 'Resolve this blocker before export.'
+          : 'Review this warning before handoff.',
+        commands: [],
+      },
+    });
+  }
+
+  for (const suggestion of preview?.suggestions ?? preview?.quality?.suggestions ?? []) {
+    suggestions.push({
+      source: 'preview',
+      code: suggestion.code,
+      suggestedAction: suggestion.suggestedAction,
+    });
+  }
+
+  if (!validation.ok) {
+    for (const error of validation.errors) {
+      suggestions.push({
+        source: 'validation',
+        code: error.code,
+        pathString: error.pathString,
+        suggestedAction: {
+          summary: 'Fix this validation error before making additional content edits.',
+          commands: [],
+        },
+      });
+    }
+  }
+
+  return suggestions;
+}
+
 async function inspect(args) {
   const { scriptPath, script } = await readScript(args);
   const summary = {
@@ -774,6 +841,99 @@ async function renderPreview(args) {
 
     throw error;
   }
+}
+
+async function authorCheck(args) {
+  const { scriptPath, script } = await readScript(args);
+  const validationOptions = await getValidationOptions(args, scriptPath);
+  const knownAssets = hasFlag(args, '--skip-asset-check')
+    ? null
+    : await getKnownAssetsForReadiness(args, scriptPath);
+  const validation = validateProject(script, validationOptions);
+  const layout = lintProjectLayout(script);
+  const readiness = createExportReadiness(script, {
+    knownAssets,
+    requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
+  });
+
+  let preview = null;
+  if (!hasFlag(args, '--skip-preview')) {
+    const sceneId = getArgValue(args, '--scene', 'start');
+    const pageIndex = getIntArg(args, '--page', 0);
+    const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
+    const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
+    const outPath = path.resolve(repoRoot, getArgValue(args, '--preview-out', path.join('.tmp', 'author-check-preview.png')));
+    preview = await renderPreviewScreenshot({
+      repoRoot,
+      script,
+      sceneId,
+      pageIndex,
+      outPath,
+      width,
+      height,
+      dryRun: true,
+    });
+
+    if (hasFlag(args, '--write-preview-plan')) {
+      const planPath = outPath.endsWith('.json') ? outPath : `${outPath}.json`;
+      await writePreviewRenderPlan(planPath, preview);
+      preview.planPath = planPath;
+    }
+  }
+
+  const gates = {
+    validation: validation.ok,
+    layout: layout.ok,
+    readiness: readiness.ready,
+    preview: preview ? preview.dryRun === true : true,
+  };
+  const ok = Object.values(gates).every(Boolean);
+  const output = {
+    ok,
+    scriptPath,
+    gates,
+    summary: {
+      validationErrors: validation.errors.length,
+      validationWarnings: validation.warnings.length,
+      layoutWarnings: layout.warnings.length,
+      readinessBlockers: readiness.blockers.length,
+      readinessWarnings: readiness.warnings.length,
+      previewPlanned: Boolean(preview),
+    },
+    validation,
+    layout,
+    readiness,
+    preview,
+    issues: [
+      ...summarizeIssues('validation', validation.errors),
+      ...summarizeIssues('validation', validation.warnings),
+      ...summarizeIssues('layout', layout.warnings),
+      ...summarizeIssues('readiness', readiness.blockers),
+      ...summarizeIssues('readiness', readiness.warnings),
+    ],
+  };
+  output.suggestions = collectAuthorCheckSuggestions(output);
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Author check: ${output.ok ? 'OK' : 'NEEDS ATTENTION'}\n`);
+    process.stdout.write(`Script: ${scriptPath}\n`);
+    process.stdout.write(`Validation: ${gates.validation ? 'OK' : 'FAILED'}\n`);
+    process.stdout.write(`Layout: ${gates.layout ? 'OK' : 'WARNINGS'}\n`);
+    process.stdout.write(`Readiness: ${gates.readiness ? 'READY' : 'BLOCKED'}\n`);
+    if (preview) {
+      process.stdout.write(`Preview plan: ${preview.sceneId}#${preview.pageIndex} -> ${preview.outPath}\n`);
+      if (preview.planPath) {
+        process.stdout.write(`Preview plan file: ${preview.planPath}\n`);
+      }
+    }
+    for (const issue of output.issues) {
+      printIssue(issue);
+    }
+  }
+
+  return ok ? 0 : 1;
 }
 
 async function addScene(args) {
@@ -1763,6 +1923,7 @@ function printHelp() {
   process.stdout.write(`vn-author commands:
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
+  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
@@ -1809,6 +1970,11 @@ async function main() {
 
     if (command === 'validate') {
       process.exitCode = await validate(args);
+      return;
+    }
+
+    if (command === 'author-check') {
+      process.exitCode = await authorCheck(args);
       return;
     }
 

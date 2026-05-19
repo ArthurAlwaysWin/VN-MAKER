@@ -100,6 +100,14 @@ Use `--dry-run` to inspect the validation result without writing:
 node tools/vn-author/index.js add-scene --id chapter_1 --name "Chapter 1" --dry-run --json
 ```
 
+Use `author-check` as the preferred handoff gate after meaningful edits:
+
+```bash
+node tools/vn-author/index.js author-check --script public/game/script.json --scene start --page 0 --write-preview-plan --json
+```
+
+The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload.
+
 ## Draft Shape
 
 ```json

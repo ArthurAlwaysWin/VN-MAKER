@@ -18,6 +18,7 @@
     "vn:inspect": "node tools/vn-author/index.js inspect",
     "vn:report": "node tools/vn-author/index.js export-report",
     "vn:lint-layout": "node tools/vn-author/index.js lint-layout",
+    "vn:author-check": "node tools/vn-author/index.js author-check",
     "vn:render-preview": "node tools/vn-author/index.js render-preview",
     "vn:readiness": "node tools/vn-author/index.js export-readiness",
     "verify": "npm run build && npm run test",

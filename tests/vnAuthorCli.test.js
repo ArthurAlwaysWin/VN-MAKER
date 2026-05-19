@@ -1321,6 +1321,145 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('runs an aggregate author check with preview dry-run planning', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const previewPath = path.join(dir, 'author-preview.png');
+      await writeFile(path.join(dir, 'sakura.svg'), '<svg />', 'utf8');
+      await writeFile(path.join(dir, 'school.svg'), '<svg />', 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_test',
+        meta: { resolution: { width: 800, height: 450 } },
+        characters: {
+          sakura: {
+            name: 'Sakura',
+            expressions: { normal: 'sakura.svg' },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'normal',
+                background: 'school.svg',
+                characters: [{ id: 'sakura', expression: 'normal', position: 'center' }],
+                dialogues: [{ speaker: 'sakura', text: 'Hi.' }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--preview-out',
+        previewPath,
+        '--write-preview-plan',
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(`${previewPath}.json`, 'utf8'));
+
+      expect(result.ok).toBe(true);
+      expect(result.gates).toEqual({
+        validation: true,
+        layout: true,
+        readiness: true,
+        preview: true,
+      });
+      expect(result.summary).toMatchObject({
+        validationErrors: 0,
+        layoutWarnings: 0,
+        readinessBlockers: 0,
+        previewPlanned: true,
+      });
+      expect(result.preview).toMatchObject({
+        dryRun: true,
+        sceneId: 'start',
+        pageIndex: 0,
+        outPath: previewPath,
+        planPath: `${previewPath}.json`,
+      });
+      expect(plan).toMatchObject({
+        dryRun: true,
+        sceneId: 'start',
+        pageIndex: 0,
+      });
+    });
+  });
+
+  it('returns non-zero author check output with aggregated suggestions', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_test',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              { type: 'normal', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--skip-preview',
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.any(String),
+      });
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'author-check',
+          '--script',
+          scriptPath,
+          '--skip-preview',
+          '--json',
+        ]);
+      } catch (error) {
+        const result = JSON.parse(error.stdout);
+        expect(result.ok).toBe(false);
+        expect(result.gates).toMatchObject({
+          validation: true,
+          layout: false,
+          readiness: false,
+          preview: true,
+        });
+        expect(result.issues).toEqual(expect.arrayContaining([
+          expect.objectContaining({ source: 'layout', code: 'layout-blank-page' }),
+          expect.objectContaining({ source: 'readiness', code: 'layout-blank-page' }),
+        ]));
+        expect(result.suggestions).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            source: 'layout',
+            code: 'layout-blank-page',
+            suggestedAction: expect.objectContaining({
+              commands: expect.arrayContaining([
+                expect.objectContaining({ command: 'set-page-background' }),
+              ]),
+            }),
+          }),
+        ]));
+      }
+    });
+  });
+
   it('prepares a preview render plan without requiring a browser dependency', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

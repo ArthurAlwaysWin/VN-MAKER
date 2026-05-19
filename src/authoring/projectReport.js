@@ -1,5 +1,5 @@
 import { validateProject } from '../shared/projectValidator.js';
-import { traceReachableScenes } from '../shared/sceneGraph.js';
+import { collectSceneReferences, traceReachableScenes } from '../shared/sceneGraph.js';
 import { createExportReadiness } from './exportReadiness.js';
 import { lintProjectLayout } from './layoutLint.js';
 
@@ -27,13 +27,18 @@ function countPages(script = {}) {
 }
 
 function collectSceneSummaries(script = {}) {
-  return Object.entries(script.scenes ?? {}).map(([sceneId, scene]) => ({
-    id: sceneId,
-    name: scene?.name ?? sceneId,
-    pageCount: Array.isArray(scene?.pages) ? scene.pages.length : 0,
-    next: scene?.next ?? null,
-    pages: collectPageSummaries(scene?.pages),
-  }));
+  return Object.entries(script.scenes ?? {}).map(([sceneId, scene]) => {
+    const incomingReferences = collectSceneReferences(script, sceneId);
+    return {
+      id: sceneId,
+      name: scene?.name ?? sceneId,
+      pageCount: Array.isArray(scene?.pages) ? scene.pages.length : 0,
+      next: scene?.next ?? null,
+      incomingReferenceCount: incomingReferences.length,
+      incomingReferencePaths: incomingReferences.map((reference) => reference.pathString),
+      pages: collectPageSummaries(scene?.pages),
+    };
+  });
 }
 
 function collectPageTargets(page = {}) {

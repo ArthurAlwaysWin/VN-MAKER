@@ -61,6 +61,8 @@ describe('project report', () => {
           name: 'Start',
           pageCount: 2,
           next: null,
+          incomingReferenceCount: 1,
+          incomingReferencePaths: ['scenes.start.pages.1.options.0.target'],
           pages: [
             {
               index: 0,

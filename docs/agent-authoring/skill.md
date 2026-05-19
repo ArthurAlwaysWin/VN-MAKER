@@ -80,6 +80,8 @@ node tools/vn-author/index.js apply-plan plan.json --script public/game/script.j
 
 See `docs/agent-authoring/plan-manifest.md` for the manifest shape. If validation fails, `apply-plan` does not write unless `--allow-invalid` is present. When `--checkpoint` is used, JSON output includes a rollback descriptor for `restore-checkpoint`.
 
+See `docs/agent-authoring/end-to-end-example.md` for a complete prose-to-plan-to-handoff example.
+
 ## Incremental Edits
 
 For small changes, prefer incremental commands:

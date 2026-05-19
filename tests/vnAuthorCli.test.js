@@ -407,6 +407,46 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('keeps the documented example plan executable by apply-plan dry-run', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const examplePlanPath = path.resolve('docs/agent-authoring/example-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_example_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        examplePlanPath,
+        '--script',
+        scriptPath,
+        '--dry-run',
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(result.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'planned',
+        wrote: false,
+      });
+      expect(result.validation.ok).toBe(true);
+      expect(result.changeSummary).toMatchObject({
+        operationCount: 8,
+        counts: {
+          before: { characters: 0, scenes: 0, pages: 0, variables: 0 },
+          after: { characters: 1, scenes: 2, pages: 3, variables: 1 },
+          delta: { characters: 1, scenes: 2, pages: 3, variables: 1 },
+        },
+      });
+      expect(script.scenes).toEqual({});
+    });
+  });
+
   it('does not write invalid authoring plans unless explicitly allowed', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

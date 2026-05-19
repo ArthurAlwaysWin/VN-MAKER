@@ -83,6 +83,7 @@ npm run vn:apply-plan -- plan.json --script public/game/script.json --force --ch
 `apply-plan` reads the script once, applies operations in order, validates the final result, and writes once. If validation has errors it refuses to write unless `--allow-invalid` is present. JSON output includes each operation result plus one aggregate `transaction` and `changeSummary`.
 
 See [plan-manifest.md](./plan-manifest.md) for the full manifest shape and supported commands.
+See [end-to-end-example.md](./end-to-end-example.md) for a complete prose-to-plan-to-handoff walkthrough.
 
 When `--checkpoint` is used, the transaction includes a rollback descriptor. To restore it:
 

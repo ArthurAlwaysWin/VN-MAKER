@@ -123,6 +123,7 @@ node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --opt
 Before deleting or merging branch scenes, inspect references:
 
 ```bash
+npm run vn:scene-references -- --all --script public/game/script.json --json
 npm run vn:scene-references -- --scene chapter_1_old_route --script public/game/script.json --json
 node tools/vn-author/index.js retarget-scene --from chapter_1_old_route --to chapter_1_new_route --script public/game/script.json --force --checkpoint --json
 node tools/vn-author/index.js clear-scene-references --scene unused_branch --script public/game/script.json --force --checkpoint --json

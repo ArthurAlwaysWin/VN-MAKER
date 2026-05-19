@@ -111,6 +111,7 @@ Use `rename-scene` instead of direct JSON edits when a scene id changes; it upda
 Inspect and repair scene references before deleting or merging branch scenes:
 
 ```bash
+node tools/vn-author/index.js scene-references --all --script public/game/script.json --json
 node tools/vn-author/index.js scene-references --scene old_route --script public/game/script.json --json
 node tools/vn-author/index.js retarget-scene --from old_route --to new_route --script public/game/script.json --force --checkpoint --json
 node tools/vn-author/index.js clear-scene-references --scene unused_route --script public/game/script.json --force --checkpoint --json

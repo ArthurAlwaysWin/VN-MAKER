@@ -1305,6 +1305,29 @@ describe('vn-author CLI', () => {
         expect.objectContaining({ command: 'clear-scene-references' }),
       ]));
 
+      const allRefsResult = await execFileAsync('node', [
+        cliPath,
+        'scene-references',
+        '--script',
+        scriptPath,
+        '--all',
+        '--json',
+      ]);
+      const allRefs = JSON.parse(allRefsResult.stdout);
+      expect(allRefs).toMatchObject({
+        referenceCount: 4,
+        scenes: expect.arrayContaining([
+          expect.objectContaining({
+            sceneId: 'old_route',
+            referenceCount: 3,
+          }),
+          expect.objectContaining({
+            sceneId: 'fallback',
+            referenceCount: 1,
+          }),
+        ]),
+      });
+
       const retargetResult = await execFileAsync('node', [
         cliPath,
         'retarget-scene',

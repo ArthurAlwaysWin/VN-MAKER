@@ -1620,9 +1620,35 @@ async function setSceneNext(args) {
 
 async function sceneReferences(args) {
   const { scriptPath, script } = await readScript(args);
+  if (hasFlag(args, '--all')) {
+    const scenes = Object.keys(script.scenes ?? {}).map((sceneId) => {
+      const references = collectSceneReferences(script, sceneId);
+      return {
+        sceneId,
+        referenceCount: references.length,
+        references,
+      };
+    });
+    const output = {
+      scriptPath,
+      scenes,
+      referenceCount: scenes.reduce((count, scene) => count + scene.referenceCount, 0),
+    };
+
+    if (hasFlag(args, '--json')) {
+      writeJson(output);
+    } else {
+      process.stdout.write('Scene references:\n');
+      for (const scene of scenes) {
+        process.stdout.write(`- ${scene.sceneId}: ${scene.referenceCount}\n`);
+      }
+    }
+    return 0;
+  }
+
   const sceneId = getArgValue(args, '--scene', getArgValue(args, '--id', null));
   if (!sceneId) {
-    throw new Error('scene-references requires --scene');
+    throw new Error('scene-references requires --scene or --all');
   }
 
   if (!script.scenes?.[sceneId]) {
@@ -2670,7 +2696,7 @@ function printHelp() {
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  scene-references --scene scene_id [--script path] [--json]
+  scene-references --scene scene_id|--all [--script path] [--json]
   retarget-scene --from scene_id --to scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   clear-scene-references --scene scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   rename-scene --scene scene_id --new-id scene_id [--name name] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]

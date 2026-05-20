@@ -2,6 +2,38 @@ function uniqueValues(values = []) {
   return [...new Set(values.filter((value) => value != null && value !== ''))];
 }
 
+export function createHandoffReviewItemKey(item = {}) {
+  return JSON.stringify([
+    item.source ?? '',
+    item.code ?? '',
+    item.pathString ?? '',
+    item.sceneId ?? '',
+    item.pageIndex ?? '',
+    item.message ?? '',
+  ]);
+}
+
+export function countHandoffReviewStatuses(handoff = null, state = {}) {
+  const counts = {
+    open: 0,
+    acknowledged: 0,
+    resolved: 0,
+  };
+
+  for (const item of handoff?.reviewItems ?? []) {
+    const status = state[createHandoffReviewItemKey(item)]?.status;
+    if (status === 'acknowledged') {
+      counts.acknowledged += 1;
+    } else if (status === 'resolved') {
+      counts.resolved += 1;
+    } else {
+      counts.open += 1;
+    }
+  }
+
+  return counts;
+}
+
 export function parseScenePath(pathString = '') {
   const match = /^scenes\.([^.]+)(?:\.pages\.(\d+))?/.exec(String(pathString));
   if (!match) {

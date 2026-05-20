@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { parseAgentPathTarget, parseScenePath } from '../utils/agentHandoff.js';
+import { createHandoffReviewItemKey, parseAgentPathTarget, parseScenePath } from '../utils/agentHandoff.js';
 
 export const useProjectStore = defineStore('project', () => {
   const projectPath = ref(null);
@@ -8,6 +8,7 @@ export const useProjectStore = defineStore('project', () => {
   const recentProjects = ref([]);
   const agentHandoff = ref(null);
   const agentHandoffPath = ref(null);
+  const agentReviewState = ref({});
   const sceneNavigationRequest = ref(null);
   const agentPathNavigationRequest = ref(null);
   const hasCreatedProject = ref(false);
@@ -54,14 +55,49 @@ export const useProjectStore = defineStore('project', () => {
   async function loadAgentHandoff() {
     agentHandoff.value = null;
     agentHandoffPath.value = null;
+    agentReviewState.value = {};
     if (!window.ipcRenderer) return null;
 
     const result = await window.ipcRenderer.invoke('read-agent-handoff');
     if (result?.success) {
       agentHandoff.value = result.handoff || null;
       agentHandoffPath.value = result.path || null;
+      loadAgentReviewState();
     }
     return result;
+  }
+
+  function getAgentReviewStateStorageKey() {
+    if (!projectPath.value || !agentHandoff.value) {
+      return null;
+    }
+
+    const handoffId = agentHandoff.value.createdAt || agentHandoffPath.value || 'current';
+    return `galgame-maker:agent-review-state:${projectPath.value}:${handoffId}`;
+  }
+
+  function loadAgentReviewState() {
+    const storageKey = getAgentReviewStateStorageKey();
+    if (!storageKey || typeof window === 'undefined' || !window.localStorage) {
+      agentReviewState.value = {};
+      return {};
+    }
+
+    try {
+      agentReviewState.value = JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+    } catch {
+      agentReviewState.value = {};
+    }
+    return agentReviewState.value;
+  }
+
+  function saveAgentReviewState() {
+    const storageKey = getAgentReviewStateStorageKey();
+    if (!storageKey || typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(agentReviewState.value));
   }
 
   async function saveProject(scriptData) {
@@ -86,6 +122,7 @@ export const useProjectStore = defineStore('project', () => {
     projectData.value = null;
     agentHandoff.value = null;
     agentHandoffPath.value = null;
+    agentReviewState.value = {};
     sceneNavigationRequest.value = null;
     agentPathNavigationRequest.value = null;
     isDirty.value = false;
@@ -130,10 +167,40 @@ export const useProjectStore = defineStore('project', () => {
     return true;
   }
 
+  function setAgentReviewItemStatus(item, status) {
+    if (!item || !['acknowledged', 'resolved'].includes(status)) {
+      return false;
+    }
+
+    const key = createHandoffReviewItemKey(item);
+    agentReviewState.value = {
+      ...agentReviewState.value,
+      [key]: {
+        status,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+    saveAgentReviewState();
+    return true;
+  }
+
+  function clearAgentReviewItemStatus(item) {
+    if (!item) {
+      return false;
+    }
+
+    const key = createHandoffReviewItemKey(item);
+    const nextState = { ...agentReviewState.value };
+    delete nextState[key];
+    agentReviewState.value = nextState;
+    saveAgentReviewState();
+    return true;
+  }
+
   return {
-    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    loadAgentHandoff, closeProject, markDirty, requestSceneNavigation, requestAgentPathNavigation
+    loadAgentHandoff, loadAgentReviewState, closeProject, markDirty, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
   };
 });

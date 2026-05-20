@@ -9,6 +9,8 @@ import { resolve } from 'node:path';
 
 import { useProjectStore } from '../src/editor/stores/project.js';
 import {
+  countHandoffReviewStatuses,
+  createHandoffReviewItemKey,
   groupHandoffReviewByPath,
   parseAgentPathTarget,
   parseScenePath,
@@ -18,6 +20,7 @@ import {
 describe('agent handoff editor integration', () => {
   afterEach(() => {
     delete window.ipcRenderer;
+    window.localStorage.clear();
     vi.clearAllMocks();
   });
 
@@ -58,7 +61,69 @@ describe('agent handoff editor integration', () => {
     project.closeProject();
     expect(project.agentHandoff).toBeNull();
     expect(project.agentHandoffPath).toBeNull();
+    expect(project.agentReviewState).toEqual({});
     expect(project.sceneNavigationRequest).toBeNull();
+  });
+
+  it('persists local handoff review item lifecycle state by handoff', async () => {
+    setActivePinia(createPinia());
+    const reviewItem = { source: 'layout', code: 'layout-blank-page', pathString: 'scenes.start.pages.0' };
+    const handoff = {
+      kind: 'agent-authoring-handoff',
+      createdAt: '2026-05-20T10:00:00.000Z',
+      reviewItems: [reviewItem],
+    };
+    window.ipcRenderer = {
+      invoke: vi.fn(async (channel) => {
+        if (channel === 'load-project') {
+          return {
+            success: true,
+            path: 'E:/demo-project',
+            project: { name: 'Demo Project' },
+          };
+        }
+        if (channel === 'read-agent-handoff') {
+          return {
+            success: true,
+            handoff,
+            path: 'E:/demo-project/agent-handoff.json',
+          };
+        }
+        return { success: true };
+      }),
+    };
+
+    const project = useProjectStore();
+    await project.loadProject('E:/demo-project');
+
+    expect(countHandoffReviewStatuses(handoff, project.agentReviewState)).toEqual({
+      open: 1,
+      acknowledged: 0,
+      resolved: 0,
+    });
+    expect(project.setAgentReviewItemStatus(reviewItem, 'acknowledged')).toBe(true);
+    expect(project.agentReviewState[createHandoffReviewItemKey(reviewItem)]).toMatchObject({
+      status: 'acknowledged',
+    });
+    expect(countHandoffReviewStatuses(handoff, project.agentReviewState)).toEqual({
+      open: 0,
+      acknowledged: 1,
+      resolved: 0,
+    });
+
+    expect(project.setAgentReviewItemStatus(reviewItem, 'resolved')).toBe(true);
+    expect(countHandoffReviewStatuses(handoff, project.agentReviewState)).toEqual({
+      open: 0,
+      acknowledged: 0,
+      resolved: 1,
+    });
+
+    expect(project.clearAgentReviewItemStatus(reviewItem)).toBe(true);
+    expect(countHandoffReviewStatuses(handoff, project.agentReviewState)).toEqual({
+      open: 1,
+      acknowledged: 0,
+      resolved: 0,
+    });
   });
 
   it('creates scene navigation requests from handoff paths', () => {
@@ -111,6 +176,10 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('agentGateRows');
     expect(source).toContain('agentReviewItems');
     expect(source).toContain('agentReviewGroups');
+    expect(source).toContain('agentReviewStatusCounts');
+    expect(source).toContain('setAgentReviewItemStatus');
+    expect(source).toContain('clearAgentReviewItemStatus');
+    expect(source).toContain('agent-review-status');
     expect(source).toContain('groupHandoffReviewByPath');
     expect(source).toContain('openAgentPath');
     expect(source).toContain('requestAgentPathNavigation');

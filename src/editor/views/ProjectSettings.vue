@@ -56,6 +56,11 @@
                 · {{ project.agentHandoff.transactionSummary.changedPathCount ?? 0 }} paths
               </span>
               <span>Review items {{ project.agentHandoff.reviewItemCount ?? agentReviewItems.length }}</span>
+              <span>
+                Open {{ agentReviewStatusCounts.open }}
+                · Acknowledged {{ agentReviewStatusCounts.acknowledged }}
+                · Resolved {{ agentReviewStatusCounts.resolved }}
+              </span>
               <span v-if="project.agentHandoff.latestCheckpointPath" class="agent-path">{{ project.agentHandoff.latestCheckpointPath }}</span>
             </div>
             <div class="agent-review-groups" v-if="agentReviewGroups.length">
@@ -78,15 +83,36 @@
                   </li>
                 </ul>
                 <ul class="agent-review-list" v-if="group.reviewItems.length">
-                  <li v-for="item in group.reviewItems" :key="`${item.source}-${item.code}-${item.pathString}`">
+                  <li
+                    v-for="item in group.reviewItems"
+                    :key="getAgentReviewItemKey(item)"
+                    :class="`review-status-${getAgentReviewStatus(item)}`"
+                  >
                     <span class="agent-review-code">{{ item.code }}</span>
                     <span class="agent-review-text">{{ item.pathString || item.message }}</span>
+                    <span class="agent-review-status">{{ getAgentReviewStatusLabel(item) }}</span>
                     <button
                       v-if="canNavigateAgentPath(item.pathString)"
                       class="agent-locate-btn"
                       @click="openAgentPath(item.pathString)"
                       :title="getAgentPathTitle(item.pathString)"
                     >定位</button>
+                    <button
+                      class="agent-locate-btn"
+                      @click="project.setAgentReviewItemStatus(item, 'acknowledged')"
+                      title="标记为已阅"
+                    >已阅</button>
+                    <button
+                      class="agent-locate-btn"
+                      @click="project.setAgentReviewItemStatus(item, 'resolved')"
+                      title="标记为已解决"
+                    >解决</button>
+                    <button
+                      v-if="getAgentReviewStatus(item) !== 'open'"
+                      class="agent-locate-btn"
+                      @click="project.clearAgentReviewItemStatus(item)"
+                      title="清除本地状态"
+                    >重置</button>
                   </li>
                 </ul>
               </section>
@@ -154,7 +180,12 @@ import ThemeBrowserModal from '../components/theme/ThemeBrowserModal.vue';
 import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
 import CursorIconSettings from '../components/theme/CursorIconSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
-import { groupHandoffReviewByPath, parseAgentPathTarget } from '../utils/agentHandoff.js';
+import {
+  countHandoffReviewStatuses,
+  createHandoffReviewItemKey,
+  groupHandoffReviewByPath,
+  parseAgentPathTarget,
+} from '../utils/agentHandoff.js';
 
 const project = useProjectStore();
 const script = useScriptStore();
@@ -172,6 +203,7 @@ const agentGateRows = computed(() => {
 });
 const agentReviewGroups = computed(() => groupHandoffReviewByPath(project.agentHandoff).slice(0, 6));
 const agentReviewItems = computed(() => agentReviewGroups.value.flatMap((group) => group.reviewItems).slice(0, 5));
+const agentReviewStatusCounts = computed(() => countHandoffReviewStatuses(project.agentHandoff, project.agentReviewState));
 const DIALOGUE_PREVIEW_SAMPLE = {
   type: 'show-dialogue-preview',
   speakerName: '预览角色',
@@ -184,6 +216,21 @@ function canNavigateAgentPath(pathString) {
 
 function openAgentPath(pathString) {
   project.requestAgentPathNavigation(pathString);
+}
+
+function getAgentReviewItemKey(item) {
+  return createHandoffReviewItemKey(item);
+}
+
+function getAgentReviewStatus(item) {
+  return project.agentReviewState[getAgentReviewItemKey(item)]?.status ?? 'open';
+}
+
+function getAgentReviewStatusLabel(item) {
+  const status = getAgentReviewStatus(item);
+  if (status === 'acknowledged') return '已阅';
+  if (status === 'resolved') return '已解决';
+  return '待处理';
 }
 
 function getAgentPathTitle(pathString) {
@@ -440,7 +487,7 @@ onBeforeUnmount(() => {
 }
 .agent-review-list li {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 6px;
   align-items: center;
 }
@@ -453,6 +500,13 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.agent-review-status {
+  color: #888;
+  font-size: 11px;
+}
+.review-status-acknowledged .agent-review-status { color: #83c6e6; }
+.review-status-resolved .agent-review-status { color: #8fe3ad; }
+.review-status-resolved .agent-review-text { text-decoration: line-through; }
 .agent-locate-btn {
   border: 1px solid #444;
   border-radius: 4px;

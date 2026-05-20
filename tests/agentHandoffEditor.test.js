@@ -8,7 +8,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { useProjectStore } from '../src/editor/stores/project.js';
-import { parseScenePath, summarizeHandoffByScene } from '../src/editor/utils/agentHandoff.js';
+import {
+  groupHandoffReviewByPath,
+  parseAgentPathTarget,
+  parseScenePath,
+  summarizeHandoffByScene,
+} from '../src/editor/utils/agentHandoff.js';
 
 describe('agent handoff editor integration', () => {
   afterEach(() => {
@@ -69,6 +74,25 @@ describe('agent handoff editor integration', () => {
     expect(project.requestSceneNavigation('characters.sakura')).toBe(false);
   });
 
+  it('creates non-scene navigation requests from handoff paths', () => {
+    setActivePinia(createPinia());
+    const project = useProjectStore();
+
+    expect(project.requestAgentPathNavigation('systems.variables.sakura_affection')).toBe(true);
+    expect(project.agentPathNavigationRequest).toMatchObject({
+      kind: 'variable',
+      tab: 'story-systems',
+      id: 'sakura_affection',
+    });
+    expect(project.requestAgentPathNavigation('characters.sakura')).toBe(true);
+    expect(project.agentPathNavigationRequest).toMatchObject({
+      kind: 'character',
+      tab: 'resource-library',
+      id: 'sakura',
+    });
+    expect(project.requestAgentPathNavigation('unknown.path')).toBe(false);
+  });
+
   it('exposes the safe handoff IPC channel through preload', () => {
     const preload = readFileSync(resolve(process.cwd(), 'electron', 'preload.js'), 'utf8');
     const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
@@ -86,13 +110,59 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('外部 Agent 交接');
     expect(source).toContain('agentGateRows');
     expect(source).toContain('agentReviewItems');
-    expect(source).toContain('agentChangedPaths');
+    expect(source).toContain('agentReviewGroups');
+    expect(source).toContain('groupHandoffReviewByPath');
     expect(source).toContain('openAgentPath');
-    expect(source).toContain('requestSceneNavigation');
+    expect(source).toContain('requestAgentPathNavigation');
     expect(source).toContain('agent-locate-btn');
+    expect(source).toContain('agent-review-group');
     expect(source).toContain('transactionSummary');
     expect(source).toContain('project.loadAgentHandoff()');
     expect(source).toContain('latestCheckpointPath');
+  });
+
+  it('groups handoff review items by scene and non-scene path targets', () => {
+    const groups = groupHandoffReviewByPath({
+      transactionSummary: {
+        changedPaths: [
+          'scenes.start.pages.1',
+          'characters.sakura',
+          'systems.variables.sakura_affection',
+          'ui.theme.buttonFamilies.qab',
+        ],
+      },
+      reviewItems: [
+        { source: 'layout', code: 'layout-warning', pathString: 'scenes.start.pages.1' },
+        { source: 'validation', code: 'missing-character', pathString: 'characters.sakura' },
+        { source: 'validation', code: 'bad-variable', pathString: 'systems.variables.sakura_affection' },
+      ],
+    });
+
+    expect(parseAgentPathTarget('systems.variables.sakura_affection')).toMatchObject({
+      kind: 'variable',
+      tab: 'story-systems',
+      id: 'sakura_affection',
+    });
+    expect(parseAgentPathTarget('characters.sakura')).toMatchObject({
+      kind: 'character',
+      tab: 'resource-library',
+      id: 'sakura',
+    });
+    expect(parseAgentPathTarget('ui.theme.buttonFamilies.qab')).toMatchObject({
+      kind: 'ui',
+      tab: 'project-settings',
+    });
+    expect(groups.map((group) => group.key)).toEqual([
+      'scene:start',
+      'characters',
+      'systems:variables',
+      'ui',
+    ]);
+    expect(groups.find((group) => group.key === 'characters')).toMatchObject({
+      label: 'Characters',
+      changedPaths: ['characters.sakura'],
+      reviewItems: [expect.objectContaining({ code: 'missing-character' })],
+    });
   });
 
   it('summarizes handoff changed paths and review items by scene for editor navigation', () => {
@@ -160,7 +230,9 @@ describe('agent handoff editor integration', () => {
     );
 
     expect(appSource).toContain('project.sceneNavigationRequest');
+    expect(appSource).toContain('project.agentPathNavigationRequest');
     expect(appSource).toContain("activeTab.value = 'scenes'");
+    expect(appSource).toContain('activeTab.value = request.tab');
     expect(pageEditorSource).toContain('applySceneNavigationRequest');
     expect(pageEditorSource).toContain('editor.selectPage(request.sceneId, pageIndex)');
     expect(sceneTreeSource).toContain('watch(selectedSceneId');

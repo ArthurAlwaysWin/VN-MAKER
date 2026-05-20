@@ -58,30 +58,39 @@
               <span>Review items {{ project.agentHandoff.reviewItemCount ?? agentReviewItems.length }}</span>
               <span v-if="project.agentHandoff.latestCheckpointPath" class="agent-path">{{ project.agentHandoff.latestCheckpointPath }}</span>
             </div>
-            <ul class="agent-review-list" v-if="agentChangedPaths.length">
-              <li v-for="pathString in agentChangedPaths" :key="pathString">
-                <span class="agent-review-code">changed</span>
-                <span class="agent-review-text">{{ pathString }}</span>
-                <button
-                  v-if="canNavigateAgentPath(pathString)"
-                  class="agent-locate-btn"
-                  @click="openAgentPath(pathString)"
-                  title="在游戏内容中定位"
-                >定位</button>
-              </li>
-            </ul>
-            <ul class="agent-review-list" v-if="agentReviewItems.length">
-              <li v-for="item in agentReviewItems" :key="`${item.source}-${item.code}-${item.pathString}`">
-                <span class="agent-review-code">{{ item.code }}</span>
-                <span class="agent-review-text">{{ item.pathString || item.message }}</span>
-                <button
-                  v-if="canNavigateAgentPath(item.pathString)"
-                  class="agent-locate-btn"
-                  @click="openAgentPath(item.pathString)"
-                  title="在游戏内容中定位"
-                >定位</button>
-              </li>
-            </ul>
+            <div class="agent-review-groups" v-if="agentReviewGroups.length">
+              <section
+                v-for="group in agentReviewGroups"
+                :key="group.key"
+                class="agent-review-group"
+              >
+                <h5>{{ group.label }}</h5>
+                <ul class="agent-review-list" v-if="group.changedPaths.length">
+                  <li v-for="pathString in group.changedPaths" :key="pathString">
+                    <span class="agent-review-code">changed</span>
+                    <span class="agent-review-text">{{ pathString }}</span>
+                    <button
+                      v-if="canNavigateAgentPath(pathString)"
+                      class="agent-locate-btn"
+                      @click="openAgentPath(pathString)"
+                      :title="getAgentPathTitle(pathString)"
+                    >定位</button>
+                  </li>
+                </ul>
+                <ul class="agent-review-list" v-if="group.reviewItems.length">
+                  <li v-for="item in group.reviewItems" :key="`${item.source}-${item.code}-${item.pathString}`">
+                    <span class="agent-review-code">{{ item.code }}</span>
+                    <span class="agent-review-text">{{ item.pathString || item.message }}</span>
+                    <button
+                      v-if="canNavigateAgentPath(item.pathString)"
+                      class="agent-locate-btn"
+                      @click="openAgentPath(item.pathString)"
+                      :title="getAgentPathTitle(item.pathString)"
+                    >定位</button>
+                  </li>
+                </ul>
+              </section>
+            </div>
           </div>
           <div class="agent-handoff-empty" v-else>
             <span>外部 Agent 交接</span>
@@ -145,7 +154,7 @@ import ThemeBrowserModal from '../components/theme/ThemeBrowserModal.vue';
 import ButtonFamilyImageSettings from '../components/theme/ButtonFamilyImageSettings.vue';
 import CursorIconSettings from '../components/theme/CursorIconSettings.vue';
 import { HELP_SETTINGS } from '../helpTexts.js';
-import { parseScenePath } from '../utils/agentHandoff.js';
+import { groupHandoffReviewByPath, parseAgentPathTarget } from '../utils/agentHandoff.js';
 
 const project = useProjectStore();
 const script = useScriptStore();
@@ -161,16 +170,8 @@ const agentGateRows = computed(() => {
     { key: 'readiness', label: 'Readiness', ok: gates.readiness !== false },
   ];
 });
-const agentReviewItems = computed(() => (
-  Array.isArray(project.agentHandoff?.reviewItems)
-    ? project.agentHandoff.reviewItems.slice(0, 5)
-    : []
-));
-const agentChangedPaths = computed(() => (
-  Array.isArray(project.agentHandoff?.transactionSummary?.changedPaths)
-    ? project.agentHandoff.transactionSummary.changedPaths.slice(0, 5)
-    : []
-));
+const agentReviewGroups = computed(() => groupHandoffReviewByPath(project.agentHandoff).slice(0, 6));
+const agentReviewItems = computed(() => agentReviewGroups.value.flatMap((group) => group.reviewItems).slice(0, 5));
 const DIALOGUE_PREVIEW_SAMPLE = {
   type: 'show-dialogue-preview',
   speakerName: '预览角色',
@@ -178,11 +179,20 @@ const DIALOGUE_PREVIEW_SAMPLE = {
 };
 
 function canNavigateAgentPath(pathString) {
-  return Boolean(parseScenePath(pathString));
+  return Boolean(parseAgentPathTarget(pathString));
 }
 
 function openAgentPath(pathString) {
-  project.requestSceneNavigation(pathString);
+  project.requestAgentPathNavigation(pathString);
+}
+
+function getAgentPathTitle(pathString) {
+  const target = parseAgentPathTarget(pathString);
+  if (target?.kind === 'scene') return '在游戏内容中定位';
+  if (target?.kind === 'variable') return '在剧情系统中定位';
+  if (target?.kind === 'character' || target?.kind === 'asset') return '在资源库中定位';
+  if (target?.kind === 'ui') return '在项目设置中定位';
+  return '定位';
 }
 
 function onIframeRef(el) {
@@ -404,6 +414,22 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.agent-review-groups {
+  display: grid;
+  gap: 8px;
+}
+.agent-review-group {
+  display: grid;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid #333;
+}
+.agent-review-group h5 {
+  margin: 0;
+  color: #ddd;
+  font-size: 12px;
+  font-weight: 600;
 }
 .agent-review-list {
   list-style: none;

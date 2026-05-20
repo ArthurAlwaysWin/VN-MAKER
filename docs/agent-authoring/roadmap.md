@@ -73,19 +73,17 @@ Current:
 
 - `handoff-report` writes `agent-handoff.json`.
 - Project Settings shows gates, transaction summary, changed paths, and review items.
+- Project Settings groups handoff changed paths and review items by scene/path category.
 - PageEditor scene tree shows agent-changed scenes, changed pages, incoming reference counts, and review counts.
 - Project Settings can locate scene/page paths in PageEditor.
+- Project Settings can route non-scene paths such as variables, characters, assets, and UI paths to the closest editor surface.
 
 Gaps:
 
 - Review items have no lifecycle in the editor, such as acknowledged/resolved.
-- The editor does not yet group handoff items by scene in a dedicated review panel.
-- Non-scene changed paths, such as characters or variables, do not have locate actions.
 
 Priority:
 
-- P1: group Project Settings handoff review by scene/path with clearer actions.
-- P2: add locate actions for characters, variables, and assets.
 - P3: add local acknowledgement state if the handoff review flow needs it.
 
 ### 5. Agent Documentation And Examples
@@ -125,8 +123,7 @@ Priority:
 
 ## Next Implementation Order
 
-1. Improve Project Settings handoff grouping and non-scene path location.
-2. Normalize external-agent docs into a compact checklist.
+1. Normalize external-agent docs into a compact checklist.
 
 ## Current Branch Closure Gate
 

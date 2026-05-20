@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { parseScenePath } from '../utils/agentHandoff.js';
+import { parseAgentPathTarget, parseScenePath } from '../utils/agentHandoff.js';
 
 export const useProjectStore = defineStore('project', () => {
   const projectPath = ref(null);
@@ -9,10 +9,12 @@ export const useProjectStore = defineStore('project', () => {
   const agentHandoff = ref(null);
   const agentHandoffPath = ref(null);
   const sceneNavigationRequest = ref(null);
+  const agentPathNavigationRequest = ref(null);
   const hasCreatedProject = ref(false);
   const isDirty = ref(false);
   const _saving = ref(false);
   let sceneNavigationRequestCounter = 0;
+  let agentPathNavigationRequestCounter = 0;
 
   const projectName = computed(() => projectData.value?.name || '');
 
@@ -85,6 +87,7 @@ export const useProjectStore = defineStore('project', () => {
     agentHandoff.value = null;
     agentHandoffPath.value = null;
     sceneNavigationRequest.value = null;
+    agentPathNavigationRequest.value = null;
     isDirty.value = false;
     if (window.ipcRenderer) window.ipcRenderer.invoke('close-project');
   }
@@ -109,10 +112,28 @@ export const useProjectStore = defineStore('project', () => {
     return true;
   }
 
+  function requestAgentPathNavigation(pathString) {
+    const target = parseAgentPathTarget(pathString);
+    if (!target) {
+      return false;
+    }
+
+    if (target.kind === 'scene') {
+      return requestSceneNavigation(pathString);
+    }
+
+    agentPathNavigationRequestCounter += 1;
+    agentPathNavigationRequest.value = {
+      nonce: agentPathNavigationRequestCounter,
+      ...target,
+    };
+    return true;
+  }
+
   return {
-    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, sceneNavigationRequest, hasCreatedProject, isDirty,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    loadAgentHandoff, closeProject, markDirty, requestSceneNavigation
+    loadAgentHandoff, closeProject, markDirty, requestSceneNavigation, requestAgentPathNavigation
   };
 });

@@ -141,6 +141,15 @@ watch(() => project.sceneNavigationRequest?.nonce, (nonce) => {
   activeTab.value = 'scenes';
 });
 
+watch(() => project.agentPathNavigationRequest?.nonce, (nonce) => {
+  const request = project.agentPathNavigationRequest;
+  if (!nonce || currentView.value !== 'editing' || !request?.tab) {
+    return;
+  }
+
+  activeTab.value = request.tab;
+});
+
 // --- Keyboard Shortcuts ---
 function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {

@@ -574,6 +574,137 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'example-draft-plan.json');
+      const resultOutPath = path.join(dir, 'apply-plan-result.json');
+      const previewPath = path.join(dir, 'author-check-preview.png');
+      const handoffPath = path.join(dir, 'agent-handoff.json');
+      const exampleDraftPath = path.resolve('docs/agent-authoring/example-draft.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_full_chain',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const draftPlan = await execFileAsync('node', [
+        cliPath,
+        'draft-plan',
+        exampleDraftPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const draftPlanResult = JSON.parse(draftPlan.stdout);
+      expect(draftPlanResult).toMatchObject({
+        outPath: planPath,
+        operationCount: 6,
+      });
+
+      const apply = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--checkpoint',
+        '--result-out',
+        resultOutPath,
+        '--json',
+      ]);
+      const applyResult = JSON.parse(apply.stdout);
+      const resultArtifact = JSON.parse(await readFile(resultOutPath, 'utf8'));
+      expect(applyResult.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'written',
+        wrote: true,
+      });
+      expect(applyResult.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'characters.sakura',
+        'characters.haruki',
+        'systems.variables.sakura_affection',
+        'scenes.start',
+        'scenes.start.pages.0',
+        'scenes.start.pages.1',
+      ]));
+      expect(resultArtifact.changeSummary).toMatchObject({
+        operationCount: 6,
+        validation: { ok: true, errorCount: 0, warningCount: 0 },
+      });
+
+      const check = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--preview-out',
+        previewPath,
+        '--write-preview-plan',
+        '--skip-asset-check',
+        '--json',
+      ]);
+      const checkResult = JSON.parse(check.stdout);
+      const previewPlan = JSON.parse(await readFile(`${previewPath}.json`, 'utf8'));
+      expect(checkResult).toMatchObject({
+        ok: true,
+        gates: {
+          validation: true,
+          layout: true,
+          readiness: true,
+          preview: true,
+        },
+      });
+      expect(previewPlan).toMatchObject({
+        dryRun: true,
+        sceneId: 'start',
+        pageIndex: 0,
+      });
+
+      const handoff = await execFileAsync('node', [
+        cliPath,
+        'handoff-report',
+        '--script',
+        scriptPath,
+        '--transaction',
+        resultOutPath,
+        '--out',
+        handoffPath,
+        '--write-editor-handoff',
+        '--skip-asset-check',
+        '--note',
+        'Review the full external-agent artifact chain.',
+        '--json',
+      ]);
+      const handoffResult = JSON.parse(handoff.stdout);
+      const handoffArtifact = JSON.parse(await readFile(handoffPath, 'utf8'));
+      expect(handoffResult).toMatchObject({
+        kind: 'agent-authoring-handoff',
+        ok: true,
+        transactionSummary: {
+          command: 'apply-plan',
+          status: 'written',
+          wrote: true,
+          operationCount: 6,
+        },
+        notes: ['Review the full external-agent artifact chain.'],
+      });
+      expect(handoffArtifact.transactionSummary.changedPaths).toEqual(expect.arrayContaining([
+        'scenes.start.pages.0',
+        'scenes.start.pages.1',
+      ]));
+      expect((await stat(planPath)).isFile()).toBe(true);
+      expect((await stat(resultOutPath)).isFile()).toBe(true);
+      expect((await stat(`${previewPath}.json`)).isFile()).toBe(true);
+      expect((await stat(handoffPath)).isFile()).toBe(true);
+    });
+  });
+
   it('does not write invalid authoring plans unless explicitly allowed', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

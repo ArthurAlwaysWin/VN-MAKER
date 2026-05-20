@@ -97,6 +97,7 @@ Current:
 
 - Workflow, plan manifest, validation rules, layout rules, skill docs, example draft, example plan, and end-to-end example exist.
 - Example plan and example draft are tested against the CLI.
+- The end-to-end example uses the generated draft plan for dry-run and apply steps.
 
 Gaps:
 
@@ -114,26 +115,24 @@ Priority:
 Current:
 
 - Focused tests cover authoring API, CLI, draft import, draft-plan, plan examples, handoff, editor handoff display, and scene graph helpers.
+- A full-chain CLI artifact test covers `draft-plan -> apply-plan --result-out -> author-check -> handoff-report --write-editor-handoff`.
 - `npm run test:focused` and `npm run build` are the current closure gates for this branch.
 
 Gaps:
 
-- No single test asserts the complete draft-plan -> apply-plan -> author-check -> handoff-report chain with written artifacts.
 - Editor tests are mostly static/source-level for handoff UX rather than mounted component tests.
 
 Priority:
 
-- P1: add one end-to-end CLI artifact test for the full external-agent chain.
 - P2: add component-level handoff UX tests when test harness support is ready.
 
 ## Next Implementation Order
 
-1. Add a tested full-chain CLI artifact example: `draft-plan -> apply-plan --result-out -> author-check -> handoff-report --write-editor-handoff`.
-2. Add `author-check --transaction` so quality checks can focus on changed scenes/pages.
-3. Add a formal structured draft contract doc.
-4. Add plan schema validation or validate-only mode.
-5. Improve Project Settings handoff grouping and non-scene path location.
-6. Normalize external-agent docs into a compact checklist.
+1. Add `author-check --transaction` so quality checks can focus on changed scenes/pages.
+2. Add a formal structured draft contract doc.
+3. Add plan schema validation or validate-only mode.
+4. Improve Project Settings handoff grouping and non-scene path location.
+5. Normalize external-agent docs into a compact checklist.
 
 ## Current Branch Closure Gate
 
@@ -141,5 +140,4 @@ Before considering this branch ready for review:
 
 - `npm run test:focused` passes.
 - `npm run build` passes.
-- The full-chain CLI artifact example is tested.
 - Docs name the external-agent path clearly and do not imply an in-editor AI assistant.

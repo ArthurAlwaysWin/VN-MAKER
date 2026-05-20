@@ -12,7 +12,7 @@ This example shows the intended external-agent flow:
 
 > Add a small opening branch: Sakura meets the player at the school gate, the player can smile back, and that raises Sakura affection before entering her route.
 
-## Plan
+## Draft Plan
 
 An external agent can either write the plan directly or first convert a structured draft. The draft path is useful when the user starts with prose and the agent wants a visible intermediate artifact:
 
@@ -20,16 +20,16 @@ An external agent can either write the plan directly or first convert a structur
 npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --json
 ```
 
-For this walkthrough, use the checked-in hand-authored sample:
+Review the generated plan before applying it:
 
 ```bash
-docs/agent-authoring/example-plan.json
+.tmp/example-draft-plan.json
 ```
 
 ## Dry Run
 
 ```bash
-npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/game/script.json --dry-run --json
+npm run vn:apply-plan -- .tmp/example-draft-plan.json --script public/game/script.json --dry-run --json
 ```
 
 Review:
@@ -42,7 +42,7 @@ Review:
 ## Apply
 
 ```bash
-npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
+npm run vn:apply-plan -- .tmp/example-draft-plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
 The result file is useful because `handoff-report` can attach the transaction summary later.

@@ -7,7 +7,7 @@ npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
-See `docs/agent-authoring/example-plan.json` for a complete small visual novel branch plan. If you start from a structured draft, generate a plan first:
+See `docs/agent-authoring/example-plan.json` for a complete small visual novel branch plan. If you start from a structured draft, follow `docs/agent-authoring/structured-draft-contract.md` and generate a plan first:
 
 ```bash
 npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --json

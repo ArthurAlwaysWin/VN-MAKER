@@ -38,6 +38,8 @@ For prose input, split into:
 
 Use a structured draft JSON before touching `script.json`.
 
+See `docs/agent-authoring/structured-draft-contract.md` for the supported draft fields, defaults, and conversion rules.
+
 ## 4. Import Or Mutate
 
 Use one of:

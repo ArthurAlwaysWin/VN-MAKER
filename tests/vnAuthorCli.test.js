@@ -574,6 +574,27 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('documents the structured draft contract used by the example draft', async () => {
+    const contract = await readFile(path.resolve('docs/agent-authoring/structured-draft-contract.md'), 'utf8');
+
+    expect(contract).toContain('npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json');
+    expect(contract).toContain('docs/agent-authoring/example-draft.json');
+    for (const heading of [
+      '## Top-Level Shape',
+      '## Characters',
+      '## Variables',
+      '## Locations',
+      '## Scenes',
+      '## Beats',
+      '## Dialogues',
+      '## Choices',
+      '## Conversion Rules',
+      '## Agent Checklist',
+    ]) {
+      expect(contract).toContain(heading);
+    }
+  });
+
   it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

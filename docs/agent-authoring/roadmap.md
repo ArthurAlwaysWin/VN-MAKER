@@ -19,16 +19,15 @@ Current:
 - Structured draft import exists through `import-draft`.
 - Structured draft to apply-plan conversion exists through `draft-plan`.
 - Checked-in draft and plan examples are covered by CLI tests.
+- A formal structured draft contract documents supported fields, defaults, and conversion rules.
 
 Gaps:
 
-- Draft schema is documented by examples, not yet a formal schema reference.
 - Prose-to-draft guidance is spread across workflow/skill docs instead of a compact prompt contract.
 - Generated plan metadata does not yet include enough provenance for large multi-scene drafts, such as source beat ids and prose spans.
 
 Priority:
 
-- P1: document the structured draft contract.
 - P2: add richer provenance to `draft-plan` operations.
 
 ### 2. Transaction Execution
@@ -127,10 +126,9 @@ Priority:
 
 ## Next Implementation Order
 
-1. Add a formal structured draft contract doc.
-2. Add plan schema validation or validate-only mode.
-3. Improve Project Settings handoff grouping and non-scene path location.
-4. Normalize external-agent docs into a compact checklist.
+1. Add plan schema validation or validate-only mode.
+2. Improve Project Settings handoff grouping and non-scene path location.
+3. Normalize external-agent docs into a compact checklist.
 
 ## Current Branch Closure Gate
 

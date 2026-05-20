@@ -51,6 +51,7 @@ node tools/vn-author/index.js render-preview --script public/game/script.json --
 ## Draft Import
 
 When converting prose or an outline, first produce a structured draft JSON, then import it.
+Follow `docs/agent-authoring/structured-draft-contract.md` for supported fields, defaults, and conversion rules.
 
 ```bash
 node tools/vn-author/index.js import-draft draft.json --fresh --out public/game/script.json --json

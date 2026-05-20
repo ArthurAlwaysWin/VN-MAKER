@@ -22,6 +22,7 @@ Build editable visual novel drafts for human creators. The human creator remains
 
 See also:
 
+- `docs/agent-authoring/agent-checklist.md`
 - `docs/agent-authoring/layout-rules.md`
 - `docs/agent-authoring/validation-rules.md`
 

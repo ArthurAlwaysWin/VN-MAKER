@@ -1,6 +1,6 @@
 # Agent Authoring Workflow
 
-For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md).
+For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md).
 
 ## 1. Inspect
 

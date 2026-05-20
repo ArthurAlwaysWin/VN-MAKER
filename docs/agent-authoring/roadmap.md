@@ -93,16 +93,14 @@ Current:
 - Workflow, plan manifest, validation rules, layout rules, skill docs, example draft, example plan, and end-to-end example exist.
 - Example plan and example draft are tested against the CLI.
 - The end-to-end example uses the generated draft plan for dry-run and apply steps.
+- A compact external-agent checklist maps Codex, Claude, opencode, and GitHub Copilot to the same command contract.
 
 Gaps:
 
-- Docs do not yet clearly map Codex/Claude/opencode/Copilot workflows to the same command contract.
-- There is no compact "external agent checklist" that agents can paste into their own task context.
 - Some command examples still use `node tools/...` while others use npm scripts.
 
 Priority:
 
-- P1: add an agent checklist doc.
 - P2: normalize command style across docs.
 
 ### 6. Regression Protection
@@ -123,7 +121,7 @@ Priority:
 
 ## Next Implementation Order
 
-1. Normalize external-agent docs into a compact checklist.
+1. Normalize command style across external-agent docs.
 
 ## Current Branch Closure Gate
 

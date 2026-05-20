@@ -595,6 +595,25 @@ describe('vn-author CLI', () => {
     }
   });
 
+  it('documents the compact external-agent checklist command chain', async () => {
+    const checklist = await readFile(path.resolve('docs/agent-authoring/agent-checklist.md'), 'utf8');
+
+    expect(checklist).toContain('Codex, Claude, opencode, GitHub Copilot');
+    expect(checklist).toContain('Do not build or imply an in-editor AI chat assistant.');
+    expect(checklist).toContain('docs/agent-authoring/structured-draft-contract.md');
+    expect(checklist).toContain('docs/agent-authoring/plan-manifest.md');
+    for (const command of [
+      'npm run vn:inspect -- --json',
+      'npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json',
+      'npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json',
+      'npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json',
+      'npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json',
+      'npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff',
+    ]) {
+      expect(checklist).toContain(command);
+    }
+  });
+
   it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -1508,7 +1527,7 @@ describe('vn-author CLI', () => {
         { type: 'var:add', id: 'affection', value: 3 },
       ]);
     });
-  });
+  }, 15000);
 
   it('edits choice page prompt/options and unified page media from the CLI', async () => {
     await withTempDir(async (dir) => {

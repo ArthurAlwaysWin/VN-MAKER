@@ -4,6 +4,7 @@ External agents can batch related authoring edits into a single JSON manifest an
 
 ```bash
 npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json
+npm run vn:apply-plan -- plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
@@ -121,7 +122,9 @@ When writing, use `--checkpoint` for multi-step edits:
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --json
 ```
 
-Use `--result-out` to save the transaction result for `handoff-report --transaction`.
+Use `--validate-only` to execute the plan in memory, run final project validation, and save a machine-readable validation artifact without writing or checkpointing the script. Unlike `--dry-run`, validate-only returns `transaction.status: "validated"` for valid plans and `"invalid"` for plans that would fail project validation.
+
+Use `--result-out` to save the transaction result for `author-check --transaction` and `handoff-report --transaction`.
 
 If validation fails, `apply-plan` returns non-zero and does not write unless `--allow-invalid` is present. Use `--allow-invalid` only for deliberate intermediate states that a follow-up plan will immediately repair.
 

@@ -52,10 +52,11 @@ or convert the structured draft into a transactional plan manifest first:
 
 ```bash
 npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json
+npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --dry-run --json
 ```
 
-Use `draft-plan` when prose-derived work should be inspected as operations before anything is written.
+Use `draft-plan` when prose-derived work should be inspected as operations before anything is written. Use `apply-plan --validate-only` before writing when an external agent needs a saved artifact that proves the plan can be applied and pass validation without mutating the project.
 
 or code:
 
@@ -90,6 +91,7 @@ Then dry-run and apply it:
 
 ```bash
 npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json
+npm run vn:apply-plan -- plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 

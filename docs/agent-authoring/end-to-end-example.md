@@ -29,6 +29,7 @@ Review the generated plan before applying it:
 ## Dry Run
 
 ```bash
+npm run vn:apply-plan -- .tmp/example-draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/example-draft-plan.json --script public/game/script.json --dry-run --json
 ```
 
@@ -38,6 +39,8 @@ Review:
 - `operations[]`
 - `changeSummary.changedPaths`
 - `changeSummary.validation`
+
+`--validate-only` writes no project files or checkpoints. It is useful when the agent wants a saved proof artifact before the real apply step.
 
 ## Apply
 

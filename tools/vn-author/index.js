@@ -1149,6 +1149,7 @@ async function applyPlan(args) {
   const session = createProjectSession({ script });
   const operationResults = [];
   const dryRun = hasFlag(args, '--dry-run');
+  const validateOnly = hasFlag(args, '--validate-only');
   for (const [index, operation] of operations.entries()) {
     const command = normalizePlanCommand(operation.command ?? operation.op);
     try {
@@ -1179,10 +1180,11 @@ async function applyPlan(args) {
         scriptPath,
         outPath: null,
         dryRun,
+        validateOnly,
         planPath,
         transaction: {
           command: 'apply-plan',
-          status: 'failed',
+          status: validateOnly ? 'invalid' : 'failed',
           wrote: false,
           blockedByValidation: false,
           checkpointPath: null,
@@ -1197,7 +1199,8 @@ async function applyPlan(args) {
         changeSummary: {
           command: 'apply-plan',
           dryRun,
-          writeStatus: 'failed',
+          validateOnly,
+          writeStatus: validateOnly ? 'invalid' : 'failed',
           scriptPath,
           outPath: null,
           planPath,
@@ -1231,7 +1234,7 @@ async function applyPlan(args) {
   const blockedByValidation = !validation.ok && !allowInvalid;
 
   let writeResult = null;
-  if (!dryRun && !blockedByValidation) {
+  if (!dryRun && !validateOnly && !blockedByValidation) {
     writeResult = await writeScriptFile(outputPath, nextScript, {
       force: hasFlag(args, '--force') || outputPath === scriptPath,
       backup: hasFlag(args, '--backup'),
@@ -1241,8 +1244,10 @@ async function applyPlan(args) {
 
   const beforeCounts = summarizeScriptShape(script);
   const afterCounts = summarizeScriptShape(nextScript);
-  const status = dryRun
-    ? 'planned'
+  const status = validateOnly
+    ? (validation.ok ? 'validated' : 'invalid')
+    : dryRun
+      ? 'planned'
     : blockedByValidation
       ? 'blocked'
       : 'written';
@@ -1250,9 +1255,10 @@ async function applyPlan(args) {
   const changeSummary = {
     command: 'apply-plan',
     dryRun,
+    validateOnly,
     writeStatus: status,
     scriptPath,
-    outPath: dryRun || blockedByValidation ? null : outputPath,
+    outPath: dryRun || validateOnly || blockedByValidation ? null : outputPath,
     planPath,
     operationCount: operationResults.length,
     changedPaths,
@@ -1274,12 +1280,13 @@ async function applyPlan(args) {
     scriptPath,
     outPath: changeSummary.outPath,
     dryRun,
+    validateOnly,
     planPath,
     transaction: {
       command: 'apply-plan',
       status,
       wrote: status === 'written',
-      blockedByValidation,
+      blockedByValidation: validateOnly ? false : blockedByValidation,
       checkpointPath: writeResult?.checkpointPath ?? null,
       backupPath: writeResult?.backupPath ?? null,
       rollback: writeResult?.checkpointPath
@@ -1299,7 +1306,7 @@ async function applyPlan(args) {
   if (hasFlag(args, '--json')) {
     writeJson(output);
   } else {
-    process.stdout.write(`${dryRun ? 'Prepared' : status === 'written' ? 'Applied' : 'Blocked'} plan: ${planPath}\n`);
+    process.stdout.write(`${validateOnly ? 'Validated' : dryRun ? 'Prepared' : status === 'written' ? 'Applied' : 'Blocked'} plan: ${planPath}\n`);
     process.stdout.write(`Operations: ${operationResults.length}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -1322,7 +1329,7 @@ async function applyPlan(args) {
     }
   }
 
-  return validation.ok || allowInvalid ? 0 : 1;
+  return validation.ok || (!validateOnly && allowInvalid) ? 0 : 1;
 }
 
 function printMutationResult(label, output) {
@@ -3051,7 +3058,7 @@ function printHelp() {
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   draft-plan draft.json [--out plan.json] [--title title] [--json]
-  apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
+  apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   scene-references --scene scene_id|--all [--script path] [--json]

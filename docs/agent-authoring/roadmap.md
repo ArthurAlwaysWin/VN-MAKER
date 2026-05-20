@@ -37,17 +37,16 @@ Current:
 - `apply-plan` supports ordered multi-operation edits, dry-run, checkpoint, result capture, validation-blocked writes, and rollback descriptors.
 - Operation failures return structured `operationFailure` payloads for unsupported commands and missing params.
 - `--result-out` persists both success and operation failure payloads.
+- `apply-plan --validate-only` executes a manifest in memory, runs validation, and can save a non-mutating validation artifact.
 
 Gaps:
 
 - Operation failure payloads do not yet include a machine-readable repair suggestion.
-- There is no standalone plan schema validator command.
 - Supported command docs are partly embedded in help text and examples.
 
 Priority:
 
 - P1: add plan schema/command reference docs.
-- P1: add `validate-plan` or `apply-plan --validate-only`.
 - P2: add repair suggestions for common failures.
 
 ### 3. Quality Gates
@@ -126,9 +125,8 @@ Priority:
 
 ## Next Implementation Order
 
-1. Add plan schema validation or validate-only mode.
-2. Improve Project Settings handoff grouping and non-scene path location.
-3. Normalize external-agent docs into a compact checklist.
+1. Improve Project Settings handoff grouping and non-scene path location.
+2. Normalize external-agent docs into a compact checklist.
 
 ## Current Branch Closure Gate
 

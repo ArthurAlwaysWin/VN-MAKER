@@ -790,6 +790,146 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('validates an apply-plan manifest without writing or checkpointing', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'valid-plan.json');
+      const resultOutPath = path.join(dir, 'validate-result.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_validate_only',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          { command: 'add-scene', params: { id: 'start', name: 'Start' } },
+          {
+            command: 'add-page',
+            params: {
+              scene: 'start',
+              type: 'normal',
+              background: 'backgrounds/start.svg',
+              dialogues: [{ speaker: null, text: 'Validated only.' }],
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--validate-only',
+        '--force',
+        '--checkpoint',
+        '--result-out',
+        resultOutPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const saved = JSON.parse(await readFile(resultOutPath, 'utf8'));
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        dryRun: false,
+        validateOnly: true,
+        outPath: null,
+        transaction: {
+          command: 'apply-plan',
+          status: 'validated',
+          wrote: false,
+          blockedByValidation: false,
+          checkpointPath: null,
+        },
+        changeSummary: {
+          validateOnly: true,
+          writeStatus: 'validated',
+          operationCount: 2,
+          validation: { ok: true, errorCount: 0, warningCount: 0 },
+        },
+      });
+      expect(saved.transaction).toMatchObject(result.transaction);
+      expect(result.changeSummary.changedPaths).toEqual([
+        'scenes.start',
+        'scenes.start.pages.0',
+      ]);
+      expect(script.scenes).toEqual({});
+    });
+  });
+
+  it('reports validation-invalid apply-plan manifests in validate-only mode', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'invalid-validate-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_validate_only_invalid',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          { command: 'add-scene', params: { id: 'start' } },
+          {
+            command: 'add-page',
+            params: {
+              scene: 'start',
+              type: 'normal',
+              dialogues: [{ speaker: 'missing_character', text: 'No write.' }],
+            },
+          },
+        ],
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--validate-only',
+        '--allow-invalid',
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.any(String),
+      });
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'apply-plan',
+          planPath,
+          '--script',
+          scriptPath,
+          '--validate-only',
+          '--allow-invalid',
+          '--json',
+        ]);
+      } catch (error) {
+        const result = JSON.parse(error.stdout);
+        const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+        expect(result).toMatchObject({
+          validateOnly: true,
+          outPath: null,
+          transaction: {
+            status: 'invalid',
+            wrote: false,
+            blockedByValidation: false,
+          },
+          changeSummary: {
+            validateOnly: true,
+            writeStatus: 'invalid',
+            validation: { ok: false, errorCount: 1 },
+          },
+        });
+        expect(script.scenes).toEqual({});
+      }
+    });
+  });
+
   it('returns structured apply-plan operation failures for unsupported commands', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

@@ -519,6 +519,61 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('keeps the documented example draft convertible to an executable plan', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'example-draft-plan.json');
+      const exampleDraftPath = path.resolve('docs/agent-authoring/example-draft.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_example_draft_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const planResult = await execFileAsync('node', [
+        cliPath,
+        'draft-plan',
+        exampleDraftPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const generated = JSON.parse(planResult.stdout);
+
+      expect(generated.operationCount).toBe(6);
+      expect(generated.warningCount).toBe(0);
+      expect(generated.plan.source).toMatchObject({
+        kind: 'novel-draft',
+        projectId: 'gm_example_agent_draft',
+      });
+
+      const dryRun = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--dry-run',
+        '--json',
+      ]);
+      const result = JSON.parse(dryRun.stdout);
+
+      expect(result.transaction).toMatchObject({
+        status: 'planned',
+        wrote: false,
+      });
+      expect(result.validation.ok).toBe(true);
+      expect(result.changeSummary).toMatchObject({
+        operationCount: 6,
+        counts: {
+          before: { characters: 0, scenes: 0, pages: 0, variables: 0 },
+          after: { characters: 2, scenes: 1, pages: 2, variables: 1 },
+          delta: { characters: 2, scenes: 1, pages: 2, variables: 1 },
+        },
+      });
+    });
+  });
+
   it('does not write invalid authoring plans unless explicitly allowed', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

@@ -118,6 +118,29 @@ function normalizeChoiceOptions(options = []) {
     }));
 }
 
+function createProvenance(kind, details = {}, raw = {}) {
+  const provenance = {
+    kind,
+    ...details,
+  };
+
+  for (const key of ['sourceId', 'sourceBeatId', 'sourceRef', 'sourceSpan', 'proseSpan']) {
+    if (raw[key] != null) {
+      provenance[key] = cloneJsonValue(raw[key]);
+    }
+  }
+
+  return provenance;
+}
+
+function stripProvenanceFields(value = {}) {
+  const nextValue = cloneJsonValue(value);
+  for (const key of ['sourceId', 'sourceBeatId', 'sourceRef', 'sourceSpan', 'proseSpan']) {
+    delete nextValue[key];
+  }
+  return nextValue;
+}
+
 export function createNovelDraftPlan(draft = {}, options = {}) {
   if (!isPlainObject(draft)) {
     throw new Error('Novel draft must be a plain object');
@@ -138,8 +161,12 @@ export function createNovelDraftPlan(draft = {}, options = {}) {
     operations.push({
       id: `add-variable-${id}`,
       command: 'add-variable',
+      provenance: createProvenance('variable', {
+        variableId: id,
+        variableIndex: operations.length,
+      }, rawVariable),
       params: {
-        ...rawVariable,
+        ...stripProvenanceFields(rawVariable),
         id,
       },
     });
@@ -155,8 +182,12 @@ export function createNovelDraftPlan(draft = {}, options = {}) {
     operations.push({
       id: `add-character-${id}`,
       command: 'add-character',
+      provenance: createProvenance('character', {
+        characterId: id,
+        characterIndex: characterCount - 1,
+      }, rawCharacter),
       params: {
-        ...rawCharacter,
+        ...stripProvenanceFields(rawCharacter),
         id,
         name: rawCharacter.name ?? id,
         expressions: normalizeExpressionHints({ ...rawCharacter, id }),
@@ -174,6 +205,10 @@ export function createNovelDraftPlan(draft = {}, options = {}) {
     operations.push({
       id: `add-scene-${sceneId}`,
       command: 'add-scene',
+      provenance: createProvenance('scene', {
+        sceneId,
+        sceneIndex,
+      }, rawScene),
       params: {
         id: sceneId,
         name: rawScene.name ?? sceneId,
@@ -204,6 +239,12 @@ export function createNovelDraftPlan(draft = {}, options = {}) {
       operations.push({
         id: `add-page-${sceneId}-${pageId}`,
         command: 'add-page',
+        provenance: createProvenance('beat', {
+          sceneId,
+          sceneIndex,
+          beatId: pageId,
+          beatIndex,
+        }, beat),
         params: basePageParams,
       });
 
@@ -212,6 +253,12 @@ export function createNovelDraftPlan(draft = {}, options = {}) {
         operations.push({
           id: `add-choice-${sceneId}-${pageId}`,
           command: 'add-page',
+          provenance: createProvenance('choice', {
+            sceneId,
+            sceneIndex,
+            beatId: pageId,
+            beatIndex,
+          }, choice),
           params: {
             ...basePageParams,
             id: `${pageId}_choice`,

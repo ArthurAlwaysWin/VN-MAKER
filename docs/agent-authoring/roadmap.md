@@ -20,15 +20,13 @@ Current:
 - Structured draft to apply-plan conversion exists through `draft-plan`.
 - Checked-in draft and plan examples are covered by CLI tests.
 - A formal structured draft contract documents supported fields, defaults, and conversion rules.
+- Generated plan operations include provenance metadata for source characters, variables, scenes, beats, choices, source ids, and prose spans when present.
 
 Gaps:
 
 - Prose-to-draft guidance is spread across workflow/skill docs instead of a compact prompt contract.
-- Generated plan metadata does not yet include enough provenance for large multi-scene drafts, such as source beat ids and prose spans.
 
 Priority:
-
-- P2: add richer provenance to `draft-plan` operations.
 
 ### 2. Transaction Execution
 

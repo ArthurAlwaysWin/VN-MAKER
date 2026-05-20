@@ -42,6 +42,8 @@ Optional but recommended:
 
 Unknown fields are preserved only when the lower-level operation accepts them. Do not rely on arbitrary draft metadata surviving into the final project.
 
+`draft-plan` copies supported source metadata into each generated operation's `provenance` object. Use this when converting a large prose outline and you need to trace a failed operation or handoff item back to the original beat. Supported source metadata fields are `sourceId`, `sourceBeatId`, `sourceRef`, `sourceSpan`, and `proseSpan`.
+
 ## IDs
 
 Every user-addressable object should have a stable lowercase id using `a-z`, `0-9`, `_`, or `-`.
@@ -149,6 +151,8 @@ Fields:
 ```json
 {
   "id": "p1",
+  "sourceBeatId": "outline-beat-1",
+  "proseSpan": { "start": 120, "end": 260 },
   "location": "school_gate",
   "background": "backgrounds/school_gate.svg",
   "characters": [
@@ -173,6 +177,7 @@ Fields:
 Fields:
 
 - `id`: page id. Defaults to `p<beat_number>`.
+- `sourceBeatId`, `sourceRef`, `sourceSpan`, `proseSpan`: optional provenance metadata copied into generated plan operations.
 - `location` or `locationId`: looks up a `locations[]` entry.
 - `background`: direct page background path. This wins over location background.
 - `backgroundHint`: fallback background path if no direct background or location background resolves.
@@ -253,7 +258,21 @@ The generated plan includes:
     "kind": "novel-draft",
     "projectId": "gm_example_agent_draft"
   },
-  "operations": [],
+  "operations": [
+    {
+      "id": "add-page-start-p1",
+      "command": "add-page",
+      "provenance": {
+        "kind": "beat",
+        "sceneId": "start",
+        "sceneIndex": 0,
+        "beatId": "p1",
+        "beatIndex": 0,
+        "sourceBeatId": "outline-beat-1",
+        "proseSpan": { "start": 120, "end": 260 }
+      }
+    }
+  ],
   "warnings": []
 }
 ```

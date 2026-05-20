@@ -146,6 +146,8 @@ describe('novel draft import', () => {
           beats: [
             {
               id: 'p1',
+              sourceBeatId: 'outline-beat-1',
+              proseSpan: { start: 12, end: 85 },
               location: 'gate',
               characters: [{ id: 'sakura', expression: 'smile' }],
               dialogues: [{ speaker: 'sakura', text: 'You came.', expression: 'smile' }],
@@ -173,6 +175,15 @@ describe('novel draft import', () => {
         expect.objectContaining({
           command: 'add-page',
           id: 'add-page-start-p1',
+          provenance: {
+            kind: 'beat',
+            sceneId: 'start',
+            sceneIndex: 0,
+            beatId: 'p1',
+            beatIndex: 0,
+            sourceBeatId: 'outline-beat-1',
+            proseSpan: { start: 12, end: 85 },
+          },
           params: expect.objectContaining({
             scene: 'start',
             type: 'normal',
@@ -182,6 +193,13 @@ describe('novel draft import', () => {
         expect.objectContaining({
           command: 'add-page',
           id: 'add-choice-start-p1',
+          provenance: {
+            kind: 'choice',
+            sceneId: 'start',
+            sceneIndex: 0,
+            beatId: 'p1',
+            beatIndex: 0,
+          },
           params: expect.objectContaining({
             scene: 'start',
             type: 'choice',

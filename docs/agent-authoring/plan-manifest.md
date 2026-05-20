@@ -37,6 +37,8 @@ npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/exam
 
 `id` is optional but recommended. It is echoed in JSON output so agents can connect operation results back to their own plan steps.
 
+`provenance` is optional and ignored by the executor. `draft-plan` uses it to record where generated operations came from, such as source scene ids, beat ids, indexes, or prose spans.
+
 `params` and `args` are accepted as aliases. Prefer `params` in new manifests.
 
 ## Supported Commands

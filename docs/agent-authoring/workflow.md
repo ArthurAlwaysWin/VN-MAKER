@@ -1,5 +1,7 @@
 # Agent Authoring Workflow
 
+For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md).
+
 ## 1. Inspect
 
 ```bash

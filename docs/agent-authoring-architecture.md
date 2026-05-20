@@ -66,6 +66,8 @@ The current external-agent surface includes:
 - `author-check` for aggregate validation, layout lint, readiness, and preview dry-run planning.
 - `handoff-report` for structured review artifacts with optional transaction summaries, consumed by humans and surfaced in Project Settings when saved as project-root `agent-handoff.json`.
 
+The active implementation roadmap and gap audit lives in `docs/agent-authoring/roadmap.md`.
+
 ## Existing Foundations
 
 Keep and extend these modules:

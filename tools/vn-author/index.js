@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
+import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
 import { createExportReadiness } from '../../src/authoring/exportReadiness.js';
 import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
@@ -1371,6 +1372,46 @@ async function restoreCheckpoint(args) {
   }
 
   return validation.ok ? 0 : 1;
+}
+
+async function draftPlan(args) {
+  const draftPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!draftPathArg) {
+    throw new Error('draft-plan requires a draft JSON path');
+  }
+
+  const draftPath = path.resolve(repoRoot, draftPathArg);
+  const draft = JSON.parse(await readFile(draftPath, 'utf8'));
+  const plan = createNovelDraftPlan(draft, {
+    title: getArgValue(args, '--title', undefined),
+  });
+  const outPathArg = getArgValue(args, '--out', null);
+  const outPath = outPathArg ? path.resolve(repoRoot, outPathArg) : null;
+  if (outPath) {
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  }
+
+  const output = {
+    draftPath,
+    outPath,
+    operationCount: plan.operations.length,
+    warningCount: plan.warnings.length,
+    plan,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Draft plan: ${draftPath}\n`);
+    process.stdout.write(`Operations: ${output.operationCount}\n`);
+    process.stdout.write(`Warnings: ${output.warningCount}\n`);
+    if (outPath) {
+      process.stdout.write(`Wrote plan: ${outPath}\n`);
+    }
+  }
+
+  return 0;
 }
 
 async function exportReport(args) {
@@ -2839,6 +2880,7 @@ function printHelp() {
   handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
+  draft-plan draft.json [--out plan.json] [--title title] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -2896,6 +2938,11 @@ async function main() {
 
     if (command === 'import-draft') {
       process.exitCode = await importDraft(args);
+      return;
+    }
+
+    if (command === 'draft-plan') {
+      process.exitCode = await draftPlan(args);
       return;
     }
 

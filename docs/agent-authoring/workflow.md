@@ -44,6 +44,15 @@ Use one of:
 node tools/vn-author/index.js import-draft draft.json --fresh --out public/game/script.json --json
 ```
 
+or convert the structured draft into a transactional plan manifest first:
+
+```bash
+npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json
+npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --dry-run --json
+```
+
+Use `draft-plan` when prose-derived work should be inspected as operations before anything is written.
+
 or code:
 
 ```js

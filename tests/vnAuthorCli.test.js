@@ -138,6 +138,78 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('converts a structured draft into an apply-plan manifest from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const draftPath = path.join(dir, 'draft.json');
+      const planPath = path.join(dir, 'draft-plan.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(draftPath, JSON.stringify({
+        projectId: 'gm_cli_draft_plan',
+        title: 'Draft Plan',
+        characters: [{ id: 'sakura', name: 'Sakura' }],
+        scenes: [
+          {
+            id: 'start',
+            beats: [
+              {
+                background: 'backgrounds/school.svg',
+                characters: ['sakura'],
+                dialogues: [{ speaker: 'sakura', text: 'Welcome.' }],
+              },
+            ],
+          },
+        ],
+      }), 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_draft_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'draft-plan',
+        draftPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        outPath: planPath,
+        operationCount: 3,
+      });
+      expect(plan.operations.map((operation) => operation.command)).toEqual([
+        'add-character',
+        'add-scene',
+        'add-page',
+      ]);
+
+      const dryRun = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--dry-run',
+        '--json',
+      ]);
+      const dryRunResult = JSON.parse(dryRun.stdout);
+      expect(dryRunResult.transaction).toMatchObject({
+        status: 'planned',
+        wrote: false,
+      });
+      expect(dryRunResult.validation.ok).toBe(true);
+      expect(dryRunResult.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'characters.sakura',
+        'scenes.start',
+        'scenes.start.pages.0',
+      ]));
+    });
+  });
+
   it('adds a scene incrementally when explicitly forced to write', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

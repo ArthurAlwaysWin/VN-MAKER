@@ -14,7 +14,13 @@ This example shows the intended external-agent flow:
 
 ## Plan
 
-Use the checked-in sample:
+An external agent can either write the plan directly or first convert a structured draft. The draft path is useful when the user starts with prose and the agent wants a visible intermediate artifact:
+
+```bash
+npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --json
+```
+
+For this walkthrough, use the checked-in hand-authored sample:
 
 ```bash
 docs/agent-authoring/example-plan.json

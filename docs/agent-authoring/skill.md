@@ -56,6 +56,13 @@ When converting prose or an outline, first produce a structured draft JSON, then
 node tools/vn-author/index.js import-draft draft.json --fresh --out public/game/script.json --json
 ```
 
+For reviewable prose-derived edits, convert that structured draft into an apply-plan manifest first:
+
+```bash
+node tools/vn-author/index.js draft-plan draft.json --out .tmp/draft-plan.json --json
+node tools/vn-author/index.js apply-plan .tmp/draft-plan.json --script public/game/script.json --dry-run --json
+```
+
 Use `--fresh` for a new generated project. Omit `--fresh` when importing into an existing script and preserving current content is intended.
 
 `--out` refuses to overwrite existing files unless `--force` is present. Use `--checkpoint` before larger edits and `--backup` with `--force` when overwriting important scripts:

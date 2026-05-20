@@ -620,7 +620,10 @@ describe('vn-author CLI', () => {
 
     const docPaths = [
       'docs/agent-authoring/agent-checklist.md',
+      'docs/agent-authoring/command-reference.md',
       'docs/agent-authoring/layout-rules.md',
+      'docs/agent-authoring/mini-workflows.md',
+      'docs/agent-authoring/plan-manifest.md',
       'docs/agent-authoring/project-contract.md',
       'docs/agent-authoring/skill.md',
       'docs/agent-authoring/validation-rules.md',

@@ -89,7 +89,7 @@ npm run vn -- apply-plan plan.json --script public/game/script.json --dry-run --
 npm run vn -- apply-plan plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
-See `docs/agent-authoring/plan-manifest.md` for the manifest shape. If validation fails, `apply-plan` does not write unless `--allow-invalid` is present. When `--checkpoint` is used, JSON output includes a rollback descriptor for `restore-checkpoint`.
+See `docs/agent-authoring/plan-manifest.md` for the manifest shape, `docs/agent-authoring/command-reference.md` for operation params, and `docs/agent-authoring/mini-workflows.md` for focused task examples. If validation fails, `apply-plan` does not write unless `--allow-invalid` is present. When `--checkpoint` is used, JSON output includes a rollback descriptor for `restore-checkpoint`.
 
 See `docs/agent-authoring/end-to-end-example.md` for a complete prose-to-plan-to-handoff example.
 

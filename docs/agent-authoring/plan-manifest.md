@@ -1,6 +1,6 @@
 # Agent Plan Manifest
 
-External agents can batch related authoring edits into a single JSON manifest and apply it with `vn-author apply-plan`.
+External agents can batch related authoring edits into a single JSON manifest and apply it with `vn-author apply-plan`. For a command-by-command parameter reference, see [command-reference.md](./command-reference.md).
 
 ```bash
 npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json

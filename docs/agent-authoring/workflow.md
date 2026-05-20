@@ -1,6 +1,6 @@
 # Agent Authoring Workflow
 
-For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md).
+For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md). For focused edits, use [mini-workflows.md](./mini-workflows.md). For plan command parameters, use [command-reference.md](./command-reference.md).
 
 ## 1. Inspect
 
@@ -97,7 +97,7 @@ npm run vn:apply-plan -- plan.json --script public/game/script.json --force --ch
 
 `apply-plan` reads the script once, applies operations in order, validates the final result, and writes once. If validation has errors it refuses to write unless `--allow-invalid` is present. JSON output includes each operation result plus one aggregate `transaction` and `changeSummary`. If an operation itself fails, JSON output includes `operationFailure` with the failed index, id, command, diagnostic code, and supported commands when available; `--result-out` saves that failure payload too.
 
-See [plan-manifest.md](./plan-manifest.md) for the full manifest shape and supported commands.
+See [plan-manifest.md](./plan-manifest.md) for the full manifest shape and [command-reference.md](./command-reference.md) for supported command parameters.
 See [end-to-end-example.md](./end-to-end-example.md) for a complete prose-to-plan-to-handoff walkthrough.
 
 When `--checkpoint` is used, the transaction includes a rollback descriptor. To restore it:

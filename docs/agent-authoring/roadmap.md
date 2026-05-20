@@ -39,14 +39,11 @@ Current:
 - Common operation failures include machine-readable `suggestedAction.repairHint` payloads so external agents can patch a plan and retry.
 - `--result-out` persists both success and operation failure payloads.
 - `apply-plan --validate-only` executes a manifest in memory, runs validation, and can save a non-mutating validation artifact.
+- A dedicated command reference documents supported `apply-plan` operations, required params, aliases, and repair hints.
 
 Gaps:
 
-- Supported command docs are partly embedded in help text and examples.
-
 Priority:
-
-- P1: add plan schema/command reference docs.
 
 ### 3. Quality Gates
 
@@ -71,17 +68,16 @@ Current:
 - `handoff-report` writes `agent-handoff.json`.
 - Project Settings shows gates, transaction summary, changed paths, and review items.
 - Project Settings groups handoff changed paths and review items by scene/path category.
+- Project Settings can track local review item lifecycle state: open, acknowledged, and resolved.
 - PageEditor scene tree shows agent-changed scenes, changed pages, incoming reference counts, and review counts.
 - Project Settings can locate scene/page paths in PageEditor.
 - Project Settings can route non-scene paths such as variables, characters, assets, and UI paths to the closest editor surface.
 
 Gaps:
 
-- Review items have no lifecycle in the editor, such as acknowledged/resolved.
+- Review item lifecycle state is local to the editor and is not written back into the handoff artifact.
 
 Priority:
-
-- P3: add local acknowledgement state if the handoff review flow needs it.
 
 ### 5. Agent Documentation And Examples
 
@@ -92,6 +88,8 @@ Current:
 - The end-to-end example uses the generated draft plan for dry-run and apply steps.
 - A compact external-agent checklist maps Codex, Claude, opencode, and GitHub Copilot to the same command contract.
 - External-agent docs use the shared `npm run vn -- <command>` style for generic CLI commands.
+- README links to the external-agent authoring workflow.
+- Focused mini-workflows cover adding scenes, revising dialogue, staging characters, setting media, adding branches, and preparing handoff.
 
 Gaps:
 

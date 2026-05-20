@@ -17,6 +17,7 @@
 
 - **[Phase 3A 设计规格](docs/superpowers/specs/2025-06-25-phase-3a-project-system-design.md)** — Phase 3A 完整设计文档
 - **[脚本格式参考](docs/script-format.md)** — script.json 技术规格
+- **[外部 Agent 创作工作流](docs/agent-authoring/workflow.md)** — 供 Codex、Claude、opencode、GitHub Copilot 等外部 agent 通过 CLI/API 编辑同一个项目；不是内置 AI 助手
 
 ## 快速开始
 

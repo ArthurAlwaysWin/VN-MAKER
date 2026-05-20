@@ -1,6 +1,8 @@
 # Agent Authoring Architecture
 
 > Purpose: keep Galgame Maker's no-code creator experience intact while adding a stable, high-ceiling authoring interface for AI agents such as Codex, Claude Code, opencode, and GitHub Copilot.
+>
+> Implementation note: this is the original design document. The implementation consolidated several planned modules into `src/authoring/projectSession.js` and `tools/vn-author/index.js`; see `docs/agent-authoring/roadmap.md` for current status.
 
 ## Product Intent
 

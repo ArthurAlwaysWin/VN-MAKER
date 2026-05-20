@@ -25,7 +25,7 @@
             @blur="confirmRename"
             @click.stop />
           <span v-else class="scene-name">{{ scene.name }}</span>
-          <span v-if="hasAgentSceneChange(sceneId)" class="agent-badge" title="外部 Agent 修改了这个场景">AI</span>
+          <span v-if="hasAgentSceneChange(sceneId)" class="agent-badge" title="外部 Agent 修改了这个场景">Agent</span>
           <span
             v-if="agentIncomingReferenceCount(sceneId)"
             class="agent-badge reference"

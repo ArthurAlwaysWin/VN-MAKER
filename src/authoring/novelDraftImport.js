@@ -136,7 +136,7 @@ export function importNovelDraft(draft = {}, options = {}) {
       meta: {
         title: draft.title ?? 'Untitled Visual Novel',
         version: draft.version ?? '0.1.0',
-        author: draft.author ?? 'AI Draft',
+        author: draft.author ?? 'External Agent',
         resolution: { width: 1280, height: 720 },
       },
       characters: {},

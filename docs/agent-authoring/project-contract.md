@@ -11,7 +11,7 @@ Agents author the same canonical `script.json` used by the editor and runtime. P
   "meta": {
     "title": "Example",
     "version": "0.1.0",
-    "author": "AI Draft",
+    "author": "External Agent",
     "resolution": { "width": 1280, "height": 720 }
   },
   "characters": {},

@@ -2,6 +2,8 @@
 
 Use this skill when an AI agent needs to create or edit a Galgame Maker visual novel project.
 
+This skill doc overlaps with `workflow.md` by design. It is intended for injection into external agent prompts where the full workflow reference may not be available.
+
 ## Mission
 
 Build editable visual novel drafts for human creators. The human creator remains the director. The agent should produce a valid project that opens in the no-code editor and can be revised visually.
@@ -237,4 +239,4 @@ Common warnings:
 - Preview screenshot automation requires optional Playwright support; use `render-preview --dry-run --write-plan` to verify the render payload without a browser.
 - Layout lint is heuristic-only; runtime preview remains the visual source of truth.
 - Advanced agent-only effects should not be invented until a shared contract exists.
-- Importing prose directly is a model task; this repo currently imports structured draft JSON.
+- Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.

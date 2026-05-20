@@ -614,6 +614,24 @@ describe('vn-author CLI', () => {
     }
   });
 
+  it('keeps external-agent docs on the npm vn command style', async () => {
+    const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8'));
+    expect(packageJson.scripts.vn).toBe('node tools/vn-author/index.js');
+
+    const docPaths = [
+      'docs/agent-authoring/agent-checklist.md',
+      'docs/agent-authoring/layout-rules.md',
+      'docs/agent-authoring/project-contract.md',
+      'docs/agent-authoring/skill.md',
+      'docs/agent-authoring/validation-rules.md',
+      'docs/agent-authoring/workflow.md',
+    ];
+    for (const docPath of docPaths) {
+      const doc = await readFile(path.resolve(docPath), 'utf8');
+      expect(doc).not.toContain('node tools/vn-author/index.js');
+    }
+  });
+
   it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

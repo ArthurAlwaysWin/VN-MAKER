@@ -3,15 +3,15 @@
 Every agent workflow should finish with validation:
 
 ```bash
-node tools/vn-author/index.js validate --script public/game/script.json --json
-node tools/vn-author/index.js lint-layout --script public/game/script.json --json
-node tools/vn-author/index.js export-readiness --script public/game/script.json --json
+npm run vn -- validate --script public/game/script.json --json
+npm run vn -- lint-layout --script public/game/script.json --json
+npm run vn -- export-readiness --script public/game/script.json --json
 ```
 
 Use asset validation before export or handoff:
 
 ```bash
-node tools/vn-author/index.js validate --script public/game/script.json --check-assets --json
+npm run vn -- validate --script public/game/script.json --check-assets --json
 ```
 
 ## Validation Result

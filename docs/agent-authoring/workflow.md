@@ -45,7 +45,7 @@ See `docs/agent-authoring/structured-draft-contract.md` for the supported draft 
 Use one of:
 
 ```bash
-node tools/vn-author/index.js import-draft draft.json --fresh --out public/game/script.json --json
+npm run vn -- import-draft draft.json --fresh --out public/game/script.json --json
 ```
 
 or convert the structured draft into a transactional plan manifest first:
@@ -69,7 +69,7 @@ Avoid direct JSON edits unless the API cannot express the operation yet.
 When overwriting an existing script, use explicit intent:
 
 ```bash
-node tools/vn-author/index.js import-draft draft.json --fresh --out public/game/script.json --force --checkpoint --backup --json
+npm run vn -- import-draft draft.json --fresh --out public/game/script.json --force --checkpoint --backup --json
 ```
 
 Use `--checkpoint` before larger edits. It writes a timestamped copy under `.checkpoints/` before the script is changed. `--backup` still writes the latest `.bak` copy for quick manual recovery. JSON output includes `transaction` and `changeSummary` blocks so external agents can report the exact target, changed paths, count deltas, validation status, and checkpoint path.
@@ -109,28 +109,28 @@ npm run vn:restore-checkpoint -- public/game/.checkpoints/script.2026-05-19T10-0
 For small edits:
 
 ```bash
-node tools/vn-author/index.js add-scene --id chapter_1 --name "Chapter 1" --script public/game/script.json --force --checkpoint --json
-node tools/vn-author/index.js rename-scene --scene chapter_1 --new-id chapter_01 --name "Chapter 01" --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js delete-scene --scene unused_branch --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js add-character --id sakura --name "Sakura" --expression normal=characters/sakura_normal.svg --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js add-variable --id affection --type number --initial 0 --label "Affection" --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js add-page --scene chapter_1 --type choice --prompt "Answer?" --options '[{"text":"Continue","target":"chapter_2"}]' --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js move-page --scene chapter_1 --from 2 --to 0 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js remove-page --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Hello." --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-dialogue --scene chapter_1 --page 0 --dialogue-index 0 --text "Hello again." --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js move-dialogue --scene chapter_1 --page 0 --from 2 --to 1 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js remove-dialogue --scene chapter_1 --page 0 --dialogue-index 3 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js add-choice-option --scene chapter_1 --page 1 --text "Ask about the letter" --target chapter_2 --effects '[{"type":"var:add","id":"affection","value":1}]' --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-choice-option --scene chapter_1 --page 1 --option 0 --text "Ask about the envelope" --target chapter_2 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js move-choice-option --scene chapter_1 --page 1 --from 2 --to 0 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js remove-choice-option --scene chapter_1 --page 1 --option 3 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-condition-page --scene chapter_1 --page 2 --condition-mode any --conditions '[{"variableId":"affection","operator":">=","value":3}]' --true-target chapter_2 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-scene-next --scene chapter_1 --next chapter_2 --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-page-characters --scene chapter_1 --page 0 --preset duo-left-right --character sakura:smile --character haruki:normal --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
-node tools/vn-author/index.js add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
+npm run vn -- add-scene --id chapter_1 --name "Chapter 1" --script public/game/script.json --force --checkpoint --json
+npm run vn -- rename-scene --scene chapter_1 --new-id chapter_01 --name "Chapter 01" --script public/game/script.json --force --backup --json
+npm run vn -- delete-scene --scene unused_branch --script public/game/script.json --force --backup --json
+npm run vn -- add-character --id sakura --name "Sakura" --expression normal=characters/sakura_normal.svg --script public/game/script.json --force --backup --json
+npm run vn -- add-variable --id affection --type number --initial 0 --label "Affection" --script public/game/script.json --force --backup --json
+npm run vn -- add-page --scene chapter_1 --type choice --prompt "Answer?" --options '[{"text":"Continue","target":"chapter_2"}]' --script public/game/script.json --force --backup --json
+npm run vn -- move-page --scene chapter_1 --from 2 --to 0 --script public/game/script.json --force --backup --json
+npm run vn -- remove-page --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
+npm run vn -- add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Hello." --script public/game/script.json --force --backup --json
+npm run vn -- set-dialogue --scene chapter_1 --page 0 --dialogue-index 0 --text "Hello again." --script public/game/script.json --force --backup --json
+npm run vn -- move-dialogue --scene chapter_1 --page 0 --from 2 --to 1 --script public/game/script.json --force --backup --json
+npm run vn -- remove-dialogue --scene chapter_1 --page 0 --dialogue-index 3 --script public/game/script.json --force --backup --json
+npm run vn -- add-choice-option --scene chapter_1 --page 1 --text "Ask about the letter" --target chapter_2 --effects '[{"type":"var:add","id":"affection","value":1}]' --script public/game/script.json --force --backup --json
+npm run vn -- set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json
+npm run vn -- set-choice-option --scene chapter_1 --page 1 --option 0 --text "Ask about the envelope" --target chapter_2 --script public/game/script.json --force --backup --json
+npm run vn -- move-choice-option --scene chapter_1 --page 1 --from 2 --to 0 --script public/game/script.json --force --backup --json
+npm run vn -- remove-choice-option --scene chapter_1 --page 1 --option 3 --script public/game/script.json --force --backup --json
+npm run vn -- set-condition-page --scene chapter_1 --page 2 --condition-mode any --conditions '[{"variableId":"affection","operator":">=","value":3}]' --true-target chapter_2 --script public/game/script.json --force --backup --json
+npm run vn -- set-scene-next --scene chapter_1 --next chapter_2 --script public/game/script.json --force --backup --json
+npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset duo-left-right --character sakura:smile --character haruki:normal --script public/game/script.json --force --backup --json
+npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
+npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
 ```
 
 `rename-scene` updates scene references in `next`, choice option targets, and condition targets. `delete-scene` refuses to delete scenes referenced from other scenes unless `--force-references` is present.
@@ -140,8 +140,8 @@ Before deleting or merging branch scenes, inspect references:
 ```bash
 npm run vn:scene-references -- --all --script public/game/script.json --json
 npm run vn:scene-references -- --scene chapter_1_old_route --script public/game/script.json --json
-node tools/vn-author/index.js retarget-scene --from chapter_1_old_route --to chapter_1_new_route --script public/game/script.json --force --checkpoint --json
-node tools/vn-author/index.js clear-scene-references --scene unused_branch --script public/game/script.json --force --checkpoint --json
+npm run vn -- retarget-scene --from chapter_1_old_route --to chapter_1_new_route --script public/game/script.json --force --checkpoint --json
+npm run vn -- clear-scene-references --scene unused_branch --script public/game/script.json --force --checkpoint --json
 ```
 
 `scene-references` reports exact `pathString` values for scene `next`, choice targets, and condition targets, plus suggested repair commands. Use `retarget-scene` when preserving branch flow; use `clear-scene-references` only when those jumps should become terminal or intentionally unset.

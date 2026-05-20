@@ -94,14 +94,11 @@ Current:
 - Example plan and example draft are tested against the CLI.
 - The end-to-end example uses the generated draft plan for dry-run and apply steps.
 - A compact external-agent checklist maps Codex, Claude, opencode, and GitHub Copilot to the same command contract.
+- External-agent docs use the shared `npm run vn -- <command>` style for generic CLI commands.
 
 Gaps:
 
-- Some command examples still use `node tools/...` while others use npm scripts.
-
 Priority:
-
-- P2: normalize command style across docs.
 
 ### 6. Regression Protection
 
@@ -121,7 +118,8 @@ Priority:
 
 ## Next Implementation Order
 
-1. Normalize command style across external-agent docs.
+1. Add repair suggestions for common apply-plan operation failures.
+2. Add all-changed-scenes preview planning.
 
 ## Current Branch Closure Gate
 

@@ -169,9 +169,9 @@ Agents may author runtime-supported cinematic fields before every editor surface
 Prefer the authoring API or CLI:
 
 ```bash
-node tools/vn-author/index.js set-page-camera --scene start --page 0 --effect shake --direction both --intensity high --duration-ms 450 --force --json
-node tools/vn-author/index.js set-page-transition --scene start --page 0 --type dissolve --duration 500 --force --json
-node tools/vn-author/index.js set-character-animation --scene start --page 0 --character sakura --animation breathe --force --json
+npm run vn -- set-page-camera --scene start --page 0 --effect shake --direction both --intensity high --duration-ms 450 --force --json
+npm run vn -- set-page-transition --scene start --page 0 --type dissolve --duration 500 --force --json
+npm run vn -- set-character-animation --scene start --page 0 --character sakura --animation breathe --force --json
 ```
 
 Unknown camera effects are ignored at runtime, unknown transitions fall back to `fade`, and unknown character animations are preserved but not played. `validate --json` reports these as warnings so agents can keep future-compatible data without breaking export.

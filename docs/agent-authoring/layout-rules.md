@@ -27,13 +27,13 @@ Preset output is canonical page character data:
 Run layout lint after meaningful page edits:
 
 ```bash
-node tools/vn-author/index.js lint-layout --script public/game/script.json --json
+npm run vn -- lint-layout --script public/game/script.json --json
 ```
 
 `export-report` also includes a `layout` section:
 
 ```bash
-node tools/vn-author/index.js export-report --script public/game/script.json --json
+npm run vn -- export-report --script public/game/script.json --json
 ```
 
 ## Current Warning Codes
@@ -65,7 +65,7 @@ Treat placeholders like `<asset-path>` and `<character-id>` as inputs to fill fr
 Render a specific scene/page when Playwright is available:
 
 ```bash
-node tools/vn-author/index.js render-preview --script public/game/script.json --scene start --page 0 --out .tmp/preview.png --json
+npm run vn -- render-preview --script public/game/script.json --scene start --page 0 --out .tmp/preview.png --json
 ```
 
 The command uses the runtime iframe preview protocol:

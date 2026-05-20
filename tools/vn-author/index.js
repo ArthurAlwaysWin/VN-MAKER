@@ -12,7 +12,10 @@ import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
 import { createCharacterBlocking, LAYOUT_PRESETS } from '../../src/authoring/layoutPresets.js';
 import { createProjectSession } from '../../src/authoring/projectSession.js';
 import { createProjectReport } from '../../src/authoring/projectReport.js';
-import { collectSceneReferenceDiagnostics } from '../../src/authoring/sceneReferenceDiagnostics.js';
+import {
+  collectSceneReferenceDiagnostics,
+  sceneIdsFromChangedPaths,
+} from '../../src/authoring/sceneReferenceDiagnostics.js';
 import { validateProject } from '../../src/shared/projectValidator.js';
 import { collectSceneReferences } from '../../src/shared/sceneGraph.js';
 import {
@@ -351,6 +354,157 @@ function getChangedPaths(result = {}) {
 
 function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function getTransactionChangedPaths(transaction = null) {
+  const changedPaths = transaction?.changeSummary?.changedPaths
+    ?? transaction?.transactionSummary?.changedPaths
+    ?? [];
+  return Array.isArray(changedPaths) ? changedPaths.filter(Boolean) : [];
+}
+
+async function readTransactionArg(args) {
+  const transactionPath = getArgValue(args, '--transaction', null);
+  if (!transactionPath) {
+    return null;
+  }
+
+  const resolvedPath = path.resolve(repoRoot, transactionPath);
+  return {
+    path: resolvedPath,
+    data: JSON.parse(await readFile(resolvedPath, 'utf8')),
+  };
+}
+
+function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
+  const targets = [];
+  for (const changedPath of changedPaths) {
+    const pageMatch = /^scenes\.([^.]+)\.pages\.(\d+)/.exec(String(changedPath));
+    if (pageMatch) {
+      const sceneId = pageMatch[1];
+      const pageIndex = Number(pageMatch[2]);
+      if (script.scenes?.[sceneId]?.pages?.[pageIndex]) {
+        targets.push({ sceneId, pageIndex });
+      }
+      continue;
+    }
+
+    const sceneMatch = /^scenes\.([^.]+)/.exec(String(changedPath));
+    if (sceneMatch) {
+      const sceneId = sceneMatch[1];
+      if (script.scenes?.[sceneId]?.pages?.[0]) {
+        targets.push({ sceneId, pageIndex: 0 });
+      }
+    }
+  }
+
+  const seen = new Set();
+  return targets.filter((target) => {
+    const key = `${target.sceneId}:${target.pageIndex}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function createAuthorCheckFocus({ args, script, transaction }) {
+  const changedPaths = getTransactionChangedPaths(transaction?.data);
+  const transactionSceneIds = sceneIdsFromChangedPaths(changedPaths)
+    .filter((sceneId) => script.scenes?.[sceneId]);
+  const transactionPageTargets = pageTargetsFromChangedPaths(changedPaths, script);
+  const explicitSceneId = getArgValue(args, '--scene', null);
+  const explicitPageIndex = getIntArg(args, '--page', null);
+  const defaultSceneId = explicitSceneId ?? transactionPageTargets[0]?.sceneId ?? transactionSceneIds[0] ?? 'start';
+  const defaultPageIndex = explicitPageIndex ?? transactionPageTargets[0]?.pageIndex ?? 0;
+  const checkedSceneIds = uniqueValues([
+    ...(explicitSceneId ? [explicitSceneId] : []),
+    ...transactionSceneIds,
+    ...(transaction?.data ? [] : [defaultSceneId]),
+  ]).filter((sceneId) => script.scenes?.[sceneId]);
+
+  return {
+    mode: transaction?.data ? 'transaction' : 'manual',
+    transactionPath: transaction?.path ?? null,
+    changedPaths,
+    checkedSceneIds,
+    pageTargets: transaction?.data ? transactionPageTargets : [],
+    previewTarget: {
+      sceneId: defaultSceneId,
+      pageIndex: defaultPageIndex,
+    },
+  };
+}
+
+function issueMatchesAuthorCheckFocus(issue = {}, focus = {}) {
+  if (focus.mode !== 'transaction') {
+    return true;
+  }
+
+  if (!focus.changedPaths?.length) {
+    return true;
+  }
+
+  const pathString = issue.pathString ?? '';
+  if (pathString && focus.changedPaths.some((changedPath) => (
+    pathString === changedPath
+    || pathString.startsWith(`${changedPath}.`)
+    || changedPath.startsWith(`${pathString}.`)
+  ))) {
+    return true;
+  }
+
+  const sceneId = issue.sceneId ?? issue.location?.sceneId ?? null;
+  const pageIndex = issue.pageIndex ?? issue.location?.pageIndex ?? null;
+  if (!sceneId || !focus.checkedSceneIds.includes(sceneId)) {
+    return false;
+  }
+
+  if (!Number.isInteger(pageIndex)) {
+    return true;
+  }
+
+  return focus.changedPaths.some((changedPath) => (
+    changedPath === `scenes.${sceneId}`
+    || changedPath.startsWith(`scenes.${sceneId}.pages.${pageIndex}`)
+  ));
+}
+
+function filterAuthorCheckReport(report, focus) {
+  if (focus.mode !== 'transaction') {
+    return report;
+  }
+
+  const warnings = (report.warnings ?? []).filter((issue) => issueMatchesAuthorCheckFocus(issue, focus));
+  return {
+    ...report,
+    ok: warnings.length === 0,
+    warnings,
+    suggestions: (report.suggestions ?? []).filter((issue) => issueMatchesAuthorCheckFocus(issue, focus)),
+    aggregate: {
+      ok: report.ok,
+      warningCount: report.warnings?.length ?? 0,
+    },
+  };
+}
+
+function filterAuthorCheckReadiness(readiness, focus) {
+  if (focus.mode !== 'transaction') {
+    return readiness;
+  }
+
+  const blockers = (readiness.blockers ?? []).filter((issue) => issueMatchesAuthorCheckFocus(issue, focus));
+  const warnings = (readiness.warnings ?? []).filter((issue) => issueMatchesAuthorCheckFocus(issue, focus));
+  return {
+    ...readiness,
+    ready: blockers.length === 0,
+    blockers,
+    warnings,
+    aggregate: {
+      ready: readiness.ready,
+      blockerCount: readiness.blockers?.length ?? 0,
+      warningCount: readiness.warnings?.length ?? 0,
+    },
+  };
 }
 
 function createMutationChangeSummary({
@@ -1663,24 +1817,27 @@ async function renderPreview(args) {
 
 async function authorCheck(args) {
   const { scriptPath, script } = await readScript(args);
+  const transaction = await readTransactionArg(args);
+  const focus = createAuthorCheckFocus({ args, script, transaction });
   const validationOptions = await getValidationOptions(args, scriptPath);
   const knownAssets = hasFlag(args, '--skip-asset-check')
     ? null
     : await getKnownAssetsForReadiness(args, scriptPath);
   const validation = validateProject(script, validationOptions);
-  const layout = lintProjectLayout(script);
-  const readiness = createExportReadiness(script, {
+  const layout = filterAuthorCheckReport(lintProjectLayout(script), focus);
+  const readiness = filterAuthorCheckReadiness(createExportReadiness(script, {
     knownAssets,
     requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
-  });
-  const sceneId = getArgValue(args, '--scene', 'start');
+  }), focus);
+  const sceneId = focus.previewTarget.sceneId;
   const referenceDiagnostics = collectSceneReferenceDiagnostics(script, {
-    sceneIds: [sceneId],
+    sceneIds: focus.checkedSceneIds,
+    changedPaths: focus.changedPaths,
   });
 
   let preview = null;
   if (!hasFlag(args, '--skip-preview')) {
-    const pageIndex = getIntArg(args, '--page', 0);
+    const pageIndex = focus.previewTarget.pageIndex;
     const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
     const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
     const outPath = path.resolve(repoRoot, getArgValue(args, '--preview-out', path.join('.tmp', 'author-check-preview.png')));
@@ -1712,6 +1869,19 @@ async function authorCheck(args) {
   const output = {
     ok,
     scriptPath,
+    transactionSummary: transaction?.data
+      ? {
+        path: transaction.path,
+        command: transaction.data.transaction?.command ?? transaction.data.changeSummary?.command ?? null,
+        status: transaction.data.transaction?.status ?? transaction.data.changeSummary?.writeStatus ?? null,
+        wrote: transaction.data.transaction?.wrote ?? null,
+        dryRun: transaction.data.dryRun ?? transaction.data.changeSummary?.dryRun ?? null,
+        operationCount: transaction.data.changeSummary?.operationCount ?? transaction.data.operations?.length ?? null,
+        changedPaths: focus.changedPaths.slice(0, 20),
+        changedPathCount: focus.changedPaths.length,
+      }
+      : null,
+    focus,
     gates,
     summary: {
       validationErrors: validation.errors.length,
@@ -1723,7 +1893,7 @@ async function authorCheck(args) {
       previewPlanned: Boolean(preview),
     },
     sceneReferences: {
-      checkedSceneIds: script.scenes?.[sceneId] ? [sceneId] : [],
+      checkedSceneIds: focus.checkedSceneIds,
       diagnostics: referenceDiagnostics,
     },
     referenceDiagnostics,
@@ -2874,7 +3044,7 @@ function printHelp() {
   process.stdout.write(`vn-author commands:
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
-  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--preview-out path] [--write-preview-plan] [--json]
+  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
   handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]

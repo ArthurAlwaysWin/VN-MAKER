@@ -58,16 +58,15 @@ Current:
 - Validation, layout lint, export readiness, preview dry-run, and `author-check` exist.
 - Scene reference diagnostics are included in `author-check` and handoff review items.
 - Example workflows run through dry-run, apply, author-check, and handoff.
+- `author-check --transaction result.json` reads changed paths from an apply result, focuses changed scene/page diagnostics, and defaults preview planning to the first changed page.
 
 Gaps:
 
-- `author-check` checks a selected scene/page for preview/reference diagnostics, but not all changed paths from a transaction.
 - Handoff and author-check are adjacent rather than one continuous command that consumes an apply result and checks exactly changed content.
 - Preview screenshot quality is available, but the workflow still tolerates dry-run preview in common paths.
 
 Priority:
 
-- P1: let `author-check` accept `--transaction result.json` and focus checks on changed scenes/pages.
 - P2: add all-changed-scenes preview planning.
 
 ### 4. Human Handoff
@@ -128,11 +127,10 @@ Priority:
 
 ## Next Implementation Order
 
-1. Add `author-check --transaction` so quality checks can focus on changed scenes/pages.
-2. Add a formal structured draft contract doc.
-3. Add plan schema validation or validate-only mode.
-4. Improve Project Settings handoff grouping and non-scene path location.
-5. Normalize external-agent docs into a compact checklist.
+1. Add a formal structured draft contract doc.
+2. Add plan schema validation or validate-only mode.
+3. Improve Project Settings handoff grouping and non-scene path location.
+4. Normalize external-agent docs into a compact checklist.
 
 ## Current Branch Closure Gate
 

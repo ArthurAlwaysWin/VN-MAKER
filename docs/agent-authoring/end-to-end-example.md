@@ -50,10 +50,10 @@ The result file is useful because `handoff-report` can attach the transaction su
 ## Check
 
 ```bash
-npm run vn:author-check -- --script public/game/script.json --scene start --page 0 --write-preview-plan --json
+npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 ```
 
-If this returns issues or suggestions, repair with another small plan or direct CLI mutation.
+With `--transaction`, author-check reads `changeSummary.changedPaths`, focuses layout/readiness review on changed scenes/pages, and plans preview for the first changed page unless `--scene` and `--page` are provided. If this returns issues or suggestions, repair with another small plan or direct CLI mutation.
 
 ## Handoff
 

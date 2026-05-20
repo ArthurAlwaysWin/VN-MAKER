@@ -146,12 +146,12 @@ node tools/vn-author/index.js clear-scene-references --scene unused_branch --scr
 
 ```bash
 npm run validate:project -- --json
-npm run vn:author-check -- --scene start --page 0 --write-preview-plan --json
+npm run vn:author-check -- --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and a preview dry-run plan into one JSON payload.
+Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and a preview dry-run plan into one JSON payload. Use `--transaction` after `apply-plan --result-out` so the check focuses layout/readiness and scene reference review on changed scenes/pages; pass `--scene` and `--page` only when you need to override the preview target.
 
 When `lint-layout --json` returns warnings, read `suggestions[]` before editing again. Each suggestion carries the page location and repair command templates where the CLI can express the fix.
 

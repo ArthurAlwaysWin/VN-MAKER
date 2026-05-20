@@ -133,10 +133,10 @@ node tools/vn-author/index.js add-scene --id chapter_1 --name "Chapter 1" --dry-
 Use `author-check` as the preferred handoff gate after meaningful edits:
 
 ```bash
-node tools/vn-author/index.js author-check --script public/game/script.json --scene start --page 0 --write-preview-plan --json
+node tools/vn-author/index.js author-check --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 ```
 
-The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload.
+The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload. With `--transaction`, it reads changed paths from the apply result and focuses changed scene/page checks; add `--scene` and `--page` only to override the preview target.
 
 Generate a handoff report when returning work to the no-code editor or a human reviewer:
 

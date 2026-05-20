@@ -639,10 +639,8 @@ describe('vn-author CLI', () => {
         'author-check',
         '--script',
         scriptPath,
-        '--scene',
-        'start',
-        '--page',
-        '0',
+        '--transaction',
+        resultOutPath,
         '--preview-out',
         previewPath,
         '--write-preview-plan',
@@ -659,6 +657,12 @@ describe('vn-author CLI', () => {
           readiness: true,
           preview: true,
         },
+      });
+      expect(checkResult.focus).toMatchObject({
+        mode: 'transaction',
+        changedPaths: expect.arrayContaining(['scenes.start.pages.0']),
+        checkedSceneIds: ['start'],
+        previewTarget: { sceneId: 'start', pageIndex: 0 },
       });
       expect(previewPlan).toMatchObject({
         dryRun: true,
@@ -2172,6 +2176,109 @@ describe('vn-author CLI', () => {
         planPath: `${previewPath}.json`,
       });
       expect(plan).toMatchObject({
+        dryRun: true,
+        sceneId: 'start',
+        pageIndex: 0,
+      });
+    });
+  });
+
+  it('focuses author-check on transaction changed scene pages', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const transactionPath = path.join(dir, 'apply-result.json');
+      const previewPath = path.join(dir, 'transaction-author-preview.png');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_transaction_author_check',
+        meta: { resolution: { width: 800, height: 450 } },
+        characters: {
+          sakura: { name: 'Sakura' },
+        },
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'normal',
+                background: 'backgrounds/school.svg',
+                characters: [{ id: 'sakura', position: 'center' }],
+                dialogues: [{ speaker: 'sakura', text: 'This changed page is ready.' }],
+              },
+            ],
+          },
+          untouched_blank: {
+            pages: [
+              { type: 'normal', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+      await writeFile(transactionPath, JSON.stringify({
+        dryRun: false,
+        transaction: {
+          command: 'apply-plan',
+          status: 'written',
+          wrote: true,
+        },
+        changeSummary: {
+          command: 'apply-plan',
+          operationCount: 1,
+          changedPaths: ['scenes.start.pages.0'],
+          validation: { ok: true, errorCount: 0, warningCount: 0 },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        transactionPath,
+        '--preview-out',
+        previewPath,
+        '--write-preview-plan',
+        '--skip-asset-check',
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      const previewPlan = JSON.parse(await readFile(`${previewPath}.json`, 'utf8'));
+      expect(result.ok).toBe(true);
+      expect(result.focus).toMatchObject({
+        mode: 'transaction',
+        transactionPath,
+        changedPaths: ['scenes.start.pages.0'],
+        checkedSceneIds: ['start'],
+        pageTargets: [{ sceneId: 'start', pageIndex: 0 }],
+        previewTarget: { sceneId: 'start', pageIndex: 0 },
+      });
+      expect(result.transactionSummary).toMatchObject({
+        command: 'apply-plan',
+        status: 'written',
+        wrote: true,
+        operationCount: 1,
+        changedPathCount: 1,
+      });
+      expect(result.summary).toMatchObject({
+        layoutWarnings: 0,
+        readinessBlockers: 0,
+        previewPlanned: true,
+      });
+      expect(result.layout.aggregate).toMatchObject({
+        ok: false,
+        warningCount: 1,
+      });
+      expect(result.readiness.aggregate).toMatchObject({
+        ready: false,
+        blockerCount: 2,
+      });
+      expect(result.issues).not.toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'layout',
+          pathString: 'scenes.untouched_blank.pages.0',
+        }),
+      ]));
+      expect(previewPlan).toMatchObject({
         dryRun: true,
         sceneId: 'start',
         pageIndex: 0,

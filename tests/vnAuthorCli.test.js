@@ -1027,6 +1027,13 @@ describe('vn-author CLI', () => {
             command: 'paint-scene',
             status: 'failed',
             code: 'unsupported-apply-plan-command',
+            suggestedAction: {
+              repairHint: {
+                action: 'replace-command',
+                path: 'operations[1].command',
+                unsupportedCommand: 'paint-scene',
+              },
+            },
           },
           changeSummary: {
             writeStatus: 'failed',
@@ -1051,6 +1058,11 @@ describe('vn-author CLI', () => {
           }),
         ]);
         expect(result.operationFailure.supportedCommands).toEqual(expect.arrayContaining([
+          'add-scene',
+          'set-dialogue',
+          'retarget-scene',
+        ]));
+        expect(result.operationFailure.suggestedAction.repairHint.supportedCommands).toEqual(expect.arrayContaining([
           'add-scene',
           'set-dialogue',
           'retarget-scene',
@@ -1107,6 +1119,15 @@ describe('vn-author CLI', () => {
           message: 'add-page requires sceneId',
           missingParam: 'sceneId',
           acceptedParams: ['sceneId', 'scene'],
+          suggestedAction: {
+            summary: 'Add required param "sceneId" to this operation.',
+            repairHint: {
+              action: 'add-param',
+              path: 'operations[0].params.sceneId',
+              missingParam: 'sceneId',
+              acceptedParams: ['sceneId', 'scene'],
+            },
+          },
         });
         expect(result.changeSummary).toMatchObject({
           completedOperationCount: 0,
@@ -1114,6 +1135,56 @@ describe('vn-author CLI', () => {
           changedPaths: [],
         });
       }
+    });
+  });
+
+  it('returns repair hints for apply-plan operations without commands', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'missing-command-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_plan_missing_command',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          { id: 'blank-op', params: { id: 'start' } },
+        ],
+      }), 'utf8');
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'apply-plan',
+          planPath,
+          '--script',
+          scriptPath,
+          '--json',
+        ]);
+      } catch (error) {
+        const result = JSON.parse(error.stdout);
+        expect(result.operationFailure).toMatchObject({
+          index: 0,
+          id: 'blank-op',
+          command: null,
+          code: 'missing-apply-plan-command',
+          suggestedAction: {
+            summary: 'Add a supported apply-plan command to this operation.',
+            repairHint: {
+              action: 'add-command',
+              path: 'operations[0].command',
+            },
+          },
+        });
+        expect(result.operationFailure.suggestedAction.repairHint.supportedCommands).toEqual(expect.arrayContaining([
+          'add-scene',
+          'set-dialogue',
+        ]));
+        return;
+      }
+
+      throw new Error('Expected apply-plan to fail for a missing operation command');
     });
   });
 

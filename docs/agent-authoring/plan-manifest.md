@@ -139,7 +139,17 @@ If an operation cannot be executed, for example because the command is unsupport
     "command": "paint-scene",
     "code": "unsupported-apply-plan-command",
     "message": "Unsupported apply-plan command: paint-scene",
-    "supportedCommands": ["add-scene", "add-page", "set-dialogue"]
+    "supportedCommands": ["add-scene", "add-page", "set-dialogue"],
+    "suggestedAction": {
+      "summary": "Replace this operation with one or more supported apply-plan commands.",
+      "commands": [],
+      "repairHint": {
+        "action": "replace-command",
+        "path": "operations[1].command",
+        "unsupportedCommand": "paint-scene",
+        "supportedCommands": ["add-scene", "add-page", "set-dialogue"]
+      }
+    }
   },
   "operations": [
     { "index": 0, "id": "create-start", "command": "add-scene", "status": "applied" },
@@ -153,7 +163,7 @@ If an operation cannot be executed, for example because the command is unsupport
 }
 ```
 
-For missing parameters, `operationFailure.code` is `"missing-apply-plan-param"` and includes `missingParam` plus any accepted aliases in `acceptedParams`, for example `["sceneId", "scene"]`.
+For missing parameters, `operationFailure.code` is `"missing-apply-plan-param"` and includes `missingParam` plus any accepted aliases in `acceptedParams`, for example `["sceneId", "scene"]`. The `suggestedAction.repairHint` object is machine-readable so an external agent can patch the manifest and retry. Common `repairHint.action` values are `"add-command"`, `"replace-command"`, and `"add-param"`.
 
 When using `--result-out`, the same failure payload is saved for later handoff/debugging.
 

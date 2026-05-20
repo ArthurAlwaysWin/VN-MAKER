@@ -615,6 +615,55 @@ function requireParam(params, command, ...names) {
   return value;
 }
 
+function createApplyPlanFailureSuggestedAction(failure) {
+  if (failure.code === 'missing-apply-plan-command') {
+    return {
+      summary: 'Add a supported apply-plan command to this operation.',
+      commands: [],
+      repairHint: {
+        action: 'add-command',
+        path: `operations[${failure.index}].command`,
+        supportedCommands: failure.supportedCommands ?? [],
+      },
+    };
+  }
+
+  if (failure.code === 'missing-apply-plan-param') {
+    return {
+      summary: `Add required param "${failure.missingParam}" to this operation.`,
+      commands: [],
+      repairHint: {
+        action: 'add-param',
+        path: `operations[${failure.index}].params.${failure.missingParam}`,
+        missingParam: failure.missingParam,
+        acceptedParams: failure.acceptedParams ?? [failure.missingParam],
+      },
+    };
+  }
+
+  if (failure.code === 'unsupported-apply-plan-command') {
+    return {
+      summary: 'Replace this operation with one or more supported apply-plan commands.',
+      commands: [],
+      repairHint: {
+        action: 'replace-command',
+        path: `operations[${failure.index}].command`,
+        unsupportedCommand: failure.command,
+        supportedCommands: failure.supportedCommands ?? [],
+      },
+    };
+  }
+
+  return {
+    summary: 'Inspect this operation and repair the plan before retrying apply-plan.',
+    commands: [],
+    repairHint: {
+      action: 'inspect-operation',
+      path: `operations[${failure.index}]`,
+    },
+  };
+}
+
 function buildPlanPage(command, params) {
   const type = getParam(params, 'type') ?? 'normal';
   const page = {
@@ -1175,6 +1224,7 @@ async function applyPlan(args) {
         acceptedParams: error.acceptedParams ?? undefined,
         supportedCommands: error.supportedCommands ?? undefined,
       };
+      failure.suggestedAction = createApplyPlanFailureSuggestedAction(failure);
       const output = {
         ok: false,
         scriptPath,

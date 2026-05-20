@@ -56,7 +56,7 @@ The result file is useful because `handoff-report` can attach the transaction su
 npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 ```
 
-With `--transaction`, author-check reads `changeSummary.changedPaths`, focuses layout/readiness review on changed scenes/pages, and plans preview for the first changed page unless `--scene` and `--page` are provided. If this returns issues or suggestions, repair with another small plan or direct CLI mutation.
+With `--transaction`, author-check reads `changeSummary.changedPaths`, focuses layout/readiness review on changed scenes/pages, and writes preview targets for all changed scene pages unless `--scene` and `--page` are provided. The JSON still includes `previewTarget` and the first `preview` as the primary compatibility target. If this returns issues or suggestions, repair with another small plan or direct CLI mutation.
 
 ## Handoff
 

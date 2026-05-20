@@ -138,7 +138,7 @@ Use `author-check` as the preferred handoff gate after meaningful edits:
 npm run vn -- author-check --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 ```
 
-The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload. With `--transaction`, it reads changed paths from the apply result and focuses changed scene/page checks; add `--scene` and `--page` only to override the preview target.
+The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload. With `--transaction`, it reads changed paths from the apply result, focuses changed scene/page checks, and plans preview targets for all changed scene pages; add `--scene` and `--page` only to override that target list.
 
 Generate a handoff report when returning work to the no-code editor or a human reviewer:
 

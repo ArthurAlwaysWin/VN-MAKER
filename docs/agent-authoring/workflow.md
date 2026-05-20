@@ -155,7 +155,7 @@ npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and a preview dry-run plan into one JSON payload. Use `--transaction` after `apply-plan --result-out` so the check focuses layout/readiness and scene reference review on changed scenes/pages; pass `--scene` and `--page` only when you need to override the preview target.
+Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and preview dry-run planning into one JSON payload. Use `--transaction` after `apply-plan --result-out` so the check focuses layout/readiness and scene reference review on changed scenes/pages and writes preview targets for all changed scene pages. Pass `--scene` and `--page` only when you need to override that target list.
 
 When `lint-layout --json` returns warnings, read `suggestions[]` before editing again. Each suggestion carries the page location and repair command templates where the CLI can express the fix.
 

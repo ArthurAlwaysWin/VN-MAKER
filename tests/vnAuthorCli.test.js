@@ -2472,6 +2472,12 @@ describe('vn-author CLI', () => {
                 characters: [{ id: 'sakura', position: 'center' }],
                 dialogues: [{ speaker: 'sakura', text: 'This changed page is ready.' }],
               },
+              {
+                type: 'normal',
+                background: 'backgrounds/hall.svg',
+                characters: [{ id: 'sakura', position: 'left' }],
+                dialogues: [{ speaker: 'sakura', text: 'This second changed page is ready too.' }],
+              },
             ],
           },
           untouched_blank: {
@@ -2491,7 +2497,7 @@ describe('vn-author CLI', () => {
         changeSummary: {
           command: 'apply-plan',
           operationCount: 1,
-          changedPaths: ['scenes.start.pages.0'],
+          changedPaths: ['scenes.start.pages.0', 'scenes.start.pages.1'],
           validation: { ok: true, errorCount: 0, warningCount: 0 },
         },
       }), 'utf8');
@@ -2516,9 +2522,10 @@ describe('vn-author CLI', () => {
       expect(result.focus).toMatchObject({
         mode: 'transaction',
         transactionPath,
-        changedPaths: ['scenes.start.pages.0'],
+        changedPaths: ['scenes.start.pages.0', 'scenes.start.pages.1'],
         checkedSceneIds: ['start'],
-        pageTargets: [{ sceneId: 'start', pageIndex: 0 }],
+        pageTargets: [{ sceneId: 'start', pageIndex: 0 }, { sceneId: 'start', pageIndex: 1 }],
+        previewTargets: [{ sceneId: 'start', pageIndex: 0 }, { sceneId: 'start', pageIndex: 1 }],
         previewTarget: { sceneId: 'start', pageIndex: 0 },
       });
       expect(result.transactionSummary).toMatchObject({
@@ -2526,7 +2533,7 @@ describe('vn-author CLI', () => {
         status: 'written',
         wrote: true,
         operationCount: 1,
-        changedPathCount: 1,
+        changedPathCount: 2,
       });
       expect(result.summary).toMatchObject({
         layoutWarnings: 0,
@@ -2551,6 +2558,19 @@ describe('vn-author CLI', () => {
         dryRun: true,
         sceneId: 'start',
         pageIndex: 0,
+        targetCount: 2,
+        targets: [
+          expect.objectContaining({
+            sceneId: 'start',
+            pageIndex: 0,
+            outPath: previewPath,
+          }),
+          expect.objectContaining({
+            sceneId: 'start',
+            pageIndex: 1,
+            outPath: expect.stringContaining('transaction-author-preview-start-p1.png'),
+          }),
+        ],
       });
     });
   });

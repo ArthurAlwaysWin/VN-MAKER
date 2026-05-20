@@ -407,6 +407,23 @@ function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
   });
 }
 
+function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
+  if (explicitSceneId || explicitPageIndex != null) {
+    return [{ sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+  }
+
+  if (transaction?.data) {
+    const targets = transactionPageTargets.length
+      ? transactionPageTargets
+      : checkedSceneIds
+        .filter((sceneId) => script.scenes?.[sceneId]?.pages?.[0])
+        .map((sceneId) => ({ sceneId, pageIndex: 0 }));
+    return targets.length ? targets : [{ sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+  }
+
+  return [{ sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+}
+
 function createAuthorCheckFocus({ args, script, transaction }) {
   const changedPaths = getTransactionChangedPaths(transaction?.data);
   const transactionSceneIds = sceneIdsFromChangedPaths(changedPaths)
@@ -421,6 +438,16 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     ...transactionSceneIds,
     ...(transaction?.data ? [] : [defaultSceneId]),
   ]).filter((sceneId) => script.scenes?.[sceneId]);
+  const previewTargets = createPreviewTargets({
+    explicitSceneId,
+    explicitPageIndex,
+    transaction,
+    transactionPageTargets,
+    checkedSceneIds,
+    defaultSceneId,
+    defaultPageIndex,
+    script,
+  });
 
   return {
     mode: transaction?.data ? 'transaction' : 'manual',
@@ -428,7 +455,8 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     changedPaths,
     checkedSceneIds,
     pageTargets: transaction?.data ? transactionPageTargets : [],
-    previewTarget: {
+    previewTargets,
+    previewTarget: previewTargets[0] ?? {
       sceneId: defaultSceneId,
       pageIndex: defaultPageIndex,
     },
@@ -1092,6 +1120,17 @@ function collectAuthorCheckSuggestions({ validation, layout, readiness, preview,
   }
 
   return suggestions;
+}
+
+function previewOutPathForTarget(baseOutPath, target, index) {
+  if (index === 0) {
+    return baseOutPath;
+  }
+
+  const parsed = path.parse(baseOutPath);
+  const safeSceneId = String(target.sceneId ?? 'scene').replace(/[^a-z0-9_-]+/gi, '_');
+  const suffix = `${safeSceneId}-p${target.pageIndex ?? 0}`;
+  return path.join(parsed.dir, `${parsed.name}-${suffix}${parsed.ext || '.png'}`);
 }
 
 async function inspect(args) {
@@ -1886,7 +1925,6 @@ async function authorCheck(args) {
     knownAssets,
     requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
   }), focus);
-  const sceneId = focus.previewTarget.sceneId;
   const referenceDiagnostics = collectSceneReferenceDiagnostics(script, {
     sceneIds: focus.checkedSceneIds,
     changedPaths: focus.changedPaths,
@@ -1894,20 +1932,29 @@ async function authorCheck(args) {
 
   let preview = null;
   if (!hasFlag(args, '--skip-preview')) {
-    const pageIndex = focus.previewTarget.pageIndex;
     const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
     const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
     const outPath = path.resolve(repoRoot, getArgValue(args, '--preview-out', path.join('.tmp', 'author-check-preview.png')));
-    preview = await renderPreviewScreenshot({
-      repoRoot,
-      script,
-      sceneId,
-      pageIndex,
-      outPath,
-      width,
-      height,
-      dryRun: true,
-    });
+    const previewTargets = focus.previewTargets.length ? focus.previewTargets : [focus.previewTarget];
+    const previews = [];
+    for (const [index, target] of previewTargets.entries()) {
+      previews.push(await renderPreviewScreenshot({
+        repoRoot,
+        script,
+        sceneId: target.sceneId,
+        pageIndex: target.pageIndex,
+        outPath: previewOutPathForTarget(outPath, target, index),
+        width,
+        height,
+        dryRun: true,
+      }));
+    }
+
+    preview = {
+      ...previews[0],
+      targetCount: previews.length,
+      targets: previews,
+    };
 
     if (hasFlag(args, '--write-preview-plan')) {
       const planPath = outPath.endsWith('.json') ? outPath : `${outPath}.json`;

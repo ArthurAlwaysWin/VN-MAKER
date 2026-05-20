@@ -63,7 +63,7 @@ npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-`author-check --transaction` focuses changed scenes/pages and writes a preview plan without needing a browser.
+`author-check --transaction` focuses changed scenes/pages and writes a preview plan for all changed scene pages without needing a browser.
 
 ## Preview
 

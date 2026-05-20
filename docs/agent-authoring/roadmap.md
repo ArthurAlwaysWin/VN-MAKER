@@ -55,7 +55,7 @@ Current:
 - Validation, layout lint, export readiness, preview dry-run, and `author-check` exist.
 - Scene reference diagnostics are included in `author-check` and handoff review items.
 - Example workflows run through dry-run, apply, author-check, and handoff.
-- `author-check --transaction result.json` reads changed paths from an apply result, focuses changed scene/page diagnostics, and defaults preview planning to the first changed page.
+- `author-check --transaction result.json` reads changed paths from an apply result, focuses changed scene/page diagnostics, and plans preview targets for all changed scene pages while preserving a primary preview target for compatibility.
 
 Gaps:
 
@@ -63,8 +63,6 @@ Gaps:
 - Preview screenshot quality is available, but the workflow still tolerates dry-run preview in common paths.
 
 Priority:
-
-- P2: add all-changed-scenes preview planning.
 
 ### 4. Human Handoff
 
@@ -114,10 +112,6 @@ Gaps:
 Priority:
 
 - P2: add component-level handoff UX tests when test harness support is ready.
-
-## Next Implementation Order
-
-1. Add all-changed-scenes preview planning.
 
 ## Current Branch Closure Gate
 

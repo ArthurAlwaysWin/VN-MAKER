@@ -59,6 +59,16 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
       continue;
     }
 
+    const sceneMatch = /^scenes\.([^.]+)/.exec(String(changedPath));
+    if (sceneMatch) {
+      targets.push({
+        type: 'scene',
+        sceneId: sceneMatch[1],
+        pageIndex: 0,
+      });
+      continue;
+    }
+
     for (const [pathPrefix, screenId] of PREVIEW_SCREEN_PATHS.entries()) {
       if (changedPath === pathPrefix || String(changedPath).startsWith(`${pathPrefix}.`)) {
         targets.push({ type: 'screen', screenId });

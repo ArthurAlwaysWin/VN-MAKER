@@ -114,6 +114,7 @@ describe('agent handoff report', () => {
         transaction: { command: 'apply-plan', status: 'written', wrote: true },
         changeSummary: {
           changedPaths: [
+            'scenes.start',
             'scenes.start.pages.0',
             'ui.titleScreen',
             'ui.gameMenu.chrome',

@@ -134,6 +134,34 @@ async function writeJsonAtomic(filePath, data) {
   await atomicWrite(filePath, JSON.stringify(data, null, 2));
 }
 
+async function getProjectScriptFileState(projectPath = currentProjectPath) {
+  if (!projectPath) {
+    return null;
+  }
+
+  const scriptPath = path.join(projectPath, 'script.json');
+  try {
+    const scriptStat = await fs.stat(scriptPath);
+    return {
+      path: scriptPath,
+      mtimeMs: scriptStat.mtimeMs,
+      size: scriptStat.size,
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function isSameFileState(left, right) {
+  if (!left || !right) {
+    return false;
+  }
+  return left.mtimeMs === right.mtimeMs && left.size === right.size;
+}
+
 async function ensurePlayerProfile(projectId, projectPath = currentProjectPath) {
   const playerDataDir = getPlayerDataDir(projectPath);
   await fs.mkdir(playerDataDir, { recursive: true });
@@ -330,23 +358,59 @@ ipcMain.handle('load-project', async (event, projectPath) => {
      await fs.mkdir(getPlayerDataDir(projectPath), { recursive: true });
 
      await addToRecent(projectPath, projectData.name);
-     return { success: true, project: projectData, script: scriptData, path: projectPath };
+     return {
+       success: true,
+       project: projectData,
+       script: scriptData,
+       path: projectPath,
+       scriptFileState: await getProjectScriptFileState(projectPath),
+     };
   } catch (e) {
     console.error('Failed to load project:', e);
     return { success: false, error: e.message };
   }
 });
 
-ipcMain.handle('save-project', async (event, { project, script }) => {
+ipcMain.handle('save-project', async (event, { project, script, expectedScriptFileState }) => {
   if (!currentProjectPath) return { success: false, error: 'No project loaded' };
   try {
+    const currentScriptFileState = await getProjectScriptFileState();
+    if (
+      expectedScriptFileState
+      && currentScriptFileState
+      && !isSameFileState(expectedScriptFileState, currentScriptFileState)
+    ) {
+      return {
+        success: false,
+        conflict: true,
+        error: 'script.json changed on disk after this project was loaded.',
+        scriptFileState: currentScriptFileState,
+        expectedScriptFileState,
+      };
+    }
+
     project.lastModified = new Date().toISOString();
     const normalizedScript = ensureGalgameContract(script);
     await atomicWrite(path.join(currentProjectPath, 'project.json'), JSON.stringify(project, null, 2));
     await atomicWrite(path.join(currentProjectPath, 'script.json'), JSON.stringify(normalizedScript, null, 2));
-    return { success: true };
+    return { success: true, scriptFileState: await getProjectScriptFileState() };
   } catch (e) {
     console.error('Failed to save project:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('check-project-file-state', async () => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    return {
+      success: true,
+      scriptFileState: await getProjectScriptFileState(),
+    };
+  } catch (e) {
+    console.error('Failed to check project file state:', e);
     return { success: false, error: e.message };
   }
 });

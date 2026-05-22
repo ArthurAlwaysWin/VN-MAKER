@@ -1,6 +1,6 @@
 # Agent Authoring Workflow
 
-For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md). For focused edits, use [mini-workflows.md](./mini-workflows.md). For plan command parameters, use [command-reference.md](./command-reference.md).
+For the current implementation plan and gap audit, see [roadmap.md](./roadmap.md). For cross-session development details, use [implementation-plan.md](./implementation-plan.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md). For focused edits, use [mini-workflows.md](./mini-workflows.md). For prose-to-VN adaptation, use [novel-adaptation-skill.md](./novel-adaptation-skill.md) and [example-adaptation-preview.md](./example-adaptation-preview.md). For asset names that agents can match reliably, use [asset-naming-guidelines.md](./asset-naming-guidelines.md). For screen UI design from a style prompt or reference screenshot, use [screen-ui-skill.md](./screen-ui-skill.md). For plan command parameters, use [command-reference.md](./command-reference.md).
 
 ## 1. Inspect
 
@@ -10,6 +10,17 @@ npm run vn:report -- --json
 ```
 
 Read the current project shape before changing anything.
+
+List the project asset library before planning prose adaptation, staging, or screen visuals:
+
+```bash
+npm run vn -- list-assets --script public/game/script.json --json
+npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
+```
+
+The command is read-only and returns `assets/backgrounds`, `characters`, `audio`, `voices`, `ui`, and `fonts` entries with semantic tokens derived from file names.
+
+Use semantic asset names such as `backgrounds/school_gate_rainy.png`, `characters/sakura_nervous.png`, and `ui/game_menu_button_normal.png` so `list-assets` tokens can support honest matching. See `docs/agent-authoring/asset-naming-guidelines.md`.
 
 ## 2. Validate
 
@@ -37,6 +48,8 @@ For prose input, split into:
 - Unlocks
 
 Use a structured draft JSON before touching `script.json`.
+
+Before creating that structured draft, show the human a concise adaptation preview with concrete backgrounds, character expressions, page beats, choices, variable effects, BGM/SE, and missing asset notes. See `docs/agent-authoring/novel-adaptation-skill.md` and `docs/agent-authoring/example-adaptation-preview.md`.
 
 See `docs/agent-authoring/structured-draft-contract.md` for the supported draft fields, defaults, and conversion rules.
 
@@ -86,6 +99,39 @@ For multi-step edits, prefer an atomic plan manifest:
   ]
 }
 ```
+
+For title screen work, use the structured title commands instead of direct JSON edits:
+
+```bash
+npm run vn -- set-title-screen --script public/game/script.json --background ui/title/background.png --bgm audio/title.ogg --force --checkpoint --json
+npm run vn -- add-title-element --script public/game/script.json --type text --content "Moonlit Letter" --x 640 --y 170 --anchor center --force --json
+npm run vn -- add-title-element --script public/game/script.json --type button --label "Start" --action start --x 640 --y 430 --anchor center --force --json
+```
+
+For existing settings, game menu, save/load, and backlog screens, use `set-screen-layout` with a structured JSON config:
+
+```bash
+npm run vn -- set-screen-layout --script public/game/script.json --screen gameMenu --config .tmp/game-menu-layout.json --force --checkpoint --json
+npm run vn -- set-screen-layout --script public/game/script.json --screen settingsScreen --config .tmp/settings-layout.json --force --json
+```
+
+For shared UI styling, use the structured shared UI commands:
+
+```bash
+npm run vn -- set-dialogue-box --script public/game/script.json --config .tmp/dialogue-box.json --force --checkpoint --json
+npm run vn -- set-theme --script public/game/script.json --config .tmp/theme.json --force --json
+npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
+```
+
+When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, or `ui.backlogScreen`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions:
+
+```bash
+npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
+```
+
+For reference-screenshot-based screen work, include `handoff.referenceScreenshotNotes` in the plan manifest so `handoff-report --transaction` creates a structured fidelity review item for the human reviewer.
+
+If the editor is open while an external agent changes `script.json`, the editor detects the changed file state, blocks stale saves, and shows a reload warning. Reload the project before continuing GUI edits so agent-authored changes are not overwritten.
 
 Then dry-run and apply it:
 
@@ -155,7 +201,7 @@ npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and preview dry-run planning into one JSON payload. Use `--transaction` after `apply-plan --result-out` so the check focuses layout/readiness and scene reference review on changed scenes/pages and writes preview targets for all changed scene pages. Pass `--scene` and `--page` only when you need to override that target list.
+Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and preview dry-run planning into one JSON payload. Use `--transaction` after `apply-plan --result-out` so the check focuses layout/readiness and scene reference review on changed scenes/pages, writes preview targets for changed scenes/screens, and emits screen UI preview review items. Pass `--scene` and `--page` only when you need to override that target list.
 
 When `lint-layout --json` returns warnings, read `suggestions[]` before editing again. Each suggestion carries the page location and repair command templates where the CLI can express the fix.
 
@@ -197,7 +243,7 @@ If you saved a previous mutation result, attach it so the editor can show change
 npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --json
 ```
 
-The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability, recent checkpoints from `.checkpoints/`, transaction summaries, and review items with suggested actions where available. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel for human review.
+The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability, recent checkpoints from `.checkpoints/`, transaction summaries, preview targets, and review items with suggested actions where available. Review items include categories such as `missing-asset`, `unused-asset`, `placeholder-asset`, `ambiguous-asset`, and `screen-ui-preview` so humans can see what to import, rename, remove, replace, or visually inspect. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel for human review, including visual preview targets for changed scenes and supported screens.
 
 Tell the human creator:
 

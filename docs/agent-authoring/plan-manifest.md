@@ -41,6 +41,36 @@ npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/exam
 
 `params` and `args` are accepted as aliases. Prefer `params` in new manifests.
 
+`handoff.referenceScreenshotNotes` is optional. Use it when a screen UI operation is based on a reference screenshot and the human reviewer should compare the editor preview against that image. These notes are preserved in `apply-plan --result-out` and become handoff review items when `handoff-report --transaction` reads the result. They do not write HTML/CSS or mutate the project contract.
+
+```json
+{
+  "version": 1,
+  "handoff": {
+    "referenceScreenshotNotes": [
+      {
+        "screenId": "gameMenu",
+        "reference": "references/game-menu.png",
+        "summary": "Matched the left-side menu column using editable layout config.",
+        "matched": ["menu alignment", "cool translucent panel"],
+        "gaps": ["exact glow intensity needs human preview"]
+      }
+    ]
+  },
+  "operations": [
+    {
+      "command": "set-screen-layout",
+      "params": {
+        "screenId": "gameMenu",
+        "config": { "panel": { "width": 360 } }
+      }
+    }
+  ]
+}
+```
+
+Supported `screenId` values for fidelity notes are `titleScreen`, `settingsScreen`, `gameMenu`, `saveLoadScreen`, and `backlogScreen`.
+
 ## Supported Commands
 
 Plan command names match the CLI command names:
@@ -73,6 +103,14 @@ Plan command names match the CLI command names:
 - `set-page-camera`
 - `set-page-transition`
 - `set-character-animation`
+- `set-title-screen`
+- `add-title-element`
+- `update-title-element`
+- `remove-title-element`
+- `set-screen-layout`
+- `set-dialogue-box`
+- `set-theme`
+- `set-widget-styles`
 - `add-choice-effect`
 
 ## Parameter Style

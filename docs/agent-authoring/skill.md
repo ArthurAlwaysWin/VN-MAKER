@@ -17,7 +17,7 @@ Build editable visual novel drafts for human creators. The human creator remains
 5. Never create new `commands[]`.
 6. Use layout presets before custom coordinates.
 7. Register variables before effects or conditions reference them.
-8. Register endings and CG before unlock effects reference them.
+8. When an existing project already has ending or CG registries, keep unlock effects aligned with those registries; do not invent new CG/ending registry workflows until official commands exist.
 9. Validate after every meaningful change.
 10. Treat runtime preview as the visual source of truth when preview is available.
 11. Use `apply-plan` for multi-step edits so checkpoint, validation, and summary are atomic.
@@ -25,7 +25,11 @@ Build editable visual novel drafts for human creators. The human creator remains
 See also:
 
 - `docs/agent-authoring/agent-checklist.md`
+- `docs/agent-authoring/asset-naming-guidelines.md`
+- `docs/agent-authoring/example-adaptation-preview.md`
 - `docs/agent-authoring/layout-rules.md`
+- `docs/agent-authoring/novel-adaptation-skill.md`
+- `docs/agent-authoring/screen-ui-skill.md`
 - `docs/agent-authoring/validation-rules.md`
 
 ## First Commands
@@ -55,6 +59,8 @@ npm run vn -- render-preview --script public/game/script.json --scene start --pa
 
 When converting prose or an outline, first produce a structured draft JSON, then import it.
 Follow `docs/agent-authoring/structured-draft-contract.md` for supported fields, defaults, and conversion rules.
+For raw novel prose, first show the human an adaptation preview: concrete background, character expressions, page beats, choices, variable effects, BGM/SE, and missing asset notes. Follow `docs/agent-authoring/novel-adaptation-skill.md`.
+Before naming concrete assets, run `list-assets` and prefer semantic filenames documented in `docs/agent-authoring/asset-naming-guidelines.md`.
 
 ```bash
 npm run vn -- import-draft draft.json --fresh --out public/game/script.json --json
@@ -140,7 +146,7 @@ Use `author-check` as the preferred handoff gate after meaningful edits:
 npm run vn -- author-check --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 ```
 
-The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload. With `--transaction`, it reads changed paths from the apply result, focuses changed scene/page checks, and plans preview targets for all changed scene pages; add `--scene` and `--page` only to override that target list.
+The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload. With `--transaction`, it reads changed paths from the apply result, focuses changed scene/page checks, plans preview targets for changed scenes and supported screen UI paths, and emits screen UI preview review items; add `--scene` and `--page` only to override that target list.
 
 Generate a handoff report when returning work to the no-code editor or a human reviewer:
 
@@ -240,3 +246,4 @@ Common warnings:
 - Layout lint is heuristic-only; runtime preview remains the visual source of truth.
 - Advanced agent-only effects should not be invented until a shared contract exists.
 - Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.
+- CG gallery and ending list authoring commands are not part of the current external-agent layer; do not build those flows unless the human explicitly requests that scope.

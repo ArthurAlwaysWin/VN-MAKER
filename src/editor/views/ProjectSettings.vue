@@ -63,6 +63,23 @@
               </span>
               <span v-if="project.agentHandoff.latestCheckpointPath" class="agent-path">{{ project.agentHandoff.latestCheckpointPath }}</span>
             </div>
+            <div class="agent-preview-targets" v-if="agentPreviewTargets.length">
+              <h5>视觉预览目标</h5>
+              <ul class="agent-review-list">
+                <li
+                  v-for="target in agentPreviewTargets"
+                  :key="getPreviewTargetKey(target)"
+                >
+                  <span class="agent-review-code">{{ getPreviewTargetKindLabel(target) }}</span>
+                  <span class="agent-review-text">{{ getPreviewTargetLabel(target) }}</span>
+                  <button
+                    class="agent-locate-btn"
+                    @click="openPreviewTarget(target)"
+                    :title="getPreviewTargetTitle(target)"
+                  >{{ getPreviewTargetActionLabel(target) }}</button>
+                </li>
+              </ul>
+            </div>
             <div class="agent-review-groups" v-if="agentReviewGroups.length">
               <section
                 v-for="group in agentReviewGroups"
@@ -88,8 +105,8 @@
                     :key="getAgentReviewItemKey(item)"
                     :class="`review-status-${getAgentReviewStatus(item)}`"
                   >
-                    <span class="agent-review-code">{{ item.code }}</span>
-                    <span class="agent-review-text">{{ item.pathString || item.message }}</span>
+                    <span class="agent-review-code">{{ getAgentReviewItemLabel(item) }}</span>
+                    <span class="agent-review-text" :title="getAgentReviewItemTitle(item)">{{ getAgentReviewItemText(item) }}</span>
                     <span class="agent-review-status">{{ getAgentReviewStatusLabel(item) }}</span>
                     <button
                       v-if="canNavigateAgentPath(item.pathString)"
@@ -204,6 +221,10 @@ const agentGateRows = computed(() => {
 const agentReviewGroups = computed(() => groupHandoffReviewByPath(project.agentHandoff).slice(0, 6));
 const agentReviewItems = computed(() => agentReviewGroups.value.flatMap((group) => group.reviewItems).slice(0, 5));
 const agentReviewStatusCounts = computed(() => countHandoffReviewStatuses(project.agentHandoff, project.agentReviewState));
+const agentPreviewTargets = computed(() => {
+  const targets = project.agentHandoff?.previewTargets ?? [];
+  return Array.isArray(targets) ? targets.slice(0, 8) : [];
+});
 const DIALOGUE_PREVIEW_SAMPLE = {
   type: 'show-dialogue-preview',
   speakerName: '预览角色',
@@ -233,6 +254,35 @@ function getAgentReviewStatusLabel(item) {
   return '待处理';
 }
 
+function getAgentReviewItemLabel(item) {
+  const labels = {
+    'missing-asset': 'missing asset',
+    'unused-asset': 'unused asset',
+    'asset-check': 'asset check',
+    'placeholder-asset': 'placeholder',
+    'ambiguous-asset': 'ambiguous',
+    'screen-ui-preview': 'screen preview',
+    'reference-screenshot-fidelity': 'reference fidelity',
+  };
+  return labels[item?.category] ?? item?.code ?? item?.source ?? 'review';
+}
+
+function getAgentReviewItemText(item) {
+  if (item?.category === 'reference-screenshot-fidelity' && item.message) {
+    return item.message;
+  }
+  return item?.pathString || item?.message || item?.code || 'review item';
+}
+
+function getAgentReviewItemTitle(item) {
+  const parts = [
+    item?.message,
+    item?.pathString && item.pathString !== item.message ? item.pathString : null,
+    item?.reference ? `Reference: ${item.reference}` : null,
+  ];
+  return parts.filter(Boolean).join('\n');
+}
+
 function getAgentPathTitle(pathString) {
   const target = parseAgentPathTarget(pathString);
   if (target?.kind === 'scene') return '在游戏内容中定位';
@@ -240,6 +290,44 @@ function getAgentPathTitle(pathString) {
   if (target?.kind === 'character' || target?.kind === 'asset') return '在资源库中定位';
   if (target?.kind === 'ui') return '在项目设置中定位';
   return '定位';
+}
+
+function getPreviewTargetKey(target) {
+  if (target?.type === 'screen' || target?.screenId) {
+    return `screen:${target.screenId}`;
+  }
+  return `scene:${target?.sceneId ?? 'unknown'}:${target?.pageIndex ?? 0}`;
+}
+
+function getPreviewTargetKindLabel(target) {
+  return target?.type === 'screen' || target?.screenId ? 'screen' : 'scene';
+}
+
+function getPreviewTargetLabel(target) {
+  if (target?.type === 'screen' || target?.screenId) {
+    return target.screenId || 'screen';
+  }
+  return `${target?.sceneId ?? 'scene'} · page ${target?.pageIndex ?? 0}`;
+}
+
+function getPreviewTargetTitle(target) {
+  return target?.type === 'screen' || target?.screenId ? '在右侧预览画面' : '在游戏内容中定位页面';
+}
+
+function getPreviewTargetActionLabel(target) {
+  return target?.type === 'screen' || target?.screenId ? '预览' : '定位';
+}
+
+function openPreviewTarget(target) {
+  if (!target) return;
+  if (target.type === 'screen' || target.screenId) {
+    showPreviewScreen(target.screenId);
+    return;
+  }
+
+  if (target.sceneId) {
+    project.requestSceneNavigation(`scenes.${target.sceneId}.pages.${target.pageIndex ?? 0}`);
+  }
 }
 
 function onIframeRef(el) {
@@ -282,9 +370,17 @@ function onThemeBrowserClose() {
 }
 
 function sendShowScreen() {
+  showPreviewScreen('settingsScreen');
+}
+
+function showPreviewScreen(screenId = 'settingsScreen') {
+  if (script.data) {
+    themeEditor.startEngine();
+    themeEditor.flushPreview();
+  }
   themeEditor.iframeRef.value?.contentWindow?.postMessage({
     type: 'show-screen',
-    screenId: 'settingsScreen',
+    screenId,
   }, '*');
 }
 
@@ -465,6 +561,19 @@ onBeforeUnmount(() => {
 .agent-review-groups {
   display: grid;
   gap: 8px;
+}
+.agent-preview-targets {
+  display: grid;
+  gap: 5px;
+  padding-top: 6px;
+  margin-bottom: 8px;
+  border-top: 1px solid #333;
+}
+.agent-preview-targets h5 {
+  margin: 0;
+  color: #ddd;
+  font-size: 12px;
+  font-weight: 600;
 }
 .agent-review-group {
   display: grid;

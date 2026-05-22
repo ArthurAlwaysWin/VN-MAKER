@@ -4,6 +4,8 @@ This roadmap is the working plan for the external AI agent authoring layer.
 
 The older high-level plan lives in `docs/agent-authoring-architecture.md`, especially Phase I. This file turns that architecture into a prioritized implementation and audit checklist for the current branch.
 
+For cross-session development details, concrete task order, and acceptance criteria, see `docs/agent-authoring/implementation-plan.md`.
+
 ## Product Boundary
 
 Goal: users talk to external agents such as Codex, Claude, opencode, or GitHub Copilot. Those agents edit the same no-code visual novel project through repo-owned APIs, CLI commands, contracts, validation, preview, author-check, and handoff artifacts.
@@ -21,12 +23,12 @@ Current:
 - Checked-in draft and plan examples are covered by CLI tests.
 - A formal structured draft contract documents supported fields, defaults, and conversion rules.
 - Generated plan operations include provenance metadata for source characters, variables, scenes, beats, choices, source ids, and prose spans when present.
+- A novel adaptation skill documents the required human-readable breakdown before turning raw prose into structured draft operations.
+- A concrete adaptation preview example documents resource matching, choices, variables, and missing assets before draft creation.
 
 Gaps:
 
-- Prose-to-draft guidance is spread across workflow/skill docs instead of a compact prompt contract.
-
-Priority:
+- Prose-to-draft guidance is now linked across workflow, skill docs, and an example preview; it is not enforced by CLI because prose interpretation remains an external-agent responsibility.
 
 ### 2. Transaction Execution
 
@@ -39,10 +41,6 @@ Current:
 - `apply-plan --validate-only` executes a manifest in memory, runs validation, and can save a non-mutating validation artifact.
 - A dedicated command reference documents supported `apply-plan` operations, required params, aliases, and repair hints.
 
-Gaps:
-
-Priority:
-
 ### 3. Quality Gates
 
 Current:
@@ -51,6 +49,7 @@ Current:
 - Scene reference diagnostics are included in `author-check` and handoff review items.
 - Example workflows run through dry-run, apply, author-check, and handoff.
 - `author-check --transaction result.json` reads changed paths from an apply result, focuses changed scene/page diagnostics, and plans preview targets for all changed scene pages while preserving a primary preview target for compatibility.
+- `author-check --transaction result.json` also plans screen preview targets for changed title/settings/menu/save-load/backlog `ui.*` paths.
 
 Gaps:
 
@@ -64,16 +63,32 @@ Priority:
 Current:
 
 - `handoff-report` writes `agent-handoff.json`.
-- Project Settings shows gates, transaction summary, changed paths, and review items.
+- Project Settings shows gates, transaction summary, changed paths, preview targets, and review items.
 - Project Settings groups handoff changed paths and review items by scene/path category.
 - Project Settings can track local review item lifecycle state: open, acknowledged, and resolved.
 - PageEditor scene tree shows agent-changed scenes, changed pages, incoming reference counts, and review counts.
 - Project Settings can locate scene/page paths in PageEditor.
 - Project Settings can route non-scene paths such as variables, characters, assets, and UI paths to the closest editor surface.
+- Handoff artifacts include `previewTargets` for changed scene pages and supported screen UI paths, and Project Settings surfaces those targets for visual review.
+- Handoff review items include categories for missing assets, unused assets, skipped asset checks, and required screen UI preview review.
+- Handoff flags placeholder-like and highly ambiguous referenced asset names for human replacement or rename review.
+- Handoff can carry reference screenshot fidelity notes from an apply-plan result into structured review items for Project Settings.
 
 Gaps:
 
 - Review item lifecycle state is local to the editor and is not written back into the handoff artifact.
+
+### 4.5. External File Change Safety
+
+Current:
+
+- The editor records the loaded `script.json` file state.
+- Saves are blocked when `script.json` changed on disk after load/save, preventing stale editor state from overwriting external agent edits.
+- The editor polls for external `script.json` changes and shows a reload warning.
+
+Gaps:
+
+- The warning does not yet offer a structured diff/merge view.
 
 Priority:
 
@@ -82,16 +97,19 @@ Priority:
 Current:
 
 - Workflow, plan manifest, validation rules, layout rules, skill docs, example draft, example plan, and end-to-end example exist.
+- Asset naming guidance documents semantic filename patterns for agent-visible `list-assets` tokens.
+- A screen UI authoring skill draft captures the reference-screenshot workflow for title/settings/menu/save-load/backlog UI, while keeping output constrained to editor-owned structured config.
 - Example plan and example draft are tested against the CLI.
 - The end-to-end example uses the generated draft plan for dry-run and apply steps.
 - A compact external-agent checklist maps Codex, Claude, opencode, and GitHub Copilot to the same command contract.
 - External-agent docs use the shared `npm run vn -- <command>` style for generic CLI commands.
 - README links to the external-agent authoring workflow.
 - Focused mini-workflows cover adding scenes, revising dialogue, staging characters, setting media, adding branches, and preparing handoff.
+- Screen UI authoring is documented as a skill workflow. `ui.titleScreen` has structured CLI/API commands; `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` can be edited through `set-screen-layout`; shared UI sections can be edited through `set-dialogue-box`, `set-theme`, and `set-widget-styles`.
 
 Gaps:
 
-Priority:
+- No P0 documentation gaps remain for the current structured screen UI authoring layer.
 
 ### 6. Regression Protection
 

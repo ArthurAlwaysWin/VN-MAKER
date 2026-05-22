@@ -114,6 +114,21 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 
 `unused-asset` and `theme-*-partial-coverage` entries are warnings. They do not block export, but agents should either remove unused files, reference them intentionally, or tell the human creator why they remain. Theme partial coverage means a locked asset group was started but not completed; for example, a `pageTabPager` button family should provide `normal`, `hover`, `pressed`, and `selected`.
 
+## Handoff Review Categories
+
+`handoff-report` enriches review items with a `category` field so Project Settings and external agents can distinguish human tasks:
+
+| Category | Meaning |
+| --- | --- |
+| `missing-asset` | A referenced asset path does not exist in known project assets. The item includes `assetPath`, `assetKind`, and a suggested `list-assets` / `validate --check-assets` follow-up. |
+| `unused-asset` | A file exists under the asset root but is not referenced by the script. The human should confirm whether to reference, rename, or remove it. |
+| `asset-check` | Handoff did not run with known assets, so missing files may not have been detected. |
+| `placeholder-asset` | A referenced asset path appears to be a placeholder, such as `placeholder`, `todo`, or `dummy`. Replace it with final art/audio or explicitly accept it. |
+| `ambiguous-asset` | A referenced asset path has a generic filename such as `bg01.png`, `img02.png`, or `button.png`, which may confuse future agent matching. |
+| `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. |
+| `reference-screenshot-fidelity` | A plan used a reference screenshot and includes notes about what matched and what still needs human visual comparison. |
+| `layout`, `readiness`, `validation` | Existing structural and quality gates that should be resolved or explicitly accepted before handoff. |
+
 ## Scene Graph
 
 `export-report` includes scene graph data:

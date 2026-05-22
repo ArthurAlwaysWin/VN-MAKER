@@ -162,8 +162,68 @@ describe('agent handoff editor integration', () => {
     const preload = readFileSync(resolve(process.cwd(), 'electron', 'preload.js'), 'utf8');
     const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
     expect(preload).toContain("'read-agent-handoff'");
+    expect(preload).toContain("'check-project-file-state'");
     expect(main).toContain("ipcMain.handle('read-agent-handoff'");
+    expect(main).toContain("ipcMain.handle('check-project-file-state'");
+    expect(main).toContain('expectedScriptFileState');
+    expect(main).toContain('conflict: true');
     expect(main).toContain("'agent-handoff.json'");
+  });
+
+  it('tracks external script changes and blocks stale saves in the project store', async () => {
+    setActivePinia(createPinia());
+    const loadedState = { path: 'E:/demo-project/script.json', mtimeMs: 1000, size: 10 };
+    const changedState = { path: 'E:/demo-project/script.json', mtimeMs: 2000, size: 20 };
+    window.ipcRenderer = {
+      invoke: vi.fn(async (channel) => {
+        if (channel === 'load-project') {
+          return {
+            success: true,
+            path: 'E:/demo-project',
+            project: { name: 'Demo Project' },
+            script: { projectId: 'demo', scenes: {} },
+            scriptFileState: loadedState,
+          };
+        }
+        if (channel === 'read-agent-handoff') {
+          return { success: true, handoff: null, path: 'E:/demo-project/agent-handoff.json' };
+        }
+        if (channel === 'check-project-file-state') {
+          return { success: true, scriptFileState: changedState };
+        }
+        if (channel === 'save-project') {
+          return {
+            success: false,
+            conflict: true,
+            scriptFileState: changedState,
+            expectedScriptFileState: loadedState,
+          };
+        }
+        return { success: true };
+      }),
+    };
+
+    const project = useProjectStore();
+    await project.loadProject('E:/demo-project');
+
+    expect(project.scriptFileState).toEqual(loadedState);
+    await expect(project.checkExternalScriptChange()).resolves.toBe(true);
+    expect(project.externalScriptChange).toMatchObject({
+      source: 'poll',
+      scriptFileState: changedState,
+      expectedScriptFileState: loadedState,
+    });
+
+    project.clearExternalScriptChange();
+    await expect(project.saveProject({ projectId: 'demo', scenes: {} })).resolves.toBe(false);
+    expect(project.externalScriptChange).toMatchObject({
+      source: 'save-project',
+      scriptFileState: changedState,
+      expectedScriptFileState: loadedState,
+    });
+    expect(window.ipcRenderer.invoke).toHaveBeenCalledWith('save-project', expect.objectContaining({
+      expectedScriptFileState: loadedState,
+    }));
   });
 
   it('renders compact handoff gates and review items in ProjectSettings', () => {
@@ -177,9 +237,17 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('agentReviewItems');
     expect(source).toContain('agentReviewGroups');
     expect(source).toContain('agentReviewStatusCounts');
+    expect(source).toContain('agentPreviewTargets');
+    expect(source).toContain('视觉预览目标');
+    expect(source).toContain('openPreviewTarget');
+    expect(source).toContain('showPreviewScreen');
+    expect(source).toContain('getAgentReviewItemLabel');
+    expect(source).toContain('reference-screenshot-fidelity');
+    expect(source).toContain('reference fidelity');
     expect(source).toContain('setAgentReviewItemStatus');
     expect(source).toContain('clearAgentReviewItemStatus');
     expect(source).toContain('agent-review-status');
+    expect(source).toContain('agent-preview-targets');
     expect(source).toContain('groupHandoffReviewByPath');
     expect(source).toContain('openAgentPath');
     expect(source).toContain('requestAgentPathNavigation');
@@ -188,6 +256,16 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('transactionSummary');
     expect(source).toContain('project.loadAgentHandoff()');
     expect(source).toContain('latestCheckpointPath');
+  });
+
+  it('renders external script change warning and reload action in the editor shell', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src', 'editor', 'App.vue'), 'utf8');
+
+    expect(source).toContain('project.externalScriptChange');
+    expect(source).toContain('检测到 script.json 已被外部工具修改');
+    expect(source).toContain('reloadCurrentProject');
+    expect(source).toContain('project.checkExternalScriptChange()');
+    expect(source).toContain('external-change-banner');
   });
 
   it('groups handoff review items by scene and non-scene path targets', () => {

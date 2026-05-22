@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -574,6 +574,616 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('lists project assets across agent-visible categories', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(path.join(dir, 'assets', 'backgrounds'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'characters'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'audio'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'voices'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'ui', 'title'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'fonts'), { recursive: true });
+      await writeFile(path.join(dir, 'assets', 'backgrounds', 'rainy_school_gate.png'), 'bg', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'characters', 'sakura_nervous.webp'), 'char', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'audio', 'rain_theme.ogg'), 'bgm', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'voices', 'sakura_line_001.wav'), 'voice', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'ui', 'title', 'logo.png'), 'ui', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'fonts', 'story_serif.ttf'), 'font', 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'list-assets',
+        '--project',
+        dir,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        projectPath: dir,
+        assetRoot: path.join(dir, 'assets'),
+        categories: ['backgrounds', 'characters', 'audio', 'voices', 'ui', 'fonts'],
+      });
+      expect(result.assets.backgrounds).toEqual([
+        expect.objectContaining({
+          path: 'backgrounds/rainy_school_gate.png',
+          name: 'rainy_school_gate',
+          tokens: ['rainy', 'school', 'gate'],
+          extension: '.png',
+          size: 2,
+        }),
+      ]);
+      expect(result.assets.characters[0]).toMatchObject({
+        path: 'characters/sakura_nervous.webp',
+        name: 'sakura_nervous',
+        tokens: ['sakura', 'nervous'],
+        extension: '.webp',
+      });
+      expect(result.assets.audio[0].path).toBe('audio/rain_theme.ogg');
+      expect(result.assets.voices[0].path).toBe('voices/sakura_line_001.wav');
+      expect(result.assets.ui[0].path).toBe('ui/title/logo.png');
+      expect(result.assets.fonts[0].path).toBe('fonts/story_serif.ttf');
+    });
+  });
+
+  it('handles missing asset category folders gracefully', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(path.join(dir, 'assets', 'backgrounds'), { recursive: true });
+      await writeFile(path.join(dir, 'assets', 'backgrounds', 'school.png'), 'bg', 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'list-assets',
+        '--project',
+        dir,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result.assets.backgrounds).toHaveLength(1);
+      expect(result.assets.characters).toEqual([]);
+      expect(result.assets.audio).toEqual([]);
+      expect(result.assets.voices).toEqual([]);
+      expect(result.assets.ui).toEqual([]);
+      expect(result.assets.fonts).toEqual([]);
+    });
+  });
+
+  it('derives the project path from --script when listing assets', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await mkdir(path.join(dir, 'assets', 'ui'), { recursive: true });
+      await writeFile(scriptPath, JSON.stringify({ projectId: 'assets_from_script' }), 'utf8');
+      await writeFile(path.join(dir, 'assets', 'ui', 'textbox_frame.png'), 'ui', 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'list-assets',
+        '--script',
+        scriptPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result.projectPath).toBe(dir);
+      expect(result.assetRoot).toBe(path.join(dir, 'assets'));
+      expect(result.assets.ui[0]).toMatchObject({
+        path: 'ui/textbox_frame.png',
+        tokens: ['textbox', 'frame'],
+      });
+    });
+  });
+
+  it('tokenizes semantic asset names for agent matching', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(path.join(dir, 'assets', 'backgrounds'), { recursive: true });
+      await writeFile(path.join(dir, 'assets', 'backgrounds', 'rainy_school_gate.png'), 'bg', 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'list-assets',
+        '--project',
+        dir,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result.assets.backgrounds[0]).toMatchObject({
+        name: 'rainy_school_gate',
+        tokens: ['rainy', 'school', 'gate'],
+        extension: '.png',
+      });
+    });
+  });
+
+  it('does not include files outside the project assets folder', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(path.join(dir, 'assets', 'backgrounds'), { recursive: true });
+      await mkdir(path.join(dir, 'backgrounds'), { recursive: true });
+      await writeFile(path.join(dir, 'assets', 'backgrounds', 'inside.png'), 'in', 'utf8');
+      await writeFile(path.join(dir, 'backgrounds', 'outside.png'), 'out', 'utf8');
+      await writeFile(path.join(dir, 'assets-outside.png'), 'out', 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'list-assets',
+        '--project',
+        dir,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const allPaths = Object.values(result.assets).flat().map((asset) => asset.path);
+
+      expect(allPaths).toEqual(['backgrounds/inside.png']);
+      expect(allPaths).not.toContain('backgrounds/outside.png');
+      expect(allPaths).not.toContain('assets-outside.png');
+    });
+  });
+
+  it('sets and edits title screen elements through direct CLI commands', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_title_screen',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const setResult = await execFileAsync('node', [
+        cliPath,
+        'set-title-screen',
+        '--script',
+        scriptPath,
+        '--background',
+        'ui/title/background.png',
+        '--bgm',
+        'audio/title.ogg',
+        '--elements',
+        JSON.stringify([
+          { id: 'logo', type: 'text', content: 'Moonlit Letter', x: 640, y: 170, anchor: 'center' },
+        ]),
+        '--replace',
+        '--force',
+        '--json',
+      ]);
+      const setOutput = JSON.parse(setResult.stdout);
+      expect(setOutput.result).toMatchObject({
+        uiPath: 'ui.titleScreen',
+        screenId: 'titleScreen',
+        elementCount: 1,
+      });
+      expect(setOutput.changeSummary.changedPaths).toEqual(['ui.titleScreen']);
+
+      const addResult = await execFileAsync('node', [
+        cliPath,
+        'add-title-element',
+        '--script',
+        scriptPath,
+        '--type',
+        'button',
+        '--id',
+        'start-button',
+        '--label',
+        'Start',
+        '--action',
+        'start',
+        '--x',
+        '640',
+        '--y',
+        '430',
+        '--anchor',
+        'center',
+        '--width',
+        '220',
+        '--height',
+        '52',
+        '--force',
+        '--json',
+      ]);
+      expect(JSON.parse(addResult.stdout).result).toMatchObject({
+        elementId: 'start-button',
+        elementIndex: 1,
+      });
+
+      await execFileAsync('node', [
+        cliPath,
+        'update-title-element',
+        '--script',
+        scriptPath,
+        '--id',
+        'start-button',
+        '--text',
+        'Begin',
+        '--force',
+        '--json',
+      ]);
+      await execFileAsync('node', [
+        cliPath,
+        'remove-title-element',
+        '--script',
+        scriptPath,
+        '--id',
+        'logo',
+        '--force',
+        '--json',
+      ]);
+
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(script.ui.titleScreen).toEqual({
+        background: 'ui/title/background.png',
+        bgm: 'audio/title.ogg',
+        elements: [
+          {
+            id: 'start-button',
+            type: 'button',
+            text: 'Begin',
+            action: 'start',
+            x: 640,
+            y: 430,
+            anchor: 'center',
+            width: 220,
+            height: 52,
+          },
+        ],
+      });
+    });
+  });
+
+  it('applies title screen changes transactionally from an authoring plan', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'title-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_title_screen_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            id: 'title-base',
+            command: 'set-title-screen',
+            params: {
+              background: 'ui/title/background.png',
+              bgm: 'audio/title.ogg',
+              merge: false,
+            },
+          },
+          {
+            id: 'title-logo',
+            command: 'add-title-element',
+            params: {
+              id: 'title-logo',
+              type: 'text',
+              content: 'Moonlit Letter',
+              x: 640,
+              y: 170,
+              anchor: 'center',
+            },
+          },
+          {
+            id: 'title-button',
+            command: 'add-title-element',
+            params: {
+              id: 'start-button',
+              type: 'button',
+              text: 'Start',
+              action: 'start',
+              x: 640,
+              y: 430,
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--checkpoint',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'written',
+        wrote: true,
+      });
+      expect(result.changeSummary.changedPaths).toEqual(['ui.titleScreen']);
+      expect(script.ui.titleScreen).toMatchObject({
+        background: 'ui/title/background.png',
+        bgm: 'audio/title.ogg',
+        elements: [
+          { id: 'title-logo', type: 'text', content: 'Moonlit Letter' },
+          { id: 'start-button', type: 'button', text: 'Start', action: 'start' },
+        ],
+      });
+    });
+  });
+
+  it('sets existing screen layout config from a JSON file', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const configPath = path.join(dir, 'game-menu-layout.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_screen_layout',
+        characters: {},
+        scenes: {},
+        ui: {
+          gameMenu: {
+            panel: { width: 320 },
+          },
+        },
+      }), 'utf8');
+      await writeFile(configPath, JSON.stringify({
+        panel: { background: 'rgba(0,0,0,0.7)' },
+        buttons: { color: '#ffffff' },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'set-screen-layout',
+        '--script',
+        scriptPath,
+        '--screen',
+        'gameMenu',
+        '--config',
+        configPath,
+        '--force',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.result).toEqual({
+        uiPath: 'ui.gameMenu',
+        screenId: 'gameMenu',
+      });
+      expect(result.changeSummary.changedPaths).toEqual(['ui.gameMenu']);
+      expect(script.ui.gameMenu).toEqual({
+        panel: { width: 320, background: 'rgba(0,0,0,0.7)' },
+        buttons: { color: '#ffffff' },
+      });
+    });
+  });
+
+  it('applies screen layout changes transactionally from an authoring plan', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'screen-layout-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_screen_layout_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            id: 'settings-layout',
+            command: 'set-screen-layout',
+            params: {
+              screen: 'settingsScreen',
+              merge: false,
+              config: {
+                header: { title: { text: 'Settings' } },
+                tabBar: { tabs: [{ label: 'Audio', settingKeys: ['master-volume'] }] },
+              },
+            },
+          },
+          {
+            id: 'save-load-layout',
+            command: 'set-screen-layout',
+            params: {
+              screen: 'saveLoadScreen',
+              config: {
+                chrome: { backgroundImage: 'ui/save-load/background.png' },
+              },
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--checkpoint',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.changeSummary.changedPaths).toEqual([
+        'ui.settingsScreen',
+        'ui.saveLoadScreen',
+      ]);
+      expect(script.ui.settingsScreen.header.title.text).toBe('Settings');
+      expect(script.ui.saveLoadScreen.chrome.backgroundImage).toBe('ui/save-load/background.png');
+    });
+  });
+
+  it('rejects unsupported screen layout ids from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_screen_layout_invalid',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'set-screen-layout',
+        '--script',
+        scriptPath,
+        '--screen',
+        'titleScreen',
+        '--config-json',
+        '{}',
+        '--force',
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stderr: expect.stringContaining('Unsupported screen layout id: titleScreen'),
+      });
+    });
+  });
+
+  it('sets shared UI config from JSON without raw style/code authoring', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const widgetPath = path.join(dir, 'widget-styles.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_shared_ui',
+        characters: {},
+        scenes: {},
+        ui: {
+          dialogueBox: {
+            frame: { opacity: 0.8 },
+          },
+          theme: {
+            tokens: { primary: '#112233' },
+          },
+          widgetStyles: {
+            slider: { trackColor: '#111111' },
+          },
+        },
+      }), 'utf8');
+      await writeFile(widgetPath, JSON.stringify({
+        slider: { thumbColor: '#ffffff' },
+        toggle: { onColor: '#66aaff' },
+      }), 'utf8');
+
+      const dialogueResult = await execFileAsync('node', [
+        cliPath,
+        'set-dialogue-box',
+        '--script',
+        scriptPath,
+        '--config-json',
+        JSON.stringify({
+          frame: { backgroundImage: 'ui/dialogue/frame.png' },
+          nameplateStyle: { color: '#ffffff' },
+        }),
+        '--force',
+        '--json',
+      ]);
+      const themeResult = await execFileAsync('node', [
+        cliPath,
+        'set-theme',
+        '--script',
+        scriptPath,
+        '--config-json',
+        JSON.stringify({
+          tokens: { accent: '#66aaff' },
+          cursor: { default: 'ui/cursors/default.png' },
+        }),
+        '--force',
+        '--json',
+      ]);
+      const widgetResult = await execFileAsync('node', [
+        cliPath,
+        'set-widget-styles',
+        '--script',
+        scriptPath,
+        '--config',
+        widgetPath,
+        '--replace',
+        '--force',
+        '--json',
+      ]);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(JSON.parse(dialogueResult.stdout).changeSummary.changedPaths).toEqual(['ui.dialogueBox']);
+      expect(JSON.parse(themeResult.stdout).changeSummary.changedPaths).toEqual(['ui.theme']);
+      expect(JSON.parse(widgetResult.stdout).changeSummary.changedPaths).toEqual(['ui.widgetStyles']);
+      expect(script.ui.dialogueBox).toEqual({
+        frame: { opacity: 0.8, backgroundImage: 'ui/dialogue/frame.png' },
+        nameplateStyle: { color: '#ffffff' },
+      });
+      expect(script.ui.theme).toEqual({
+        tokens: { primary: '#112233', accent: '#66aaff' },
+        cursor: { default: 'ui/cursors/default.png' },
+      });
+      expect(script.ui.widgetStyles).toEqual({
+        slider: { thumbColor: '#ffffff' },
+        toggle: { onColor: '#66aaff' },
+      });
+    });
+  });
+
+  it('applies shared UI config changes transactionally from an authoring plan', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'shared-ui-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_shared_ui_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            command: 'set-dialogue-box',
+            params: {
+              config: {
+                nameplateStyle: { backgroundImage: 'ui/dialogue/nameplate.png' },
+              },
+            },
+          },
+          {
+            command: 'set-theme',
+            params: {
+              config: {
+                icons: { close: 'ui/icons/close.png' },
+              },
+            },
+          },
+          {
+            command: 'set-widget-styles',
+            params: {
+              merge: false,
+              config: {
+                tabs: { activeBackgroundImage: 'ui/widgets/tab-active.png' },
+              },
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--checkpoint',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.changeSummary.changedPaths).toEqual([
+        'ui.dialogueBox',
+        'ui.theme',
+        'ui.widgetStyles',
+      ]);
+      expect(script.ui.dialogueBox.nameplateStyle.backgroundImage).toBe('ui/dialogue/nameplate.png');
+      expect(script.ui.theme.icons.close).toBe('ui/icons/close.png');
+      expect(script.ui.widgetStyles.tabs.activeBackgroundImage).toBe('ui/widgets/tab-active.png');
+    });
+  });
+
   it('documents the structured draft contract used by the example draft', async () => {
     const contract = await readFile(path.resolve('docs/agent-authoring/structured-draft-contract.md'), 'utf8');
 
@@ -600,10 +1210,14 @@ describe('vn-author CLI', () => {
 
     expect(checklist).toContain('Codex, Claude, opencode, GitHub Copilot');
     expect(checklist).toContain('Do not build or imply an in-editor AI chat assistant.');
+    expect(checklist).toContain('docs/agent-authoring/asset-naming-guidelines.md');
+    expect(checklist).toContain('docs/agent-authoring/example-adaptation-preview.md');
     expect(checklist).toContain('docs/agent-authoring/structured-draft-contract.md');
     expect(checklist).toContain('docs/agent-authoring/plan-manifest.md');
+    expect(checklist).toContain('Do not build CG gallery, ending list, or in-editor AI assistant flows unless the human explicitly asks for that scope.');
     for (const command of [
       'npm run vn:inspect -- --json',
+      'npm run vn -- list-assets --script public/game/script.json --json',
       'npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json',
       'npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json',
       'npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json',
@@ -614,15 +1228,57 @@ describe('vn-author CLI', () => {
     }
   });
 
+  it('documents asset naming and adaptation preview contracts for prose workflows', async () => {
+    const naming = await readFile(path.resolve('docs/agent-authoring/asset-naming-guidelines.md'), 'utf8');
+    const preview = await readFile(path.resolve('docs/agent-authoring/example-adaptation-preview.md'), 'utf8');
+    const adaptationSkill = await readFile(path.resolve('docs/agent-authoring/novel-adaptation-skill.md'), 'utf8');
+    const planManifest = await readFile(path.resolve('docs/agent-authoring/plan-manifest.md'), 'utf8');
+
+    for (const text of [
+      'backgrounds/school_gate_rainy.png',
+      'characters/sakura_nervous.png',
+      'ui/game_menu_button_normal.png',
+      'npm run vn -- list-assets --script path/to/script.json --json',
+      'Filename tokens are the current supported semantic layer.',
+    ]) {
+      expect(naming).toContain(text);
+    }
+
+    for (const text of [
+      '## Source Excerpt',
+      '## Adaptation Preview',
+      'sakura_trust',
+      'characters/haruma_worried.png',
+      '可能需要补充的资源',
+    ]) {
+      expect(preview).toContain(text);
+    }
+
+    expect(adaptationSkill).toContain('example-adaptation-preview.md');
+    expect(adaptationSkill).toContain('asset-naming-guidelines.md');
+    for (const command of [
+      'set-title-screen',
+      'set-screen-layout',
+      'set-dialogue-box',
+      'set-theme',
+      'set-widget-styles',
+    ]) {
+      expect(planManifest).toContain(`- \`${command}\``);
+    }
+  });
+
   it('keeps external-agent docs on the npm vn command style', async () => {
     const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8'));
     expect(packageJson.scripts.vn).toBe('node tools/vn-author/index.js');
 
     const docPaths = [
       'docs/agent-authoring/agent-checklist.md',
+      'docs/agent-authoring/asset-naming-guidelines.md',
       'docs/agent-authoring/command-reference.md',
+      'docs/agent-authoring/example-adaptation-preview.md',
       'docs/agent-authoring/layout-rules.md',
       'docs/agent-authoring/mini-workflows.md',
+      'docs/agent-authoring/novel-adaptation-skill.md',
       'docs/agent-authoring/plan-manifest.md',
       'docs/agent-authoring/project-contract.md',
       'docs/agent-authoring/skill.md',
@@ -633,6 +1289,13 @@ describe('vn-author CLI', () => {
       const doc = await readFile(path.resolve(docPath), 'utf8');
       expect(doc).not.toContain('node tools/vn-author/index.js');
     }
+  });
+
+  it('keeps the external-agent skill scoped away from unsupported CG and ending authoring', async () => {
+    const skill = await readFile(path.resolve('docs/agent-authoring/skill.md'), 'utf8');
+
+    expect(skill).toContain('do not invent new CG/ending registry workflows until official commands exist');
+    expect(skill).toContain('CG gallery and ending list authoring commands are not part of the current external-agent layer');
   });
 
   it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
@@ -2578,6 +3241,130 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('plans screen preview targets for transaction changed UI screens', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const transactionPath = path.join(dir, 'ui-transaction.json');
+      const previewPath = path.join(dir, 'ui-author-preview.png');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_screen_author_check',
+        meta: { resolution: { width: 800, height: 450 } },
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'normal',
+                background: 'backgrounds/school.svg',
+                characters: [],
+                dialogues: [{ speaker: null, text: 'Ready for screen preview.' }],
+              },
+            ],
+          },
+        },
+        ui: {
+          titleScreen: {
+            background: 'ui/title/background.png',
+            elements: [{ id: 'title', type: 'text', content: 'Title', x: 400, y: 120 }],
+          },
+          gameMenu: {
+            panel: { width: 320 },
+          },
+        },
+      }), 'utf8');
+      await writeFile(transactionPath, JSON.stringify({
+        dryRun: false,
+        transaction: {
+          command: 'apply-plan',
+          status: 'written',
+          wrote: true,
+        },
+        changeSummary: {
+          command: 'apply-plan',
+          operationCount: 2,
+          changedPaths: ['ui.titleScreen', 'ui.gameMenu'],
+          validation: { ok: true, errorCount: 0, warningCount: 0 },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        transactionPath,
+        '--preview-out',
+        previewPath,
+        '--write-preview-plan',
+        '--skip-asset-check',
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      const previewPlan = JSON.parse(await readFile(`${previewPath}.json`, 'utf8'));
+
+      expect(result.focus).toMatchObject({
+        mode: 'transaction',
+        changedPaths: ['ui.titleScreen', 'ui.gameMenu'],
+        screenTargets: [
+          { type: 'screen', screenId: 'titleScreen' },
+          { type: 'screen', screenId: 'gameMenu' },
+        ],
+        previewTarget: { type: 'screen', screenId: 'titleScreen' },
+      });
+      expect(result.preview).toMatchObject({
+        targetCount: 2,
+        type: 'screen',
+        screenId: 'titleScreen',
+      });
+      expect(result.summary.screenPreviewReviewItems).toBe(2);
+      expect(result.screenPreview.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          category: 'screen-ui-preview',
+          code: 'screen-ui-preview-required',
+          pathString: 'ui.titleScreen',
+          screenId: 'titleScreen',
+        }),
+        expect.objectContaining({
+          source: 'preview',
+          category: 'screen-ui-preview',
+          code: 'screen-ui-preview-required',
+          pathString: 'ui.gameMenu',
+          screenId: 'gameMenu',
+        }),
+      ]));
+      expect(result.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          category: 'screen-ui-preview',
+          code: 'screen-ui-preview-required',
+          pathString: 'ui.titleScreen',
+        }),
+      ]));
+      expect(result.suggestions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          code: 'screen-ui-preview-required',
+          pathString: 'ui.titleScreen',
+        }),
+      ]));
+      expect(previewPlan).toMatchObject({
+        dryRun: true,
+        targetCount: 2,
+        targets: [
+          expect.objectContaining({ type: 'screen', screenId: 'titleScreen', outPath: previewPath }),
+          expect.objectContaining({
+            type: 'screen',
+            screenId: 'gameMenu',
+            outPath: expect.stringContaining('ui-author-preview-gameMenu.png'),
+          }),
+        ],
+      });
+    });
+  });
+
   it('writes an editor handoff report with recent checkpoints', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -2670,6 +3457,137 @@ describe('vn-author CLI', () => {
           code: 'scene-incoming-references',
           sceneId: 'unused_checkpoint_scene',
           referenceCount: 1,
+        }),
+      ]));
+    });
+  });
+
+  it('preserves reference screenshot fidelity notes from apply-plan into handoff review', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'screen-plan.json');
+      const resultPath = path.join(dir, 'apply-result.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_reference_fidelity',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'normal',
+                background: 'backgrounds/room.png',
+                characters: [],
+                dialogues: [{ speaker: null, text: 'Ready.' }],
+              },
+            ],
+          },
+        },
+        ui: {
+          gameMenu: {},
+        },
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        handoff: {
+          referenceScreenshotNotes: [
+            {
+              screenId: 'gameMenu',
+              reference: 'references/game-menu.png',
+              summary: 'Matched the reference menu structure using editable layout config.',
+              matched: ['left-aligned menu stack'],
+              gaps: ['background blur needs visual confirmation'],
+            },
+          ],
+        },
+        operations: [
+          {
+            command: 'set-screen-layout',
+            params: {
+              screenId: 'gameMenu',
+              config: {
+                panel: { width: 360, opacity: 0.82 },
+              },
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const apply = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--result-out',
+        resultPath,
+        '--json',
+      ]);
+      const applyResult = JSON.parse(apply.stdout);
+      expect(applyResult.handoff.referenceScreenshotNotes).toEqual([
+        expect.objectContaining({
+          screenId: 'gameMenu',
+          reference: 'references/game-menu.png',
+        }),
+      ]);
+
+      const check = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        resultPath,
+        '--skip-asset-check',
+        '--json',
+      ]);
+      const checkResult = JSON.parse(check.stdout);
+      expect(checkResult.summary.referenceScreenshotFidelityNotes).toBe(1);
+      expect(checkResult.referenceScreenshotFidelity.issues).toEqual([
+        expect.objectContaining({
+          category: 'reference-screenshot-fidelity',
+          code: 'reference-screenshot-fidelity-note',
+          pathString: 'ui.gameMenu',
+          screenId: 'gameMenu',
+          reference: 'references/game-menu.png',
+          matched: ['left-aligned menu stack'],
+          gaps: ['background blur needs visual confirmation'],
+        }),
+      ]);
+      expect(checkResult.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          category: 'reference-screenshot-fidelity',
+          code: 'reference-screenshot-fidelity-note',
+        }),
+      ]));
+      expect(checkResult.suggestions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          code: 'reference-screenshot-fidelity-note',
+          pathString: 'ui.gameMenu',
+        }),
+      ]));
+
+      const handoff = await execFileAsync('node', [
+        cliPath,
+        'handoff-report',
+        '--script',
+        scriptPath,
+        '--transaction',
+        resultPath,
+        '--skip-asset-check',
+        '--json',
+      ]);
+      const report = JSON.parse(handoff.stdout);
+      expect(report.reviewItems).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          category: 'reference-screenshot-fidelity',
+          code: 'reference-screenshot-fidelity-note',
+          pathString: 'ui.gameMenu',
+          screenId: 'gameMenu',
+          reference: 'references/game-menu.png',
+          gaps: ['background blur needs visual confirmation'],
         }),
       ]));
     });

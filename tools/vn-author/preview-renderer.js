@@ -56,10 +56,12 @@ function createPreviewWarning(code, message, details = {}) {
   };
 }
 
-function normalizePreviewTarget({ sceneId, pageIndex, outPath }) {
+function normalizePreviewTarget({ sceneId, pageIndex, screenId, outPath }) {
   return {
+    type: screenId ? 'screen' : 'scene',
     sceneId: sceneId || 'start',
     pageIndex: Number.isInteger(pageIndex) ? pageIndex : 0,
+    screenId: screenId || null,
     outPath,
   };
 }
@@ -132,7 +134,7 @@ async function installAssetRoutes(page, repoRoot) {
   await page.route('**/game/**/*', fulfillAsset);
 }
 
-function createHarnessHtml({ script, sceneId, pageIndex }) {
+function createHarnessHtml({ script, sceneId, pageIndex, screenId }) {
   const payload = JSON.stringify({
     type: 'start',
     script,
@@ -140,6 +142,9 @@ function createHarnessHtml({ script, sceneId, pageIndex }) {
     pageIndex,
     previewMode: true,
   });
+  const screenPayload = screenId
+    ? JSON.stringify({ type: 'show-screen', screenId })
+    : null;
 
   return `<!doctype html>
 <html>
@@ -159,7 +164,10 @@ function createHarnessHtml({ script, sceneId, pageIndex }) {
     window.addEventListener('message', (event) => {
       if (event.data && event.data.type === 'ready') {
         event.source.postMessage({ type: 'ack-preview' }, '*');
-        setTimeout(() => iframe.contentWindow.postMessage(payload, '*'), 0);
+        setTimeout(() => {
+          iframe.contentWindow.postMessage(payload, '*');
+          ${screenPayload ? `setTimeout(() => iframe.contentWindow.postMessage(${screenPayload}, '*'), 250);` : ''}
+        }, 0);
       }
     });
   </script>
@@ -210,6 +218,26 @@ async function waitForPreviewReady(page) {
     const stage = document.querySelector('#stage-layer');
     return Boolean(dialogue || choice || stage?.children.length);
   }, null, { timeout: 10000 });
+  await page.waitForTimeout(600);
+}
+
+async function waitForScreenPreviewReady(page, screenId) {
+  await waitForPreviewReady(page);
+  if (!screenId) return;
+
+  const frameElement = await page.$('#runtime');
+  const frame = await frameElement.contentFrame();
+  const selectorByScreen = {
+    titleScreen: '#title-screen.visible',
+    settingsScreen: '#settings-screen.visible',
+    gameMenu: '#game-menu.visible',
+    saveLoadScreen: '#save-load-screen:not(.hidden)',
+    backlogScreen: '#backlog-screen:not(.hidden)',
+  };
+  const selector = selectorByScreen[screenId];
+  if (selector) {
+    await frame.waitForSelector(selector, { timeout: 10000 });
+  }
   await page.waitForTimeout(600);
 }
 
@@ -383,12 +411,13 @@ export async function renderPreviewScreenshot({
   script,
   sceneId = 'start',
   pageIndex = 0,
+  screenId = null,
   outPath,
   width = 1280,
   height = 720,
   dryRun = false,
 } = {}) {
-  const target = normalizePreviewTarget({ sceneId, pageIndex, outPath });
+  const target = normalizePreviewTarget({ sceneId, pageIndex, screenId, outPath });
   if (!target.outPath) {
     throw new Error('render-preview requires an output path');
   }
@@ -397,13 +426,16 @@ export async function renderPreviewScreenshot({
     script,
     sceneId: target.sceneId,
     pageIndex: target.pageIndex,
+    screenId: target.screenId,
   });
 
   if (dryRun) {
     return {
       dryRun: true,
+      type: target.type,
       sceneId: target.sceneId,
       pageIndex: target.pageIndex,
+      screenId: target.screenId,
       outPath: target.outPath,
       width,
       height,
@@ -433,7 +465,7 @@ export async function renderPreviewScreenshot({
     await installAssetRoutes(page, repoRoot);
     await page.goto(vite.url, { waitUntil: 'domcontentloaded' });
     await page.setContent(harnessHtml, { waitUntil: 'domcontentloaded' });
-    await waitForPreviewReady(page);
+    await waitForScreenPreviewReady(page, target.screenId);
 
     await mkdir(path.dirname(target.outPath), { recursive: true });
     await page.screenshot({
@@ -455,8 +487,10 @@ export async function renderPreviewScreenshot({
 
     return {
       dryRun: false,
+      type: target.type,
       sceneId: target.sceneId,
       pageIndex: target.pageIndex,
+      screenId: target.screenId,
       outPath: target.outPath,
       width,
       height,

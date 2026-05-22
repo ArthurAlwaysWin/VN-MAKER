@@ -487,4 +487,176 @@ describe('project authoring session', () => {
       expect.objectContaining({ type: 'choice', prompt: 'Pick' }),
     ]);
   });
+
+  it('authors title screen config through structured UI helpers', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_title_screen_authoring',
+        characters: {},
+        scenes: {},
+      },
+    });
+
+    expect(session.setTitleScreen({
+      background: 'ui/title/background.png',
+      bgm: 'audio/title.ogg',
+      elements: [
+        { id: 'logo', type: 'text', content: 'Moonlit Letter', x: 640, y: 170, anchor: 'center' },
+      ],
+      merge: false,
+    })).toMatchObject({
+      uiPath: 'ui.titleScreen',
+      screenId: 'titleScreen',
+      elementCount: 1,
+    });
+
+    expect(session.addTitleElement({
+      element: {
+        id: 'start-button',
+        type: 'button',
+        label: 'Start',
+        action: 'load',
+        x: 640,
+        y: 430,
+        anchor: 'center',
+        size: { width: 220, height: 52 },
+      },
+    })).toMatchObject({
+      uiPath: 'ui.titleScreen',
+      elementId: 'start-button',
+      elementIndex: 1,
+    });
+
+    session.updateTitleElement({
+      elementId: 'start-button',
+      patch: { text: 'Begin', action: 'start' },
+    });
+    session.removeTitleElement({ elementId: 'logo' });
+
+    const titleScreen = session.toJSON().ui.titleScreen;
+    expect(titleScreen).toEqual({
+      background: 'ui/title/background.png',
+      bgm: 'audio/title.ogg',
+      elements: [
+        {
+          id: 'start-button',
+          type: 'button',
+          text: 'Begin',
+          action: 'start',
+          x: 640,
+          y: 430,
+          anchor: 'center',
+          width: 220,
+          height: 52,
+        },
+      ],
+    });
+  });
+
+  it('sets supported screen layout config while rejecting unsupported screen ids', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_screen_layout_authoring',
+        characters: {},
+        scenes: {},
+        ui: {
+          gameMenu: {
+            panel: { width: 360, align: 'center' },
+          },
+        },
+      },
+    });
+
+    expect(session.setScreenLayout({
+      screenId: 'gameMenu',
+      config: {
+        panel: { background: 'rgba(0,0,0,0.7)' },
+        buttons: { color: '#ffffff' },
+      },
+    })).toEqual({
+      uiPath: 'ui.gameMenu',
+      screenId: 'gameMenu',
+    });
+    expect(session.toJSON().ui.gameMenu).toEqual({
+      panel: { width: 360, align: 'center', background: 'rgba(0,0,0,0.7)' },
+      buttons: { color: '#ffffff' },
+    });
+
+    session.setScreenLayout({
+      screenId: 'backlogScreen',
+      config: { header: { title: 'History' } },
+      merge: false,
+    });
+    expect(session.toJSON().ui.backlogScreen).toEqual({
+      header: { title: 'History' },
+    });
+
+    expect(() => session.setScreenLayout({
+      screenId: 'titleScreen',
+      config: {},
+    })).toThrow('Unsupported screen layout id: titleScreen');
+  });
+
+  it('authors shared UI config through structured helpers', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_shared_ui_authoring',
+        characters: {},
+        scenes: {},
+        ui: {
+          dialogueBox: {
+            frame: { opacity: 0.7, padding: 18 },
+          },
+          theme: {
+            tokens: { primary: '#223344' },
+          },
+          widgetStyles: {
+            slider: { trackColor: '#222222' },
+          },
+        },
+      },
+    });
+
+    expect(session.setDialogueBox({
+      config: {
+        frame: { backgroundImage: 'ui/dialogue/frame.png' },
+        nameplateStyle: { color: '#ffffff' },
+      },
+    })).toEqual({
+      uiPath: 'ui.dialogueBox',
+    });
+    expect(session.setTheme({
+      config: {
+        tokens: { accent: '#88ccff' },
+        cursor: { default: 'ui/cursors/default.png' },
+      },
+    })).toEqual({
+      uiPath: 'ui.theme',
+    });
+    expect(session.setWidgetStyles({
+      config: {
+        slider: { thumbColor: '#ffffff' },
+        toggle: { onColor: '#88ccff' },
+      },
+      merge: false,
+    })).toEqual({
+      uiPath: 'ui.widgetStyles',
+    });
+
+    expect(session.toJSON().ui.dialogueBox).toEqual({
+      frame: { opacity: 0.7, padding: 18, backgroundImage: 'ui/dialogue/frame.png' },
+      nameplateStyle: { color: '#ffffff' },
+    });
+    expect(session.toJSON().ui.theme).toEqual({
+      tokens: { primary: '#223344', accent: '#88ccff' },
+      cursor: { default: 'ui/cursors/default.png' },
+    });
+    expect(session.toJSON().ui.widgetStyles).toEqual({
+      slider: { thumbColor: '#ffffff' },
+      toggle: { onColor: '#88ccff' },
+    });
+
+    expect(() => session.setTheme({ config: 'body { color: red; }' }))
+      .toThrow('Theme config must be an object');
+  });
 });

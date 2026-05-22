@@ -26,6 +26,12 @@
       </div>
     </header>
 
+    <div v-if="project.externalScriptChange" class="external-change-banner">
+      <span>检测到 script.json 已被外部工具修改。为避免覆盖外部 Agent 的更改，保存已暂停。</span>
+      <button @click="reloadCurrentProject">重新载入项目</button>
+      <button @click="project.clearExternalScriptChange()">稍后处理</button>
+    </div>
+
     <TabBar v-model="activeTab" :tabs="tabs" />
 
     <main class="workspace">
@@ -109,6 +115,7 @@ const canRedo = computed(() => script.historyIndex < script.history.length - 1);
 // --- Auto-save (2s debounce) ---
 let saveTimer = null;
 let snapshotTimer = null;
+let externalChangeTimer = null;
 
 watch(() => script.data, () => {
   if (!script.data || script._skipWatch) return;
@@ -176,11 +183,17 @@ onMounted(async () => {
   window.__saveCurrentProject = () => script.data
     ? attemptSave({ source: 'electron-close' })
     : Promise.resolve(false);
+  externalChangeTimer = setInterval(() => {
+    if (currentView.value === 'editing' && project.projectPath) {
+      void project.checkExternalScriptChange();
+    }
+  }, 3000);
 });
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeyDown);
   if (saveTimer) clearTimeout(saveTimer);
   if (snapshotTimer) clearTimeout(snapshotTimer);
+  if (externalChangeTimer) clearInterval(externalChangeTimer);
 });
 
 // --- Actions ---
@@ -253,6 +266,14 @@ async function goHome() {
   await project.loadRecentProjects();
 }
 
+async function reloadCurrentProject() {
+  if (!project.projectPath) return;
+  const currentPath = project.projectPath;
+  if (saveTimer) clearTimeout(saveTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  await openProject(currentPath);
+}
+
 function openPreview() {
   if (window.ipcRenderer) {
     window.ipcRenderer.invoke('open-preview', project.projectPath);
@@ -279,7 +300,11 @@ async function attemptSave({ silent = false, source = 'manual' } = {}) {
     return false;
   }
 
-  return project.saveProject(script.data);
+  const saved = await project.saveProject(script.data);
+  if (!saved && project.externalScriptChange && !silent) {
+    alert('检测到 script.json 已被外部工具修改。请先重新载入项目，确认外部 Agent 的更改后再继续保存。');
+  }
+  return saved;
 }
 
 function manualSave() {
@@ -317,4 +342,24 @@ function manualSave() {
 .preview-btn:hover { background: #117748; }
 
 .workspace { flex: 1; background: #1e1e1e; position: relative; overflow-y: auto; }
+
+.external-change-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #4a2f05;
+  border-bottom: 1px solid #8a5a12;
+  color: #ffe7b0;
+  font-size: 12px;
+}
+.external-change-banner button {
+  background: #6f470a;
+  border: 1px solid #a66d15;
+  color: #fff3cf;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.external-change-banner button:hover { background: #83550f; }
 </style>

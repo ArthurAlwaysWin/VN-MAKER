@@ -20,9 +20,17 @@ npm run validate:project -- --json
 
 Read the current project shape before making changes.
 
+For prose adaptation, staging, or screen UI work, also inspect assets:
+
+```bash
+npm run vn -- list-assets --script public/game/script.json --json
+```
+
+Use semantic asset names from `docs/agent-authoring/asset-naming-guidelines.md`; mention ambiguous or missing assets in the handoff.
+
 ## Choose The Edit Path
 
-- Prose or outline input: create a structured draft that follows `docs/agent-authoring/structured-draft-contract.md`.
+- Prose or outline input: first show an adaptation preview like `docs/agent-authoring/example-adaptation-preview.md`, then create a structured draft that follows `docs/agent-authoring/structured-draft-contract.md`.
 - Multi-step project edit: create an apply-plan manifest that follows `docs/agent-authoring/plan-manifest.md`.
 - Small targeted edit: use `tools/vn-author/index.js` commands or `src/authoring/projectSession.js`.
 - Avoid raw `script.json` edits unless no API or CLI command can express the change.
@@ -63,7 +71,7 @@ npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-`author-check --transaction` focuses changed scenes/pages and writes a preview plan for all changed scene pages without needing a browser.
+`author-check --transaction` focuses changed scenes/pages and supported changed screen UI paths, then writes a preview plan without needing a browser.
 
 ## Preview
 
@@ -102,6 +110,7 @@ Include:
 ## Do Not
 
 - Do not invent unsupported script fields, effects, or `commands[]`.
+- Do not build CG gallery, ending list, or in-editor AI assistant flows unless the human explicitly asks for that scope.
 - Do not skip validation after meaningful edits.
 - Do not finish with validation errors or readiness blockers unless the human explicitly accepts them.
 - Do not treat a dry-run preview plan as visual confirmation when actual screenshot rendering is available.

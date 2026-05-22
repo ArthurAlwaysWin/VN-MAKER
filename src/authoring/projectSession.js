@@ -193,6 +193,108 @@ function normalizePageTransitionInput(transition) {
   };
 }
 
+function normalizeTitleElement(element, index = 0) {
+  if (!isPlainObject(element)) {
+    throw new Error('Title screen element must be an object');
+  }
+
+  const type = assertNonEmptyString(element.type, 'title element type');
+  if (!['text', 'button', 'image'].includes(type)) {
+    throw new Error(`Unsupported title element type: ${type}`);
+  }
+
+  const normalized = {
+    ...cloneJsonValue(element),
+    type,
+    id: element.id ?? `title-${type}-${index + 1}`,
+  };
+
+  if (type === 'button') {
+    if (normalized.text === undefined && normalized.label !== undefined) {
+      normalized.text = normalized.label;
+    }
+    if (normalized.action === 'load') {
+      normalized.action = 'continue';
+    }
+    if (normalized.action !== undefined && !['start', 'continue', 'settings', 'quit'].includes(normalized.action)) {
+      throw new Error(`Unsupported title button action: ${normalized.action}`);
+    }
+  }
+
+  if (isPlainObject(normalized.size)) {
+    normalized.width ??= normalized.size.width;
+    normalized.height ??= normalized.size.height;
+    delete normalized.size;
+  }
+
+  delete normalized.label;
+  return normalized;
+}
+
+function normalizeTitleScreenConfig(config = {}) {
+  if (!isPlainObject(config)) {
+    throw new Error('Title screen config must be an object');
+  }
+
+  const elements = Array.isArray(config.elements)
+    ? config.elements.map((element, index) => normalizeTitleElement(element, index))
+    : [];
+
+  return {
+    ...cloneJsonValue(config),
+    background: config.background ?? null,
+    bgm: config.bgm ?? null,
+    elements,
+  };
+}
+
+function ensureTitleScreen(script) {
+  script.ui ??= {};
+  script.ui.titleScreen = normalizeTitleScreenConfig(script.ui.titleScreen ?? {});
+  return script.ui.titleScreen;
+}
+
+const SUPPORTED_SCREEN_LAYOUT_IDS = [
+  'settingsScreen',
+  'gameMenu',
+  'saveLoadScreen',
+  'backlogScreen',
+];
+
+function assertSupportedScreenLayoutId(screenId) {
+  const id = assertNonEmptyString(screenId, 'screenId');
+  if (!SUPPORTED_SCREEN_LAYOUT_IDS.includes(id)) {
+    throw new Error(`Unsupported screen layout id: ${id}`);
+  }
+  return id;
+}
+
+function mergePlainObjects(base, patch) {
+  const result = cloneJsonValue(base ?? {});
+  for (const [key, value] of Object.entries(patch ?? {})) {
+    if (isPlainObject(value) && isPlainObject(result[key])) {
+      result[key] = mergePlainObjects(result[key], value);
+    } else {
+      result[key] = cloneJsonValue(value);
+    }
+  }
+  return result;
+}
+
+function normalizeScreenLayoutConfig(config) {
+  if (!isPlainObject(config)) {
+    throw new Error('Screen layout config must be an object');
+  }
+  return cloneJsonValue(config);
+}
+
+function normalizeSharedUiConfig(config, label) {
+  if (!isPlainObject(config)) {
+    throw new Error(`${label} config must be an object`);
+  }
+  return cloneJsonValue(config);
+}
+
 function normalizeScriptForAuthoring(script) {
   const normalized = ensureGalgameContract(script ?? {});
   normalized.systems.variables = normalizeVariableRegistry(normalized.systems.variables);
@@ -539,6 +641,122 @@ export function createProjectSession(input = {}) {
         pageIndex,
         characterId: id,
         animation: character.animation,
+      };
+    },
+
+    setTitleScreen({ background, bgm, elements, config, merge = true } = {}) {
+      const current = ensureTitleScreen(script);
+      const base = merge ? current : {};
+      const next = normalizeTitleScreenConfig({
+        ...cloneJsonValue(base),
+        ...cloneJsonValue(config ?? {}),
+        ...(background !== undefined ? { background } : {}),
+        ...(bgm !== undefined ? { bgm } : {}),
+        ...(elements !== undefined ? { elements } : {}),
+      });
+      script.ui.titleScreen = next;
+      return {
+        uiPath: 'ui.titleScreen',
+        screenId: 'titleScreen',
+        elementCount: next.elements.length,
+      };
+    },
+
+    addTitleElement({ element }) {
+      const titleScreen = ensureTitleScreen(script);
+      const nextElement = normalizeTitleElement(element, titleScreen.elements.length);
+      titleScreen.elements.push(nextElement);
+      return {
+        uiPath: 'ui.titleScreen',
+        screenId: 'titleScreen',
+        elementId: nextElement.id,
+        elementIndex: titleScreen.elements.length - 1,
+      };
+    },
+
+    updateTitleElement({ elementId, index, patch }) {
+      const titleScreen = ensureTitleScreen(script);
+      const elementIndex = elementId
+        ? titleScreen.elements.findIndex((element) => element?.id === elementId)
+        : index;
+      if (!Number.isInteger(elementIndex) || elementIndex < 0 || elementIndex >= titleScreen.elements.length) {
+        throw new Error('Title element index is out of range');
+      }
+
+      const nextElement = normalizeTitleElement({
+        ...cloneJsonValue(titleScreen.elements[elementIndex]),
+        ...cloneJsonValue(patch ?? {}),
+      }, elementIndex);
+      titleScreen.elements[elementIndex] = nextElement;
+      return {
+        uiPath: 'ui.titleScreen',
+        screenId: 'titleScreen',
+        elementId: nextElement.id,
+        elementIndex,
+      };
+    },
+
+    removeTitleElement({ elementId, index }) {
+      const titleScreen = ensureTitleScreen(script);
+      const elementIndex = elementId
+        ? titleScreen.elements.findIndex((element) => element?.id === elementId)
+        : index;
+      if (!Number.isInteger(elementIndex) || elementIndex < 0 || elementIndex >= titleScreen.elements.length) {
+        throw new Error('Title element index is out of range');
+      }
+
+      const [removed] = titleScreen.elements.splice(elementIndex, 1);
+      return {
+        uiPath: 'ui.titleScreen',
+        screenId: 'titleScreen',
+        elementId: removed?.id ?? null,
+        elementIndex,
+      };
+    },
+
+    setScreenLayout({ screenId, config, merge = true }) {
+      const id = assertSupportedScreenLayoutId(screenId);
+      const nextConfig = normalizeScreenLayoutConfig(config ?? {});
+      script.ui ??= {};
+      script.ui[id] = merge
+        ? mergePlainObjects(script.ui[id] ?? {}, nextConfig)
+        : nextConfig;
+      return {
+        uiPath: `ui.${id}`,
+        screenId: id,
+      };
+    },
+
+    setDialogueBox({ config, merge = true }) {
+      const nextConfig = normalizeSharedUiConfig(config ?? {}, 'Dialogue box');
+      script.ui ??= {};
+      script.ui.dialogueBox = merge
+        ? mergePlainObjects(script.ui.dialogueBox ?? {}, nextConfig)
+        : nextConfig;
+      return {
+        uiPath: 'ui.dialogueBox',
+      };
+    },
+
+    setTheme({ config, merge = true }) {
+      const nextConfig = normalizeSharedUiConfig(config ?? {}, 'Theme');
+      script.ui ??= {};
+      script.ui.theme = merge
+        ? mergePlainObjects(script.ui.theme ?? {}, nextConfig)
+        : nextConfig;
+      return {
+        uiPath: 'ui.theme',
+      };
+    },
+
+    setWidgetStyles({ config, merge = true }) {
+      const nextConfig = normalizeSharedUiConfig(config ?? {}, 'Widget styles');
+      script.ui ??= {};
+      script.ui.widgetStyles = merge
+        ? mergePlainObjects(script.ui.widgetStyles ?? {}, nextConfig)
+        : nextConfig;
+      return {
+        uiPath: 'ui.widgetStyles',
       };
     },
 

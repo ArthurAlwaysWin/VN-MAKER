@@ -13,6 +13,8 @@ export const useProjectStore = defineStore('project', () => {
   const agentPathNavigationRequest = ref(null);
   const hasCreatedProject = ref(false);
   const isDirty = ref(false);
+  const scriptFileState = ref(null);
+  const externalScriptChange = ref(null);
   const _saving = ref(false);
   let sceneNavigationRequestCounter = 0;
   let agentPathNavigationRequestCounter = 0;
@@ -46,6 +48,8 @@ export const useProjectStore = defineStore('project', () => {
     if (result.success) {
       projectPath.value = result.path;
       projectData.value = result.project;
+      scriptFileState.value = result.scriptFileState || null;
+      externalScriptChange.value = null;
       await loadAgentHandoff();
       isDirty.value = false;
     }
@@ -106,9 +110,21 @@ export const useProjectStore = defineStore('project', () => {
     try {
       const result = await window.ipcRenderer.invoke('save-project', {
         project: JSON.parse(JSON.stringify(projectData.value)),
-        script: JSON.parse(JSON.stringify(scriptData))
+        script: JSON.parse(JSON.stringify(scriptData)),
+        expectedScriptFileState: scriptFileState.value ? JSON.parse(JSON.stringify(scriptFileState.value)) : null,
       });
+      if (result?.conflict) {
+        externalScriptChange.value = {
+          detectedAt: new Date().toISOString(),
+          scriptFileState: result.scriptFileState || null,
+          expectedScriptFileState: result.expectedScriptFileState || scriptFileState.value,
+          source: 'save-project',
+        };
+        return false;
+      }
       if (result.success) {
+        scriptFileState.value = result.scriptFileState || scriptFileState.value;
+        externalScriptChange.value = null;
         isDirty.value = false;
       }
       return result.success;
@@ -125,12 +141,45 @@ export const useProjectStore = defineStore('project', () => {
     agentReviewState.value = {};
     sceneNavigationRequest.value = null;
     agentPathNavigationRequest.value = null;
+    scriptFileState.value = null;
+    externalScriptChange.value = null;
     isDirty.value = false;
     if (window.ipcRenderer) window.ipcRenderer.invoke('close-project');
   }
 
   function markDirty() {
     isDirty.value = true;
+  }
+
+  function isSameFileState(left, right) {
+    return Boolean(left && right && left.mtimeMs === right.mtimeMs && left.size === right.size);
+  }
+
+  async function checkExternalScriptChange() {
+    if (!window.ipcRenderer || !projectPath.value || !scriptFileState.value) {
+      return false;
+    }
+
+    const result = await window.ipcRenderer.invoke('check-project-file-state');
+    if (!result?.success || !result.scriptFileState) {
+      return false;
+    }
+
+    if (!isSameFileState(scriptFileState.value, result.scriptFileState)) {
+      externalScriptChange.value = {
+        detectedAt: new Date().toISOString(),
+        scriptFileState: result.scriptFileState,
+        expectedScriptFileState: scriptFileState.value,
+        source: 'poll',
+      };
+      return true;
+    }
+
+    return false;
+  }
+
+  function clearExternalScriptChange() {
+    externalScriptChange.value = null;
   }
 
   function requestSceneNavigation(pathString) {
@@ -198,9 +247,9 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   return {
-    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty, scriptFileState, externalScriptChange,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    loadAgentHandoff, loadAgentReviewState, closeProject, markDirty, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
+    loadAgentHandoff, loadAgentReviewState, closeProject, markDirty, checkExternalScriptChange, clearExternalScriptChange, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
   };
 });

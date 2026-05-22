@@ -77,6 +77,20 @@ function parseJsonArg(args, name, fallback = null) {
   }
 }
 
+async function parseJsonFileArg(args, name, fallback = null) {
+  const value = getArgValue(args, name, null);
+  if (value == null) {
+    return fallback;
+  }
+
+  const filePath = path.resolve(repoRoot, value);
+  try {
+    return JSON.parse(await readFile(filePath, 'utf8'));
+  } catch (error) {
+    throw new Error(`${name} must point to a valid JSON file: ${error.message}`);
+  }
+}
+
 function parseScalarValue(value, fallback = null) {
   if (value == null) {
     return fallback;
@@ -92,6 +106,10 @@ function parseScalarValue(value, fallback = null) {
 
   const numeric = Number(trimmed);
   return Number.isFinite(numeric) && trimmed !== '' ? numeric : value;
+}
+
+function parseOptionalScalarValue(value) {
+  return value == null ? undefined : parseScalarValue(value);
 }
 
 function cloneJsonValue(value) {
@@ -178,6 +196,79 @@ function parsePageAudioArgs(args) {
   return { bgm, se };
 }
 
+async function parseTitleScreenArgs(args) {
+  const config = await parseJsonFileArg(args, '--config', parseJsonArg(args, '--config-json', {}));
+  return dropUndefinedFields({
+    config,
+    background: hasFlag(args, '--clear-background') ? null : getOptionalArgValue(args, '--background'),
+    bgm: hasFlag(args, '--clear-bgm') ? null : getOptionalArgValue(args, '--bgm'),
+    elements: parseJsonArg(args, '--elements', undefined),
+    merge: hasFlag(args, '--replace') ? false : true,
+  });
+}
+
+async function parseScreenLayoutArgs(args) {
+  const config = await parseJsonFileArg(args, '--config', parseJsonArg(args, '--config-json', null));
+  if (config == null) {
+    throw new Error('set-screen-layout requires --config or --config-json');
+  }
+
+  return {
+    screenId: getArgValue(args, '--screen', getArgValue(args, '--screen-id', null)),
+    config,
+    merge: hasFlag(args, '--replace') ? false : true,
+  };
+}
+
+async function parseSharedUiConfigArgs(args, command) {
+  const config = await parseJsonFileArg(args, '--config', parseJsonArg(args, '--config-json', null));
+  if (config == null) {
+    throw new Error(`${command} requires --config or --config-json`);
+  }
+
+  return {
+    config,
+    merge: hasFlag(args, '--replace') ? false : true,
+  };
+}
+
+function parseTitleElementArgs(args, { requireType = true } = {}) {
+  const jsonElement = parseJsonArg(args, '--element', null);
+  if (jsonElement) {
+    return jsonElement;
+  }
+
+  const type = requireType
+    ? getArgValue(args, '--type', null)
+    : getOptionalArgValue(args, '--type');
+  if (requireType && !type) {
+    throw new Error('title element requires --type');
+  }
+
+  return dropUndefinedFields({
+    id: getOptionalArgValue(args, '--id'),
+    type,
+    content: getOptionalArgValue(args, '--content'),
+    text: getOptionalArgValue(args, '--text') ?? getOptionalArgValue(args, '--label'),
+    action: getOptionalArgValue(args, '--action'),
+    src: getOptionalArgValue(args, '--src'),
+    x: parseOptionalScalarValue(getOptionalArgValue(args, '--x')),
+    y: parseOptionalScalarValue(getOptionalArgValue(args, '--y')),
+    anchor: getOptionalArgValue(args, '--anchor'),
+    width: parseOptionalScalarValue(getOptionalArgValue(args, '--width')),
+    height: parseOptionalScalarValue(getOptionalArgValue(args, '--height')),
+    fontSize: parseOptionalScalarValue(getOptionalArgValue(args, '--font-size')),
+    fontFamily: getOptionalArgValue(args, '--font-family'),
+    color: getOptionalArgValue(args, '--color'),
+    backgroundColor: getOptionalArgValue(args, '--background-color'),
+    border: getOptionalArgValue(args, '--border'),
+    borderRadius: parseOptionalScalarValue(getOptionalArgValue(args, '--border-radius')),
+    hoverColor: getOptionalArgValue(args, '--hover-color'),
+    letterSpacing: parseOptionalScalarValue(getOptionalArgValue(args, '--letter-spacing')),
+    textShadow: getOptionalArgValue(args, '--text-shadow'),
+  });
+}
+
 async function readScript(args) {
   const scriptPath = path.resolve(repoRoot, getArgValue(args, '--script', defaultScriptPath));
   const raw = await readFile(scriptPath, 'utf8');
@@ -216,6 +307,87 @@ async function collectKnownAssets(rootDir) {
 
   await walk(rootDir);
   return assets;
+}
+
+const ASSET_LIBRARY_CATEGORIES = [
+  'backgrounds',
+  'characters',
+  'audio',
+  'voices',
+  'ui',
+  'fonts',
+];
+
+function tokenizeAssetName(name) {
+  return String(name ?? '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function createEmptyAssetLibrary() {
+  return Object.fromEntries(ASSET_LIBRARY_CATEGORIES.map((category) => [category, []]));
+}
+
+async function collectAssetCategory({ assetRoot, category }) {
+  const categoryRoot = path.join(assetRoot, category);
+  let categoryStat = null;
+  try {
+    categoryStat = await stat(categoryRoot);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+
+  if (!categoryStat.isDirectory()) {
+    return [];
+  }
+
+  const assets = [];
+  async function walk(dir) {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(entryPath);
+        continue;
+      }
+
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      const entryStat = await stat(entryPath);
+      const parsed = path.parse(entry.name);
+      assets.push({
+        path: path.relative(assetRoot, entryPath).replace(/\\/g, '/'),
+        name: parsed.name,
+        tokens: tokenizeAssetName(parsed.name),
+        extension: parsed.ext,
+        size: entryStat.size,
+      });
+    }
+  }
+
+  await walk(categoryRoot);
+  return assets.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function resolveAssetProjectPath(args) {
+  const projectPathArg = getArgValue(args, '--project', null);
+  if (projectPathArg) {
+    return path.resolve(repoRoot, projectPathArg);
+  }
+
+  const scriptPathArg = getArgValue(args, '--script', null);
+  if (scriptPathArg) {
+    return path.dirname(path.resolve(repoRoot, scriptPathArg));
+  }
+
+  return path.dirname(defaultScriptPath);
 }
 
 async function collectCheckpointEntries(checkpointDir, limit = 5) {
@@ -305,6 +477,9 @@ function getMutationTarget(result = {}) {
     'fromIndex',
     'toIndex',
     'effectIndex',
+    'screenId',
+    'elementId',
+    'elementIndex',
   ]) {
     if (result[key] !== undefined) {
       target[key] = result[key];
@@ -314,6 +489,10 @@ function getMutationTarget(result = {}) {
 }
 
 function getChangedPaths(result = {}) {
+  if (result.uiPath) {
+    return [result.uiPath];
+  }
+
   if (Array.isArray(result.references) && result.references.length > 0) {
     return result.references
       .map((reference) => reference.pathString)
@@ -407,21 +586,48 @@ function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
   });
 }
 
-function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
+const PREVIEW_SCREEN_PATHS = new Map([
+  ['ui.titleScreen', 'titleScreen'],
+  ['ui.settingsScreen', 'settingsScreen'],
+  ['ui.gameMenu', 'gameMenu'],
+  ['ui.saveLoadScreen', 'saveLoadScreen'],
+  ['ui.backlogScreen', 'backlogScreen'],
+]);
+
+function screenTargetsFromChangedPaths(changedPaths = []) {
+  const targets = [];
+  for (const changedPath of changedPaths) {
+    for (const [pathPrefix, screenId] of PREVIEW_SCREEN_PATHS.entries()) {
+      if (changedPath === pathPrefix || changedPath.startsWith(`${pathPrefix}.`)) {
+        targets.push({ type: 'screen', screenId });
+      }
+    }
+  }
+
+  const seen = new Set();
+  return targets.filter((target) => {
+    if (seen.has(target.screenId)) return false;
+    seen.add(target.screenId);
+    return true;
+  });
+}
+
+function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
   if (explicitSceneId || explicitPageIndex != null) {
-    return [{ sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+    return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
 
   if (transaction?.data) {
-    const targets = transactionPageTargets.length
-      ? transactionPageTargets
+    const sceneTargets = transactionPageTargets.length
+      ? transactionPageTargets.map((target) => ({ type: 'scene', ...target }))
       : checkedSceneIds
         .filter((sceneId) => script.scenes?.[sceneId]?.pages?.[0])
-        .map((sceneId) => ({ sceneId, pageIndex: 0 }));
-    return targets.length ? targets : [{ sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+        .map((sceneId) => ({ type: 'scene', sceneId, pageIndex: 0 }));
+    const targets = [...sceneTargets, ...transactionScreenTargets];
+    return targets.length ? targets : [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
 
-  return [{ sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+  return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
 }
 
 function createAuthorCheckFocus({ args, script, transaction }) {
@@ -429,6 +635,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
   const transactionSceneIds = sceneIdsFromChangedPaths(changedPaths)
     .filter((sceneId) => script.scenes?.[sceneId]);
   const transactionPageTargets = pageTargetsFromChangedPaths(changedPaths, script);
+  const transactionScreenTargets = screenTargetsFromChangedPaths(changedPaths);
   const explicitSceneId = getArgValue(args, '--scene', null);
   const explicitPageIndex = getIntArg(args, '--page', null);
   const defaultSceneId = explicitSceneId ?? transactionPageTargets[0]?.sceneId ?? transactionSceneIds[0] ?? 'start';
@@ -443,6 +650,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     explicitPageIndex,
     transaction,
     transactionPageTargets,
+    transactionScreenTargets,
     checkedSceneIds,
     defaultSceneId,
     defaultPageIndex,
@@ -455,6 +663,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     changedPaths,
     checkedSceneIds,
     pageTargets: transaction?.data ? transactionPageTargets : [],
+    screenTargets: transaction?.data ? transactionScreenTargets : [],
     previewTargets,
     previewTarget: previewTargets[0] ?? {
       sceneId: defaultSceneId,
@@ -605,6 +814,14 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-page-camera',
   'set-page-transition',
   'set-character-animation',
+  'set-title-screen',
+  'add-title-element',
+  'update-title-element',
+  'remove-title-element',
+  'set-screen-layout',
+  'set-dialogue-box',
+  'set-theme',
+  'set-widget-styles',
   'add-choice-effect',
 ];
 
@@ -721,6 +938,56 @@ function buildPlanPage(command, params) {
 
   page.dialogues = getParam(params, 'dialogues') ?? page.dialogues ?? [];
   return { type: 'normal', page };
+}
+
+function buildTitleScreenPatch(params) {
+  return dropUndefinedFields({
+    background: getParam(params, 'clearBackground', 'clear-background') ? null : getParam(params, 'background'),
+    bgm: getParam(params, 'clearBgm', 'clear-bgm') ? null : getParam(params, 'bgm'),
+    elements: getParam(params, 'elements'),
+    config: getParam(params, 'config'),
+    merge: getParam(params, 'merge') ?? true,
+  });
+}
+
+function buildTitleElement(command, params, { requireType = true } = {}) {
+  return getParam(params, 'element') ?? dropUndefinedFields({
+    id: getParam(params, 'id', 'elementId', 'element-id'),
+    type: requireType ? requireParam(params, command, 'type') : getParam(params, 'type'),
+    content: getParam(params, 'content'),
+    text: getParam(params, 'text', 'label'),
+    action: getParam(params, 'action'),
+    src: getParam(params, 'src'),
+    x: getParam(params, 'x'),
+    y: getParam(params, 'y'),
+    anchor: getParam(params, 'anchor'),
+    width: getParam(params, 'width'),
+    height: getParam(params, 'height'),
+    fontSize: getParam(params, 'fontSize', 'font-size'),
+    fontFamily: getParam(params, 'fontFamily', 'font-family'),
+    color: getParam(params, 'color'),
+    backgroundColor: getParam(params, 'backgroundColor', 'background-color'),
+    border: getParam(params, 'border'),
+    borderRadius: getParam(params, 'borderRadius', 'border-radius'),
+    hoverColor: getParam(params, 'hoverColor', 'hover-color'),
+    letterSpacing: getParam(params, 'letterSpacing', 'letter-spacing'),
+    textShadow: getParam(params, 'textShadow', 'text-shadow'),
+  });
+}
+
+function buildScreenLayoutPatch(command, params) {
+  return {
+    screenId: requireParam(params, command, 'screenId', 'screen'),
+    config: requireParam(params, command, 'config'),
+    merge: getParam(params, 'merge') ?? true,
+  };
+}
+
+function buildSharedUiConfigPatch(command, params) {
+  return {
+    config: requireParam(params, command, 'config'),
+    merge: getParam(params, 'merge') ?? true,
+  };
 }
 
 function applyPlanOperation(session, operation = {}, index = 0) {
@@ -994,6 +1261,47 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
+  if (command === 'set-title-screen') {
+    return session.setTitleScreen(buildTitleScreenPatch(params));
+  }
+
+  if (command === 'add-title-element') {
+    return session.addTitleElement({
+      element: buildTitleElement(command, params),
+    });
+  }
+
+  if (command === 'update-title-element') {
+    return session.updateTitleElement({
+      elementId: getParam(params, 'elementId', 'element-id', 'id'),
+      index: getParam(params, 'index', 'elementIndex', 'element-index'),
+      patch: getParam(params, 'patch') ?? buildTitleElement(command, params, { requireType: false }),
+    });
+  }
+
+  if (command === 'remove-title-element') {
+    return session.removeTitleElement({
+      elementId: getParam(params, 'elementId', 'element-id', 'id'),
+      index: getParam(params, 'index', 'elementIndex', 'element-index'),
+    });
+  }
+
+  if (command === 'set-screen-layout') {
+    return session.setScreenLayout(buildScreenLayoutPatch(command, params));
+  }
+
+  if (command === 'set-dialogue-box') {
+    return session.setDialogueBox(buildSharedUiConfigPatch(command, params));
+  }
+
+  if (command === 'set-theme') {
+    return session.setTheme(buildSharedUiConfigPatch(command, params));
+  }
+
+  if (command === 'set-widget-styles') {
+    return session.setWidgetStyles(buildSharedUiConfigPatch(command, params));
+  }
+
   if (command === 'add-choice-effect') {
     return session.addChoiceEffect({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
@@ -1050,9 +1358,14 @@ function summarizeIssues(source, issues = []) {
   return issues.map((issue) => ({
     source,
     severity: issue.severity ?? 'warning',
+    category: issue.category,
     code: issue.code,
     message: issue.message,
     pathString: issue.pathString ?? '',
+    screenId: issue.screenId,
+    reference: issue.reference,
+    matched: issue.matched,
+    gaps: issue.gaps,
     location: issue.location ?? (
       issue.sceneId ? { sceneId: issue.sceneId, pageIndex: issue.pageIndex ?? null } : undefined
     ),
@@ -1060,7 +1373,111 @@ function summarizeIssues(source, issues = []) {
   }));
 }
 
-function collectAuthorCheckSuggestions({ validation, layout, readiness, preview, referenceDiagnostics }) {
+function normalizeReferenceScreenshotNotesForCheck(transactionData = null) {
+  const notes = transactionData?.handoff?.referenceScreenshotNotes
+    ?? transactionData?.changeSummary?.referenceScreenshotNotes
+    ?? [];
+  if (!Array.isArray(notes)) {
+    return [];
+  }
+
+  const screenIds = new Set(PREVIEW_SCREEN_PATHS.values());
+  return notes
+    .filter((note) => note && typeof note === 'object')
+    .map((note) => {
+      const screenId = typeof note.screenId === 'string' && screenIds.has(note.screenId)
+        ? note.screenId
+        : null;
+      const summary = typeof note.summary === 'string' && note.summary.trim()
+        ? note.summary.trim()
+        : null;
+      const reference = typeof note.reference === 'string' && note.reference.trim()
+        ? note.reference.trim()
+        : null;
+      const matched = Array.isArray(note.matched)
+        ? note.matched.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim())
+        : [];
+      const gaps = Array.isArray(note.gaps)
+        ? note.gaps.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim())
+        : [];
+      if (!screenId && !summary && !reference && matched.length === 0 && gaps.length === 0) {
+        return null;
+      }
+      return { screenId, summary, reference, matched, gaps };
+    })
+    .filter(Boolean);
+}
+
+function collectReferenceScreenshotIssues(transactionData = null) {
+  return normalizeReferenceScreenshotNotesForCheck(transactionData).map((note) => {
+    const pathString = note.screenId ? `ui.${note.screenId}` : 'ui';
+    const message = [
+      note.summary,
+      note.matched.length ? `Matched: ${note.matched.join('; ')}` : null,
+      note.gaps.length ? `Needs review: ${note.gaps.join('; ')}` : null,
+    ].filter(Boolean).join(' ') || 'Review screen UI fidelity against the provided reference screenshot.';
+
+    return {
+      source: 'preview',
+      severity: 'warning',
+      category: 'reference-screenshot-fidelity',
+      code: 'reference-screenshot-fidelity-note',
+      pathString,
+      message,
+      screenId: note.screenId,
+      reference: note.reference,
+      matched: note.matched,
+      gaps: note.gaps,
+      suggestedAction: {
+        summary: 'Compare the preview target against the reference screenshot and adjust only through structured screen UI fields.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    };
+  });
+}
+
+function collectScreenPreviewIssues(screenTargets = []) {
+  return screenTargets
+    .filter((target) => target?.type === 'screen' || target?.screenId)
+    .map((target) => {
+      const screenId = target.screenId ?? null;
+      return {
+        source: 'preview',
+        severity: 'warning',
+        category: 'screen-ui-preview',
+        code: 'screen-ui-preview-required',
+        pathString: screenId ? `ui.${screenId}` : 'ui',
+        message: screenId
+          ? `Screen "${screenId}" changed and needs visual review in the editor preview.`
+          : 'A screen UI section changed and needs visual review in the editor preview.',
+        screenId,
+        suggestedAction: {
+          summary: 'Open the generated preview target or Project Settings preview, then mark the handoff item resolved after review.',
+          commands: [
+            {
+              command: 'author-check',
+              args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+            },
+          ],
+        },
+      };
+    });
+}
+
+function collectAuthorCheckSuggestions({
+  validation,
+  layout,
+  readiness,
+  preview,
+  referenceDiagnostics,
+  referenceScreenshotIssues,
+  screenPreviewIssues,
+}) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
     if (warning.suggestedAction) {
@@ -1105,6 +1522,24 @@ function collectAuthorCheckSuggestions({ validation, layout, readiness, preview,
     });
   }
 
+  for (const issue of referenceScreenshotIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of screenPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
   if (!validation.ok) {
     for (const error of validation.errors) {
       suggestions.push({
@@ -1128,6 +1563,11 @@ function previewOutPathForTarget(baseOutPath, target, index) {
   }
 
   const parsed = path.parse(baseOutPath);
+  if (target.type === 'screen' || target.screenId) {
+    const safeScreenId = String(target.screenId ?? 'screen').replace(/[^a-z0-9_-]+/gi, '_');
+    return path.join(parsed.dir, `${parsed.name}-${safeScreenId}${parsed.ext || '.png'}`);
+  }
+
   const safeSceneId = String(target.sceneId ?? 'scene').replace(/[^a-z0-9_-]+/gi, '_');
   const suffix = `${safeSceneId}-p${target.pageIndex ?? 0}`;
   return path.join(parsed.dir, `${parsed.name}-${suffix}${parsed.ext || '.png'}`);
@@ -1155,6 +1595,39 @@ async function inspect(args) {
   process.stdout.write(`Characters: ${summary.characterCount}\n`);
   process.stdout.write(`Scenes: ${summary.sceneCount}\n`);
   process.stdout.write(`Variables: ${summary.variableCount}\n`);
+  return 0;
+}
+
+async function listAssets(args) {
+  const projectPath = resolveAssetProjectPath(args);
+  const assetRoot = path.join(projectPath, 'assets');
+  const assets = createEmptyAssetLibrary();
+
+  for (const category of ASSET_LIBRARY_CATEGORIES) {
+    assets[category] = await collectAssetCategory({ assetRoot, category });
+  }
+
+  const output = {
+    projectPath,
+    assetRoot,
+    categories: ASSET_LIBRARY_CATEGORIES,
+    assets,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+    return 0;
+  }
+
+  process.stdout.write(`Project: ${projectPath}\n`);
+  process.stdout.write(`Assets: ${assetRoot}\n`);
+  for (const category of ASSET_LIBRARY_CATEGORIES) {
+    process.stdout.write(`${category}: ${assets[category].length}\n`);
+    for (const asset of assets[category]) {
+      process.stdout.write(`  - ${asset.path}\n`);
+    }
+  }
+
   return 0;
 }
 
@@ -1220,6 +1693,50 @@ async function writeApplyPlanResultOut(args, output) {
   return resultOutPath;
 }
 
+const HANDOFF_SCREEN_IDS = new Set([
+  'titleScreen',
+  'settingsScreen',
+  'gameMenu',
+  'saveLoadScreen',
+  'backlogScreen',
+]);
+
+function normalizePlanHandoff(plan = {}) {
+  const notes = plan?.handoff?.referenceScreenshotNotes;
+  if (!Array.isArray(notes)) {
+    return null;
+  }
+
+  const referenceScreenshotNotes = notes
+    .filter((note) => note && typeof note === 'object')
+    .map((note) => {
+      const normalized = {};
+      if (typeof note.screenId === 'string' && HANDOFF_SCREEN_IDS.has(note.screenId)) {
+        normalized.screenId = note.screenId;
+      }
+      if (typeof note.reference === 'string' && note.reference.trim()) {
+        normalized.reference = note.reference.trim();
+      }
+      if (typeof note.summary === 'string' && note.summary.trim()) {
+        normalized.summary = note.summary.trim();
+      }
+      if (Array.isArray(note.matched)) {
+        normalized.matched = note.matched
+          .filter((entry) => typeof entry === 'string' && entry.trim())
+          .map((entry) => entry.trim());
+      }
+      if (Array.isArray(note.gaps)) {
+        normalized.gaps = note.gaps
+          .filter((entry) => typeof entry === 'string' && entry.trim())
+          .map((entry) => entry.trim());
+      }
+      return Object.keys(normalized).length ? normalized : null;
+    })
+    .filter(Boolean);
+
+  return referenceScreenshotNotes.length ? { referenceScreenshotNotes } : null;
+}
+
 async function applyPlan(args) {
   const planPathArg = args.find((arg) => !arg.startsWith('--'));
   if (!planPathArg) {
@@ -1228,6 +1745,7 @@ async function applyPlan(args) {
 
   const planPath = path.resolve(repoRoot, planPathArg);
   const plan = JSON.parse(await readFile(planPath, 'utf8'));
+  const handoff = normalizePlanHandoff(plan);
   const operations = Array.isArray(plan) ? plan : plan.operations;
   if (!Array.isArray(operations) || operations.length === 0) {
     throw new Error('apply-plan requires operations[]');
@@ -1302,6 +1820,7 @@ async function applyPlan(args) {
           backupPath: null,
         },
         validation: null,
+        ...(handoff ? { handoff } : {}),
       };
       await writeApplyPlanResultOut(args, output);
 
@@ -1363,6 +1882,7 @@ async function applyPlan(args) {
     },
     checkpointPath: writeResult?.checkpointPath ?? null,
     backupPath: writeResult?.backupPath ?? null,
+    ...(handoff ? { referenceScreenshotNotes: handoff.referenceScreenshotNotes } : {}),
   };
 
   const output = {
@@ -1389,6 +1909,7 @@ async function applyPlan(args) {
     operations: operationResults,
     changeSummary,
     validation,
+    ...(handoff ? { handoff } : {}),
   };
   await writeApplyPlanResultOut(args, output);
 
@@ -1929,6 +2450,8 @@ async function authorCheck(args) {
     sceneIds: focus.checkedSceneIds,
     changedPaths: focus.changedPaths,
   });
+  const screenPreviewIssues = collectScreenPreviewIssues(focus.screenTargets);
+  const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
 
   let preview = null;
   if (!hasFlag(args, '--skip-preview')) {
@@ -1943,6 +2466,7 @@ async function authorCheck(args) {
         script,
         sceneId: target.sceneId,
         pageIndex: target.pageIndex,
+        screenId: target.screenId,
         outPath: previewOutPathForTarget(outPath, target, index),
         width,
         height,
@@ -1994,6 +2518,8 @@ async function authorCheck(args) {
       readinessBlockers: readiness.blockers.length,
       readinessWarnings: readiness.warnings.length,
       sceneReferenceDiagnostics: referenceDiagnostics.length,
+      screenPreviewReviewItems: screenPreviewIssues.length,
+      referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewPlanned: Boolean(preview),
     },
     sceneReferences: {
@@ -2001,6 +2527,14 @@ async function authorCheck(args) {
       diagnostics: referenceDiagnostics,
     },
     referenceDiagnostics,
+    screenPreview: {
+      issues: screenPreviewIssues,
+    },
+    screenPreviewIssues,
+    referenceScreenshotIssues,
+    referenceScreenshotFidelity: {
+      issues: referenceScreenshotIssues,
+    },
     validation,
     layout,
     readiness,
@@ -2011,6 +2545,8 @@ async function authorCheck(args) {
       ...summarizeIssues('layout', layout.warnings),
       ...summarizeIssues('readiness', readiness.blockers),
       ...summarizeIssues('readiness', readiness.warnings),
+      ...summarizeIssues('preview', screenPreviewIssues),
+      ...summarizeIssues('preview', referenceScreenshotIssues),
       ...referenceDiagnostics,
     ],
   };
@@ -3098,6 +3634,151 @@ async function setCharacterAnimation(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setTitleScreen(args) {
+  const titleScreenPatch = await parseTitleScreenArgs(args);
+  const output = await mutateScript(args, (session) => session.setTitleScreen(titleScreenPatch));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Set title screen: ${output.result.elementCount} elements\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function addTitleElement(args) {
+  const output = await mutateScript(args, (session) => session.addTitleElement({
+    element: parseTitleElementArgs(args),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Added title element: ${output.result.elementId ?? output.result.elementIndex}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateTitleElement(args) {
+  const patch = parseJsonArg(args, '--patch', null) ?? parseTitleElementArgs(args, { requireType: false });
+  const output = await mutateScript(args, (session) => session.updateTitleElement({
+    elementId: getArgValue(args, '--id', getArgValue(args, '--element-id', null)),
+    index: getIntArg(args, '--index', getIntArg(args, '--element-index', null)),
+    patch,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Updated title element: ${output.result.elementId ?? output.result.elementIndex}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeTitleElement(args) {
+  const output = await mutateScript(args, (session) => session.removeTitleElement({
+    elementId: getArgValue(args, '--id', getArgValue(args, '--element-id', null)),
+    index: getIntArg(args, '--index', getIntArg(args, '--element-index', null)),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Removed title element: ${output.result.elementId ?? output.result.elementIndex}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function setScreenLayout(args) {
+  const screenLayoutPatch = await parseScreenLayoutArgs(args);
+  const output = await mutateScript(args, (session) => session.setScreenLayout(screenLayoutPatch));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Set screen layout: ${output.result.screenId}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function setSharedUiConfig(args, command, label, mutator) {
+  const patch = await parseSharedUiConfigArgs(args, command);
+  const output = await mutateScript(args, (session) => mutator(session, patch));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Set ${label}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function addChoiceEffect(args) {
   const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
   if (!sceneId) {
@@ -3148,6 +3829,7 @@ function printHelp() {
   process.stdout.write(`vn-author commands:
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
+  list-assets [--project path|--script path] [--json]
   author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
@@ -3186,6 +3868,14 @@ function printHelp() {
   set-page-camera --scene scene_id --page index [--effect shake|zoom|pan|flash] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--camera json] [--clear-camera] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-transition --scene scene_id --page index [--type fade|dissolve|wipe|scale|blur|slide-left|slide-right|none] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-animation --scene scene_id --page index --character character_id [--animation none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-title-screen [--background path] [--bgm path] [--elements json] [--config file] [--config-json json] [--clear-background] [--clear-bgm] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-title-element --type text|button|image [--id id] [--content text] [--text text] [--label text] [--action start|continue|settings|quit] [--src path] [--x number] [--y number] [--anchor center|top-left] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-title-element --id id|--index index [--patch json] [--content text] [--text text] [--x number] [--y number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-title-element --id id|--index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-screen-layout --screen settingsScreen|gameMenu|saveLoadScreen|backlogScreen --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-dialogue-box --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-theme --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-widget-styles --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-choice-effect --scene scene_id --page index --option index [--effect json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   export-report [--script path] [--check-assets] [--readiness] [--asset-root path] [--json]
 `);
@@ -3202,6 +3892,11 @@ async function main() {
 
     if (command === 'validate') {
       process.exitCode = await validate(args);
+      return;
+    }
+
+    if (command === 'list-assets') {
+      process.exitCode = await listAssets(args);
       return;
     }
 
@@ -3397,6 +4092,61 @@ async function main() {
 
     if (command === 'set-character-animation') {
       process.exitCode = await setCharacterAnimation(args);
+      return;
+    }
+
+    if (command === 'set-title-screen') {
+      process.exitCode = await setTitleScreen(args);
+      return;
+    }
+
+    if (command === 'add-title-element') {
+      process.exitCode = await addTitleElement(args);
+      return;
+    }
+
+    if (command === 'update-title-element') {
+      process.exitCode = await updateTitleElement(args);
+      return;
+    }
+
+    if (command === 'remove-title-element') {
+      process.exitCode = await removeTitleElement(args);
+      return;
+    }
+
+    if (command === 'set-screen-layout') {
+      process.exitCode = await setScreenLayout(args);
+      return;
+    }
+
+    if (command === 'set-dialogue-box') {
+      process.exitCode = await setSharedUiConfig(
+        args,
+        command,
+        'dialogue box',
+        (session, patch) => session.setDialogueBox(patch),
+      );
+      return;
+    }
+
+    if (command === 'set-theme') {
+      process.exitCode = await setSharedUiConfig(
+        args,
+        command,
+        'theme',
+        (session, patch) => session.setTheme(patch),
+      );
+      return;
+    }
+
+    if (command === 'set-widget-styles') {
+      process.exitCode = await setSharedUiConfig(
+        args,
+        command,
+        'widget styles',
+        (session, patch) => session.setWidgetStyles(patch),
+      );
       return;
     }
 

@@ -16,22 +16,40 @@
                 class="bgr-canvas"
                 @click="pickColor"
               />
-              <div v-if="!pickedColor" class="bgr-hint">👆 点击图片上的背景色取色</div>
+              <div v-if="sampleColors.length === 0" class="bgr-hint">点击背景色取样，可多次点击添加阴影或渐变色</div>
+              <div v-else class="bgr-hint">继续点击可添加更多背景取样</div>
             </div>
           </div>
           <!-- Right: Controls -->
           <div class="bgr-controls">
             <div class="bgr-label">设置</div>
-            <!-- Picked color display -->
             <div class="bgr-section">
-              <div class="bgr-section-title">已选背景色</div>
+              <div class="bgr-slider-header">
+                <span class="bgr-section-title">背景取样</span>
+                <span class="bgr-slider-value">{{ sampleColors.length }}</span>
+              </div>
               <div class="bgr-color-display">
                 <div
                   class="bgr-color-swatch"
-                  :style="{ background: pickedColor || '#333' }"
+                  :style="sampleSwatchStyle"
                 ></div>
-                <span class="bgr-color-hex">{{ pickedColor || '未选择' }}</span>
+                <span class="bgr-color-hex">{{ sampleLabel }}</span>
               </div>
+              <div v-if="sampleColors.length" class="bgr-sample-list">
+                <span
+                  v-for="sample in sampleColors"
+                  :key="sample.id"
+                  class="bgr-sample-chip"
+                  :style="{ background: sample.hex }"
+                  :title="sample.hex"
+                ></span>
+              </div>
+              <button
+                v-if="sampleColors.length"
+                class="bgr-mini-btn"
+                @click="clearSamples"
+                title="清除所有取样颜色"
+              >清除取样</button>
             </div>
             <!-- Tolerance slider -->
             <div class="bgr-section">
@@ -58,12 +76,16 @@
                 class="bgr-slider" @input="scheduleProcess"
               />
             </div>
+            <label class="bgr-check-row">
+              <input type="checkbox" v-model="edgeConnectedOnly" @change="scheduleProcess" />
+              <span>仅删除边缘连通背景</span>
+            </label>
             <!-- Spacer -->
             <div class="bgr-spacer"></div>
             <!-- Action buttons -->
             <button
               class="bgr-btn-primary"
-              :disabled="!pickedColor || saving"
+              :disabled="sampleColors.length === 0 || saving"
               @click="confirmRemoval"
               title="保存去背景后的透明 PNG"
             >{{ saving ? '保存中...' : '✅ 确认去背景' }}</button>
@@ -83,9 +105,13 @@
  * BgRemovalModal — Pure-Canvas solid-color background removal tool.
  * User clicks to pick background color, adjusts tolerance/feather, confirms to export transparent PNG.
  */
-import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue';
 import HelpTip from '../HelpTip.vue';
 import { HELP_RESOURCE } from '../../helpTexts.js';
+import {
+  removeSolidBackground,
+  sampleBackgroundColor,
+} from '../../utils/bgRemoval.js';
 
 const props = defineProps({
   visible: Boolean,
@@ -101,11 +127,33 @@ const emit = defineEmits(['done', 'skip', 'cancel']);
 
 const canvasRef = ref(null);
 const canvasWrapRef = ref(null);
-const tolerance = ref(30);
+const tolerance = ref(22);
 const feather = ref(1);
-const pickedColor = ref(null);
-const pickedRgb = ref(null);
+const sampleColors = ref([]);
+const edgeConnectedOnly = ref(true);
 const saving = ref(false);
+const sampleLabel = computed(() => {
+  if (sampleColors.value.length === 0) return '未选择';
+  if (sampleColors.value.length === 1) return sampleColors.value[0].hex;
+  return `${sampleColors.value.length} 个颜色`;
+});
+const sampleSwatchStyle = computed(() => {
+  if (sampleColors.value.length === 0) {
+    return { background: '#333' };
+  }
+  if (sampleColors.value.length === 1) {
+    return { background: sampleColors.value[0].hex };
+  }
+  const stops = sampleColors.value
+    .map((sample, index) => {
+      const position = sampleColors.value.length === 1
+        ? 0
+        : Math.round((index / (sampleColors.value.length - 1)) * 100);
+      return `${sample.hex} ${position}%`;
+    })
+    .join(', ');
+  return { background: `linear-gradient(90deg, ${stops})` };
+});
 
 let originalImageData = null;
 let imgWidth = 0;
@@ -115,10 +163,10 @@ let processTimer = null;
 // Load image when modal opens; clean up on close
 watch(() => props.visible, async (v) => {
   if (v && props.imageSrc) {
-    pickedColor.value = null;
-    pickedRgb.value = null;
-    tolerance.value = 30;
+    sampleColors.value = [];
+    tolerance.value = 22;
     feather.value = 1;
+    edgeConnectedOnly.value = true;
     saving.value = false;
     await nextTick();
     loadImage();
@@ -172,52 +220,51 @@ function pickColor(event) {
 
   if (!originalImageData || x < 0 || y < 0 || x >= imgWidth || y >= imgHeight) return;
 
-  const idx = (y * imgWidth + x) * 4;
-  const r = originalImageData.data[idx];
-  const g = originalImageData.data[idx + 1];
-  const b = originalImageData.data[idx + 2];
+  const sample = sampleBackgroundColor(originalImageData, x, y, { radius: 2 });
+  if (!sample) return;
 
-  pickedRgb.value = [r, g, b];
-  pickedColor.value = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  const duplicate = sampleColors.value.some((existing) => (
+    Math.abs(existing.rgb[0] - sample.rgb[0])
+    + Math.abs(existing.rgb[1] - sample.rgb[1])
+    + Math.abs(existing.rgb[2] - sample.rgb[2])
+  ) <= 6);
+  if (!duplicate) {
+    sampleColors.value.push({
+      id: `${sample.hex}:${sampleColors.value.length}`,
+      rgb: sample.rgb,
+      hex: sample.hex,
+    });
+  }
   processPixels();
 }
 
 function scheduleProcess() {
-  if (!pickedRgb.value) return;
+  if (sampleColors.value.length === 0) return;
   clearTimeout(processTimer);
   processTimer = setTimeout(processPixels, 50);
 }
 
 function processPixels() {
-  if (!originalImageData || !pickedRgb.value) return;
+  if (!originalImageData || sampleColors.value.length === 0) return;
   const canvas = canvasRef.value;
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  const src = originalImageData.data;
-  const out = new ImageData(new Uint8ClampedArray(src), imgWidth, imgHeight);
-  const dst = out.data;
-
-  const [tR, tG, tB] = pickedRgb.value;
-  const maxDist = 441.67; // √(255²×3)
-  const thresh = (tolerance.value / 100) * maxDist;
-  const featherDist = (feather.value / 5) * maxDist;
-
-  for (let i = 0; i < dst.length; i += 4) {
-    const dR = dst[i] - tR;
-    const dG = dst[i + 1] - tG;
-    const dB = dst[i + 2] - tB;
-    const dist = Math.sqrt(dR * dR + dG * dG + dB * dB);
-
-    if (dist <= thresh) {
-      dst[i + 3] = 0;
-    } else if (featherDist > 0 && dist <= thresh + featherDist) {
-      const ratio = (dist - thresh) / featherDist;
-      dst[i + 3] = Math.round(ratio * dst[i + 3]);
-    }
-  }
+  const out = removeSolidBackground(originalImageData, sampleColors.value.map((sample) => sample.rgb), {
+    tolerance: tolerance.value,
+    feather: feather.value,
+    edgeConnectedOnly: edgeConnectedOnly.value,
+  });
+  if (!out) return;
 
   ctx.putImageData(out, 0, 0);
+}
+
+function clearSamples() {
+  sampleColors.value = [];
+  const canvas = canvasRef.value;
+  if (!canvas || !originalImageData) return;
+  canvas.getContext('2d')?.putImageData(originalImageData, 0, 0);
 }
 
 async function confirmRemoval() {
@@ -385,6 +432,33 @@ async function confirmRemoval() {
   font-family: monospace;
   font-size: 12px;
 }
+.bgr-sample-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.bgr-sample-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid #555;
+}
+.bgr-mini-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #444;
+  border-radius: 5px;
+  background: #242424;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 11px;
+}
+.bgr-mini-btn:hover {
+  border-color: #666;
+  color: #ddd;
+}
 .bgr-slider-header {
   display: flex;
   justify-content: space-between;
@@ -406,6 +480,19 @@ async function confirmRemoval() {
   font-size: 10px;
   color: #666;
   margin-top: 2px;
+}
+.bgr-check-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #2a2a2a;
+  color: #aaa;
+  font-size: 12px;
+}
+.bgr-check-row input {
+  accent-color: #4af;
 }
 .bgr-spacer { flex: 1; }
 .bgr-btn-primary {

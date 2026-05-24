@@ -2,6 +2,8 @@
 
 Agents author the same canonical `script.json` used by the editor and runtime. Prefer `tools/vn-author` or `createProjectSession` instead of direct JSON edits.
 
+For cross-cutting operation, transaction, diagnostic, preview, handoff, and conflict rules, see [integration-contract.md](./integration-contract.md).
+
 ## Top Level
 
 ```json
@@ -54,14 +56,41 @@ Register expressions before using them on a page or dialogue.
       "sakura_affection": {
         "type": "number",
         "initial": 0,
-        "label": "Sakura Affection"
+        "label": "Sakura Affection",
+        "group": "Affection",
+        "kind": "affection",
+        "characterId": "sakura",
+        "min": 0,
+        "max": 100,
+        "step": 1
       }
     }
   }
 }
 ```
 
-Supported variable types are `number` and `bool`.
+Supported variable types are `number` and `bool`. Optional UI metadata is `label`, `group`, and `notes`. Number variables may define `min`, `max`, and `step` for editor controls. Affection presets use `kind: "affection"` and `characterId`, and should be created with `add-affection-variable` so GUI and agent output stay normalized.
+
+## Endings
+
+```json
+{
+  "systems": {
+    "endings": {
+      "good_end": {
+        "title": "Good End",
+        "category": "main",
+        "order": 1,
+        "description": "Clear the good route.",
+        "thumbnail": "ui/endings/good.png",
+        "hiddenUntilUnlocked": true
+      }
+    }
+  }
+}
+```
+
+Ending ids use the same stable id shape as variables. Register endings before writing `unlock:ending` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.endings`, not in save slots or `script.json`.
 
 ## Scenes
 

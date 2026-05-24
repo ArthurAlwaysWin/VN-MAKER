@@ -14,6 +14,13 @@ export const VARIABLE_TYPES = Object.freeze([
   'number',
 ]);
 
+export const VARIABLE_KINDS = Object.freeze([
+  'generic',
+  'affection',
+]);
+
+export const VARIABLE_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+
 function cloneJsonValue(value) {
   if (value === undefined) {
     return undefined;
@@ -26,7 +33,7 @@ function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-function normalizeVariableId(variableId) {
+export function normalizeVariableId(variableId) {
   if (typeof variableId !== 'string') {
     return null;
   }
@@ -35,8 +42,26 @@ function normalizeVariableId(variableId) {
   return normalized || null;
 }
 
+export function isValidVariableId(variableId) {
+  const normalized = normalizeVariableId(variableId);
+  return Boolean(normalized && VARIABLE_ID_PATTERN.test(normalized));
+}
+
 function normalizeVariableType(type) {
   return VARIABLE_TYPES.includes(type) ? type : 'number';
+}
+
+function normalizeVariableKind(kind) {
+  return VARIABLE_KINDS.includes(kind) ? kind : 'generic';
+}
+
+function normalizeOptionalString(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized || null;
 }
 
 function normalizeBooleanValue(value) {
@@ -66,6 +91,15 @@ function normalizeNumberValue(value) {
   return Number.isFinite(normalized) ? normalized : 0;
 }
 
+function normalizeOptionalNumber(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
+}
+
 function normalizeRuntimeValueForEntry(entry = {}, value) {
   return entry.type === 'bool'
     ? normalizeBooleanValue(value)
@@ -79,7 +113,92 @@ export function normalizeVariableEntry(entry = {}) {
 
   normalized.type = normalizeVariableType(normalized.type);
   normalized.initial = normalizeRuntimeValueForEntry(normalized, normalized.initial);
+  const hasExplicitKind = normalized.kind !== undefined || normalized.characterId !== undefined;
+  normalized.kind = normalizeVariableKind(normalized.kind ?? (normalized.characterId ? 'affection' : 'generic'));
+  if (!hasExplicitKind && normalized.kind === 'generic') {
+    delete normalized.kind;
+  }
+
+  const label = normalizeOptionalString(normalized.label ?? normalized.name);
+  if (label) {
+    normalized.label = label;
+  } else {
+    delete normalized.label;
+  }
+
+  const group = normalizeOptionalString(normalized.group);
+  if (group) {
+    normalized.group = group;
+  } else {
+    delete normalized.group;
+  }
+
+  const notes = normalizeOptionalString(normalized.notes);
+  if (notes) {
+    normalized.notes = notes;
+  } else {
+    delete normalized.notes;
+  }
+
+  if (normalized.kind === 'affection') {
+    const characterId = normalizeOptionalString(normalized.characterId);
+    if (characterId) {
+      normalized.characterId = characterId;
+    } else {
+      delete normalized.characterId;
+    }
+  } else {
+    delete normalized.characterId;
+  }
+
+  if (normalized.type === 'number') {
+    const min = normalizeOptionalNumber(normalized.min);
+    const max = normalizeOptionalNumber(normalized.max);
+    const step = normalizeOptionalNumber(normalized.step);
+    if (min != null) normalized.min = min;
+    else delete normalized.min;
+    if (max != null) normalized.max = max;
+    else delete normalized.max;
+    if (step != null && step > 0) normalized.step = step;
+    else delete normalized.step;
+  } else {
+    delete normalized.min;
+    delete normalized.max;
+    delete normalized.step;
+  }
+
   return normalized;
+}
+
+export function createAffectionVariableId(characterId) {
+  const normalizedCharacterId = normalizeVariableId(characterId);
+  return normalizedCharacterId ? `${normalizedCharacterId}_affection` : null;
+}
+
+export function createAffectionVariableEntry({
+  characterId,
+  characterName,
+  initial = 0,
+  label,
+  group = 'Affection',
+  notes = '',
+  min = 0,
+  max = 100,
+  step = 1,
+} = {}) {
+  const displayName = normalizeOptionalString(characterName) ?? normalizeOptionalString(characterId) ?? 'Character';
+  return normalizeVariableEntry({
+    type: 'number',
+    initial,
+    label: label ?? `${displayName} Affection`,
+    group,
+    notes,
+    kind: 'affection',
+    characterId,
+    min,
+    max,
+    step,
+  });
 }
 
 export function normalizeVariableRegistry(registry = {}) {
@@ -147,6 +266,14 @@ function isVariableEffect(effect) {
     || effect?.type === 'var:sub';
 }
 
+function normalizeOptionEffectsForReferences(option) {
+  try {
+    return normalizeEffects(option);
+  } catch {
+    return [];
+  }
+}
+
 export function collectVariableReferences(scriptData = {}) {
   const references = [];
 
@@ -166,13 +293,15 @@ export function collectVariableReferences(scriptData = {}) {
 
       if (page.type === 'choice') {
         (page.options ?? []).forEach((option, optionIndex) => {
-          normalizeEffects(option).forEach((effect, effectIndex) => {
+          normalizeOptionEffectsForReferences(option).forEach((effect, effectIndex) => {
             if (!isVariableEffect(effect)) {
               return;
             }
 
             references.push({
               variableId: effect.id,
+              kind: 'choice-effect',
+              pathString: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects.${effectIndex}`,
               sceneId,
               sceneName: scene.name || sceneId,
               pageIndex,
@@ -190,6 +319,8 @@ export function collectVariableReferences(scriptData = {}) {
         normalizedPage.conditions.forEach((condition, conditionIndex) => {
           references.push({
             variableId: condition.variableId,
+            kind: 'condition',
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.conditions.${conditionIndex}`,
             sceneId,
             sceneName: scene.name || sceneId,
             pageIndex,

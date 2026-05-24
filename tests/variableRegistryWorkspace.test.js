@@ -361,11 +361,49 @@ describe('variable registry workspace', () => {
     await flushUi();
 
     expect(harness.script.data.systems.variables.affection).toMatchObject({
-      name: '新樱好感',
+      label: '新樱好感',
       type: 'number',
       initial: 9,
       group: '主角',
       notes: '主线关键数值',
+    });
+  });
+
+  it('creates a character affection preset through the shared variable normalizer', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const script = useScriptStore();
+    script.loadFromData(makeScriptData({
+      characters: {
+        sakura: {
+          name: '樱',
+          color: '#ff99aa',
+          expressions: {},
+        },
+      },
+      systems: {
+        variables: {},
+      },
+    }));
+
+    const result = script.createAffectionVariable('sakura');
+
+    expect(result).toEqual({
+      success: true,
+      variableId: 'sakura_affection',
+      alreadyExists: false,
+    });
+    expect(script.selectedVariableId).toBe('sakura_affection');
+    expect(script.data.systems.variables.sakura_affection).toMatchObject({
+      type: 'number',
+      initial: 0,
+      label: '樱 Affection',
+      group: '好感度',
+      kind: 'affection',
+      characterId: 'sakura',
+      min: 0,
+      max: 100,
+      step: 1,
     });
   });
 

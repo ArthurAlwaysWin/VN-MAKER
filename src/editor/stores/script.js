@@ -3,11 +3,21 @@ import { computed, ref, nextTick } from 'vue';
 import { normalizeConditionPage, normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 import { normalizeEffectContainer } from '../../shared/effectDsl.js';
+import {
+  collectEndingUnlockReferences,
+  normalizeEndingRegistry,
+} from '../../shared/endingRegistry.js';
 import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../../shared/themeLegacyMigrations.js';
-import { collectVariableReferences, normalizeVariableRegistry } from '../../shared/variableRegistry.js';
+import {
+  collectVariableReferences,
+  createAffectionVariableEntry,
+  createAffectionVariableId,
+  normalizeVariableRegistry,
+} from '../../shared/variableRegistry.js';
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
+const DRAFT_ENDING_PREFIX = '__draft_ending__';
 
 function slugifyVariableId(value) {
   return String(value ?? '')
@@ -15,6 +25,10 @@ function slugifyVariableId(value) {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '_')
     .replace(/^_+|_+$/g, '');
+}
+
+function slugifyEndingId(value) {
+  return slugifyVariableId(value);
 }
 
 function formatVariableReferenceLocation(reference = {}) {
@@ -58,6 +72,7 @@ function normalizeStoryContracts(scriptData) {
 
   scriptData.systems ??= {};
   scriptData.systems.variables = normalizeVariableRegistry(scriptData.systems.variables);
+  scriptData.systems.endings = normalizeEndingRegistry(scriptData.systems.endings);
   normalizeChoiceEffects(scriptData);
   normalizeConditionPages(scriptData, {
     registry: scriptData.systems.variables,
@@ -65,11 +80,19 @@ function normalizeStoryContracts(scriptData) {
   return scriptData;
 }
 
+function isVariableEffect(effect) {
+  return effect?.type === 'var:set'
+    || effect?.type === 'var:add'
+    || effect?.type === 'var:sub';
+}
+
 export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
   const isLoading = ref(false);
   const _skipWatch = ref(false);
   const selectedVariableId = ref(null);
+  const selectedEndingId = ref(null);
+  const storySystemsPanel = ref('variables');
   const storySystemsRepairRequest = ref(null);
 
   // Undo/Redo history
@@ -148,6 +171,8 @@ export const useScriptStore = defineStore('script', () => {
     history.value = [];
     historyIndex.value = -1;
     selectedVariableId.value = null;
+    selectedEndingId.value = null;
+    storySystemsPanel.value = 'variables';
     storySystemsRepairRequest.value = null;
   }
 
@@ -155,6 +180,22 @@ export const useScriptStore = defineStore('script', () => {
     selectedVariableId.value = typeof variableId === 'string' && variableId.trim()
       ? variableId.trim()
       : null;
+    if (selectedVariableId.value) {
+      storySystemsPanel.value = 'variables';
+    }
+  }
+
+  function selectEnding(endingId) {
+    selectedEndingId.value = typeof endingId === 'string' && endingId.trim()
+      ? endingId.trim()
+      : null;
+    if (selectedEndingId.value) {
+      storySystemsPanel.value = 'endings';
+    }
+  }
+
+  function selectStorySystemsPanel(panel) {
+    storySystemsPanel.value = panel === 'endings' ? 'endings' : 'variables';
   }
 
   function ensureVariableRegistryState() {
@@ -165,6 +206,16 @@ export const useScriptStore = defineStore('script', () => {
     data.value.systems ??= {};
     data.value.systems.variables = normalizeVariableRegistry(data.value.systems.variables);
     return data.value.systems.variables;
+  }
+
+  function ensureEndingRegistryState() {
+    if (!data.value) {
+      return null;
+    }
+
+    data.value.systems ??= {};
+    data.value.systems.endings = normalizeEndingRegistry(data.value.systems.endings);
+    return data.value.systems.endings;
   }
 
   function createVariableDraft() {
@@ -181,7 +232,7 @@ export const useScriptStore = defineStore('script', () => {
     }
 
     registry[draftId] = {
-      name: '',
+      label: '',
       type: 'bool',
       initial: false,
       group: '',
@@ -198,14 +249,222 @@ export const useScriptStore = defineStore('script', () => {
       return false;
     }
 
+    const normalizedChanges = { ...changes };
+    if (normalizedChanges.name !== undefined && normalizedChanges.label === undefined) {
+      normalizedChanges.label = normalizedChanges.name;
+      delete normalizedChanges.name;
+    }
+
     registry[variableId] = normalizeVariableRegistry({
       [variableId]: {
         ...registry[variableId],
-        ...changes,
+        ...normalizedChanges,
       },
     })[variableId];
     pushState();
     return true;
+  }
+
+  function createAffectionVariable(characterId) {
+    const registry = ensureVariableRegistryState();
+    const character = data.value?.characters?.[characterId];
+    if (!registry || !character) {
+      return { success: false, error: 'missing-character' };
+    }
+
+    const variableId = createAffectionVariableId(characterId);
+    if (!variableId) {
+      return { success: false, error: 'invalid-character-id' };
+    }
+
+    if (registry[variableId]) {
+      selectVariable(variableId);
+      return { success: true, variableId, alreadyExists: true };
+    }
+
+    registry[variableId] = createAffectionVariableEntry({
+      characterId,
+      characterName: character.name || characterId,
+      group: '好感度',
+    });
+    selectVariable(variableId);
+    pushState();
+    return { success: true, variableId, alreadyExists: false };
+  }
+
+  function createEndingDraft() {
+    const endings = ensureEndingRegistryState();
+    if (!endings) {
+      return null;
+    }
+
+    let index = 1;
+    let draftId = `${DRAFT_ENDING_PREFIX}${index}`;
+    while (endings[draftId]) {
+      index++;
+      draftId = `${DRAFT_ENDING_PREFIX}${index}`;
+    }
+
+    endings[draftId] = {
+      title: '',
+      category: 'main',
+      order: Object.keys(endings).length,
+      description: '',
+      hiddenUntilUnlocked: false,
+    };
+    selectEnding(draftId);
+    pushState();
+    return draftId;
+  }
+
+  function updateEndingFields(endingId, changes = {}) {
+    const endings = ensureEndingRegistryState();
+    if (!endings || !endings[endingId]) {
+      return false;
+    }
+
+    endings[endingId] = normalizeEndingRegistry({
+      [endingId]: {
+        ...endings[endingId],
+        ...changes,
+      },
+    })[endingId];
+    pushState();
+    return true;
+  }
+
+  function findEndingReferences(endingId) {
+    if (!endingId) {
+      return [];
+    }
+
+    return collectEndingUnlockReferences(data.value ?? {})
+      .filter((reference) => reference.endingId === endingId)
+      .map((reference) => ({
+        ...reference,
+        locationText: `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`,
+      }));
+  }
+
+  function renameEnding(endingId, nextEndingId, options = {}) {
+    const endings = ensureEndingRegistryState();
+    if (!endings || !endings[endingId]) {
+      return { success: false, error: 'missing-ending' };
+    }
+
+    const normalizedId = slugifyEndingId(nextEndingId);
+    if (!normalizedId) {
+      return { success: false, error: 'empty-id' };
+    }
+
+    if (normalizedId === endingId) {
+      return { success: true, endingId };
+    }
+
+    if (endings[normalizedId]) {
+      return { success: false, error: 'duplicate-id' };
+    }
+
+    const references = findEndingReferences(endingId);
+    if (options.previewOnly) {
+      return {
+        success: true,
+        endingId: normalizedId,
+        references,
+        rewriteCount: references.length,
+      };
+    }
+
+    let rewriteCount = 0;
+    for (const scene of Object.values(data.value?.scenes ?? {})) {
+      for (const page of scene.pages || []) {
+        if (page?.type !== 'choice') {
+          continue;
+        }
+
+        page.options = (page.options || []).map((option) => {
+          const normalizedOption = normalizeEffectContainer(option);
+          normalizedOption.effects = (normalizedOption.effects || []).map((effect) => {
+            if (effect?.type !== 'unlock:ending' || effect.id !== endingId) {
+              return effect;
+            }
+
+            rewriteCount++;
+            return { ...effect, id: normalizedId };
+          });
+          if (normalizedOption.effects.length === 0) {
+            delete normalizedOption.effects;
+          }
+          return normalizedOption;
+        });
+      }
+    }
+
+    endings[normalizedId] = endings[endingId];
+    delete endings[endingId];
+    selectEnding(normalizedId);
+    pushState();
+    return {
+      success: true,
+      endingId: normalizedId,
+      references,
+      rewriteCount,
+    };
+  }
+
+  function deleteEnding(endingId, options = {}) {
+    const endings = ensureEndingRegistryState();
+    if (!endings || !endings[endingId]) {
+      return { success: false, error: 'missing-ending' };
+    }
+
+    const references = findEndingReferences(endingId);
+    if (options.previewOnly) {
+      return {
+        success: true,
+        references,
+        cleanupCount: references.length,
+      };
+    }
+
+    let deletedReferenceCount = 0;
+    for (const scene of Object.values(data.value?.scenes ?? {})) {
+      for (const page of scene.pages || []) {
+        if (page?.type !== 'choice') {
+          continue;
+        }
+
+        page.options = (page.options || []).map((option) => {
+          const normalizedOption = normalizeEffectContainer(option);
+          const nextEffects = (normalizedOption.effects || []).filter((effect) => {
+            const keep = effect?.type !== 'unlock:ending' || effect.id !== endingId;
+            if (!keep) {
+              deletedReferenceCount++;
+            }
+            return keep;
+          });
+          if (nextEffects.length > 0) {
+            normalizedOption.effects = nextEffects;
+          } else {
+            delete normalizedOption.effects;
+          }
+          return normalizedOption;
+        });
+      }
+    }
+
+    delete endings[endingId];
+    if (selectedEndingId.value === endingId) {
+      const remainingIds = Object.keys(endings);
+      selectEnding(remainingIds[0] ?? null);
+    }
+
+    pushState();
+    return {
+      success: true,
+      references,
+      deletedReferenceCount,
+    };
   }
 
   function renameVariable(variableId, nextVariableId, options = {}) {
@@ -348,7 +607,7 @@ export const useScriptStore = defineStore('script', () => {
           page.options = (page.options || []).map((option) => {
             const normalizedOption = normalizeEffectContainer(option);
             const nextEffects = (normalizedOption.effects || []).filter((effect) => {
-              const keep = effect.id !== variableId;
+              const keep = !isVariableEffect(effect) || effect.id !== variableId;
               if (!keep) {
                 deletedReferenceCount++;
               }
@@ -651,6 +910,54 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function setPageType(sceneId, pageIndex, type) {
+    const scene = data.value?.scenes?.[sceneId];
+    if (!scene) return false;
+    const page = scene.pages?.[pageIndex];
+    if (!page || page.type === type) return false;
+
+    page.type = ['normal', 'choice', 'condition'].includes(type) ? type : 'normal';
+
+    if (page.type === 'normal') {
+      delete page.prompt;
+      delete page.options;
+      delete page.conditionMode;
+      delete page.conditions;
+      delete page.trueTarget;
+      delete page.falseTarget;
+      delete page.unresolvedCondition;
+      page.dialogues = Array.isArray(page.dialogues) && page.dialogues.length > 0
+        ? page.dialogues
+        : [{ speaker: null, text: '', expression: null, voice: null }];
+    } else if (page.type === 'choice') {
+      delete page.dialogues;
+      delete page.conditionMode;
+      delete page.conditions;
+      delete page.trueTarget;
+      delete page.falseTarget;
+      delete page.unresolvedCondition;
+      page.prompt ??= '';
+      page.options = Array.isArray(page.options) && page.options.length > 0
+        ? page.options.map((option) => normalizeEffectContainer(option))
+        : [{ text: '', target: null, effects: [] }, { text: '', target: null, effects: [] }];
+    } else if (page.type === 'condition') {
+      delete page.dialogues;
+      delete page.prompt;
+      delete page.options;
+      const normalizedPage = normalizeConditionPage(page, {
+        registry: data.value?.systems?.variables ?? {},
+      });
+      page.conditionMode = normalizedPage.conditionMode;
+      page.conditions = normalizedPage.conditions;
+      page.trueTarget = normalizedPage.trueTarget;
+      page.falseTarget = normalizedPage.falseTarget;
+      delete page.unresolvedCondition;
+    }
+
+    pushState();
+    return true;
+  }
+
   function setSceneNext(sceneId, nextSceneId) {
     const scene = data.value?.scenes?.[sceneId];
     if (!scene) return;
@@ -810,14 +1117,15 @@ export const useScriptStore = defineStore('script', () => {
 
   return {
     data, isLoading, _skipWatch,
-    selectedVariableId, storySystemsRepairRequest,
+    selectedVariableId, selectedEndingId, storySystemsPanel, storySystemsRepairRequest,
     conditionPageIssues, canSaveConditionPages,
     pushState, undo, redo,
     historyIndex, history,
     loadFromData, reset,
-    selectVariable, requestStorySystemsRepair,
-    createVariableDraft, updateVariableFields, renameVariable,
+    selectVariable, selectEnding, selectStorySystemsPanel, requestStorySystemsRepair,
+    createVariableDraft, updateVariableFields, createAffectionVariable, renameVariable,
     findVariableReferences, deleteVariable,
+    createEndingDraft, updateEndingFields, renameEnding, findEndingReferences, deleteEnding,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,
@@ -829,7 +1137,7 @@ export const useScriptStore = defineStore('script', () => {
     applyBuiltinTheme, applyThemeBundle,
     addScene, deleteScene, renameScene,
     addPage, deletePage, reorderPages,
-    convertPageType, setSceneNext,
+    convertPageType, setPageType, setSceneNext,
     findExpressionReferences, replaceExpressionReferences, replaceAssetPathReferences,
     loadScript, saveScript
   };

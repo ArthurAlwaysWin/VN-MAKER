@@ -28,6 +28,23 @@ describe('themeIconHelpers', () => {
     expect(result).toContain('class="close-icon"');
   });
 
+  it('escapes configured icon attributes', () => {
+    const result = resolveThemeIcon(
+      { close: 'ui/icons/close.png" onerror="alert(1)' },
+      'close',
+      'Close "icon"',
+      'close-icon" onclick="alert(1)',
+    );
+    const root = document.createElement('div');
+    root.innerHTML = result;
+
+    const img = root.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('onerror')).toBeNull();
+    expect(img.getAttribute('onclick')).toBeNull();
+    expect(img.alt).toBe('Close "icon"');
+  });
+
   it('replaces broken themed icons with fallback content after image error', () => {
     const root = document.createElement('div');
     root.innerHTML = resolveThemeIcon({ close: 'ui/icons/close.png' }, 'close', '返回', 'close-icon');

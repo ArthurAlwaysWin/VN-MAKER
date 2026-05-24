@@ -110,7 +110,7 @@ Include:
 ## Do Not
 
 - Do not invent unsupported script fields, effects, or `commands[]`.
-- Do not build CG gallery, ending list, or in-editor AI assistant flows unless the human explicitly asks for that scope.
+- Do not build CG gallery or in-editor AI assistant flows unless the human explicitly asks for that scope.
 - Do not skip validation after meaningful edits.
 - Do not finish with validation errors or readiness blockers unless the human explicitly accepts them.
 - Do not treat a dry-run preview plan as visual confirmation when actual screenshot rendering is available.

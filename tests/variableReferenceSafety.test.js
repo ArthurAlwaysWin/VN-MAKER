@@ -95,6 +95,8 @@ describe('variable reference safety', () => {
     expect(store.findVariableReferences('route_locked')).toEqual([
       {
         variableId: 'route_locked',
+        kind: 'choice-effect',
+        pathString: 'scenes.start.pages.0.options.1.effects.0',
         sceneId: 'start',
         sceneName: '开始',
         pageIndex: 0,
@@ -106,6 +108,8 @@ describe('variable reference safety', () => {
       },
       {
         variableId: 'route_locked',
+        kind: 'condition',
+        pathString: 'scenes.start.pages.1.conditions.0',
         sceneId: 'start',
         sceneName: '开始',
         pageIndex: 1,
@@ -116,6 +120,8 @@ describe('variable reference safety', () => {
       },
       {
         variableId: 'route_locked',
+        kind: 'condition',
+        pathString: 'scenes.start.pages.2.conditions.0',
         sceneId: 'start',
         sceneName: '开始',
         pageIndex: 2,

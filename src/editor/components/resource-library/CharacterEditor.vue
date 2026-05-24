@@ -47,6 +47,22 @@
         </div>
       </div>
 
+      <div class="affection-preset">
+        <div>
+          <strong>好感度变量</strong>
+          <p v-if="existingAffectionVariable">已注册：{{ affectionVariableId }}</p>
+          <p v-else>为该角色创建可用于选项效果和条件分支的数值变量。</p>
+        </div>
+        <button
+          type="button"
+          data-test="create-affection-variable"
+          :disabled="Boolean(existingAffectionVariable)"
+          @click="ensureAffectionVariable"
+        >
+          {{ existingAffectionVariable ? '已创建' : '创建好感度' }}
+        </button>
+      </div>
+
       <!-- Delete character button -->
       <button class="delete-char-btn" @click="deleteCharacter(selectedId)" title="永久删除该角色及其所有表情">删除此角色</button>
 
@@ -164,6 +180,12 @@ const selectedChar = computed(() => {
   return characters.value[selectedId.value];
 });
 
+const affectionVariableId = computed(() => selectedId.value ? `${selectedId.value}_affection` : '');
+const existingAffectionVariable = computed(() => {
+  if (!affectionVariableId.value) return null;
+  return script.data?.systems?.variables?.[affectionVariableId.value] ?? null;
+});
+
 const expressions = computed(() => {
   if (!selectedChar.value?.expressions) return [];
   return Object.entries(selectedChar.value.expressions).map(([name, path]) => ({
@@ -249,6 +271,13 @@ function updateColor(newColor) {
   if (!selectedChar.value) return;
   selectedChar.value.color = newColor;
   script.pushState();
+}
+
+function ensureAffectionVariable() {
+  const result = script.createAffectionVariable(selectedId.value);
+  if (!result.success) {
+    alert('无法创建好感度变量，请确认角色仍然存在。');
+  }
 }
 
 // ─── Expression Management ──────────────────────────────────────────
@@ -485,6 +514,35 @@ async function deleteExpression(exprName) {
 
 .delete-char-btn { background: transparent; border: 1px solid #a22; color: #e66; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 20px; }
 .delete-char-btn:hover { background: #a22; color: #fff; }
+
+.affection-preset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+.affection-preset strong { color: #ddd; font-size: 13px; }
+.affection-preset p { margin: 4px 0 0; color: #888; font-size: 12px; }
+.affection-preset button {
+  flex-shrink: 0;
+  background: #007acc;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 7px 12px;
+}
+.affection-preset button:disabled {
+  background: #333;
+  color: #888;
+  cursor: default;
+}
 
 /* Expression section */
 .expressions-section { margin-top: 24px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 20px; }

@@ -218,6 +218,210 @@ describe('project authoring session', () => {
     });
   });
 
+  it('authors M1 variable registry, affection presets, and choice-effect branches through one session contract', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_m1_authoring',
+        characters: {
+          sakura: { name: 'Sakura', expressions: {} },
+        },
+        systems: {
+          variables: {
+            affection: { type: 'number', initial: 1, label: 'Affection' },
+            route_open: { type: 'bool', initial: false, label: 'Route Open' },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'choice',
+                prompt: 'Answer?',
+                options: [
+                  {
+                    text: 'Be kind',
+                    effects: [{ type: 'var:add', id: 'affection', value: 1 }],
+                  },
+                ],
+              },
+              {
+                type: 'condition',
+                conditionMode: 'all',
+                conditions: [{ variableId: 'affection', operator: '>=', value: 2 }],
+                trueTarget: null,
+                falseTarget: null,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(session.addAffectionVariable({
+      characterId: 'sakura',
+      id: 'sakura_bond',
+      label: 'Sakura Bond',
+      min: 0,
+      max: 10,
+      step: 1,
+    })).toMatchObject({
+      variableId: 'sakura_bond',
+      characterId: 'sakura',
+      changedPaths: ['systems.variables.sakura_bond'],
+    });
+    expect(session.updateVariable({
+      variableId: 'sakura_bond',
+      patch: { initial: 3, group: 'Route Scores' },
+    })).toEqual({ variableId: 'sakura_bond' });
+
+    expect(session.renameVariable({
+      variableId: 'affection',
+      newVariableId: 'sakura_affection',
+    })).toMatchObject({
+      variableId: 'affection',
+      newVariableId: 'sakura_affection',
+      updatedReferenceCount: 2,
+      changedPaths: expect.arrayContaining([
+        'systems.variables.affection',
+        'systems.variables.sakura_affection',
+        'scenes.start.pages.0.options.0.effects.0',
+        'scenes.start.pages.1.conditions.0',
+      ]),
+    });
+
+    expect(session.setChoiceEffect({
+      sceneId: 'start',
+      pageIndex: 0,
+      optionIndex: 0,
+      effectIndex: 0,
+      effect: { type: 'var:set', id: 'route_open', value: true },
+    })).toEqual({
+      sceneId: 'start',
+      pageIndex: 0,
+      optionIndex: 0,
+      effectIndex: 0,
+      effect: { type: 'var:set', id: 'route_open', value: true },
+    });
+    expect(session.removeChoiceEffect({
+      sceneId: 'start',
+      pageIndex: 0,
+      optionIndex: 0,
+      effectIndex: 0,
+    })).toMatchObject({
+      removedEffect: { type: 'var:set', id: 'route_open', value: true },
+    });
+    expect(() => session.deleteVariable({ variableId: 'sakura_affection' })).toThrow(/still referenced/);
+    expect(session.deleteVariable({
+      variableId: 'sakura_affection',
+      forceReferences: true,
+    })).toMatchObject({
+      deletedVariableId: 'sakura_affection',
+      deletedReferenceCount: 1,
+      changedPaths: expect.arrayContaining([
+        'systems.variables.sakura_affection',
+        'scenes.start.pages.1.conditions.0',
+      ]),
+    });
+
+    const script = session.toJSON();
+    expect(script.systems.variables.sakura_bond).toMatchObject({
+      type: 'number',
+      initial: 3,
+      label: 'Sakura Bond',
+      group: 'Route Scores',
+      kind: 'affection',
+      characterId: 'sakura',
+      min: 0,
+      max: 10,
+      step: 1,
+    });
+    expect(script.scenes.start.pages[0].options[0].effects).toBeUndefined();
+    expect(script.scenes.start.pages[1].conditions).toEqual([]);
+  });
+
+  it('authors M2 endings and unlock effects through one session contract', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_m2_authoring',
+        characters: {},
+        systems: {
+          endings: {
+            normal_end: { title: 'Normal End', order: 2 },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'choice',
+                prompt: 'Finish?',
+                options: [{ text: 'End', target: null }],
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(session.addEnding({
+      id: 'good_end',
+      title: 'Good End',
+      category: 'romance',
+      order: 1,
+      description: 'Sakura route clear.',
+      thumbnail: 'ui/endings/good.png',
+      hiddenUntilUnlocked: true,
+    })).toEqual({
+      endingId: 'good_end',
+      changedPaths: ['systems.endings.good_end'],
+    });
+    expect(session.updateEnding({
+      endingId: 'normal_end',
+      patch: { category: 'main', description: 'Default route.' },
+    })).toEqual({
+      endingId: 'normal_end',
+      changedPaths: ['systems.endings.normal_end'],
+    });
+    expect(session.addEndingUnlock({
+      sceneId: 'start',
+      pageIndex: 0,
+      optionIndex: 0,
+      endingId: 'good_end',
+    })).toEqual({
+      sceneId: 'start',
+      pageIndex: 0,
+      optionIndex: 0,
+      effectIndex: 0,
+      endingId: 'good_end',
+      changedPaths: ['scenes.start.pages.0.options.0.effects.0'],
+    });
+    expect(() => session.removeEnding({ endingId: 'good_end' })).toThrow(/still referenced/);
+    expect(session.removeEnding({
+      endingId: 'good_end',
+      forceReferences: true,
+    })).toMatchObject({
+      deletedEndingId: 'good_end',
+      deletedReferenceCount: 1,
+      changedPaths: [
+        'systems.endings.good_end',
+        'scenes.start.pages.0.options.0.effects.0',
+      ],
+    });
+
+    const script = session.toJSON();
+    expect(script.systems.endings.normal_end).toMatchObject({
+      title: 'Normal End',
+      category: 'main',
+      order: 2,
+      description: 'Default route.',
+      hiddenUntilUnlocked: false,
+    });
+    expect(script.scenes.start.pages[0].options[0].effects).toBeUndefined();
+    expect(session.listEndings()).toEqual([
+      expect.objectContaining({ endingId: 'normal_end', title: 'Normal End' }),
+    ]);
+  });
+
   it('edits choice page data and page media through unified authoring methods', () => {
     const session = createProjectSession({
       script: {

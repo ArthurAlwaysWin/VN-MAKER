@@ -1,7 +1,20 @@
 <template>
   <div class="story-systems" v-if="script.data">
     <aside class="sidebar">
+      <div class="system-tabs">
+        <button
+          type="button"
+          :class="{ active: script.storySystemsPanel === 'variables' }"
+          @click="script.selectStorySystemsPanel('variables')"
+        >变量</button>
+        <button
+          type="button"
+          :class="{ active: script.storySystemsPanel === 'endings' }"
+          @click="script.selectStorySystemsPanel('endings')"
+        >结局</button>
+      </div>
       <VariableRegistryList
+        v-if="script.storySystemsPanel === 'variables'"
         :items="filteredVariables"
         :groups="groups"
         :selected-id="script.selectedVariableId"
@@ -16,6 +29,14 @@
         @update:type-filter="typeFilter = $event"
         @update:group-filter="groupFilter = $event"
       />
+      <EndingRegistryList
+        v-else
+        :items="allEndings"
+        :selected-id="script.selectedEndingId"
+        :is-empty="allEndings.length === 0"
+        @create="onCreateEnding"
+        @select="script.selectEnding"
+      />
     </aside>
 
     <section class="detail-pane">
@@ -25,7 +46,7 @@
       </div>
 
       <VariableInspector
-        v-if="selectedVariable && selectedEntry"
+        v-if="script.storySystemsPanel === 'variables' && selectedVariable && selectedEntry"
         :variable-id="selectedVariable.id"
         :variable-entry="selectedEntry"
         :usage-count="selectedVariable.usageCount"
@@ -34,10 +55,20 @@
         @request-rename="openRenameImpact"
       />
 
+      <EndingInspector
+        v-else-if="script.storySystemsPanel === 'endings' && selectedEnding && selectedEndingEntry"
+        :ending-id="selectedEnding.id"
+        :ending-entry="selectedEndingEntry"
+        :unlock-count="selectedEnding.unlockCount"
+        :focus-token="endingInspectorFocusToken"
+        @request-delete="openEndingDeleteImpact"
+        @request-rename="openEndingRenameImpact"
+      />
+
       <div v-else class="detail-card detail-placeholder">
         <p class="eyebrow">剧情系统</p>
-        <h1>选择一个变量</h1>
-        <p>左侧列表会显示变量名称、内部 ID、默认值和引用次数。</p>
+        <h1>{{ script.storySystemsPanel === 'endings' ? '选择一个结局' : '选择一个变量' }}</h1>
+        <p>{{ script.storySystemsPanel === 'endings' ? '左侧列表会显示结局标题、内部 ID 和解锁点数量。' : '左侧列表会显示变量名称、内部 ID、默认值和引用次数。' }}</p>
       </div>
     </section>
 
@@ -56,14 +87,20 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
+import EndingInspector from '../components/story-systems/EndingInspector.vue';
+import EndingRegistryList from '../components/story-systems/EndingRegistryList.vue';
 import VariableImpactModal from '../components/story-systems/VariableImpactModal.vue';
 import VariableInspector from '../components/story-systems/VariableInspector.vue';
 import VariableRegistryList from '../components/story-systems/VariableRegistryList.vue';
+import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
+import { collectEndingUnlockReferences } from '../../shared/endingRegistry.js';
 import { collectVariableReferences } from '../../shared/variableRegistry.js';
 
 const script = useScriptStore();
+const project = useProjectStore();
 const inspectorFocusToken = ref(0);
+const endingInspectorFocusToken = ref(0);
 const search = ref('');
 const typeFilter = ref('all');
 const groupFilter = ref('all');
@@ -90,6 +127,7 @@ function formatDefaultValue(entry = {}) {
 }
 
 const references = computed(() => collectVariableReferences(script.data ?? {}));
+const endingReferences = computed(() => collectEndingUnlockReferences(script.data ?? {}));
 
 const usageCounts = computed(() => {
   const counts = new Map();
@@ -103,7 +141,7 @@ const allVariables = computed(() => {
   const registry = script.data?.systems?.variables ?? {};
   return Object.entries(registry).map(([id, entry]) => ({
     id,
-    name: entry.name || entry.label || id,
+    name: entry.label || entry.name || id,
     group: entry.group || '',
     notes: entry.notes || '',
     type: entry.type || 'number',
@@ -111,6 +149,29 @@ const allVariables = computed(() => {
     defaultLabel: formatDefaultValue(entry),
     usageCount: usageCounts.value.get(id) ?? 0,
   }));
+});
+
+const endingUsageCounts = computed(() => {
+  const counts = new Map();
+  for (const reference of endingReferences.value) {
+    counts.set(reference.endingId, (counts.get(reference.endingId) ?? 0) + 1);
+  }
+  return counts;
+});
+
+const allEndings = computed(() => {
+  const endings = script.data?.systems?.endings ?? {};
+  return Object.entries(endings).map(([id, entry]) => ({
+    id,
+    title: entry.title || entry.name || id,
+    category: entry.category || '',
+    order: Number(entry.order ?? 0),
+    unlockCount: endingUsageCounts.value.get(id) ?? 0,
+  })).sort((left, right) => {
+    const orderDelta = left.order - right.order;
+    if (orderDelta !== 0) return orderDelta;
+    return left.title.localeCompare(right.title);
+  });
 });
 
 const groups = computed(() => {
@@ -157,6 +218,19 @@ const selectedEntry = computed(() => {
   return script.data?.systems?.variables?.[script.selectedVariableId] ?? null;
 });
 
+const selectedEnding = computed(() => {
+  return allEndings.value.find((item) => item.id === script.selectedEndingId)
+    || null;
+});
+
+const selectedEndingEntry = computed(() => {
+  if (!script.selectedEndingId) {
+    return null;
+  }
+
+  return script.data?.systems?.endings?.[script.selectedEndingId] ?? null;
+});
+
 const repairBanner = computed(() => {
   if (script.storySystemsRepairRequest?.source === 'missing-variable-reference' && selectedVariable.value) {
     return `已定位到变量“${selectedVariable.value.name}”，请检查它的引用并完成修复。`;
@@ -175,6 +249,13 @@ function onCreateVariable() {
   const variableId = script.createVariableDraft();
   if (variableId) {
     inspectorFocusToken.value++;
+  }
+}
+
+function onCreateEnding() {
+  const endingId = script.createEndingDraft();
+  if (endingId) {
+    endingInspectorFocusToken.value++;
   }
 }
 
@@ -203,6 +284,31 @@ function openDeleteImpact(payload) {
   impactState.actionCount = preview.cleanupCount || 0;
 }
 
+function openEndingRenameImpact(payload) {
+  const preview = script.renameEnding(payload.endingId, payload.nextEndingId, {
+    previewOnly: true,
+  });
+  impactState.visible = true;
+  impactState.mode = 'rename-ending';
+  impactState.variableId = payload.endingId;
+  impactState.variableName = selectedEnding.value?.title || payload.endingId;
+  impactState.nextVariableId = payload.nextEndingId;
+  impactState.references = preview.references || [];
+  impactState.actionCount = preview.rewriteCount || 0;
+}
+
+function openEndingDeleteImpact(payload) {
+  const preview = script.deleteEnding(payload.endingId, { previewOnly: true });
+  const currentEnding = allEndings.value.find((item) => item.id === payload.endingId);
+  impactState.visible = true;
+  impactState.mode = 'delete-ending';
+  impactState.variableId = payload.endingId;
+  impactState.variableName = currentEnding?.title || payload.endingId;
+  impactState.nextVariableId = '';
+  impactState.references = preview.references || [];
+  impactState.actionCount = preview.cleanupCount || 0;
+}
+
 function closeImpactModal() {
   impactState.visible = false;
 }
@@ -210,6 +316,10 @@ function closeImpactModal() {
 function confirmImpact() {
   if (impactState.mode === 'rename') {
     script.renameVariable(impactState.variableId, impactState.nextVariableId);
+  } else if (impactState.mode === 'rename-ending') {
+    script.renameEnding(impactState.variableId, impactState.nextVariableId);
+  } else if (impactState.mode === 'delete-ending') {
+    script.deleteEnding(impactState.variableId);
   } else {
     script.deleteVariable(impactState.variableId);
   }
@@ -218,6 +328,10 @@ function confirmImpact() {
 }
 
 watch(allVariables, (items) => {
+  if (script.storySystemsPanel !== 'variables') {
+    return;
+  }
+
   if (!items.length) {
     script.selectVariable(null);
     return;
@@ -225,6 +339,40 @@ watch(allVariables, (items) => {
 
   if (!script.selectedVariableId || !items.some((item) => item.id === script.selectedVariableId)) {
     script.selectVariable(items[0].id);
+  }
+}, {
+  immediate: true,
+});
+
+watch(allEndings, (items) => {
+  if (script.storySystemsPanel !== 'endings') {
+    return;
+  }
+
+  if (!items.length) {
+    script.selectEnding(null);
+    return;
+  }
+
+  if (!script.selectedEndingId || !items.some((item) => item.id === script.selectedEndingId)) {
+    script.selectEnding(items[0].id);
+  }
+}, {
+  immediate: true,
+});
+
+watch(() => project.agentPathNavigationRequest?.nonce, () => {
+  const request = project.agentPathNavigationRequest;
+  if (request?.kind === 'variable' && request.id) {
+    script.selectVariable(request.id);
+    inspectorFocusToken.value++;
+  }
+  if (request?.kind === 'ending') {
+    script.selectStorySystemsPanel('endings');
+    if (request.id) {
+      script.selectEnding(request.id);
+    }
+    endingInspectorFocusToken.value++;
   }
 }, {
   immediate: true,
@@ -244,6 +392,33 @@ watch(allVariables, (items) => {
   border-right: 1px solid #111;
   overflow: hidden;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.system-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+  background: #202020;
+  border-bottom: 1px solid #111;
+}
+
+.system-tabs button {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.system-tabs button.active {
+  background: #094771;
+  border-color: #007acc;
+  color: #fff;
 }
 
 .detail-pane {

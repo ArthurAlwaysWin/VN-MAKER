@@ -77,6 +77,10 @@ Plan command names match the CLI command names:
 
 - `add-character`
 - `add-variable`
+- `update-variable`
+- `rename-variable`
+- `delete-variable`
+- `add-affection-variable`
 - `add-scene`
 - `rename-scene`
 - `delete-scene`
@@ -95,6 +99,9 @@ Plan command names match the CLI command names:
 - `set-choice-option`
 - `remove-choice-option`
 - `move-choice-option`
+- `add-choice-effect`
+- `set-choice-effect`
+- `remove-choice-effect`
 - `set-condition-page`
 - `set-page-background`
 - `set-page-media`
@@ -111,7 +118,6 @@ Plan command names match the CLI command names:
 - `set-dialogue-box`
 - `set-theme`
 - `set-widget-styles`
-- `add-choice-effect`
 
 ## Parameter Style
 

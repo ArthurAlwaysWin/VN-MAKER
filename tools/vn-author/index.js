@@ -112,6 +112,20 @@ function parseOptionalScalarValue(value) {
   return value == null ? undefined : parseScalarValue(value);
 }
 
+function getFlagOrOptionalValue(args, name) {
+  const index = args.indexOf(name);
+  if (index === -1) {
+    return undefined;
+  }
+
+  const nextValue = args[index + 1];
+  if (nextValue != null && !String(nextValue).startsWith('--')) {
+    return nextValue;
+  }
+
+  return true;
+}
+
 function cloneJsonValue(value) {
   if (value === undefined) {
     return undefined;
@@ -454,6 +468,7 @@ function summarizeScriptShape(script) {
     scenes: Object.keys(scenes).length,
     pages,
     variables: Object.keys(script?.systems?.variables ?? {}).length,
+    endings: Object.keys(script?.systems?.endings ?? {}).length,
   };
 }
 
@@ -468,6 +483,10 @@ function getMutationTarget(result = {}) {
   for (const key of [
     'characterId',
     'variableId',
+    'newVariableId',
+    'deletedVariableId',
+    'endingId',
+    'deletedEndingId',
     'sceneId',
     'newSceneId',
     'deletedSceneId',
@@ -489,6 +508,10 @@ function getMutationTarget(result = {}) {
 }
 
 function getChangedPaths(result = {}) {
+  if (Array.isArray(result.changedPaths)) {
+    return result.changedPaths;
+  }
+
   if (result.uiPath) {
     return [result.uiPath];
   }
@@ -504,6 +527,9 @@ function getChangedPaths(result = {}) {
   }
   if (result.variableId) {
     return [`systems.variables.${result.variableId}`];
+  }
+  if (result.endingId) {
+    return [`systems.endings.${result.endingId}`];
   }
   if (!result.sceneId) {
     return [];
@@ -612,7 +638,23 @@ function screenTargetsFromChangedPaths(changedPaths = []) {
   });
 }
 
-function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
+function endingTargetsFromChangedPaths(changedPaths = []) {
+  const hasEndingChange = changedPaths.some((changedPath) => (
+    changedPath === 'systems.endings'
+    || String(changedPath).startsWith('systems.endings.')
+  ));
+
+  return hasEndingChange
+    ? [{
+      type: 'ending-list',
+      kind: 'ending-list',
+      pathString: 'systems.endings',
+      reason: 'changed-ending-registry',
+    }]
+    : [];
+}
+
+function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
   if (explicitSceneId || explicitPageIndex != null) {
     return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
@@ -623,7 +665,7 @@ function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction,
       : checkedSceneIds
         .filter((sceneId) => script.scenes?.[sceneId]?.pages?.[0])
         .map((sceneId) => ({ type: 'scene', sceneId, pageIndex: 0 }));
-    const targets = [...sceneTargets, ...transactionScreenTargets];
+    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets];
     return targets.length ? targets : [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
 
@@ -636,6 +678,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     .filter((sceneId) => script.scenes?.[sceneId]);
   const transactionPageTargets = pageTargetsFromChangedPaths(changedPaths, script);
   const transactionScreenTargets = screenTargetsFromChangedPaths(changedPaths);
+  const transactionEndingTargets = endingTargetsFromChangedPaths(changedPaths);
   const explicitSceneId = getArgValue(args, '--scene', null);
   const explicitPageIndex = getIntArg(args, '--page', null);
   const defaultSceneId = explicitSceneId ?? transactionPageTargets[0]?.sceneId ?? transactionSceneIds[0] ?? 'start';
@@ -651,6 +694,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     transaction,
     transactionPageTargets,
     transactionScreenTargets,
+    transactionEndingTargets,
     checkedSceneIds,
     defaultSceneId,
     defaultPageIndex,
@@ -664,6 +708,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     checkedSceneIds,
     pageTargets: transaction?.data ? transactionPageTargets : [],
     screenTargets: transaction?.data ? transactionScreenTargets : [],
+    endingTargets: transaction?.data ? transactionEndingTargets : [],
     previewTargets,
     previewTarget: previewTargets[0] ?? {
       sceneId: defaultSceneId,
@@ -794,6 +839,14 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'clear-scene-references',
   'add-character',
   'add-variable',
+  'update-variable',
+  'rename-variable',
+  'delete-variable',
+  'add-affection-variable',
+  'add-ending',
+  'update-ending',
+  'remove-ending',
+  'add-ending-unlock',
   'add-page',
   'remove-page',
   'move-page',
@@ -823,6 +876,8 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-theme',
   'set-widget-styles',
   'add-choice-effect',
+  'set-choice-effect',
+  'remove-choice-effect',
 ];
 
 function createPlanOperationError(code, message, details = {}) {
@@ -1063,6 +1118,102 @@ function applyPlanOperation(session, operation = {}, index = 0) {
       type,
       initial: getParam(params, 'initial') ?? (type === 'bool' ? false : 0),
       label: getParam(params, 'label', 'name') ?? id,
+      group: getParam(params, 'group'),
+      notes: getParam(params, 'notes'),
+      kind: getParam(params, 'kind'),
+      characterId: getParam(params, 'characterId', 'character'),
+      min: getParam(params, 'min'),
+      max: getParam(params, 'max'),
+      step: getParam(params, 'step'),
+    });
+  }
+
+  if (command === 'update-variable') {
+    return session.updateVariable({
+      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
+      patch: getParam(params, 'patch') ?? dropUndefinedFields({
+        type: getParam(params, 'type'),
+        initial: getParam(params, 'initial'),
+        label: getParam(params, 'label', 'name'),
+        group: getParam(params, 'group'),
+        notes: getParam(params, 'notes'),
+        kind: getParam(params, 'kind'),
+        characterId: getParam(params, 'characterId', 'character'),
+        min: getParam(params, 'min'),
+        max: getParam(params, 'max'),
+        step: getParam(params, 'step'),
+      }),
+    });
+  }
+
+  if (command === 'rename-variable') {
+    return session.renameVariable({
+      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
+      newVariableId: requireParam(params, command, 'newVariableId', 'newId', 'new-id', 'to'),
+    });
+  }
+
+  if (command === 'delete-variable') {
+    return session.deleteVariable({
+      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }
+
+  if (command === 'add-affection-variable') {
+    return session.addAffectionVariable({
+      characterId: requireParam(params, command, 'characterId', 'character'),
+      id: getParam(params, 'id', 'variableId', 'variable'),
+      initial: getParam(params, 'initial'),
+      label: getParam(params, 'label', 'name'),
+      group: getParam(params, 'group'),
+      notes: getParam(params, 'notes'),
+      min: getParam(params, 'min'),
+      max: getParam(params, 'max'),
+      step: getParam(params, 'step'),
+    });
+  }
+
+  if (command === 'add-ending') {
+    const id = requireParam(params, command, 'id', 'endingId', 'ending');
+    return session.addEnding({
+      id,
+      title: getParam(params, 'title', 'name') ?? id,
+      category: getParam(params, 'category'),
+      order: getParam(params, 'order'),
+      description: getParam(params, 'description'),
+      thumbnail: getParam(params, 'thumbnail'),
+      hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
+    });
+  }
+
+  if (command === 'update-ending') {
+    return session.updateEnding({
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+      patch: getParam(params, 'patch') ?? dropUndefinedFields({
+        title: getParam(params, 'title', 'name'),
+        category: getParam(params, 'category'),
+        order: getParam(params, 'order'),
+        description: getParam(params, 'description'),
+        thumbnail: getParam(params, 'thumbnail'),
+        hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
+      }),
+    });
+  }
+
+  if (command === 'remove-ending') {
+    return session.removeEnding({
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }
+
+  if (command === 'add-ending-unlock') {
+    return session.addEndingUnlock({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
     });
   }
 
@@ -1315,6 +1466,29 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
+  if (command === 'set-choice-effect') {
+    return session.setChoiceEffect({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      effectIndex: requireParam(params, command, 'effectIndex', 'effect-index', 'effect'),
+      effect: getParam(params, 'effect') ?? {
+        type: getParam(params, 'effectType', 'effect-type') ?? 'var:add',
+        id: getParam(params, 'effectId', 'effect-id', 'variable'),
+        value: getParam(params, 'value') ?? 1,
+      },
+    });
+  }
+
+  if (command === 'remove-choice-effect') {
+    return session.removeChoiceEffect({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      effectIndex: requireParam(params, command, 'effectIndex', 'effect-index', 'effect'),
+    });
+  }
+
   throw createPlanOperationError(
     'unsupported-apply-plan-command',
     `Unsupported apply-plan command: ${command}`,
@@ -1469,6 +1643,26 @@ function collectScreenPreviewIssues(screenTargets = []) {
     });
 }
 
+function collectEndingPreviewIssues(endingTargets = []) {
+  return endingTargets.map((target) => ({
+    source: 'preview',
+    severity: 'warning',
+    category: 'ending-list-preview',
+    code: 'ending-list-preview-required',
+    pathString: target.pathString ?? 'systems.endings',
+    message: 'Ending registry changed and needs review in the Story Systems ending list.',
+    suggestedAction: {
+      summary: 'Open Story Systems, review the ending list and unlock routing, then mark the handoff item resolved.',
+      commands: [
+        {
+          command: 'list-endings',
+          args: ['--script', '<script.json>', '--json'],
+        },
+      ],
+    },
+  }));
+}
+
 function collectAuthorCheckSuggestions({
   validation,
   layout,
@@ -1477,6 +1671,7 @@ function collectAuthorCheckSuggestions({
   referenceDiagnostics,
   referenceScreenshotIssues,
   screenPreviewIssues,
+  endingPreviewIssues,
 }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
@@ -1540,6 +1735,15 @@ function collectAuthorCheckSuggestions({
     });
   }
 
+  for (const issue of endingPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
   if (!validation.ok) {
     for (const error of validation.errors) {
       suggestions.push({
@@ -1555,6 +1759,10 @@ function collectAuthorCheckSuggestions({
   }
 
   return suggestions;
+}
+
+function isRenderablePreviewTarget(target = {}) {
+  return target.type === 'scene' || target.type === 'screen' || target.sceneId || target.screenId;
 }
 
 function previewOutPathForTarget(baseOutPath, target, index) {
@@ -1582,6 +1790,7 @@ async function inspect(args) {
     characterCount: Object.keys(script.characters ?? {}).length,
     sceneCount: Object.keys(script.scenes ?? {}).length,
     variableCount: Object.keys(script.systems?.variables ?? {}).length,
+    endingCount: Object.keys(script.systems?.endings ?? {}).length,
   };
 
   if (hasFlag(args, '--json')) {
@@ -1595,6 +1804,7 @@ async function inspect(args) {
   process.stdout.write(`Characters: ${summary.characterCount}\n`);
   process.stdout.write(`Scenes: ${summary.sceneCount}\n`);
   process.stdout.write(`Variables: ${summary.variableCount}\n`);
+  process.stdout.write(`Endings: ${summary.endingCount}\n`);
   return 0;
 }
 
@@ -2451,6 +2661,7 @@ async function authorCheck(args) {
     changedPaths: focus.changedPaths,
   });
   const screenPreviewIssues = collectScreenPreviewIssues(focus.screenTargets);
+  const endingPreviewIssues = collectEndingPreviewIssues(focus.endingTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
 
   let preview = null;
@@ -2458,7 +2669,8 @@ async function authorCheck(args) {
     const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
     const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
     const outPath = path.resolve(repoRoot, getArgValue(args, '--preview-out', path.join('.tmp', 'author-check-preview.png')));
-    const previewTargets = focus.previewTargets.length ? focus.previewTargets : [focus.previewTarget];
+    const previewTargets = (focus.previewTargets.length ? focus.previewTargets : [focus.previewTarget])
+      .filter(isRenderablePreviewTarget);
     const previews = [];
     for (const [index, target] of previewTargets.entries()) {
       previews.push(await renderPreviewScreenshot({
@@ -2474,16 +2686,18 @@ async function authorCheck(args) {
       }));
     }
 
-    preview = {
-      ...previews[0],
-      targetCount: previews.length,
-      targets: previews,
-    };
+    if (previews.length > 0) {
+      preview = {
+        ...previews[0],
+        targetCount: previews.length,
+        targets: previews,
+      };
 
-    if (hasFlag(args, '--write-preview-plan')) {
-      const planPath = outPath.endsWith('.json') ? outPath : `${outPath}.json`;
-      await writePreviewRenderPlan(planPath, preview);
-      preview.planPath = planPath;
+      if (hasFlag(args, '--write-preview-plan')) {
+        const planPath = outPath.endsWith('.json') ? outPath : `${outPath}.json`;
+        await writePreviewRenderPlan(planPath, preview);
+        preview.planPath = planPath;
+      }
     }
   }
 
@@ -2519,6 +2733,7 @@ async function authorCheck(args) {
       readinessWarnings: readiness.warnings.length,
       sceneReferenceDiagnostics: referenceDiagnostics.length,
       screenPreviewReviewItems: screenPreviewIssues.length,
+      endingPreviewReviewItems: endingPreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewPlanned: Boolean(preview),
     },
@@ -2531,6 +2746,10 @@ async function authorCheck(args) {
       issues: screenPreviewIssues,
     },
     screenPreviewIssues,
+    endingPreview: {
+      issues: endingPreviewIssues,
+    },
+    endingPreviewIssues,
     referenceScreenshotIssues,
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
@@ -2546,6 +2765,7 @@ async function authorCheck(args) {
       ...summarizeIssues('readiness', readiness.blockers),
       ...summarizeIssues('readiness', readiness.warnings),
       ...summarizeIssues('preview', screenPreviewIssues),
+      ...summarizeIssues('preview', endingPreviewIssues),
       ...summarizeIssues('preview', referenceScreenshotIssues),
       ...referenceDiagnostics,
     ],
@@ -2818,12 +3038,262 @@ async function addVariable(args) {
     type,
     initial: parseScalarValue(getArgValue(args, '--initial', type === 'bool' ? 'false' : '0')),
     label: getArgValue(args, '--label', getArgValue(args, '--name', variableId)),
+    group: getArgValue(args, '--group', undefined),
+    notes: getArgValue(args, '--notes', undefined),
+    kind: getArgValue(args, '--kind', undefined),
+    characterId: getArgValue(args, '--character', getArgValue(args, '--character-id', undefined)),
+    min: parseOptionalScalarValue(getArgValue(args, '--min', undefined)),
+    max: parseOptionalScalarValue(getArgValue(args, '--max', undefined)),
+    step: parseOptionalScalarValue(getArgValue(args, '--step', undefined)),
   }));
 
   if (hasFlag(args, '--json')) {
     writeJson(output);
   } else {
     printMutationResult('Added variable', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateVariable(args) {
+  const variableId = getArgValue(args, '--id', getArgValue(args, '--variable', null));
+  if (!variableId) {
+    throw new Error('update-variable requires --id');
+  }
+
+  const patch = parseJsonArg(args, '--patch', null) ?? dropUndefinedFields({
+    type: getOptionalArgValue(args, '--type'),
+    initial: parseOptionalScalarValue(getOptionalArgValue(args, '--initial')),
+    label: getOptionalArgValue(args, '--label') ?? getOptionalArgValue(args, '--name'),
+    group: getOptionalArgValue(args, '--group'),
+    notes: getOptionalArgValue(args, '--notes'),
+    kind: getOptionalArgValue(args, '--kind'),
+    characterId: getOptionalArgValue(args, '--character') ?? getOptionalArgValue(args, '--character-id'),
+    min: parseOptionalScalarValue(getOptionalArgValue(args, '--min')),
+    max: parseOptionalScalarValue(getOptionalArgValue(args, '--max')),
+    step: parseOptionalScalarValue(getOptionalArgValue(args, '--step')),
+  });
+
+  const output = await mutateScript(args, (session) => session.updateVariable({
+    variableId,
+    patch,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Updated variable', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function renameVariable(args) {
+  const variableId = getArgValue(args, '--id', getArgValue(args, '--variable', null));
+  const newVariableId = getArgValue(args, '--new-id', getArgValue(args, '--to', null));
+  if (!variableId || !newVariableId) {
+    throw new Error('rename-variable requires --id and --new-id');
+  }
+
+  const output = await mutateScript(args, (session) => session.renameVariable({
+    variableId,
+    newVariableId,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Renamed variable', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function deleteVariable(args) {
+  const variableId = getArgValue(args, '--id', getArgValue(args, '--variable', null));
+  if (!variableId) {
+    throw new Error('delete-variable requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.deleteVariable({
+    variableId,
+    forceReferences: hasFlag(args, '--force-references'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Deleted variable', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function addAffectionVariable(args) {
+  const characterId = getArgValue(args, '--character', getArgValue(args, '--character-id', null));
+  if (!characterId) {
+    throw new Error('add-affection-variable requires --character');
+  }
+
+  const output = await mutateScript(args, (session) => session.addAffectionVariable({
+    characterId,
+    id: getArgValue(args, '--id', getArgValue(args, '--variable', undefined)),
+    initial: parseOptionalScalarValue(getArgValue(args, '--initial', undefined)),
+    label: getArgValue(args, '--label', getArgValue(args, '--name', undefined)),
+    group: getArgValue(args, '--group', undefined),
+    notes: getArgValue(args, '--notes', undefined),
+    min: parseOptionalScalarValue(getArgValue(args, '--min', undefined)),
+    max: parseOptionalScalarValue(getArgValue(args, '--max', undefined)),
+    step: parseOptionalScalarValue(getArgValue(args, '--step', undefined)),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Added affection variable', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+function getEndingPatchFromArgs(args) {
+  const hiddenUntilUnlocked = getFlagOrOptionalValue(args, '--hidden-until-unlocked');
+  return dropUndefinedFields({
+    title: getOptionalArgValue(args, '--title') ?? getOptionalArgValue(args, '--name'),
+    category: getOptionalArgValue(args, '--category'),
+    order: parseOptionalScalarValue(getOptionalArgValue(args, '--order')),
+    description: getOptionalArgValue(args, '--description'),
+    thumbnail: getOptionalArgValue(args, '--thumbnail'),
+    hiddenUntilUnlocked: hiddenUntilUnlocked === undefined
+      ? undefined
+      : parseScalarValue(hiddenUntilUnlocked),
+  });
+}
+
+async function listEndings(args) {
+  const { scriptPath, script } = await readScript(args);
+  const session = createProjectSession({ script });
+  const endings = session.listEndings();
+  const output = {
+    scriptPath,
+    count: endings.length,
+    endings,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Endings: ${endings.length}\n`);
+    for (const ending of endings) {
+      process.stdout.write(`- ${ending.endingId}: ${ending.title}\n`);
+    }
+  }
+
+  return 0;
+}
+
+async function addEnding(args) {
+  const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
+  if (!endingId) {
+    throw new Error('add-ending requires --id');
+  }
+  const hiddenUntilUnlocked = getFlagOrOptionalValue(args, '--hidden-until-unlocked');
+
+  const output = await mutateScript(args, (session) => session.addEnding({
+    id: endingId,
+    title: getArgValue(args, '--title', getArgValue(args, '--name', endingId)),
+    category: getArgValue(args, '--category', undefined),
+    order: parseOptionalScalarValue(getArgValue(args, '--order', undefined)),
+    description: getArgValue(args, '--description', undefined),
+    thumbnail: getArgValue(args, '--thumbnail', undefined),
+    hiddenUntilUnlocked: hiddenUntilUnlocked === undefined
+      ? undefined
+      : parseScalarValue(hiddenUntilUnlocked),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Added ending', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateEnding(args) {
+  const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
+  if (!endingId) {
+    throw new Error('update-ending requires --id');
+  }
+
+  const patch = parseJsonArg(args, '--patch', null) ?? getEndingPatchFromArgs(args);
+  const output = await mutateScript(args, (session) => session.updateEnding({
+    endingId,
+    patch,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Updated ending', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeEnding(args) {
+  const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
+  if (!endingId) {
+    throw new Error('remove-ending requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.removeEnding({
+    endingId,
+    forceReferences: hasFlag(args, '--force-references'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Removed ending', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function addEndingUnlock(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
+  if (!sceneId) {
+    throw new Error('add-ending-unlock requires --scene');
+  }
+
+  const pageIndex = getIntArg(args, '--page', null);
+  if (pageIndex == null) {
+    throw new Error('add-ending-unlock requires --page');
+  }
+
+  const optionIndex = getIntArg(args, '--option', null);
+  if (optionIndex == null) {
+    throw new Error('add-ending-unlock requires --option');
+  }
+
+  const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
+  if (!endingId) {
+    throw new Error('add-ending-unlock requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.addEndingUnlock({
+    sceneId,
+    pageIndex,
+    optionIndex,
+    endingId,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Added ending unlock', output);
   }
 
   return output.validation.ok ? 0 : 1;
@@ -3825,6 +4295,85 @@ async function addChoiceEffect(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setChoiceEffect(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
+  if (!sceneId) {
+    throw new Error('set-choice-effect requires --scene');
+  }
+
+  const pageIndex = getIntArg(args, '--page', null);
+  if (pageIndex == null) {
+    throw new Error('set-choice-effect requires --page');
+  }
+
+  const optionIndex = getIntArg(args, '--option', null);
+  if (optionIndex == null) {
+    throw new Error('set-choice-effect requires --option');
+  }
+
+  const effectIndex = getIntArg(args, '--effect-index', null);
+  if (effectIndex == null) {
+    throw new Error('set-choice-effect requires --effect-index');
+  }
+
+  const output = await mutateScript(args, (session) => session.setChoiceEffect({
+    sceneId,
+    pageIndex,
+    optionIndex,
+    effectIndex,
+    effect: parseJsonArg(args, '--effect-json', parseJsonArg(args, '--effect', {
+      type: getArgValue(args, '--effect-type', 'var:add'),
+      id: getArgValue(args, '--effect-id', getArgValue(args, '--variable', null)),
+      value: parseScalarValue(getArgValue(args, '--value', '1')),
+    })),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Set choice effect', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeChoiceEffect(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
+  if (!sceneId) {
+    throw new Error('remove-choice-effect requires --scene');
+  }
+
+  const pageIndex = getIntArg(args, '--page', null);
+  if (pageIndex == null) {
+    throw new Error('remove-choice-effect requires --page');
+  }
+
+  const optionIndex = getIntArg(args, '--option', null);
+  if (optionIndex == null) {
+    throw new Error('remove-choice-effect requires --option');
+  }
+
+  const effectIndex = getIntArg(args, '--effect-index', null);
+  if (effectIndex == null) {
+    throw new Error('remove-choice-effect requires --effect-index');
+  }
+
+  const output = await mutateScript(args, (session) => session.removeChoiceEffect({
+    sceneId,
+    pageIndex,
+    optionIndex,
+    effectIndex,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Removed choice effect', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 function printHelp() {
   process.stdout.write(`vn-author commands:
   inspect [--script path] [--json]
@@ -3847,7 +4396,16 @@ function printHelp() {
   delete-scene --scene scene_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-scene-next --scene scene_id [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-character --id character_id [--name name] [--color hex] [--expression name=path] [--expressions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  add-variable --id variable_id [--type number|bool] [--initial value] [--label label] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-variable --id variable_id [--type number|bool] [--initial value] [--label label] [--group group] [--notes text] [--kind generic|affection] [--character character_id] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-variable --id variable_id [--patch json] [--type number|bool] [--initial value] [--label label] [--group group] [--notes text] [--kind generic|affection] [--character character_id] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  rename-variable --id variable_id --new-id variable_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  delete-variable --id variable_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-affection-variable --character character_id [--id variable_id] [--initial value] [--label label] [--group group] [--notes text] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  list-endings [--script path] [--json]
+  add-ending --id ending_id [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-ending --id ending_id [--patch json] [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-ending --id ending_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-ending-unlock --scene scene_id --page index --option index --id ending_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-page --scene scene_id [--type normal|choice|condition] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-page --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-page --scene scene_id --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -3877,6 +4435,8 @@ function printHelp() {
   set-theme --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-widget-styles --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-choice-effect --scene scene_id --page index --option index [--effect json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-choice-effect --scene scene_id --page index --option index --effect-index index [--effect-json json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-choice-effect --scene scene_id --page index --option index --effect-index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   export-report [--script path] [--check-assets] [--readiness] [--asset-root path] [--json]
 `);
 }
@@ -3992,6 +4552,51 @@ async function main() {
 
     if (command === 'add-variable') {
       process.exitCode = await addVariable(args);
+      return;
+    }
+
+    if (command === 'update-variable') {
+      process.exitCode = await updateVariable(args);
+      return;
+    }
+
+    if (command === 'rename-variable') {
+      process.exitCode = await renameVariable(args);
+      return;
+    }
+
+    if (command === 'delete-variable') {
+      process.exitCode = await deleteVariable(args);
+      return;
+    }
+
+    if (command === 'add-affection-variable') {
+      process.exitCode = await addAffectionVariable(args);
+      return;
+    }
+
+    if (command === 'list-endings') {
+      process.exitCode = await listEndings(args);
+      return;
+    }
+
+    if (command === 'add-ending') {
+      process.exitCode = await addEnding(args);
+      return;
+    }
+
+    if (command === 'update-ending') {
+      process.exitCode = await updateEnding(args);
+      return;
+    }
+
+    if (command === 'remove-ending') {
+      process.exitCode = await removeEnding(args);
+      return;
+    }
+
+    if (command === 'add-ending-unlock') {
+      process.exitCode = await addEndingUnlock(args);
       return;
     }
 
@@ -4152,6 +4757,16 @@ async function main() {
 
     if (command === 'add-choice-effect') {
       process.exitCode = await addChoiceEffect(args);
+      return;
+    }
+
+    if (command === 'set-choice-effect') {
+      process.exitCode = await setChoiceEffect(args);
+      return;
+    }
+
+    if (command === 'remove-choice-effect') {
+      process.exitCode = await removeChoiceEffect(args);
       return;
     }
 

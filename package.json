@@ -10,8 +10,9 @@
     "build": "vite build",
     "build:web": "vite build --config vite.web.config.js",
     "preview": "vite preview",
-    "test": "npm run test:focused && npm run test:node",
+    "test": "npm run test:vitest && npm run test:node",
     "test:node": "node --test tests/colorRecipe.test.js tests/configurableTabs.test.js tests/decorLayoutEditor.test.js tests/effectDsl.test.js tests/exportDesktop.test.js tests/oklch.test.js tests/scanAssets.test.js tests/scriptEngine.test.js tests/smartColorPanel.test.js tests/tabLayoutEditor.test.js tests/uiImageContract.test.js tests/widgetDefaults.test.js",
+    "test:vitest": "vitest run",
     "test:focused": "vitest run tests/branchingContract.test.js tests/variableRegistryContract.test.js tests/sceneGraph.test.js tests/projectValidator.test.js tests/projectSession.test.js tests/layoutPresets.test.js tests/layoutLint.test.js tests/projectReport.test.js tests/exportReadiness.test.js tests/agentHandoff.test.js tests/agentHandoffEditor.test.js tests/novelDraftImport.test.js tests/vnAuthorCli.test.js tests/themeBrowserService.test.js tests/themePackageImportUx.test.js tests/bgRemoval.test.js",
     "validate:project": "node tools/vn-author/index.js validate",
     "vn": "node tools/vn-author/index.js",
@@ -30,21 +31,21 @@
     "postinstall": "patch-package"
   },
   "devDependencies": {
-    "@electron/packager": "^19.1.0",
-    "@vitejs/plugin-vue": "^6.0.5",
-    "electron": "^41.0.4",
-    "jsdom": "^29.0.2",
+    "@electron/packager": "^19.1.1",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "electron": "^41.7.0",
+    "jsdom": "^29.1.1",
     "patch-package": "^8.0.1",
     "playwright": "^1.60.0",
     "png-to-ico": "^3.0.1",
-    "vite": "^6.3.0",
+    "vite": "^6.4.2",
     "vite-plugin-electron": "^0.29.1",
-    "vite-plugin-electron-renderer": "^0.14.6",
-    "vitest": "^4.1.4"
+    "vite-plugin-electron-renderer": "^0.14.7",
+    "vitest": "^4.1.7"
   },
   "dependencies": {
-    "fflate": "^0.8.2",
+    "fflate": "^0.8.3",
     "pinia": "^3.0.4",
-    "vue": "^3.5.31"
+    "vue": "^3.5.34"
   }
 }

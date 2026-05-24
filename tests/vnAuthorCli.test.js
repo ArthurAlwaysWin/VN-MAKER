@@ -1214,7 +1214,7 @@ describe('vn-author CLI', () => {
     expect(checklist).toContain('docs/agent-authoring/example-adaptation-preview.md');
     expect(checklist).toContain('docs/agent-authoring/structured-draft-contract.md');
     expect(checklist).toContain('docs/agent-authoring/plan-manifest.md');
-    expect(checklist).toContain('Do not build CG gallery, ending list, or in-editor AI assistant flows unless the human explicitly asks for that scope.');
+    expect(checklist).toContain('Do not build CG gallery or in-editor AI assistant flows unless the human explicitly asks for that scope.');
     for (const command of [
       'npm run vn:inspect -- --json',
       'npm run vn -- list-assets --script public/game/script.json --json',
@@ -1291,11 +1291,11 @@ describe('vn-author CLI', () => {
     }
   });
 
-  it('keeps the external-agent skill scoped away from unsupported CG and ending authoring', async () => {
+  it('keeps the external-agent skill scoped away from unsupported CG authoring', async () => {
     const skill = await readFile(path.resolve('docs/agent-authoring/skill.md'), 'utf8');
 
-    expect(skill).toContain('do not invent new CG/ending registry workflows until official commands exist');
-    expect(skill).toContain('CG gallery and ending list authoring commands are not part of the current external-agent layer');
+    expect(skill).toContain('Register endings with `add-ending` before writing `unlock:ending`');
+    expect(skill).toContain('CG gallery authoring commands are not part of the current external-agent layer');
   });
 
   it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
@@ -1935,6 +1935,251 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('applies M1 variable and choice-effect operations through apply-plan with changed paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'm1-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_m1',
+        characters: {
+          sakura: { name: 'Sakura', expressions: {} },
+        },
+        systems: {
+          variables: {
+            affection: { type: 'number', initial: 1, label: 'Affection' },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'choice',
+                prompt: 'Answer?',
+                options: [
+                  { text: 'Kind', effects: [{ type: 'var:add', id: 'affection', value: 1 }] },
+                ],
+              },
+              {
+                type: 'condition',
+                conditionMode: 'all',
+                conditions: [{ variableId: 'affection', operator: '>=', value: 2 }],
+                trueTarget: null,
+                falseTarget: null,
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            id: 'variable-ux',
+            command: 'update-variable',
+            params: { id: 'affection', label: 'Affection Score', min: 0, max: 10, step: 1 },
+          },
+          {
+            id: 'rename-variable',
+            command: 'rename-variable',
+            params: { id: 'affection', newId: 'sakura_affection' },
+          },
+          {
+            id: 'affection-preset',
+            command: 'add-affection-variable',
+            params: { character: 'sakura', id: 'sakura_bond', label: 'Sakura Bond' },
+          },
+          {
+            id: 'replace-effect',
+            command: 'set-choice-effect',
+            params: {
+              scene: 'start',
+              page: 0,
+              option: 0,
+              effectIndex: 0,
+              effect: { type: 'var:add', id: 'sakura_bond', value: 2 },
+            },
+          },
+          {
+            id: 'remove-effect',
+            command: 'remove-choice-effect',
+            params: { scene: 'start', page: 0, option: 0, effectIndex: 0 },
+          },
+        ],
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.transaction).toMatchObject({
+        command: 'apply-plan',
+        status: 'written',
+      });
+      expect(result.changeSummary.operationCount).toBe(5);
+      expect(result.validation.ok).toBe(true);
+      expect(result.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'systems.variables.affection',
+        'systems.variables.sakura_affection',
+        'systems.variables.sakura_bond',
+        'scenes.start.pages.0.options.0.effects.0',
+        'scenes.start.pages.1.conditions.0',
+      ]));
+      expect(script.systems.variables.sakura_affection).toMatchObject({
+        type: 'number',
+        initial: 1,
+        label: 'Affection Score',
+        min: 0,
+        max: 10,
+        step: 1,
+      });
+      expect(script.systems.variables.sakura_bond).toMatchObject({
+        kind: 'affection',
+        characterId: 'sakura',
+      });
+      expect(script.scenes.start.pages[0].options[0].effects).toBeUndefined();
+      expect(script.scenes.start.pages[1].conditions).toEqual([
+        { variableId: 'sakura_affection', operator: '>=', value: 2 },
+      ]);
+    });
+  });
+
+  it('applies M2 ending operations through CLI and apply-plan with changed paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'm2-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_m2',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'choice',
+                prompt: 'Finish?',
+                options: [{ text: 'Good end', target: null }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            id: 'register-ending',
+            command: 'add-ending',
+            params: {
+              id: 'good_end',
+              title: 'Good End',
+              category: 'main',
+              order: 1,
+              description: 'Clear the good route.',
+              thumbnail: 'ui/endings/good.png',
+              hiddenUntilUnlocked: true,
+            },
+          },
+          {
+            id: 'unlock-ending',
+            command: 'add-ending-unlock',
+            params: { scene: 'start', page: 0, option: 0, ending: 'good_end' },
+          },
+        ],
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.validation.ok).toBe(true);
+      expect(result.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'systems.endings.good_end',
+        'scenes.start.pages.0.options.0.effects.0',
+      ]));
+      expect(script.systems.endings.good_end).toMatchObject({
+        title: 'Good End',
+        category: 'main',
+        order: 1,
+        description: 'Clear the good route.',
+        thumbnail: 'ui/endings/good.png',
+        hiddenUntilUnlocked: true,
+      });
+      expect(script.scenes.start.pages[0].options[0].effects).toEqual([
+        { type: 'unlock:ending', id: 'good_end' },
+      ]);
+
+      const list = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'list-endings',
+        '--script',
+        scriptPath,
+        '--json',
+      ])).stdout);
+      expect(list).toMatchObject({
+        count: 1,
+        endings: [expect.objectContaining({ endingId: 'good_end', title: 'Good End' })],
+      });
+
+      const update = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'update-ending',
+        '--script',
+        scriptPath,
+        '--id',
+        'good_end',
+        '--title',
+        'Golden End',
+        '--hidden-until-unlocked',
+        'false',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(update.changeSummary.changedPaths).toEqual(['systems.endings.good_end']);
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).systems.endings.good_end).toMatchObject({
+        title: 'Golden End',
+        hiddenUntilUnlocked: false,
+      });
+
+      const removed = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'remove-ending',
+        '--script',
+        scriptPath,
+        '--id',
+        'good_end',
+        '--force-references',
+        '--force',
+        '--json',
+      ])).stdout);
+      const removedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(removed.result).toMatchObject({
+        deletedEndingId: 'good_end',
+        deletedReferenceCount: 1,
+      });
+      expect(removed.changeSummary.changedPaths).toEqual([
+        'systems.endings.good_end',
+        'scenes.start.pages.0.options.0.effects.0',
+      ]);
+      expect(removedScript.systems.endings.good_end).toBeUndefined();
+      expect(removedScript.scenes.start.pages[0].options[0].effects).toBeUndefined();
+    });
+  });
+
   it('adds normal, choice, and condition pages incrementally', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -2242,7 +2487,7 @@ describe('vn-author CLI', () => {
         '--json',
       ]);
 
-      const { stdout } = await execFileAsync('node', [
+      await execFileAsync('node', [
         cliPath,
         'add-choice-effect',
         '--script',
@@ -2263,10 +2508,48 @@ describe('vn-author CLI', () => {
         '--json',
       ]);
 
-      const result = JSON.parse(stdout);
+      const setEffectResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'set-choice-effect',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '1',
+        '--option',
+        '0',
+        '--effect-index',
+        '0',
+        '--effect-json',
+        '{"type":"var:set","id":"affection","value":5}',
+        '--force',
+        '--json',
+      ])).stdout);
+
+      const removeEffectResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'remove-choice-effect',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '1',
+        '--option',
+        '0',
+        '--effect-index',
+        '0',
+        '--force',
+        '--json',
+      ])).stdout);
+
       const script = JSON.parse(await readFile(scriptPath, 'utf8'));
 
-      expect(result.validation.ok).toBe(true);
+      expect(setEffectResult.validation.ok).toBe(true);
+      expect(setEffectResult.result.effect).toEqual({ type: 'var:set', id: 'affection', value: 5 });
+      expect(removeEffectResult.validation.ok).toBe(true);
+      expect(removeEffectResult.result.removedEffect).toEqual({ type: 'var:set', id: 'affection', value: 5 });
       expect(script.scenes.start.pages[0]).toMatchObject({
         background: 'backgrounds/classroom.svg',
         bgm: { file: 'audio/theme.mp3', volume: 0.4 },
@@ -2278,9 +2561,7 @@ describe('vn-author CLI', () => {
           { speaker: null, text: 'This should move first.', expression: null, voice: null },
         ],
       });
-      expect(script.scenes.start.pages[1].options[0].effects).toEqual([
-        { type: 'var:add', id: 'affection', value: 3 },
-      ]);
+      expect(script.scenes.start.pages[1].options[0].effects).toBeUndefined();
     });
   }, 15000);
 
@@ -3362,6 +3643,90 @@ describe('vn-author CLI', () => {
           }),
         ],
       });
+    });
+  });
+
+  it('surfaces ending-list preview targets for transaction changed ending paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const transactionPath = path.join(dir, 'ending-transaction.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_ending_author_check',
+        characters: {},
+        systems: {
+          endings: {
+            good_end: { title: 'Good End' },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [
+              {
+                type: 'choice',
+                background: 'backgrounds/school.svg',
+                prompt: 'End?',
+                options: [
+                  {
+                    text: 'Good',
+                    effects: [{ type: 'unlock:ending', id: 'good_end' }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+      await writeFile(transactionPath, JSON.stringify({
+        dryRun: false,
+        transaction: {
+          command: 'apply-plan',
+          status: 'written',
+          wrote: true,
+        },
+        changeSummary: {
+          command: 'apply-plan',
+          operationCount: 1,
+          changedPaths: ['systems.endings.good_end'],
+          validation: { ok: true, errorCount: 0, warningCount: 0 },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        transactionPath,
+        '--skip-preview',
+        '--skip-asset-check',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result.focus).toMatchObject({
+        mode: 'transaction',
+        changedPaths: ['systems.endings.good_end'],
+        endingTargets: [
+          {
+            type: 'ending-list',
+            kind: 'ending-list',
+            pathString: 'systems.endings',
+            reason: 'changed-ending-registry',
+          },
+        ],
+        previewTargets: [
+          expect.objectContaining({ type: 'ending-list', pathString: 'systems.endings' }),
+        ],
+      });
+      expect(result.summary.endingPreviewReviewItems).toBe(1);
+      expect(result.endingPreview.issues).toEqual([
+        expect.objectContaining({
+          category: 'ending-list-preview',
+          code: 'ending-list-preview-required',
+          pathString: 'systems.endings',
+        }),
+      ]);
     });
   });
 

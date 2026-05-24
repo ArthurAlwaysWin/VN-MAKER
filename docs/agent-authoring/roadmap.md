@@ -1,8 +1,8 @@
 # External Agent Authoring Roadmap
 
-This roadmap is the working plan for the external AI agent authoring layer.
+This roadmap tracks the external AI agent authoring layer. For the active product/system roadmap covering variables, affection, endings, CG gallery, branch graph analysis, and transition expansion, see `docs/agent-first-vn-systems-plan.md`.
 
-The older high-level plan lives in `docs/agent-authoring-architecture.md`, especially Phase I. This file turns that architecture into a prioritized implementation and audit checklist for the current branch.
+The older high-level plan now lives in `docs/archive/agent-authoring-architecture.md`. It is historical context only; follow `docs/agent-authoring/integration-contract.md` for current integration rules.
 
 For cross-session development details, concrete task order, and acceptance criteria, see `docs/agent-authoring/implementation-plan.md`.
 

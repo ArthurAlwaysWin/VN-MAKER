@@ -370,6 +370,18 @@ describe('Config-driven button text and icons', () => {
     expect(loadBtn.textContent).toBe('ロード');
   });
 
+  it('renders custom button text as text instead of HTML', () => {
+    menu.setLayout({
+      buttons: {
+        save: { text: '<img src=x onerror=alert(1)>', icon: null },
+      },
+    });
+
+    const saveBtn = menu.el.querySelector('[data-action="save"]');
+    expect(saveBtn.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(saveBtn.querySelector('img')).toBeNull();
+  });
+
   it('missing buttons config falls back to defaults', () => {
     menu.setLayout({ position: 'center' }); // no buttons key
     for (const action of ACTIONS) {

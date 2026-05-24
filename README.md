@@ -9,13 +9,15 @@
 | Phase 1 | 运行时引擎 MVP（脚本引擎、对话、角色、选项、存档等） | ✅ 完成 |
 | Phase 2 | PPT式画布编辑器（拖拽定位、自由布局、画布预览） | ✅ 完成 |
 | Phase 3A | 项目系统 + 编辑器工作流重构 | ✅ 完成 |
-| **Phase 3B** | **设置页设计器 + 桌面应用导出** | 📋 计划中 |
+| **Phase 3B** | **设置页设计器 + 桌面应用导出 + 主题化 UI 扩展** | ✅ 完成/持续打磨 |
 
 ## 📖 指导文档
 
 > **⚠️ 项目以下列文档为准，其他文档仅供参考：**
 
-- **[Phase 3A 设计规格](docs/superpowers/specs/2025-06-25-phase-3a-project-system-design.md)** — Phase 3A 完整设计文档
+- **[项目契约](docs/agent-authoring/project-contract.md)** — project.json、script.json、assets/ 与 agent 交互边界
+- **[Agent-First 开发计划](docs/agent-first-vn-systems-plan.md)** — 变量/好感度、结局/CG、分支图与转场的下一阶段路线图
+- **[AI Agent Integration Contract](docs/agent-authoring/integration-contract.md)** — agent 操作、事务、诊断、预览与交接的统一接口约束
 - **[脚本格式参考](docs/script-format.md)** — script.json 技术规格
 - **[外部 Agent 创作工作流](docs/agent-authoring/workflow.md)** — 供 Codex、Claude、opencode、GitHub Copilot 等外部 agent 通过 CLI/API 编辑同一个项目；不是内置 AI 助手
 
@@ -71,3 +73,10 @@ npm run dev
 - **窗口关闭保护**：3 选项对话框（保存/不保存/取消）
 - **键盘快捷键**：Ctrl+Z 撤销、Ctrl+Y 重做、Ctrl+S 保存
 - **安全**：路径遍历防护、CSS 消毒、项目名消毒、保存竞态锁
+
+### 导出与主题（Phase 3B+）
+- **设置页设计器**：设置界面布局、控件样式与主题素材可视化配置
+- **Web 导出**：构建静态引擎包、复制引用素材、可选 ZIP 打包
+- **桌面导出**：生成 Windows Electron 运行包、自定义图标、可选 ZIP 打包
+- **主题化 UI**：标题页、菜单、存读档、设置页、按钮族、图标与装饰素材扩展
+- **外部 Agent 工具链**：校验、报告、布局 lint、素材引用检查与 handoff 文档

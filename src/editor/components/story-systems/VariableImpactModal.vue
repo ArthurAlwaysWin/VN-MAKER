@@ -1,7 +1,7 @@
 <template>
   <div v-if="visible" class="impact-backdrop">
     <div class="impact-modal" data-test="variable-impact-modal">
-      <p class="eyebrow">{{ mode === 'rename' ? '重命名影响' : '删除影响' }}</p>
+      <p class="eyebrow">{{ isRename ? '重命名影响' : '删除影响' }}</p>
       <h2>{{ title }}</h2>
       <p class="copy">{{ message }}</p>
 
@@ -17,7 +17,7 @@
         <button
           data-test="impact-confirm"
           type="button"
-          :class="['confirm-btn', { danger: mode === 'delete' }]"
+          :class="['confirm-btn', { danger: mode === 'delete' || mode === 'delete-ending' }]"
           @click="$emit('confirm')"
         >{{ confirmLabel }}</button>
       </div>
@@ -39,25 +39,29 @@ const props = defineProps({
 
 defineEmits(['cancel', 'confirm']);
 
-const title = computed(() => props.mode === 'rename'
-  ? `重命名变量“${props.variableName}”`
-  : `删除变量“${props.variableName}”`);
+const isEnding = computed(() => props.mode === 'rename-ending' || props.mode === 'delete-ending');
+const isRename = computed(() => props.mode === 'rename' || props.mode === 'rename-ending');
+const entityLabel = computed(() => (isEnding.value ? '结局' : '变量'));
+
+const title = computed(() => isRename.value
+  ? `重命名${entityLabel.value}“${props.variableName}”`
+  : `删除${entityLabel.value}“${props.variableName}”`);
 
 const message = computed(() => {
-  if (props.mode === 'rename') {
+  if (isRename.value) {
     return `将同步更新 ${props.actionCount} 处引用，确认改为“${props.nextVariableId}”吗？`;
   }
 
   if (props.actionCount > 0) {
-    return `变量“${props.variableName}”仍被 ${props.actionCount} 处逻辑引用。删除后将同时清除这些引用，确定继续吗？`;
+    return `${entityLabel.value}“${props.variableName}”仍被 ${props.actionCount} 处逻辑引用。删除后将同时清除这些引用，确定继续吗？`;
   }
 
-  return `确定删除变量“${props.variableName}”吗？此操作不可撤销。`;
+  return `确定删除${entityLabel.value}“${props.variableName}”吗？此操作不可撤销。`;
 });
 
-const confirmLabel = computed(() => props.mode === 'rename'
+const confirmLabel = computed(() => isRename.value
   ? '应用重命名并更新引用'
-  : '删除变量并清除引用');
+  : `删除${entityLabel.value}并清除引用`);
 </script>
 
 <style scoped>

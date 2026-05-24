@@ -3,7 +3,7 @@
     <div class="inspector-header">
       <div>
         <p class="eyebrow">变量详情</p>
-        <h2>{{ variableEntry.name || variableId }}</h2>
+        <h2>{{ variableEntry.label || variableEntry.name || variableId }}</h2>
         <p class="helper">{{ usageCount }} 处引用</p>
       </div>
       <div class="header-actions">
@@ -23,7 +23,7 @@
         <input
           ref="nameInputRef"
           data-test="variable-name-input"
-          :value="variableEntry.name || ''"
+          :value="variableEntry.label || variableEntry.name || ''"
           type="text"
           placeholder="例如：樱好感"
           @input="onNameInput"
@@ -59,6 +59,43 @@
           @input="onNumberInput"
         >
       </label>
+
+      <template v-if="variableEntry.type === 'number'">
+        <label class="field">
+          <span>最小值</span>
+          <input
+            data-test="variable-min-input"
+            :value="variableEntry.min ?? ''"
+            type="number"
+            placeholder="可选"
+            @input="onOptionalNumberInput('min', $event.target.value)"
+          >
+        </label>
+
+        <label class="field">
+          <span>最大值</span>
+          <input
+            data-test="variable-max-input"
+            :value="variableEntry.max ?? ''"
+            type="number"
+            placeholder="可选"
+            @input="onOptionalNumberInput('max', $event.target.value)"
+          >
+        </label>
+
+        <label class="field">
+          <span>步进</span>
+          <input
+            data-test="variable-step-input"
+            :value="variableEntry.step ?? ''"
+            type="number"
+            min="0"
+            step="0.1"
+            placeholder="可选"
+            @input="onOptionalNumberInput('step', $event.target.value)"
+          >
+        </label>
+      </template>
 
       <div class="field" v-else>
         <span>默认值</span>
@@ -100,6 +137,10 @@
         @input="script.updateVariableFields(variableId, { notes: $event.target.value })"
       ></textarea>
     </label>
+
+    <p v-if="variableEntry.kind === 'affection'" class="affection-meta">
+      好感度变量关联角色：{{ variableEntry.characterId || '未指定' }}
+    </p>
 
     <p v-if="validationMessage" class="validation-error">{{ validationMessage }}</p>
   </div>
@@ -148,7 +189,7 @@ function slugifyVariableId(value) {
 
 function onNameInput(event) {
   const value = event.target.value;
-  script.updateVariableFields(props.variableId, { name: value });
+  script.updateVariableFields(props.variableId, { label: value });
 
   const currentId = props.variableId || '';
   if (!hasCustomIdValue.value || currentId.startsWith(DRAFT_PREFIX)) {
@@ -226,6 +267,12 @@ function onTypeChange(event) {
 function onNumberInput(event) {
   script.updateVariableFields(props.variableId, {
     initial: Number(event.target.value || 0),
+  });
+}
+
+function onOptionalNumberInput(field, value) {
+  script.updateVariableFields(props.variableId, {
+    [field]: value === '' ? undefined : Number(value),
   });
 }
 
@@ -356,5 +403,11 @@ function setBoolValue(value) {
 .validation-error {
   margin: 16px 0 0;
   color: #ff9d9d;
+}
+
+.affection-meta {
+  margin: 16px 0 0;
+  color: #9fd9ff;
+  font-size: 12px;
 }
 </style>

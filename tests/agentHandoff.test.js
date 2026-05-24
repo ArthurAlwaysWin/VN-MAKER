@@ -147,6 +147,59 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('includes ending-list preview targets for changed ending registry paths', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_ending_targets',
+      characters: {},
+      systems: {
+        endings: {
+          good_end: { title: 'Good End' },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'choice',
+              prompt: 'End?',
+              options: [
+                {
+                  text: 'Good',
+                  effects: [{ type: 'unlock:ending', id: 'good_end' }],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: ['systems.endings.good_end'],
+        },
+      },
+    });
+
+    expect(handoff.previewTargets).toEqual([
+      {
+        type: 'ending-list',
+        kind: 'ending-list',
+        pathString: 'systems.endings',
+        reason: 'changed-ending-registry',
+      },
+    ]);
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'preview',
+        category: 'ending-list-preview',
+        code: 'ending-list-preview-required',
+        pathString: 'systems.endings',
+      }),
+    ]));
+  });
+
   it('turns transaction reference screenshot notes into screen fidelity review items', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_reference_fidelity',

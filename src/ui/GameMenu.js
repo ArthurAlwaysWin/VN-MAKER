@@ -129,28 +129,36 @@ export class GameMenu {
     // ── Config-driven path ───────────────────────────────────
     const cfg = this._layoutConfig;
 
-    // Build button HTML from config
-    const buttonsHtml = BUTTON_ORDER.map((action) => {
+    const panel = document.createElement('div');
+    panel.className = 'game-menu-panel';
+
+    for (const action of BUTTON_ORDER) {
       const btnCfg = cfg.buttons?.[action];
       const label = btnCfg?.text || DEFAULT_LABELS[action];
-      let iconHtml = '';
+      const button = document.createElement('button');
+      button.className = 'game-menu-button';
+      button.dataset.action = action;
+
       // Per-button icon takes precedence; fall back to theme icon (ICO-01)
       if (btnCfg?.icon) {
-        iconHtml = `<img src="${resolvePath(btnCfg.icon)}" class="game-menu-icon" alt="" />`;
+        const img = document.createElement('img');
+        img.src = resolvePath(btnCfg.icon);
+        img.className = 'game-menu-icon';
+        img.alt = '';
+        button.appendChild(img);
       } else if (this._themeIcons?.gameMenu) {
-        iconHtml = resolveThemeIcon(this._themeIcons, 'gameMenu', '', 'game-menu-icon');
+        const template = document.createElement('template');
+        template.innerHTML = resolveThemeIcon(this._themeIcons, 'gameMenu', '', 'game-menu-icon');
+        button.appendChild(template.content.cloneNode(true));
       }
-      return `<button class="game-menu-button" data-action="${action}">${iconHtml}${label}</button>`;
-    }).join('\n        ');
 
-    this.el.innerHTML = `
-      <div class="game-menu-panel">
-        ${buttonsHtml}
-      </div>
-    `;
+      button.appendChild(document.createTextNode(label));
+      panel.appendChild(button);
+    }
+
+    this.el.replaceChildren(panel);
 
     // Apply styles
-    const panel = this.el.querySelector('.game-menu-panel');
     const buttons = panel.querySelectorAll('.game-menu-button');
 
     // Background color → overlay (dims game content behind)

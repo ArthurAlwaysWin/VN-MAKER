@@ -20,7 +20,12 @@ import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import pngToIco from 'png-to-ico';
 import { scanAssets } from '../src/engine/scanAssets.js';
-import { generateHtml, createZip } from './exportGame.js';
+import {
+  generateHtml,
+  createZip,
+  normalizeExportAssetPath,
+  sanitizeFilename,
+} from './exportGame.js';
 
 const execAsync = promisify(exec);
 
@@ -33,7 +38,13 @@ const execAsync = promisify(exec);
  * @returns {string}
  */
 function sanitizeTitle(title) {
-  return title.replace(/[<>:"|?*]/g, '_').trim() || 'Untitled';
+  return sanitizeFilename(title, 'Untitled');
+}
+
+function isInsidePath(fullPath, basePath) {
+  const resolved = path.resolve(fullPath);
+  const baseResolved = path.resolve(basePath);
+  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
 }
 
 // ─── Export Pipeline ─────────────────────────────────────
@@ -102,10 +113,22 @@ export async function exportDesktop(options, sendProgress) {
       ...assetDict.voices,
     ];
     for (const relPath of allPaths) {
-      const src = path.join(projectPath, 'assets', relPath);
-      const dst = path.join(stagingDir, 'assets', relPath);
+      const safeRelPath = normalizeExportAssetPath(relPath);
+      if (!safeRelPath) {
+        warnings.push(`Invalid asset path skipped: ${relPath}`);
+        continue;
+      }
+
+      const assetRoot = path.join(projectPath, 'assets');
+      const stagingAssetRoot = path.join(stagingDir, 'assets');
+      const src = path.join(assetRoot, safeRelPath);
+      const dst = path.join(stagingAssetRoot, safeRelPath);
+      if (!isInsidePath(src, assetRoot) || !isInsidePath(dst, stagingAssetRoot)) {
+        warnings.push(`Invalid asset path skipped: ${relPath}`);
+        continue;
+      }
       if (!existsSync(src)) {
-        warnings.push(relPath);
+        warnings.push(safeRelPath);
         continue;
       }
       await fs.mkdir(path.dirname(dst), { recursive: true });

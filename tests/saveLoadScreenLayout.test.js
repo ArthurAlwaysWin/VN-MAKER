@@ -257,6 +257,18 @@ describe('SaveLoadScreen.setLayout', () => {
         });
       });
 
+      it('renders custom title text as text instead of HTML', async () => {
+        const cfg = fullConfig();
+        cfg.header.saveTitle = '<img src=x onerror=alert(1)>';
+        screen.setLayout(cfg);
+        screen.show('save');
+        await vi.waitFor(() => {
+          const title = screen.el.querySelector('.save-load-title');
+          expect(title.textContent).toBe('<img src=x onerror=alert(1)>');
+          expect(title.querySelector('img')).toBeNull();
+        });
+      });
+
       it('applies save title color', async () => {
         screen.setLayout(fullConfig());
         screen.show('save');
@@ -414,6 +426,36 @@ describe('SaveLoadScreen.setLayout', () => {
         await vi.waitFor(() => {
           const emptyText = screen.el.querySelector('.save-slot-empty-text');
           expect(emptyText.textContent).toBe('空きスロット');
+        });
+      });
+
+      it('renders custom empty text as text instead of HTML', async () => {
+        const cfg = fullConfig();
+        cfg.slot.emptyText = '<img src=x onerror=alert(1)>';
+        screen.setLayout(cfg);
+        screen.show('save');
+        await vi.waitFor(() => {
+          const emptyText = screen.el.querySelector('.save-slot-empty-text');
+          expect(emptyText.textContent).toBe('<img src=x onerror=alert(1)>');
+          expect(emptyText.querySelector('img')).toBeNull();
+        });
+      });
+
+      it('renders save timestamps as text instead of HTML', async () => {
+        const occupiedScreen = new SaveLoadScreen(
+          document.body.appendChild(document.createElement('div')),
+          stubSaveManager([{
+            slot: 1,
+            hasThumbnail: false,
+            previewText: 'Preview',
+            date: '<img src=x onerror=alert(1)>',
+          }]),
+        );
+        occupiedScreen.show('save');
+        await vi.waitFor(() => {
+          const time = occupiedScreen.el.querySelector('.save-slot-time');
+          expect(time.textContent).toBe('<img src=x onerror=alert(1)>');
+          expect(time.querySelector('img')).toBeNull();
         });
       });
 

@@ -232,6 +232,51 @@ describe('exportDesktop — asset filtering', () => {
   });
 });
 
+// ─── 2b. exportDesktop — path safety ────────────────────
+
+describe('exportDesktop — path safety', () => {
+  it('does not copy traversal asset references outside staging', async () => {
+    const projDir = path.join(tempRoot, 'project-desktop-traversal');
+    const secretName = 'desktop-secret.txt';
+    await fs.mkdir(path.join(projDir, 'assets'), { recursive: true });
+    await fs.writeFile(path.join(tempRoot, secretName), 'secret', 'utf-8');
+    await fs.writeFile(path.join(projDir, 'script.json'), JSON.stringify({
+      scenes: {
+        s1: {
+          pages: [{ background: `../../${secretName}`, dialogues: [] }],
+        },
+      },
+    }), 'utf-8');
+
+    const outputDir = path.join(tempRoot, 'out-desktop-traversal');
+    const noop = () => {};
+    const result = await exportDesktop({
+      ...baseOpts(),
+      projectPath: projDir,
+      outputDir,
+    }, noop);
+
+    const escapedDst = path.resolve(result.outputPath, 'assets', '..', '..', secretName);
+    ok(!existsSync(escapedDst));
+  });
+
+  it('sanitizes ZIP filenames derived from game titles', async () => {
+    const outputDir = path.join(tempRoot, 'out-desktop-zip-title-safety');
+    const noop = () => {};
+    const result = await exportDesktop({
+      ...baseOpts(),
+      outputDir,
+      gameTitle: '../Desktop Escape',
+      zip: true,
+    }, noop);
+
+    ok(result.zipPath);
+    ok(!path.basename(result.zipPath).includes('..'));
+    ok(!path.basename(result.zipPath).includes('/'));
+    ok(existsSync(result.zipPath));
+  });
+});
+
 // ─── 3. exportDesktop — missing assets (PIPE-03) ────────
 
 describe('exportDesktop — missing assets', () => {

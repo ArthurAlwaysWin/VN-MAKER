@@ -148,7 +148,7 @@ export class SaveLoadScreen {
 
       this.el.innerHTML = `
         <div class="save-load-header">
-          <div class="save-load-title">${title}</div>
+          <div class="save-load-title"></div>
           <button class="save-load-close">${closeContent}</button>
         </div>
         <div class="save-load-grid"></div>
@@ -186,6 +186,7 @@ export class SaveLoadScreen {
 
       // Apply title color
       const titleEl = this.el.querySelector('.save-load-title');
+      titleEl.textContent = title;
       const titleColor = this.mode === 'save' ? hdr.saveTitleColor : hdr.loadTitleColor;
       if (titleColor) {
         const safeColor = sanitizeCssValue(titleColor);
@@ -359,7 +360,7 @@ export class SaveLoadScreen {
         <div class="save-slot-info">
           <div class="save-slot-label">存档 ${slotNum}</div>
           <div class="save-slot-text"></div>
-          <div class="save-slot-time">${slotData.date}</div>
+          <div class="save-slot-time"></div>
         </div>
         <button class="save-slot-delete" title="删除">✕</button>
       `;
@@ -375,6 +376,7 @@ export class SaveLoadScreen {
 
       // Set preview text via textContent to prevent XSS
       slotEl.querySelector('.save-slot-text').textContent = previewSafe;
+      slotEl.querySelector('.save-slot-time').textContent = slotData.date || '';
 
       // Delete button — inline confirmation
       slotEl.querySelector('.save-slot-delete').addEventListener('click', (e) => {
@@ -394,7 +396,10 @@ export class SaveLoadScreen {
     } else {
       // ── Empty slot ──
       const emptyText = (cfg && slotCfg.emptyText) ? slotCfg.emptyText : '— 空 —';
-      slotEl.innerHTML = `<span class="save-slot-empty-text">${emptyText}</span>`;
+      const emptyTextEl = document.createElement('span');
+      emptyTextEl.className = 'save-slot-empty-text';
+      emptyTextEl.textContent = emptyText;
+      slotEl.appendChild(emptyTextEl);
 
       // In save mode: direct save (no confirmation needed)
       if (this.mode === 'save') {

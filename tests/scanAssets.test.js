@@ -585,6 +585,24 @@ describe('filtering', () => {
     const result = scanAssets(script);
     deepStrictEqual(result.characters, ['characters/valid.png']);
   });
+
+  it('filters traversal, absolute, and non-asset-root paths', () => {
+    const script = {
+      characters: {
+        c1: {
+          expressions: {
+            traversal: '../../secret.png',
+            nestedTraversal: 'characters/../../secret.png',
+            absolute: '/characters/hero.png',
+            unknownRoot: 'legacy/hero.png',
+            valid: 'characters/valid.png',
+          },
+        },
+      },
+    };
+    const result = scanAssets(script);
+    deepStrictEqual(result.characters, ['characters/valid.png']);
+  });
 });
 
 describe('deduplication', () => {

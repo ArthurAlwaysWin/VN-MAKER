@@ -20,6 +20,8 @@ import { collectUiImagePaths } from '../shared/uiImageContract.js';
 
 // ─── Path Filter ─────────────────────────────────────────
 
+const ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices']);
+
 /**
  * Add path to set if it's a valid asset file reference.
  * Skips empty values, data: URIs, and http/https URLs.
@@ -28,12 +30,18 @@ import { collectUiImagePaths } from '../shared/uiImageContract.js';
  * @private
  */
 function _add(set, path) {
-  if (path && typeof path === 'string'
-      && !path.startsWith('data:')
-      && !path.startsWith('http://')
-      && !path.startsWith('https://')) {
-    set.add(path);
+  if (!path || typeof path !== 'string') return;
+  const normalized = path.trim().replace(/\\/g, '/');
+  if (
+    !normalized
+    || /^(?:https?:|data:|asset:|file:|blob:)/i.test(normalized)
+    || normalized.startsWith('/')
+    || normalized.split('/').includes('..')
+  ) {
+    return;
   }
+  if (!ASSET_ROOTS.has(normalized.split('/')[0])) return;
+  set.add(normalized);
 }
 
 // ─── Scanner ─────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Agent Command Reference
 
-This reference documents the deterministic `apply-plan` commands external agents can use inside a plan manifest. For the manifest envelope, transaction behavior, failure payloads, and checkpoints, see [plan-manifest.md](./plan-manifest.md).
+This reference documents the deterministic `apply-plan` commands external agents can use inside a plan manifest. For the manifest envelope, transaction behavior, failure payloads, and checkpoints, see [plan-manifest.md](./plan-manifest.md). For the cross-cutting integration rules that every command must follow, see [integration-contract.md](./integration-contract.md).
 
 Use `params` in new plans. The parser also accepts `args`. Aliases are listed where they are commonly useful.
 
@@ -61,7 +61,23 @@ npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
 | `add-character` | `id` | `name`, `color`, `expressions` | `expressions` is an object map like `{ "normal": "characters/sakura.svg" }`. Aliases: `characterId`, `character`. |
-| `add-variable` | `id` | `type`, `initialValue`, `label` | `type` defaults to `number`; `initialValue` defaults to `0`. Aliases: `variableId`, `variable`, `initial`. |
+| `add-variable` | `id` | `type`, `initialValue`, `label`, `group`, `notes`, `kind`, `characterId`, `min`, `max`, `step` | `type` defaults to `number`; `initialValue` defaults to `0`. Aliases: `variableId`, `variable`, `initial`, `character`. |
+| `update-variable` | `id` | `patch`, `type`, `initial`, `label`, `group`, `notes`, `kind`, `characterId`, `min`, `max`, `step` | Updates one registry entry through the shared variable normalizer. Aliases: `variableId`, `variable`, `character`. |
+| `rename-variable` | `id`, `newVariableId` | | Rewrites choice effects and condition rows. Aliases: `variableId`, `variable`, `newId`, `new-id`, `to`. |
+| `delete-variable` | `id` | `forceReferences` | Refuses to delete referenced variables unless forced; forced deletes remove variable effects and condition rows. Aliases: `variableId`, `variable`, `force-references`. |
+| `add-affection-variable` | `characterId` | `id`, `initial`, `label`, `group`, `notes`, `min`, `max`, `step` | Creates a number variable preset linked to a character. Aliases: `character`, `variableId`, `variable`. |
+
+## Ending Commands
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `list-endings` | | | Lists normalized `systems.endings` entries sorted by `order`, then title. |
+| `add-ending` | `id` | `title`, `category`, `order`, `description`, `thumbnail`, `hiddenUntilUnlocked` | Registers a new ending. Aliases: `endingId`, `ending`, `name`, `hidden-until-unlocked`. |
+| `update-ending` | `id` | `patch`, `title`, `category`, `order`, `description`, `thumbnail`, `hiddenUntilUnlocked` | Updates one ending through the shared ending normalizer. Aliases: `endingId`, `ending`, `name`, `hidden-until-unlocked`. |
+| `remove-ending` | `id` | `forceReferences` | Refuses to remove endings still referenced by `unlock:ending` effects unless forced; forced removes those effects. Aliases: `endingId`, `ending`, `force-references`. |
+| `add-ending-unlock` | `sceneId`, `pageIndex`, `optionIndex`, `endingId` | | Adds `{ "type": "unlock:ending" }` to one choice option. Aliases: `scene`, `page`, `option`, `id`, `ending`. |
+
+Changed ending registry paths use `systems.endings.<endingId>`. Unlock effects report the exact choice effect path, such as `scenes.start.pages.2.options.0.effects.0`.
 
 ## Page Commands
 
@@ -90,6 +106,8 @@ npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
 | `remove-choice-option` | `sceneId`, `pageIndex`, `optionIndex` | | Aliases: `scene`, `page`, `option`. |
 | `move-choice-option` | `sceneId`, `pageIndex`, `fromIndex`, `toIndex` | | Aliases: `scene`, `page`, `from`, `to`. |
 | `add-choice-effect` | `sceneId`, `pageIndex`, `optionIndex` | `effect`, `effectType`, `effectId`, `value` | Defaults to a `var:add` effect when `effect` is omitted. Aliases: `scene`, `page`, `option`, `effect-type`, `effect-id`, `variable`. |
+| `set-choice-effect` | `sceneId`, `pageIndex`, `optionIndex`, `effectIndex` | `effect`, `effectType`, `effectId`, `value` | Replaces one choice effect through the shared effect DSL. Aliases: `scene`, `page`, `option`, `effect-index`, `effect`, `effect-type`, `effect-id`, `variable`. |
+| `remove-choice-effect` | `sceneId`, `pageIndex`, `optionIndex`, `effectIndex` | | Removes one choice effect and reports the changed effect path. Aliases: `scene`, `page`, `option`, `effect-index`, `effect`. |
 
 ## Condition Commands
 
@@ -192,7 +210,7 @@ Plan manifest example:
 }
 ```
 
-`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. `handoff-report` also includes `previewTargets` for changed screen UI paths. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
+`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `systems.endings.*` paths become an `ending-list` preview target for Story Systems review. `handoff-report` also includes `previewTargets` for changed screen UI and ending registry paths. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
 
 ## Shared UI Commands
 

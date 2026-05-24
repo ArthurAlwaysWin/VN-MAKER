@@ -149,6 +149,12 @@ describe('agent handoff editor integration', () => {
       tab: 'story-systems',
       id: 'sakura_affection',
     });
+    expect(project.requestAgentPathNavigation('systems.endings.good_end')).toBe(true);
+    expect(project.agentPathNavigationRequest).toMatchObject({
+      kind: 'ending',
+      tab: 'story-systems',
+      id: 'good_end',
+    });
     expect(project.requestAgentPathNavigation('characters.sakura')).toBe(true);
     expect(project.agentPathNavigationRequest).toMatchObject({
       kind: 'character',
@@ -244,6 +250,8 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('getAgentReviewItemLabel');
     expect(source).toContain('reference-screenshot-fidelity');
     expect(source).toContain('reference fidelity');
+    expect(source).toContain('ending-list-preview');
+    expect(source).toContain('ending preview');
     expect(source).toContain('setAgentReviewItemStatus');
     expect(source).toContain('clearAgentReviewItemStatus');
     expect(source).toContain('agent-review-status');
@@ -275,6 +283,7 @@ describe('agent handoff editor integration', () => {
           'scenes.start.pages.1',
           'characters.sakura',
           'systems.variables.sakura_affection',
+          'systems.endings.good_end',
           'ui.theme.buttonFamilies.qab',
         ],
       },
@@ -282,6 +291,7 @@ describe('agent handoff editor integration', () => {
         { source: 'layout', code: 'layout-warning', pathString: 'scenes.start.pages.1' },
         { source: 'validation', code: 'missing-character', pathString: 'characters.sakura' },
         { source: 'validation', code: 'bad-variable', pathString: 'systems.variables.sakura_affection' },
+        { source: 'validation', code: 'ending-never-unlocked', pathString: 'systems.endings.good_end' },
       ],
     });
 
@@ -289,6 +299,11 @@ describe('agent handoff editor integration', () => {
       kind: 'variable',
       tab: 'story-systems',
       id: 'sakura_affection',
+    });
+    expect(parseAgentPathTarget('systems.endings.good_end')).toMatchObject({
+      kind: 'ending',
+      tab: 'story-systems',
+      id: 'good_end',
     });
     expect(parseAgentPathTarget('characters.sakura')).toMatchObject({
       kind: 'character',
@@ -303,12 +318,18 @@ describe('agent handoff editor integration', () => {
       'scene:start',
       'characters',
       'systems:variables',
+      'systems:endings',
       'ui',
     ]);
     expect(groups.find((group) => group.key === 'characters')).toMatchObject({
       label: 'Characters',
       changedPaths: ['characters.sakura'],
       reviewItems: [expect.objectContaining({ code: 'missing-character' })],
+    });
+    expect(groups.find((group) => group.key === 'systems:endings')).toMatchObject({
+      label: 'Endings',
+      changedPaths: ['systems.endings.good_end'],
+      reviewItems: [expect.objectContaining({ code: 'ending-never-unlocked' })],
     });
   });
 
@@ -383,5 +404,21 @@ describe('agent handoff editor integration', () => {
     expect(pageEditorSource).toContain('applySceneNavigationRequest');
     expect(pageEditorSource).toContain('editor.selectPage(request.sceneId, pageIndex)');
     expect(sceneTreeSource).toContain('watch(selectedSceneId');
+  });
+
+  it('wires ending registry editor surfaces and unlock picker source paths', () => {
+    const storySystemsSource = readFileSync(resolve(process.cwd(), 'src', 'editor', 'views', 'StorySystems.vue'), 'utf8');
+    const pageInspectorSource = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'page-editor', 'PageInspector.vue'),
+      'utf8',
+    );
+
+    expect(storySystemsSource).toContain('EndingRegistryList');
+    expect(storySystemsSource).toContain('EndingInspector');
+    expect(storySystemsSource).toContain("script.storySystemsPanel === 'endings'");
+    expect(storySystemsSource).toContain('collectEndingUnlockReferences');
+    expect(pageInspectorSource).toContain('unlock:ending');
+    expect(pageInspectorSource).toContain('addEndingUnlockRow');
+    expect(pageInspectorSource).toContain('endingOptions');
   });
 });

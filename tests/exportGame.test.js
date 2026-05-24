@@ -219,6 +219,60 @@ describe('exportGame — asset filtering', () => {
   });
 });
 
+// ─── exportGame — Path Safety ───────────────────────────
+
+describe('exportGame — path safety', () => {
+  it('does not copy traversal asset references outside the export directory', async () => {
+    const projDir = path.join(tempRoot, 'project-traversal');
+    const exportRoot = path.join(tempRoot, 'exports-traversal');
+    const outputDir = path.join(exportRoot, 'output');
+    const escapedDst = path.join(exportRoot, 'secret.txt');
+    await fs.mkdir(path.join(projDir, 'assets'), { recursive: true });
+    await fs.mkdir(exportRoot, { recursive: true });
+    await fs.writeFile(path.join(tempRoot, 'secret.txt'), 'secret', 'utf-8');
+    await fs.writeFile(path.join(projDir, 'script.json'), JSON.stringify({
+      scenes: {
+        s1: {
+          pages: [{ background: '../../secret.txt', dialogues: [] }],
+        },
+      },
+    }), 'utf-8');
+
+    const noop = () => {};
+    const result = await exportGame({
+      projectPath: projDir,
+      outputDir,
+      gameTitle: 'Traversal Test',
+      faviconPath: null,
+      zip: false,
+      _skipBuild: true,
+      _appRoot: mockAppRoot,
+    }, noop);
+
+    expect(result.success).toBe(true);
+    expect(existsSync(escapedDst)).toBe(false);
+  });
+
+  it('sanitizes ZIP filenames derived from game titles', async () => {
+    const outputDir = path.join(tempRoot, 'output-zip-title-safety');
+    const noop = () => {};
+    const result = await exportGame({
+      projectPath: mockProjectDir,
+      outputDir,
+      gameTitle: '../Zip Escape',
+      faviconPath: null,
+      zip: true,
+      _skipBuild: true,
+      _appRoot: mockAppRoot,
+    }, noop);
+
+    expect(path.dirname(result.zipPath)).toBe(path.dirname(outputDir));
+    expect(path.basename(result.zipPath)).not.toContain('..');
+    expect(path.basename(result.zipPath)).not.toContain('/');
+    expect(existsSync(result.zipPath)).toBe(true);
+  });
+});
+
 // ─── exportGame — Missing Assets ────────────────────────
 
 describe('exportGame — missing assets', () => {

@@ -5,10 +5,19 @@ import {
   getRuntimeTransitionType,
 } from '../shared/cinematicContract.js';
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
+import {
+  collectEndingUnlockReferences,
+  normalizeEndingRegistry,
+} from '../shared/endingRegistry.js';
 import { ensureGalgameContract } from '../shared/galgameContract.js';
 import { validateProject } from '../shared/projectValidator.js';
 import { collectSceneReferences } from '../shared/sceneGraph.js';
-import { normalizeVariableRegistry } from '../shared/variableRegistry.js';
+import {
+  collectVariableReferences,
+  createAffectionVariableEntry,
+  createAffectionVariableId,
+  normalizeVariableRegistry,
+} from '../shared/variableRegistry.js';
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -176,6 +185,152 @@ function clearSceneReferenceTargets(script, targetSceneId) {
   return clearedReferenceCount;
 }
 
+function isVariableEffect(effect) {
+  return effect?.type === 'var:set'
+    || effect?.type === 'var:add'
+    || effect?.type === 'var:sub';
+}
+
+function isEndingUnlockEffect(effect) {
+  return effect?.type === 'unlock:ending';
+}
+
+function findVariableReferences(script, variableId) {
+  return collectVariableReferences(script).filter((reference) => reference.variableId === variableId);
+}
+
+function findEndingUnlockReferences(script, endingId) {
+  return collectEndingUnlockReferences(script).filter((reference) => reference.endingId === endingId);
+}
+
+function replaceVariableReferences(script, fromVariableId, toVariableId) {
+  let updatedReferenceCount = 0;
+  const registry = normalizeVariableRegistry(script.systems?.variables);
+
+  for (const scene of Object.values(script.scenes ?? {})) {
+    for (const page of scene?.pages ?? []) {
+      if (page?.type === 'choice') {
+        page.options = (page.options ?? []).map((option) => {
+          const normalizedOption = normalizeEffectContainer(option);
+          if (!Array.isArray(normalizedOption.effects)) {
+            return normalizedOption;
+          }
+
+          normalizedOption.effects = normalizedOption.effects.map((effect) => {
+            if (!isVariableEffect(effect) || effect.id !== fromVariableId) {
+              return effect;
+            }
+
+            updatedReferenceCount += 1;
+            return {
+              ...effect,
+              id: toVariableId,
+            };
+          });
+          return normalizedOption;
+        });
+      }
+
+      if (page?.type === 'condition') {
+        const normalizedPage = normalizeConditionPage(page, { registry });
+        normalizedPage.conditions = normalizedPage.conditions.map((condition) => {
+          if (condition.variableId !== fromVariableId) {
+            return condition;
+          }
+
+          updatedReferenceCount += 1;
+          return {
+            ...condition,
+            variableId: toVariableId,
+          };
+        });
+        Object.assign(page, normalizedPage);
+      }
+    }
+  }
+
+  return updatedReferenceCount;
+}
+
+function removeVariableReferences(script, variableId) {
+  let deletedReferenceCount = 0;
+  const registry = normalizeVariableRegistry(script.systems?.variables);
+
+  for (const scene of Object.values(script.scenes ?? {})) {
+    for (const page of scene?.pages ?? []) {
+      if (page?.type === 'choice') {
+        page.options = (page.options ?? []).map((option) => {
+          const normalizedOption = normalizeEffectContainer(option);
+          const effects = (normalizedOption.effects ?? []).filter((effect) => {
+            const shouldKeep = !isVariableEffect(effect) || effect.id !== variableId;
+            if (!shouldKeep) {
+              deletedReferenceCount += 1;
+            }
+            return shouldKeep;
+          });
+
+          if (effects.length > 0) {
+            normalizedOption.effects = effects;
+          } else {
+            delete normalizedOption.effects;
+          }
+          return normalizedOption;
+        });
+      }
+
+      if (page?.type === 'condition') {
+        const normalizedPage = normalizeConditionPage(page, { registry });
+        normalizedPage.conditions = normalizedPage.conditions.filter((condition) => {
+          const shouldKeep = condition.variableId !== variableId;
+          if (!shouldKeep) {
+            deletedReferenceCount += 1;
+          }
+          return shouldKeep;
+        });
+        Object.assign(page, normalizedPage);
+      }
+    }
+  }
+
+  return deletedReferenceCount;
+}
+
+function removeEndingUnlockReferences(script, endingId) {
+  let deletedReferenceCount = 0;
+
+  for (const scene of Object.values(script.scenes ?? {})) {
+    for (const page of scene?.pages ?? []) {
+      if (page?.type !== 'choice') {
+        continue;
+      }
+
+      page.options = (page.options ?? []).map((option) => {
+        const normalizedOption = normalizeEffectContainer(option);
+        const effects = (normalizedOption.effects ?? []).filter((effect) => {
+          const shouldKeep = !isEndingUnlockEffect(effect) || effect.id !== endingId;
+          if (!shouldKeep) {
+            deletedReferenceCount += 1;
+          }
+          return shouldKeep;
+        });
+
+        if (effects.length > 0) {
+          normalizedOption.effects = effects;
+        } else {
+          delete normalizedOption.effects;
+        }
+        return normalizedOption;
+      });
+    }
+  }
+
+  return deletedReferenceCount;
+}
+
+function uniqueChangedPaths(paths = []) {
+  return [...new Set(paths.filter(Boolean))];
+}
+
 function normalizePageTransitionInput(transition) {
   if (transition == null) {
     return null;
@@ -298,6 +453,7 @@ function normalizeSharedUiConfig(config, label) {
 function normalizeScriptForAuthoring(script) {
   const normalized = ensureGalgameContract(script ?? {});
   normalized.systems.variables = normalizeVariableRegistry(normalized.systems.variables);
+  normalized.systems.endings = normalizeEndingRegistry(normalized.systems.endings);
 
   for (const scene of Object.values(normalized.scenes ?? {})) {
     if (!Array.isArray(scene.pages)) {
@@ -346,6 +502,9 @@ export function createProjectSession(input = {}) {
 
     addVariable(variable) {
       const id = assertNonEmptyString(variable?.id, 'variable.id');
+      if (script.systems.variables[id]) {
+        throw new Error(`Variable "${id}" already exists`);
+      }
       script.systems.variables[id] = normalizeVariableRegistry({
         [id]: {
           type: variable.type ?? 'number',
@@ -357,6 +516,231 @@ export function createProjectSession(input = {}) {
       })[id];
       delete script.systems.variables[id].id;
       return { variableId: id };
+    },
+
+    updateVariable({ variableId, patch = {}, ...fields } = {}) {
+      const id = assertNonEmptyString(variableId ?? fields.id, 'variableId');
+      if (!script.systems.variables[id]) {
+        throw new Error(`Variable "${id}" does not exist`);
+      }
+
+      script.systems.variables[id] = normalizeVariableRegistry({
+        [id]: {
+          ...script.systems.variables[id],
+          ...cloneJsonValue(patch),
+          ...cloneJsonValue(fields),
+          id: undefined,
+        },
+      })[id];
+      delete script.systems.variables[id].id;
+      return { variableId: id };
+    },
+
+    addAffectionVariable({ characterId, id, variableId, ...fields } = {}) {
+      const targetCharacterId = assertNonEmptyString(characterId, 'characterId');
+      const character = script.characters?.[targetCharacterId];
+      if (!character) {
+        throw new Error(`Character "${targetCharacterId}" does not exist`);
+      }
+
+      const targetVariableId = assertNonEmptyString(
+        id ?? variableId ?? createAffectionVariableId(targetCharacterId),
+        'variable.id',
+      );
+      if (script.systems.variables[targetVariableId]) {
+        throw new Error(`Variable "${targetVariableId}" already exists`);
+      }
+
+      script.systems.variables[targetVariableId] = createAffectionVariableEntry({
+        characterId: targetCharacterId,
+        characterName: character.name ?? targetCharacterId,
+        ...cloneJsonValue(fields),
+      });
+      return {
+        variableId: targetVariableId,
+        characterId: targetCharacterId,
+        changedPaths: [`systems.variables.${targetVariableId}`],
+      };
+    },
+
+    addEnding(ending) {
+      const id = assertNonEmptyString(ending?.id ?? ending?.endingId, 'ending.id');
+      if (script.systems.endings[id]) {
+        throw new Error(`Ending "${id}" already exists`);
+      }
+
+      script.systems.endings[id] = normalizeEndingRegistry({
+        [id]: {
+          title: ending.title ?? ending.name ?? id,
+          category: ending.category,
+          order: ending.order,
+          description: ending.description,
+          thumbnail: ending.thumbnail,
+          hiddenUntilUnlocked: ending.hiddenUntilUnlocked,
+          ...cloneJsonValue(ending),
+          id: undefined,
+        },
+      })[id];
+      delete script.systems.endings[id].id;
+      return {
+        endingId: id,
+        changedPaths: [`systems.endings.${id}`],
+      };
+    },
+
+    updateEnding({ endingId, patch = {}, ...fields } = {}) {
+      const id = assertNonEmptyString(endingId ?? fields.id, 'endingId');
+      if (!script.systems.endings[id]) {
+        throw new Error(`Ending "${id}" does not exist`);
+      }
+
+      script.systems.endings[id] = normalizeEndingRegistry({
+        [id]: {
+          ...script.systems.endings[id],
+          ...cloneJsonValue(patch),
+          ...cloneJsonValue(fields),
+          id: undefined,
+        },
+      })[id];
+      delete script.systems.endings[id].id;
+      return {
+        endingId: id,
+        changedPaths: [`systems.endings.${id}`],
+      };
+    },
+
+    removeEnding({ endingId, id, forceReferences = false } = {}) {
+      const targetId = assertNonEmptyString(endingId ?? id, 'endingId');
+      if (!script.systems.endings[targetId]) {
+        throw new Error(`Ending "${targetId}" does not exist`);
+      }
+
+      const references = findEndingUnlockReferences(script, targetId);
+      if (references.length > 0 && !forceReferences) {
+        const paths = references.map((reference) => reference.pathString).join(', ');
+        throw new Error(`Ending "${targetId}" is still referenced by: ${paths}`);
+      }
+
+      const deletedReferenceCount = removeEndingUnlockReferences(script, targetId);
+      delete script.systems.endings[targetId];
+      return {
+        endingId: targetId,
+        deletedEndingId: targetId,
+        deletedReferenceCount,
+        references,
+        changedPaths: uniqueChangedPaths([
+          `systems.endings.${targetId}`,
+          ...references.map((reference) => reference.pathString),
+        ]),
+      };
+    },
+
+    addEndingUnlock({ sceneId, pageIndex, optionIndex, endingId, id } = {}) {
+      const targetEndingId = assertNonEmptyString(endingId ?? id, 'endingId');
+      if (!script.systems.endings[targetEndingId]) {
+        throw new Error(`Ending "${targetEndingId}" does not exist`);
+      }
+
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type !== 'choice') {
+        throw new Error('Ending unlocks can only be added to choice pages');
+      }
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= (page.options?.length ?? 0)) {
+        throw new Error(`Choice option index ${optionIndex} is out of range`);
+      }
+
+      const option = normalizeEffectContainer(page.options[optionIndex]);
+      option.effects = [
+        ...(option.effects ?? []),
+        { type: 'unlock:ending', id: targetEndingId },
+      ];
+      page.options[optionIndex] = option;
+      const effectIndex = option.effects.length - 1;
+      return {
+        sceneId,
+        pageIndex,
+        optionIndex,
+        effectIndex,
+        endingId: targetEndingId,
+        changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects.${effectIndex}`],
+      };
+    },
+
+    listEndings() {
+      return Object.entries(script.systems.endings ?? {})
+        .map(([endingId, ending]) => ({
+          endingId,
+          ...cloneJsonValue(ending),
+        }))
+        .sort((left, right) => {
+          const orderDelta = Number(left.order ?? 0) - Number(right.order ?? 0);
+          if (orderDelta !== 0) return orderDelta;
+          return String(left.title ?? left.endingId).localeCompare(String(right.title ?? right.endingId));
+        });
+    },
+
+    renameVariable({ variableId, newVariableId, id, newId } = {}) {
+      const fromId = assertNonEmptyString(variableId ?? id, 'variableId');
+      const toId = assertNonEmptyString(newVariableId ?? newId, 'newVariableId');
+      if (!script.systems.variables[fromId]) {
+        throw new Error(`Variable "${fromId}" does not exist`);
+      }
+
+      if (fromId === toId) {
+        return {
+          variableId: fromId,
+          newVariableId: toId,
+          updatedReferenceCount: 0,
+          references: [],
+          changedPaths: [`systems.variables.${fromId}`],
+        };
+      }
+
+      if (script.systems.variables[toId]) {
+        throw new Error(`Variable "${toId}" already exists`);
+      }
+
+      const references = findVariableReferences(script, fromId);
+      script.systems.variables[toId] = script.systems.variables[fromId];
+      delete script.systems.variables[fromId];
+      const updatedReferenceCount = replaceVariableReferences(script, fromId, toId);
+      return {
+        variableId: fromId,
+        newVariableId: toId,
+        updatedReferenceCount,
+        references,
+        changedPaths: uniqueChangedPaths([
+          `systems.variables.${fromId}`,
+          `systems.variables.${toId}`,
+          ...references.map((reference) => reference.pathString),
+        ]),
+      };
+    },
+
+    deleteVariable({ variableId, id, forceReferences = false } = {}) {
+      const targetId = assertNonEmptyString(variableId ?? id, 'variableId');
+      if (!script.systems.variables[targetId]) {
+        throw new Error(`Variable "${targetId}" does not exist`);
+      }
+
+      const references = findVariableReferences(script, targetId);
+      if (references.length > 0 && !forceReferences) {
+        const paths = references.map((reference) => reference.pathString).join(', ');
+        throw new Error(`Variable "${targetId}" is still referenced by: ${paths}`);
+      }
+
+      const deletedReferenceCount = removeVariableReferences(script, targetId);
+      delete script.systems.variables[targetId];
+      return {
+        variableId: targetId,
+        deletedVariableId: targetId,
+        deletedReferenceCount,
+        references,
+        changedPaths: uniqueChangedPaths([
+          `systems.variables.${targetId}`,
+          ...references.map((reference) => reference.pathString),
+        ]),
+      };
     },
 
     addScene(scene) {
@@ -776,6 +1160,59 @@ export function createProjectSession(input = {}) {
       ];
       page.options[optionIndex] = option;
       return { sceneId, pageIndex, optionIndex, effectIndex: option.effects.length - 1 };
+    },
+
+    setChoiceEffect({ sceneId, pageIndex, optionIndex, effectIndex, effect }) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type !== 'choice') {
+        throw new Error('Choice effects can only be edited on choice pages');
+      }
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= (page.options?.length ?? 0)) {
+        throw new Error(`Choice option index ${optionIndex} is out of range`);
+      }
+
+      const option = normalizeEffectContainer(page.options[optionIndex]);
+      if (!Number.isInteger(effectIndex) || effectIndex < 0 || effectIndex >= (option.effects?.length ?? 0)) {
+        throw new Error(`Choice effect index ${effectIndex} is out of range`);
+      }
+
+      option.effects[effectIndex] = normalizeEffects([effect])[0];
+      page.options[optionIndex] = option;
+      return {
+        sceneId,
+        pageIndex,
+        optionIndex,
+        effectIndex,
+        effect: cloneJsonValue(option.effects[effectIndex]),
+      };
+    },
+
+    removeChoiceEffect({ sceneId, pageIndex, optionIndex, effectIndex }) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type !== 'choice') {
+        throw new Error('Choice effects can only be removed from choice pages');
+      }
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= (page.options?.length ?? 0)) {
+        throw new Error(`Choice option index ${optionIndex} is out of range`);
+      }
+
+      const option = normalizeEffectContainer(page.options[optionIndex]);
+      if (!Number.isInteger(effectIndex) || effectIndex < 0 || effectIndex >= (option.effects?.length ?? 0)) {
+        throw new Error(`Choice effect index ${effectIndex} is out of range`);
+      }
+
+      const [removedEffect] = option.effects.splice(effectIndex, 1);
+      if (option.effects.length === 0) {
+        delete option.effects;
+      }
+      page.options[optionIndex] = option;
+      return {
+        sceneId,
+        pageIndex,
+        optionIndex,
+        effectIndex,
+        removedEffect: cloneJsonValue(removedEffect),
+      };
     },
 
     setChoiceOption({ sceneId, pageIndex, optionIndex, option }) {

@@ -74,11 +74,22 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
         targets.push({ type: 'screen', screenId });
       }
     }
+
+    if (changedPath === 'systems.endings' || String(changedPath).startsWith('systems.endings.')) {
+      targets.push({
+        type: 'ending-list',
+        kind: 'ending-list',
+        pathString: 'systems.endings',
+        reason: 'changed-ending-registry',
+      });
+    }
   }
 
   const seen = new Set();
   return targets.filter((target) => {
-    const key = target.type === 'screen'
+    const key = target.type === 'ending-list'
+      ? 'ending-list:systems.endings'
+      : target.type === 'screen'
       ? `screen:${target.screenId}`
       : `scene:${target.sceneId}:${target.pageIndex}`;
     if (seen.has(key)) return false;
@@ -164,7 +175,7 @@ function createReviewItem(source, severity, issue = {}) {
 }
 
 function collectPreviewReviewItems(previewTargets = []) {
-  return previewTargets
+  const screenItems = previewTargets
     .filter((target) => target?.type === 'screen' || target?.screenId)
     .map((target) => {
       const screenId = target.screenId;
@@ -189,6 +200,28 @@ function collectPreviewReviewItems(previewTargets = []) {
         },
       };
     });
+
+  const endingItems = previewTargets
+    .filter((target) => target?.type === 'ending-list' || target?.kind === 'ending-list')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'ending-list-preview',
+      code: 'ending-list-preview-required',
+      pathString: target.pathString ?? 'systems.endings',
+      message: 'Ending registry changed and needs review in Story Systems.',
+      suggestedAction: {
+        summary: 'Open Story Systems and inspect the ending list, unlock effects, and handoff diagnostics.',
+        commands: [
+          {
+            command: 'list-endings',
+            args: ['--script', '<script.json>', '--json'],
+          },
+        ],
+      },
+    }));
+
+  return [...screenItems, ...endingItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {

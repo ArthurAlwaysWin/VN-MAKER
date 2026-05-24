@@ -1,6 +1,6 @@
 # Agent Validation Rules
 
-Every agent workflow should finish with validation:
+Every agent workflow should finish with validation. Diagnostic shape and stability requirements are defined in [integration-contract.md](./integration-contract.md).
 
 ```bash
 npm run vn -- validate --script public/game/script.json --json
@@ -39,6 +39,14 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `missing-scene-target` | A scene, choice, or condition target does not exist. |
 | `missing-page-character` | A staged character id is not registered. |
 | `missing-dialogue-speaker` | A dialogue speaker id is not registered. |
+| `invalid-variable-registry` | `systems.variables` is not an object map. |
+| `invalid-variable-id` | A variable id or variable reference uses an unsupported id shape. |
+| `duplicate-variable-id` | Two registry keys collide after normalization. |
+| `invalid-variable-entry` | A variable registry entry is not an object. |
+| `invalid-ending-registry` | `systems.endings` is not an object map. |
+| `invalid-ending-id` | An ending id or ending reference uses an unsupported id shape. |
+| `duplicate-ending-id` | Two ending registry keys collide after normalization. |
+| `invalid-ending-entry` | An ending registry entry is not an object. |
 | `invalid-effects` | A choice effect cannot normalize. |
 | `unsupported-effect` | Effect type is outside the shared DSL. |
 
@@ -51,7 +59,13 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `missing-page-character-expression` | Staged expression is not registered on the character. |
 | `unregistered-variable-effect` | Choice effect references an unregistered variable. |
 | `unregistered-condition-variable` | Condition page references an unregistered variable. |
+| `variable-type-mismatch` | A variable effect or condition compares/sets a bool/number with an incompatible operator or value. |
+| `affection-character-missing` | An affection variable does not point at an existing character. |
+| `condition-missing-targets` | A configured condition page has neither a true nor false target. |
 | `unregistered-ending-unlock` | Ending unlock references an unregistered ending. |
+| `ending-never-unlocked` | An ending is registered but no `unlock:ending` effect references it. |
+| `no-reachable-ending` | No registered ending unlock is reachable from the entry scene. |
+| `missing-ending-thumbnail` | A hidden ending lacks a thumbnail for ending-list review. |
 | `unregistered-cg-unlock` | CG unlock references an unregistered CG. |
 | `missing-asset-reference` | Asset validation could not find a referenced asset. |
 | `empty-normal-page` | Normal page has no useful content. |
@@ -126,6 +140,7 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `placeholder-asset` | A referenced asset path appears to be a placeholder, such as `placeholder`, `todo`, or `dummy`. Replace it with final art/audio or explicitly accept it. |
 | `ambiguous-asset` | A referenced asset path has a generic filename such as `bg01.png`, `img02.png`, or `button.png`, which may confuse future agent matching. |
 | `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. |
+| `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
 | `reference-screenshot-fidelity` | A plan used a reference screenshot and includes notes about what matched and what still needs human visual comparison. |
 | `layout`, `readiness`, `validation` | Existing structural and quality gates that should be resolved or explicitly accepted before handoff. |
 

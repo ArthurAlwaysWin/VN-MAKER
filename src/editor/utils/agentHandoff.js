@@ -68,6 +68,16 @@ export function parseAgentPathTarget(pathString = '') {
     };
   }
 
+  const endingMatch = /^systems\.endings(?:\.([^.]+))?$/.exec(normalized);
+  if (endingMatch) {
+    return {
+      kind: 'ending',
+      tab: 'story-systems',
+      id: endingMatch[1] ?? null,
+      pathString: normalized,
+    };
+  }
+
   const characterMatch = /^characters\.([^.]+)/.exec(normalized);
   if (characterMatch) {
     return {
@@ -97,6 +107,9 @@ function getPathGroupKey(pathString = '') {
   if (target?.kind === 'variable') {
     return 'systems:variables';
   }
+  if (target?.kind === 'ending') {
+    return 'systems:endings';
+  }
   if (target?.kind === 'character') {
     return 'characters';
   }
@@ -123,7 +136,7 @@ function createPathGroup(key) {
   return {
     key,
     kind,
-    label: labelMap[kind] ?? key,
+    label: key === 'systems:endings' ? 'Endings' : labelMap[kind] ?? key,
     changedPaths: [],
     reviewItems: [],
   };

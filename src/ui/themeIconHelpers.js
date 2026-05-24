@@ -25,9 +25,9 @@ export function resolveThemeIcon(icons, slotKey, fallbackText, cssClass = '') {
   if (!src) return fallbackHtml;
 
   const resolved = resolvePath(src);
-  const classAttr = cssClass ? ` class="${cssClass}"` : '';
+  const classAttr = cssClass ? ` class="${escapeAttr(cssClass)}"` : '';
   const altText = stripMarkup(fallbackText) || slotKey;
-  return `<span class="theme-icon-shell" data-theme-icon-shell="1" data-theme-icon-slot="${slotKey}" data-theme-icon-fallback="${encodeURIComponent(fallbackHtml)}"><img src="${resolved}"${classAttr} data-theme-icon-image="1" alt="${escapeHtml(altText)}" /></span>`;
+  return `<span class="theme-icon-shell" data-theme-icon-shell="1" data-theme-icon-slot="${escapeAttr(slotKey)}" data-theme-icon-fallback="${encodeURIComponent(fallbackHtml)}"><img src="${escapeAttr(resolved)}"${classAttr} data-theme-icon-image="1" alt="${escapeAttr(altText)}" /></span>`;
 }
 
 /**
@@ -86,6 +86,10 @@ function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function escapeAttr(text) {
+  return escapeHtml(text).replace(/'/g, '&#39;');
 }
 
 function stripMarkup(text) {

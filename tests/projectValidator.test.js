@@ -74,8 +74,8 @@ function createValidScript(overrides = {}) {
               { variableId: 'affection', operator: '>=', value: 1 },
               { variableId: 'route_locked', operator: '==', value: false },
             ],
-            trueTarget: null,
-            falseTarget: null,
+            trueTarget: 'start',
+            falseTarget: 'start',
           },
         ],
       },
@@ -141,6 +141,126 @@ describe('project validator', () => {
       'unregistered-variable-effect',
       'unregistered-ending-unlock',
       'unregistered-cg-unlock',
+    ]));
+  });
+
+  it('reports variable registry and branch GUI diagnostics for agent-authored system data', () => {
+    const script = createValidScript();
+    script.systems.variables['bad id'] = { type: 'number', initial: 0 };
+    script.systems.variables[' affection '] = { type: 'number', initial: 0 };
+    script.systems.variables.sakura_affection = {
+      type: 'number',
+      initial: 0,
+      kind: 'affection',
+      characterId: 'missing_character',
+    };
+    script.scenes.start.pages[1].options[0].effects = [
+      { type: 'var:add', id: 'route_locked', value: 1 },
+      { type: 'var:set', id: 'route_locked', value: 2 },
+    ];
+    script.scenes.good.pages[0] = {
+      type: 'condition',
+      conditionMode: 'all',
+      conditions: [
+        { variableId: 'route_locked', operator: '>=', value: 'maybe' },
+        { variableId: 'affection', operator: '>=', value: 'many' },
+      ],
+      trueTarget: null,
+      falseTarget: null,
+    };
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(codes(report)).toEqual(expect.arrayContaining([
+      'invalid-variable-id',
+      'duplicate-variable-id',
+      'affection-character-missing',
+      'variable-type-mismatch',
+      'condition-missing-targets',
+    ]));
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'condition-missing-targets',
+        pathString: 'scenes.good.pages.0',
+      }),
+      expect.objectContaining({
+        code: 'affection-character-missing',
+        pathString: 'systems.variables.sakura_affection.characterId',
+      }),
+    ]));
+  });
+
+  it('reports ending registry and reachable unlock diagnostics', () => {
+    const script = createValidScript();
+    script.systems.endings = {
+      good_end: {
+        title: 'Good End',
+        hiddenUntilUnlocked: true,
+      },
+      unused_end: {
+        title: 'Unused End',
+      },
+      'bad id': {
+        title: 'Bad End',
+      },
+    };
+    script.scenes.start.pages[1].options[0].effects = [
+      { type: 'unlock:ending', id: 'good_end' },
+    ];
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(codes(report)).toEqual(expect.arrayContaining([
+      'invalid-ending-id',
+      'ending-never-unlocked',
+      'missing-ending-thumbnail',
+    ]));
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'ending-never-unlocked',
+        pathString: 'systems.endings.unused_end',
+        endingId: 'unused_end',
+      }),
+      expect.objectContaining({
+        code: 'missing-ending-thumbnail',
+        pathString: 'systems.endings.good_end.thumbnail',
+        endingId: 'good_end',
+      }),
+    ]));
+  });
+
+  it('warns when no registered ending unlock is reachable', () => {
+    const script = createValidScript();
+    script.systems.endings = {
+      secret_end: { title: 'Secret End' },
+    };
+    script.scenes.start.pages[1].options[0].effects = [];
+    script.scenes.orphan = {
+      pages: [
+        {
+          type: 'choice',
+          prompt: 'Hidden',
+          options: [
+            {
+              text: 'Unlock',
+              effects: [{ type: 'unlock:ending', id: 'secret_end' }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(true);
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'no-reachable-ending',
+        pathString: 'systems.endings',
+        entrySceneId: 'start',
+      }),
     ]));
   });
 

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, net, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, net, dialog, shell, screen } from 'electron';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
@@ -63,10 +63,85 @@ async function addToRecent(projectPath, name) {
 
 // --- Path Security ---
 
-function isInsideProject(fullPath) {
+const ASSET_CATEGORIES = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui']);
+const dialogGrantedFilePaths = new Set();
+const dialogGrantedDirectoryPaths = new Set();
+
+function isInsidePath(fullPath, basePath) {
   const resolved = path.resolve(fullPath);
-  const projectResolved = path.resolve(currentProjectPath);
-  return resolved.startsWith(projectResolved + path.sep) || resolved === projectResolved;
+  const baseResolved = path.resolve(basePath);
+  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
+}
+
+function isInsideProject(fullPath) {
+  if (!currentProjectPath) return false;
+  return isInsidePath(fullPath, currentProjectPath);
+}
+
+function normalizeAssetCategory(category) {
+  const value = String(category ?? '');
+  return ASSET_CATEGORIES.has(value) ? value : null;
+}
+
+function isSafeFilename(filename) {
+  const value = String(filename ?? '');
+  return value.length > 0
+    && value === path.basename(value)
+    && !value.includes('/')
+    && !value.includes('\\');
+}
+
+function getAssetsRoot() {
+  if (!currentProjectPath) return null;
+  return path.join(currentProjectPath, 'assets');
+}
+
+function getAssetCategoryDir(category) {
+  const normalized = normalizeAssetCategory(category);
+  const assetsRoot = getAssetsRoot();
+  if (!normalized || !assetsRoot) return null;
+  const dir = path.join(assetsRoot, normalized);
+  return isInsidePath(dir, assetsRoot) ? dir : null;
+}
+
+function getAssetFilePath(category, filename) {
+  const dir = getAssetCategoryDir(category);
+  if (!dir || !isSafeFilename(filename)) return null;
+  const fullPath = path.join(dir, filename);
+  return isInsidePath(fullPath, dir) ? fullPath : null;
+}
+
+function getAssetRelativePath(filePath) {
+  const assetsRoot = getAssetsRoot();
+  if (!assetsRoot || !isInsidePath(filePath, assetsRoot)) return null;
+
+  const relative = path.relative(assetsRoot, filePath).replace(/\\/g, '/');
+  const parts = relative.split('/');
+  if (parts.length !== 2 || parts.some(part => !part) || parts.includes('..')) return null;
+  if (!normalizeAssetCategory(parts[0]) || !isSafeFilename(parts[1])) return null;
+  return relative;
+}
+
+function rememberDialogFilePath(filePath) {
+  if (filePath) {
+    dialogGrantedFilePaths.add(path.resolve(filePath));
+  }
+}
+
+function hasDialogFileGrant(filePath) {
+  if (!filePath) return false;
+  return dialogGrantedFilePaths.has(path.resolve(filePath));
+}
+
+function rememberDialogDirectoryPath(dirPath) {
+  if (dirPath) {
+    dialogGrantedDirectoryPaths.add(path.resolve(dirPath));
+  }
+}
+
+function hasDialogDirectoryGrant(dirPath) {
+  if (!dirPath) return false;
+  return dialogGrantedDirectoryPaths.has(path.resolve(dirPath));
 }
 
 function sanitizeProjectName(name) {
@@ -437,8 +512,11 @@ ipcMain.handle('read-agent-handoff', async () => {
 ipcMain.handle('read-dir', async (event, relativePath) => {
   try {
     if (!currentProjectPath) return [];
-    const fullPath = path.join(currentProjectPath, relativePath);
-    if (!isInsideProject(fullPath)) return [];
+    const normalized = String(relativePath ?? '').replace(/\\/g, '/');
+    const match = /^assets\/([^/]+)$/.exec(normalized);
+    if (!match) return [];
+    const fullPath = getAssetCategoryDir(match[1]);
+    if (!fullPath) return [];
     const files = await fs.readdir(fullPath, { withFileTypes: true });
     return files.map(f => ({ name: f.name, isDirectory: f.isDirectory() }));
   } catch (e) {
@@ -449,10 +527,15 @@ ipcMain.handle('read-dir', async (event, relativePath) => {
 ipcMain.handle('upload-asset', async (event, { category, name, data }) => {
   try {
     if (!currentProjectPath) return false;
-    const dir = path.join(currentProjectPath, 'assets', category);
-    if (!isInsideProject(dir)) return false;
+    const normalizedCategory = normalizeAssetCategory(category);
+    const dir = getAssetCategoryDir(normalizedCategory);
+    const fullPath = getAssetFilePath(normalizedCategory, name);
+    if (!dir || !fullPath) return false;
+    const buffer = Buffer.from(data);
+    const validation = validateAssetFormat(buffer.subarray(0, 32), path.extname(name), normalizedCategory);
+    if (!validation.valid) return false;
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, name), Buffer.from(data));
+    await fs.writeFile(fullPath, buffer);
     return true;
   } catch (e) {
     console.error('Failed to upload asset:', e);
@@ -474,9 +557,13 @@ ipcMain.handle('select-asset', async (event, { types }) => {
       ui: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
     };
 
-    const category = types[0];
-    const filters = types.map(t => filterMap[t]).filter(Boolean);
-    const defaultDir = path.join(currentProjectPath, 'assets', category || '');
+    const categories = (Array.isArray(types) ? types : [])
+      .map(normalizeAssetCategory)
+      .filter(Boolean);
+    const category = categories[0] || null;
+    if (!category) return null;
+    const filters = categories.map(t => filterMap[t]).filter(Boolean);
+    const defaultDir = getAssetCategoryDir(category);
 
     const result = await dialog.showOpenDialog(getMainWindow(), {
       properties: ['openFile'],
@@ -492,22 +579,22 @@ ipcMain.handle('select-asset', async (event, { types }) => {
 
     // If file is already inside project assets/, return relative path
     const resolvedSelected = path.resolve(selectedPath);
-    if (resolvedSelected.startsWith(assetsBase + path.sep)) {
-      return resolvedSelected.slice(assetsBase.length + 1).replace(/\\/g, '/');
+    if (isInsidePath(resolvedSelected, assetsBase)) {
+      return getAssetRelativePath(resolvedSelected);
     }
 
     // File is outside project — copy it in with validation
-    if (!category) return null;
     const fileBuffer = await fs.readFile(selectedPath);
     const ext = path.extname(selectedPath);
-    const validation = validateAssetFormat(fileBuffer.subarray(0, 12), ext, category);
+    const validation = validateAssetFormat(fileBuffer.subarray(0, 32), ext, category);
     if (!validation.valid) return null;
 
-    const targetDir = path.join(currentProjectPath, 'assets', category);
+    const targetDir = getAssetCategoryDir(category);
+    if (!targetDir) return null;
     await fs.mkdir(targetDir, { recursive: true });
     const safeName = await uniqueFilename(targetDir, path.basename(selectedPath));
-    const destPath = path.join(targetDir, safeName);
-    if (!isInsideProject(destPath)) return null;
+    const destPath = getAssetFilePath(category, safeName);
+    if (!destPath) return null;
 
     await fs.copyFile(selectedPath, destPath);
     return `${category}/${safeName}`;
@@ -522,14 +609,15 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
-    const dir = path.join(currentProjectPath, 'assets', category);
-    if (!isInsideProject(dir)) return { success: false, error: 'Invalid path' };
+    const normalizedCategory = normalizeAssetCategory(category);
+    const dir = getAssetCategoryDir(normalizedCategory);
+    if (!dir) return { success: false, error: 'Invalid path' };
     await fs.mkdir(dir, { recursive: true });
 
     const imported = [];
     const errors = [];
 
-    for (const filePath of paths) {
+    for (const filePath of Array.isArray(paths) ? paths : []) {
       const name = path.basename(filePath);
       const ext = path.extname(name);
 
@@ -546,7 +634,7 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
         continue;
       }
 
-      const validation = validateAssetFormat(headerBytes, ext, category);
+      const validation = validateAssetFormat(headerBytes, ext, normalizedCategory);
       if (!validation.valid) {
         errors.push({ name, reason: validation.reason });
         continue; // D-02: skip invalid, continue with valid
@@ -554,9 +642,9 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
 
       // Auto-name if conflict (ASSET-04)
       const safeName = await uniqueFilename(dir, name);
-      const fullPath = path.join(dir, safeName);
+      const fullPath = getAssetFilePath(normalizedCategory, safeName);
 
-      if (!isInsideProject(fullPath)) {
+      if (!fullPath) {
         errors.push({ name, reason: 'Path security violation' });
         continue;
       }
@@ -565,7 +653,7 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
       const item = { original: name, saved: safeName };
 
       // Check transparency for character sprites
-      if (category === 'characters') {
+      if (normalizedCategory === 'characters') {
         const { hasAlpha } = checkImageAlpha(headerBytes, ext);
         if (!hasAlpha) item.noAlpha = true;
       }
@@ -573,7 +661,7 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
       imported.push(item);
     }
 
-    return { success: true, imported, errors, supportedFormats: getSupportedFormats(category) };
+    return { success: true, imported, errors, supportedFormats: getSupportedFormats(normalizedCategory) };
   } catch (e) {
     console.error('[import-assets] Failed:', e);
     return { success: false, error: e.message };
@@ -584,8 +672,8 @@ ipcMain.handle('delete-asset', async (event, { category, filename }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
-    const fullPath = path.join(currentProjectPath, 'assets', category, filename);
-    if (!isInsideProject(fullPath)) return { success: false, error: 'Invalid path' };
+    const fullPath = getAssetFilePath(category, filename);
+    if (!fullPath) return { success: false, error: 'Invalid path' };
 
     await fs.unlink(fullPath);
     return { success: true };
@@ -599,13 +687,9 @@ ipcMain.handle('rename-asset', async (event, { category, oldName, newName }) => 
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
-    const dir = path.join(currentProjectPath, 'assets', category);
-    const oldPath = path.join(dir, oldName);
-    const newPath = path.join(dir, newName);
-
-    if (!isInsideProject(oldPath) || !isInsideProject(newPath)) {
-      return { success: false, error: 'Invalid path' };
-    }
+    const oldPath = getAssetFilePath(category, oldName);
+    const newPath = getAssetFilePath(category, newName);
+    if (!oldPath || !newPath) return { success: false, error: 'Invalid path' };
     if (!existsSync(oldPath)) {
       return { success: false, error: 'File not found' };
     }
@@ -625,13 +709,8 @@ ipcMain.handle('save-processed-image', async (event, { category, filename, dataB
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
-    const safeName = path.basename(filename);
-    if (!safeName || safeName !== filename) {
-      return { success: false, error: 'Invalid filename' };
-    }
-
-    const fullPath = path.join(currentProjectPath, 'assets', category, safeName);
-    if (!isInsideProject(fullPath)) return { success: false, error: 'Invalid path' };
+    const fullPath = getAssetFilePath(category, filename);
+    if (!fullPath) return { success: false, error: 'Invalid path' };
 
     const buffer = Buffer.from(dataBase64, 'base64');
     const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -651,8 +730,8 @@ ipcMain.handle('list-assets', async (event, { category }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
-    const dir = path.join(currentProjectPath, 'assets', category);
-    if (!isInsideProject(dir)) return { success: false, error: 'Invalid path' };
+    const dir = getAssetCategoryDir(category);
+    if (!dir) return { success: false, error: 'Invalid path' };
 
     if (!existsSync(dir)) return { success: true, files: [] };
 
@@ -952,7 +1031,6 @@ ipcMain.handle('set-window-mode', (event, mode) => {
       break;
     case 'borderless': {
       w.setFullScreen(false);
-      const { screen } = require('electron');
       const bounds = screen.getPrimaryDisplay().bounds;
       w.setBounds(bounds);
       break;
@@ -984,7 +1062,9 @@ ipcMain.handle('dialog-open-directory', async () => {
       title: '选择保存位置'
     });
     if (result.canceled) return null;
-    return result.filePaths[0];
+    const selectedPath = result.filePaths[0];
+    rememberDialogDirectoryPath(selectedPath);
+    return selectedPath;
   } catch (err) {
     console.error('dialog-open-directory error:', err);
     return null;
@@ -1094,6 +1174,15 @@ ipcMain.handle('install-theme-package', async (event, payload) => {
 
 ipcMain.handle('export-game', async (event, options) => {
   try {
+    if (!hasDialogDirectoryGrant(options?.outputDir)) {
+      return { success: false, error: 'Invalid output directory' };
+    }
+    const safeOptions = {
+      ...options,
+      faviconPath: options?.faviconPath && hasDialogFileGrant(options.faviconPath)
+        ? options.faviconPath
+        : null,
+    };
     const sendProgress = (payload) => {
       const mw = getMainWindow();
       if (mw && !mw.isDestroyed()) {
@@ -1101,7 +1190,7 @@ ipcMain.handle('export-game', async (event, options) => {
       }
     };
     return await exportGame({
-      ...options,
+      ...safeOptions,
       projectPath: currentProjectPath,
     }, sendProgress);
   } catch (e) {
@@ -1112,6 +1201,15 @@ ipcMain.handle('export-game', async (event, options) => {
 
 ipcMain.handle('export-game-desktop', async (event, options) => {
   try {
+    if (!hasDialogDirectoryGrant(options?.outputDir)) {
+      return { success: false, error: 'Invalid output directory' };
+    }
+    const safeOptions = {
+      ...options,
+      iconPath: options?.iconPath && hasDialogFileGrant(options.iconPath)
+        ? options.iconPath
+        : null,
+    };
     const sendProgress = (payload) => {
       const mw = getMainWindow();
       if (mw && !mw.isDestroyed()) {
@@ -1119,7 +1217,7 @@ ipcMain.handle('export-game-desktop', async (event, options) => {
       }
     };
     return await exportDesktop({
-      ...options,
+      ...safeOptions,
       projectPath: currentProjectPath,
     }, sendProgress);
   } catch (e) {
@@ -1148,7 +1246,9 @@ ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
       filters: filters || [],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
-    return result.filePaths[0];
+    const selectedPath = result.filePaths[0];
+    rememberDialogFilePath(selectedPath);
+    return selectedPath;
   } catch (e) {
     console.error('[dialog-open-file] Failed:', e);
     return null;
@@ -1157,6 +1257,7 @@ ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
 
 ipcMain.handle('read-file-base64', async (event, filePath) => {
   try {
+    if (!hasDialogFileGrant(filePath)) return null;
     const data = await fs.readFile(filePath);
     return data.toString('base64');
   } catch (e) {
@@ -1198,7 +1299,8 @@ function createWindow() {
         });
         if (response === 2) return;
         if (response === 0) {
-          await win.webContents.executeJavaScript('window.__saveCurrentProject()');
+          const saved = await win.webContents.executeJavaScript('window.__saveCurrentProject()');
+          if (!saved) return;
         }
       }
     } catch { /* renderer already destroyed */ }

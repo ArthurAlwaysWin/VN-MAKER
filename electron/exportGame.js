@@ -26,11 +26,59 @@ const execAsync = promisify(exec);
  * @private
  */
 function _escapeHtml(str) {
-  return str
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+const EXPORT_ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices']);
+
+function isInsidePath(fullPath, basePath) {
+  const resolved = path.resolve(fullPath);
+  const baseResolved = path.resolve(basePath);
+  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
+}
+
+/**
+ * Sanitize user-provided names before using them as filenames.
+ * @param {string} name
+ * @param {string} fallback
+ * @returns {string}
+ */
+export function sanitizeFilename(name, fallback = 'game') {
+  return String(name ?? '')
+    .replace(/[<>:"|?*\\/]/g, '_')
+    .replace(/\.{2,}/g, '_')
+    .trim() || fallback;
+}
+
+/**
+ * Keep exported asset paths inside assets/<known-category>/filename.
+ * @param {string} relPath
+ * @returns {string|null}
+ */
+export function normalizeExportAssetPath(relPath) {
+  if (typeof relPath !== 'string') return null;
+  const raw = relPath.trim().replace(/\\/g, '/');
+  if (!raw || /^(?:https?:|data:|asset:|file:|blob:)/i.test(raw)) return null;
+  if (path.posix.isAbsolute(raw)) return null;
+
+  const normalized = path.posix.normalize(raw);
+  if (
+    !normalized
+    || normalized === '.'
+    || normalized === '..'
+    || normalized.startsWith('../')
+  ) {
+    return null;
+  }
+
+  const parts = normalized.split('/');
+  if (parts.length < 2 || parts.some(part => !part || part === '..')) return null;
+  if (!EXPORT_ASSET_ROOTS.has(parts[0])) return null;
+  return normalized;
 }
 
 /**
@@ -159,10 +207,22 @@ export async function exportGame(options, sendProgress) {
     ...assetDict.voices,
   ];
   for (const relPath of allPaths) {
-    const src = path.join(projectPath, 'assets', relPath);
-    const dst = path.join(outputDir, 'assets', relPath);
+    const safeRelPath = normalizeExportAssetPath(relPath);
+    if (!safeRelPath) {
+      warnings.push(`Invalid asset path skipped: ${relPath}`);
+      continue;
+    }
+
+    const assetRoot = path.join(projectPath, 'assets');
+    const outputAssetRoot = path.join(outputDir, 'assets');
+    const src = path.join(assetRoot, safeRelPath);
+    const dst = path.join(outputAssetRoot, safeRelPath);
+    if (!isInsidePath(src, assetRoot) || !isInsidePath(dst, outputAssetRoot)) {
+      warnings.push(`Invalid asset path skipped: ${relPath}`);
+      continue;
+    }
     if (!existsSync(src)) {
-      warnings.push(relPath);
+      warnings.push(safeRelPath);
       continue;
     }
     await fs.mkdir(path.dirname(dst), { recursive: true });
@@ -183,7 +243,7 @@ export async function exportGame(options, sendProgress) {
   sendProgress({ step: '打包 ZIP', percent: 83 });
   let zipPath = null;
   if (zip) {
-    zipPath = path.join(path.dirname(outputDir), `${gameTitle}.zip`);
+    zipPath = path.join(path.dirname(outputDir), `${sanitizeFilename(gameTitle)}.zip`);
     await createZip(outputDir, zipPath);
   }
 

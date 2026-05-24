@@ -1,12 +1,18 @@
 import { normalizeConditionPage } from './branchingContract.js';
 import {
+  collectEndingUnlockReferences,
+  isValidEndingId,
+  normalizeEndingId,
+  normalizeEndingRegistry,
+} from './endingRegistry.js';
+import {
   isKnownCameraEffect,
   isKnownCharacterAnimation,
   isKnownTransitionType,
 } from './cinematicContract.js';
 import { normalizeEffects } from './effectDsl.js';
 import { traceReachableScenes } from './sceneGraph.js';
-import { normalizeVariableRegistry } from './variableRegistry.js';
+import { isValidVariableId, normalizeVariableId, normalizeVariableRegistry } from './variableRegistry.js';
 
 export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
   ERROR: 'error',
@@ -16,6 +22,7 @@ export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
 const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'condition']);
 const VARIABLE_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub']);
 const UNLOCK_EFFECT_TYPES = new Set(['unlock:ending', 'unlock:cg']);
+const BOOL_CONDITION_OPERATORS = new Set(['==', '!=']);
 const DEFAULT_LONG_DIALOGUE_LIMIT = 120;
 
 function isPlainObject(value) {
@@ -153,6 +160,125 @@ function validateCharacterAssets(script, report, assetSet) {
   }
 }
 
+function isBooleanLike(value) {
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return value === 0 || value === 1;
+  if (typeof value === 'string') {
+    return ['false', 'true', '0', '1', 'yes', 'no', 'on', 'off'].includes(value.trim().toLowerCase());
+  }
+  return false;
+}
+
+function isNumberLike(value) {
+  if (typeof value === 'boolean') return false;
+  if (value === null || value === undefined || value === '') return false;
+  return Number.isFinite(Number(value));
+}
+
+function validateVariableRegistry(script, registry, report) {
+  const variables = script?.systems?.variables;
+  if (variables == null) {
+    return;
+  }
+
+  if (!isPlainObject(variables)) {
+    addError(report, 'invalid-variable-registry', 'systems.variables must be an object map.', ['systems', 'variables']);
+    return;
+  }
+
+  const seenNormalizedIds = new Map();
+  for (const [rawId, entry] of Object.entries(variables)) {
+    const normalizedId = normalizeVariableId(rawId);
+    const path = ['systems', 'variables', rawId];
+
+    if (!isValidVariableId(rawId)) {
+      addError(report, 'invalid-variable-id', `Variable id "${rawId}" must start with a letter or underscore and contain only letters, numbers, underscores, or hyphens.`, path, {
+        variableId: rawId,
+      });
+    }
+
+    if (normalizedId) {
+      const previousRawId = seenNormalizedIds.get(normalizedId);
+      if (previousRawId && previousRawId !== rawId) {
+        addError(report, 'duplicate-variable-id', `Variable id "${rawId}" duplicates "${previousRawId}" after normalization.`, path, {
+          variableId: normalizedId,
+          duplicateOf: previousRawId,
+        });
+      }
+      seenNormalizedIds.set(normalizedId, rawId);
+    }
+
+    if (!isPlainObject(entry)) {
+      addError(report, 'invalid-variable-entry', 'Variable registry entry must be an object.', path, {
+        variableId: rawId,
+      });
+      continue;
+    }
+
+    const normalizedEntry = normalizedId ? registry[normalizedId] : null;
+    if (normalizedEntry?.kind === 'affection') {
+      const characterId = normalizedEntry.characterId;
+      if (!characterId || !getCharacter(script, characterId)) {
+        addWarning(report, 'affection-character-missing', `Affection variable "${normalizedId}" must reference an existing character.`, [...path, 'characterId'], {
+          variableId: normalizedId,
+          characterId: characterId ?? null,
+        });
+      }
+    }
+  }
+}
+
+function validateEndingRegistry(script, endings, report, assetSet) {
+  const rawEndings = script?.systems?.endings;
+  if (rawEndings == null) {
+    return;
+  }
+
+  if (!isPlainObject(rawEndings)) {
+    addError(report, 'invalid-ending-registry', 'systems.endings must be an object map.', ['systems', 'endings']);
+    return;
+  }
+
+  const seenNormalizedIds = new Map();
+  for (const [rawId, entry] of Object.entries(rawEndings)) {
+    const normalizedId = normalizeEndingId(rawId);
+    const path = ['systems', 'endings', rawId];
+
+    if (!isValidEndingId(rawId)) {
+      addError(report, 'invalid-ending-id', `Ending id "${rawId}" must start with a letter or underscore and contain only letters, numbers, underscores, or hyphens.`, path, {
+        endingId: rawId,
+      });
+    }
+
+    if (normalizedId) {
+      const previousRawId = seenNormalizedIds.get(normalizedId);
+      if (previousRawId && previousRawId !== rawId) {
+        addError(report, 'duplicate-ending-id', `Ending id "${rawId}" duplicates "${previousRawId}" after normalization.`, path, {
+          endingId: normalizedId,
+          duplicateOf: previousRawId,
+        });
+      }
+      seenNormalizedIds.set(normalizedId, rawId);
+    }
+
+    if (!isPlainObject(entry)) {
+      addError(report, 'invalid-ending-entry', 'Ending registry entry must be an object.', path, {
+        endingId: rawId,
+      });
+      continue;
+    }
+
+    const normalizedEntry = normalizedId ? endings[normalizedId] : null;
+    if (!isNonEmptyString(normalizedEntry?.title)) {
+      addWarning(report, 'missing-ending-title', `Ending "${rawId}" should have a title.`, [...path, 'title'], {
+        endingId: normalizedId ?? rawId,
+      });
+    }
+
+    validateAssetReference(report, assetSet, normalizedEntry?.thumbnail, [...path, 'thumbnail'], 'ending-thumbnail');
+  }
+}
+
 function validateSceneTarget(report, sceneIds, target, path, code = 'missing-scene-target') {
   if (target == null || target === '') {
     return;
@@ -265,10 +391,37 @@ function validateEffects(container, context, report) {
   effects.forEach((effect, effectIndex) => {
     const effectPath = [...path, 'effects', effectIndex];
 
-    if (VARIABLE_EFFECT_TYPES.has(effect.type) && !registry[effect.id]) {
-      addWarning(report, 'unregistered-variable-effect', `Variable effect references unregistered variable "${effect.id}".`, [...effectPath, 'id'], {
-        variableId: effect.id,
-      });
+    if (VARIABLE_EFFECT_TYPES.has(effect.type)) {
+      if (!isValidVariableId(effect.id)) {
+        addError(report, 'invalid-variable-id', `Variable effect references invalid variable id "${effect.id}".`, [...effectPath, 'id'], {
+          variableId: effect.id,
+        });
+      }
+
+      const variableEntry = registry[effect.id];
+      if (!variableEntry) {
+        addWarning(report, 'unregistered-variable-effect', `Variable effect references unregistered variable "${effect.id}".`, [...effectPath, 'id'], {
+          variableId: effect.id,
+        });
+      } else if (variableEntry.type === 'bool' && effect.type !== 'var:set') {
+        addWarning(report, 'variable-type-mismatch', `Boolean variable "${effect.id}" cannot use numeric effect "${effect.type}".`, [...effectPath, 'type'], {
+          variableId: effect.id,
+          expectedType: 'bool',
+          actualEffectType: effect.type,
+        });
+      } else if (variableEntry.type === 'bool' && !isBooleanLike(effect.value)) {
+        addWarning(report, 'variable-type-mismatch', `Boolean variable "${effect.id}" should be set to a boolean-compatible value.`, [...effectPath, 'value'], {
+          variableId: effect.id,
+          expectedType: 'bool',
+          actualValue: effect.value,
+        });
+      } else if (variableEntry.type === 'number' && effect.type === 'var:set' && !isNumberLike(effect.value)) {
+        addWarning(report, 'variable-type-mismatch', `Number variable "${effect.id}" should be set to a numeric value.`, [...effectPath, 'value'], {
+          variableId: effect.id,
+          expectedType: 'number',
+          actualValue: effect.value,
+        });
+      }
     }
 
     if (effect.type === 'unlock:ending' && !endings[effect.id]) {
@@ -287,6 +440,22 @@ function validateEffects(container, context, report) {
       addError(report, 'unsupported-effect', `Unsupported effect type "${effect.type}".`, [...effectPath, 'type']);
     }
   });
+}
+
+function getRawConditionRows(page = {}) {
+  if (Array.isArray(page.conditions) && page.conditions.length > 0) {
+    return page.conditions;
+  }
+
+  if ('variable' in page || 'operator' in page || 'value' in page) {
+    return [{
+      variableId: page.variable,
+      operator: page.operator,
+      value: page.value,
+    }];
+  }
+
+  return [];
 }
 
 function validateNormalPage(page, context, report, options) {
@@ -346,6 +515,7 @@ function validateChoicePage(page, context, report, options) {
 function validateConditionPage(page, context, report, options) {
   const { registry, sceneIds, sceneId, pageIndex } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
+  const rawRows = getRawConditionRows(page);
   const normalized = normalizeConditionPage(page, { registry });
   validatePageMedia(page, context, report, options);
 
@@ -353,16 +523,52 @@ function validateConditionPage(page, context, report, options) {
     addWarning(report, 'empty-condition-page', 'Condition page has no condition rows.', [...pagePath, 'conditions']);
   }
 
+  if (normalized.conditions.length > 0 && !normalized.trueTarget && !normalized.falseTarget) {
+    addWarning(report, 'condition-missing-targets', 'Condition page has no true or false target; both branches will continue to the next page.', pagePath);
+  }
+
   normalized.conditions.forEach((condition, conditionIndex) => {
     const conditionPath = [...pagePath, 'conditions', conditionIndex];
+    const rawCondition = isPlainObject(rawRows[conditionIndex]) ? rawRows[conditionIndex] : {};
+    const rawOperator = rawCondition.operator ?? condition.operator;
+    const rawValue = rawCondition.value;
     if (!condition.variableId) {
       addError(report, 'missing-condition-variable', 'Condition row requires a variable id.', [...conditionPath, 'variableId']);
+      return;
+    }
+
+    if (!isValidVariableId(condition.variableId)) {
+      addError(report, 'invalid-variable-id', `Condition references invalid variable id "${condition.variableId}".`, [...conditionPath, 'variableId'], {
+        variableId: condition.variableId,
+      });
       return;
     }
 
     if (!registry[condition.variableId]) {
       addWarning(report, 'unregistered-condition-variable', `Condition references unregistered variable "${condition.variableId}".`, [...conditionPath, 'variableId'], {
         variableId: condition.variableId,
+      });
+      return;
+    }
+
+    const entry = registry[condition.variableId];
+    if (entry.type === 'bool' && !BOOL_CONDITION_OPERATORS.has(rawOperator)) {
+      addWarning(report, 'variable-type-mismatch', `Boolean condition "${condition.variableId}" only supports == or !=.`, [...conditionPath, 'operator'], {
+        variableId: condition.variableId,
+        expectedType: 'bool',
+        operator: rawOperator,
+      });
+    } else if (entry.type === 'bool' && !isBooleanLike(rawValue)) {
+      addWarning(report, 'variable-type-mismatch', `Boolean condition "${condition.variableId}" should compare against a boolean-compatible value.`, [...conditionPath, 'value'], {
+        variableId: condition.variableId,
+        expectedType: 'bool',
+        actualValue: rawValue,
+      });
+    } else if (entry.type === 'number' && !isNumberLike(rawValue)) {
+      addWarning(report, 'variable-type-mismatch', `Number condition "${condition.variableId}" should compare against a numeric value.`, [...conditionPath, 'value'], {
+        variableId: condition.variableId,
+        expectedType: 'number',
+        actualValue: rawValue,
       });
     }
   });
@@ -418,6 +624,53 @@ function validateSceneReachability(script, report, options) {
   for (const sceneId of graphReport.unreachableSceneIds) {
     addWarning(report, 'unreachable-scene', `Scene "${sceneId}" is not reachable from entry scene "${graphReport.entrySceneId}".`, ['scenes', sceneId], {
       sceneId,
+      entrySceneId: graphReport.entrySceneId,
+    });
+  }
+}
+
+function validateEndingProgression(script, endings, report, options) {
+  const endingIds = Object.keys(endings);
+  if (endingIds.length === 0) {
+    return;
+  }
+
+  const references = collectEndingUnlockReferences(script);
+  const referencesByEnding = new Map();
+  for (const reference of references) {
+    if (!referencesByEnding.has(reference.endingId)) {
+      referencesByEnding.set(reference.endingId, []);
+    }
+    referencesByEnding.get(reference.endingId).push(reference);
+  }
+
+  for (const endingId of endingIds) {
+    const ending = endings[endingId] ?? {};
+    if (!referencesByEnding.has(endingId)) {
+      addWarning(report, 'ending-never-unlocked', `Ending "${endingId}" is registered but never unlocked by a choice effect.`, ['systems', 'endings', endingId], {
+        endingId,
+      });
+    }
+
+    if (ending.hiddenUntilUnlocked && !ending.thumbnail) {
+      addWarning(report, 'missing-ending-thumbnail', `Hidden ending "${endingId}" should define a thumbnail for the ending list.`, ['systems', 'endings', endingId, 'thumbnail'], {
+        endingId,
+      });
+    }
+  }
+
+  if (options.checkReachability === false) {
+    return;
+  }
+
+  const graphReport = traceReachableScenes(script, { entrySceneId: options.entrySceneId });
+  const reachableSceneIds = new Set(graphReport.reachableSceneIds);
+  const hasReachableEndingUnlock = references.some((reference) => (
+    endings[reference.endingId] && reachableSceneIds.has(reference.sceneId)
+  ));
+
+  if (!hasReachableEndingUnlock) {
+    addWarning(report, 'no-reachable-ending', 'No registered ending unlock is reachable from the entry scene.', ['systems', 'endings'], {
       entrySceneId: graphReport.entrySceneId,
     });
   }
@@ -511,16 +764,23 @@ export function validateProject(script, options = {}) {
   validateCharacterAssets(script, report, config.assetSet);
 
   const registry = normalizeVariableRegistry(script?.systems?.variables);
+  const endings = normalizeEndingRegistry(script?.systems?.endings);
+  validateVariableRegistry(script, registry, report);
+  validateEndingRegistry(script, endings, report, config.assetSet);
   const context = {
     script,
     sceneIds: getSceneIds(script),
     registry,
-    endings: isPlainObject(script?.systems?.endings) ? script.systems.endings : {},
+    endings,
     cgs: isPlainObject(script?.systems?.gallery?.cg) ? script.systems.gallery.cg : {},
   };
 
   validateScenes(script, context, report, config);
   validateSceneReachability(script, report, {
+    checkReachability: options.checkReachability,
+    entrySceneId: options.entrySceneId,
+  });
+  validateEndingProgression(script, endings, report, {
     checkReachability: options.checkReachability,
     entrySceneId: options.entrySceneId,
   });

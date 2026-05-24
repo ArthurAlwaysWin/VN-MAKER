@@ -82,6 +82,8 @@ describe('variableRegistry contract', () => {
     expect(refs).toEqual([
       {
         variableId: 'affection',
+        kind: 'choice-effect',
+        pathString: 'scenes.start.pages.0.options.0.effects.0',
         sceneId: 'start',
         sceneName: '开始',
         pageIndex: 0,
@@ -92,6 +94,8 @@ describe('variableRegistry contract', () => {
       },
       {
         variableId: 'route_locked',
+        kind: 'condition',
+        pathString: 'scenes.start.pages.1.conditions.0',
         sceneId: 'start',
         sceneName: '开始',
         pageIndex: 1,

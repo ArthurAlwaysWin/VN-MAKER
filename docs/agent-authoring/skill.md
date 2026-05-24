@@ -17,7 +17,7 @@ Build editable visual novel drafts for human creators. The human creator remains
 5. Never create new `commands[]`.
 6. Use layout presets before custom coordinates.
 7. Register variables before effects or conditions reference them.
-8. When an existing project already has ending or CG registries, keep unlock effects aligned with those registries; do not invent new CG/ending registry workflows until official commands exist.
+8. Register endings with `add-ending` before writing `unlock:ending`; keep CG unlock effects aligned with any existing CG registry until CG commands are added.
 9. Validate after every meaningful change.
 10. Treat runtime preview as the visual source of truth when preview is available.
 11. Use `apply-plan` for multi-step edits so checkpoint, validation, and summary are atomic.
@@ -120,6 +120,8 @@ npm run vn -- set-page-camera --scene chapter_1 --page 0 --effect shake --direct
 npm run vn -- set-page-transition --scene chapter_1 --page 0 --type dissolve --duration 500 --script public/game/script.json --force --backup --json
 npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation breathe --script public/game/script.json --force --backup --json
 npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script public/game/script.json --force --backup --json
+npm run vn -- add-ending --id good_end --title "Good End" --category main --order 1 --script public/game/script.json --force --backup --json
+npm run vn -- add-ending-unlock --scene chapter_1 --page 1 --option 0 --id good_end --script public/game/script.json --force --backup --json
 npm run vn -- set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json
 ```
 
@@ -237,6 +239,8 @@ Common warnings:
 - `unregistered-variable-effect`
 - `unregistered-condition-variable`
 - `unregistered-ending-unlock`
+- `ending-never-unlocked`
+- `no-reachable-ending`
 - `unregistered-cg-unlock`
 - `long-dialogue-text`
 
@@ -246,4 +250,4 @@ Common warnings:
 - Layout lint is heuristic-only; runtime preview remains the visual source of truth.
 - Advanced agent-only effects should not be invented until a shared contract exists.
 - Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.
-- CG gallery and ending list authoring commands are not part of the current external-agent layer; do not build those flows unless the human explicitly requests that scope.
+- CG gallery authoring commands are not part of the current external-agent layer; do not build CG gallery flows unless the human explicitly requests that scope.

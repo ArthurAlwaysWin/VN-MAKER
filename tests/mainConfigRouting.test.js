@@ -41,6 +41,14 @@ function stubSaveManager() {
   };
 }
 
+function sourceSection(src, startNeedle, endNeedle) {
+  const start = src.indexOf(startNeedle);
+  const end = endNeedle ? src.indexOf(endNeedle, start) : src.length;
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+  return src.slice(start, end);
+}
+
 // ─── API Surface: setLayout ──────────────────────────────
 
 describe('Config routing — API surface exists', () => {
@@ -158,38 +166,37 @@ describe('Config routing — main.js source patterns', () => {
   // ── initPreview() patterns ──
 
   it('initPreview() has titleScreen.setLayout for preview', () => {
-    // The preview block has its own titleScreen.setLayout call
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
-    expect(previewSection).toContain('titleScreen.setLayout(engine.script.ui.titleScreen)');
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    expect(previewSection).toContain('titleScreen.setLayout(engine.script.ui?.titleScreen)');
   });
 
   it('initPreview() has settingsScreen.setLayout for preview', () => {
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
-    expect(previewSection).toContain('settingsScreen.setLayout(engine.script.ui.settingsScreen)');
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    expect(previewSection).toContain('settingsScreen.setLayout(engine.script.ui?.settingsScreen)');
   });
 
   it('initPreview() has settingsScreen.setWidgetStyles for preview', () => {
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
-    expect(previewSection).toContain('settingsScreen.setWidgetStyles(engine.script.ui.widgetStyles)');
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    expect(previewSection).toContain('settingsScreen.setWidgetStyles(engine.script.ui?.widgetStyles)');
   });
 
   it('initPreview() has saveLoadScreen.setLayout for preview', () => {
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
-    expect(previewSection).toContain('saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen)');
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    expect(previewSection).toContain('saveLoadScreen.setLayout(engine.script.ui?.saveLoadScreen)');
   });
 
   it('initPreview() has backlogScreen.setLayout for preview', () => {
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
-    expect(previewSection).toContain('backlogScreen.setLayout(engine.script.ui.backlogScreen)');
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    expect(previewSection).toContain('backlogScreen.setLayout(engine.script.ui?.backlogScreen)');
   });
 
   it('initPreview() has gameMenu.setLayout for preview', () => {
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
-    expect(previewSection).toContain('gameMenu.setLayout(engine.script.ui.gameMenu)');
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    expect(previewSection).toContain('gameMenu.setLayout(engine.script.ui?.gameMenu)');
   });
 
   it('initPreview() has dialogueBox.setNameplateStyle for preview', () => {
-    const previewSection = src.slice(src.indexOf('function initPreview()'));
+    const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
     expect(previewSection).toContain('dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle)');
   });
 
@@ -207,7 +214,7 @@ describe('Config routing — main.js source patterns', () => {
 
   it('init() does not duplicate titleScreen.setLayout', () => {
     // Extract only the init() function body
-    const initStart = src.indexOf('async function init()');
+    const initStart = src.indexOf('async function init');
     const initEnd = src.indexOf('function initPreview()');
     const initBody = src.slice(initStart, initEnd);
     const matches = initBody.match(/titleScreen\.setLayout/g) || [];
@@ -215,7 +222,7 @@ describe('Config routing — main.js source patterns', () => {
   });
 
   it('init() does not duplicate settingsScreen.setLayout', () => {
-    const initStart = src.indexOf('async function init()');
+    const initStart = src.indexOf('async function init');
     const initEnd = src.indexOf('function initPreview()');
     const initBody = src.slice(initStart, initEnd);
     const matches = initBody.match(/settingsScreen\.setLayout/g) || [];

@@ -7,6 +7,15 @@
       </div>
       <div v-if="sections.props" class="section-body">
         <div class="form-group">
+          <label>页面类型</label>
+          <select :value="page.type || 'normal'" class="field-input" @change="setPageType($event.target.value)">
+            <option value="normal">普通对白</option>
+            <option value="choice">选择菜单</option>
+            <option value="condition">条件分支</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label>背景</label>
           <div class="field-with-clear">
             <input type="text" :value="page.background ? page.background.replace('backgrounds/', '') : ''"
@@ -132,7 +141,7 @@
     </div>
 
     <!-- Section 2: Characters -->
-    <div class="inspector-section">
+    <div class="inspector-section" v-if="page.type !== 'condition'">
       <div class="section-toggle" @click="sections.chars = !sections.chars">
         {{ sections.chars ? '▼' : '▶' }} 🧑 角色列表 <HelpTip :text="HELP_SCRIPT.addCharacter" />
       </div>
@@ -204,7 +213,7 @@
     </div>
 
     <!-- Section 3: Dialogues (normal pages only) -->
-    <div class="inspector-section" v-if="!page || page.type !== 'choice'">
+    <div class="inspector-section" v-if="page && page.type === 'normal'">
       <div class="section-toggle" @click="sections.dialogues = !sections.dialogues">
         {{ sections.dialogues ? '▼' : '▶' }} 💬 对话列表
       </div>
@@ -326,17 +335,103 @@
                 </option>
               </select>
             </div>
-            <div class="form-group option-variable">
-              <label>设置变量</label>
-              <div class="variable-row">
-                <input type="text" :value="optionVarKey(opt)"
-                  @input="setOptionVarKey(idx, $event.target.value)"
-                  class="field-input var-key" placeholder="变量名" />
-                <span class="var-eq">=</span>
-                <input type="number" :value="optionVarValue(opt)"
-                  @input="setOptionVarValue(idx, $event.target.value)"
-                  class="field-input var-value" placeholder="值" />
+            <div class="form-group choice-effects">
+              <label>选项效果</label>
+              <div v-if="!variableOptions.length && !endingOptions.length" class="effect-empty">
+                请先在剧情系统中创建变量或结局
               </div>
+              <div
+                v-for="(effect, effectIdx) in (opt.effects || [])"
+                :key="`${idx}-${effectIdx}-${effect.type}-${effect.id}`"
+                class="effect-row"
+              >
+                <template v-if="isVariableEffect(effect)">
+                  <div class="effect-type-toggle" title="效果类型">
+                    <button
+                      type="button"
+                      :class="{ active: effect.type === 'var:add' }"
+                      title="增加"
+                      @click="setChoiceEffectType(idx, effectIdx, 'var:add')"
+                    >+</button>
+                    <button
+                      type="button"
+                      :class="{ active: effect.type === 'var:sub' }"
+                      title="减少"
+                      @click="setChoiceEffectType(idx, effectIdx, 'var:sub')"
+                    >-</button>
+                    <button
+                      type="button"
+                      :class="{ active: effect.type === 'var:set' }"
+                      title="设置"
+                      @click="setChoiceEffectType(idx, effectIdx, 'var:set')"
+                    >
+                      =
+                    </button>
+                  </div>
+                  <select
+                    class="field-input effect-variable"
+                    :value="effect.id"
+                    @change="setChoiceEffectVariable(idx, effectIdx, $event.target.value)"
+                  >
+                    <option
+                      v-for="variable in variableOptionsForEffect(effect.type)"
+                      :key="variable.id"
+                      :value="variable.id"
+                    >
+                      {{ variable.label }}
+                    </option>
+                  </select>
+                  <select
+                    v-if="effectValueType(effect) === 'bool'"
+                    class="field-input effect-value"
+                    :value="effect.value === true ? 'true' : 'false'"
+                    @change="setChoiceEffectValue(idx, effectIdx, $event.target.value === 'true')"
+                  >
+                    <option value="true">是</option>
+                    <option value="false">否</option>
+                  </select>
+                  <input
+                    v-else
+                    type="number"
+                    class="field-input effect-value"
+                    :min="effectNumberBounds(effect).min"
+                    :max="effectNumberBounds(effect).max"
+                    :step="effectNumberBounds(effect).step"
+                    :value="effect.value ?? 1"
+                    @change="setChoiceEffectValue(idx, effectIdx, Number($event.target.value || 0))"
+                  />
+                </template>
+                <template v-else-if="isEndingUnlockEffect(effect)">
+                  <code class="readonly-effect">结局</code>
+                  <select
+                    class="field-input effect-variable"
+                    :value="effect.id"
+                    @change="setEndingUnlockId(idx, effectIdx, $event.target.value)"
+                  >
+                    <option v-for="ending in endingOptions" :key="ending.id" :value="ending.id">
+                      {{ ending.label }}
+                    </option>
+                  </select>
+                  <span class="readonly-effect-id">解锁</span>
+                </template>
+                <template v-else>
+                  <code class="readonly-effect">{{ effect.type }}</code>
+                  <span class="readonly-effect-id">{{ effect.id }}</span>
+                </template>
+                <button class="delete-x" type="button" @click="removeChoiceEffectRow(idx, effectIdx)" title="删除效果">✕</button>
+              </div>
+              <button
+                class="secondary-add-btn"
+                type="button"
+                :disabled="!variableOptions.length"
+                @click="addChoiceEffectRow(idx)"
+              >+ 添加变量效果</button>
+              <button
+                class="secondary-add-btn"
+                type="button"
+                :disabled="!endingOptions.length"
+                @click="addEndingUnlockRow(idx)"
+              >+ 添加结局解锁</button>
             </div>
           </div>
         </div>
@@ -345,6 +440,96 @@
           暂无选项，点击下方按钮添加
         </div>
         <button class="add-btn" @click="addOption" title="添加新选项">+ 添加选项</button>
+      </div>
+    </div>
+
+    <!-- Section 3c: Conditions (condition pages only) -->
+    <div class="inspector-section" v-if="page && page.type === 'condition'">
+      <div class="section-toggle" @click="sections.conditions = !sections.conditions">
+        {{ sections.conditions ? '▼' : '▶' }} 条件分支 <HelpTip :text="HELP_SCRIPT.choicePage" />
+      </div>
+      <div v-if="sections.conditions" class="section-body">
+        <div class="form-group">
+          <label>匹配方式</label>
+          <div class="condition-mode-toggle">
+            <button type="button" :class="{ active: page.conditionMode !== 'any' }" @click="setConditionMode('all')">全部</button>
+            <button type="button" :class="{ active: page.conditionMode === 'any' }" @click="setConditionMode('any')">任一</button>
+          </div>
+        </div>
+
+        <div class="condition-rows">
+          <div
+            v-for="(condition, rowIndex) in (page.conditions || [])"
+            :key="`${rowIndex}-${condition.variableId}`"
+            class="condition-row"
+          >
+            <select
+              class="field-input condition-variable"
+              :value="condition.variableId || ''"
+              @change="setConditionVariable(rowIndex, $event.target.value)"
+            >
+              <option value="">选择变量</option>
+              <option v-for="variable in variableOptions" :key="variable.id" :value="variable.id">
+                {{ variable.label }}
+              </option>
+            </select>
+            <select
+              class="field-input condition-operator"
+              :value="condition.operator"
+              @change="updateConditionRow(rowIndex, { operator: $event.target.value })"
+            >
+              <option v-for="operator in conditionOperators(condition)" :key="operator" :value="operator">
+                {{ operator }}
+              </option>
+            </select>
+            <select
+              v-if="conditionValueType(condition) === 'bool'"
+              class="field-input condition-value"
+              :value="condition.value === true ? 'true' : 'false'"
+              @change="updateConditionRow(rowIndex, { value: $event.target.value === 'true' })"
+            >
+              <option value="true">是</option>
+              <option value="false">否</option>
+            </select>
+            <input
+              v-else
+              type="number"
+              class="field-input condition-value"
+              :min="conditionNumberBounds(condition).min"
+              :max="conditionNumberBounds(condition).max"
+              :step="conditionNumberBounds(condition).step"
+              :value="condition.value ?? 0"
+              @change="updateConditionRow(rowIndex, { value: Number($event.target.value || 0) })"
+            />
+            <button class="delete-x" type="button" @click="removeConditionRow(rowIndex)" title="删除条件">✕</button>
+          </div>
+        </div>
+
+        <button
+          class="secondary-add-btn"
+          type="button"
+          :disabled="!variableOptions.length || (page.conditions || []).length >= 3"
+          @click="addConditionRow"
+        >+ 添加条件</button>
+
+        <div class="target-grid">
+          <label class="form-group">
+            <span>满足时跳转</span>
+            <select class="field-input" :value="page.trueTarget || ''" @change="setConditionTarget('trueTarget', $event.target.value)">
+              <option value="">继续下一页</option>
+              <option v-for="[sId, s] in allScenes" :key="sId" :value="sId">{{ s.name }}</option>
+            </select>
+          </label>
+          <label class="form-group">
+            <span>不满足时跳转</span>
+            <select class="field-input" :value="page.falseTarget || ''" @change="setConditionTarget('falseTarget', $event.target.value)">
+              <option value="">继续下一页</option>
+              <option v-for="[sId, s] in allScenes" :key="sId" :value="sId">{{ s.name }}</option>
+            </select>
+          </label>
+        </div>
+
+        <p class="condition-summary">{{ conditionSummary }}</p>
       </div>
     </div>
 
@@ -500,9 +685,10 @@ import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
 import {
-  getLegacySetVariableCompat,
-  setLegacySetVariableCompat,
-} from '../../../shared/effectDsl.js';
+  CONDITION_OPERATORS,
+  formatConditionSummary,
+  normalizeConditionPage,
+} from '../../../shared/branchingContract.js';
 import {
   CAMERA_INTENSITY_UI_OPTIONS,
   getCameraDirectionUiOptions,
@@ -515,7 +701,7 @@ const editor = usePageEditor();
 const script = useScriptStore();
 const assets = useAssetStore();
 
-const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, fonts: false });
+const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, conditions: true, fonts: false });
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
 const showSpeakerDropdown = ref(false);
@@ -527,6 +713,24 @@ const page = computed(() => editor.currentPage.value);
 const selectedDialogue = computed(() => editor.currentDialogue.value);
 const characterEntries = computed(() => Object.entries(script.data?.characters || {}));
 const allScenes = computed(() => Object.entries(script.data?.scenes || {}));
+const variableOptions = computed(() => Object.entries(script.data?.systems?.variables || {}).map(([id, variable]) => ({
+  id,
+  label: variable.label || variable.name || id,
+  type: variable.type || 'number',
+  min: variable.min,
+  max: variable.max,
+  step: variable.step,
+})));
+const endingOptions = computed(() => Object.entries(script.data?.systems?.endings || {}).map(([id, ending]) => ({
+  id,
+  label: ending.title || ending.name || id,
+  order: Number(ending.order ?? 0),
+})).sort((left, right) => {
+  const orderDelta = left.order - right.order;
+  if (orderDelta !== 0) return orderDelta;
+  return left.label.localeCompare(right.label);
+}));
+const numberVariableOptions = computed(() => variableOptions.value.filter((variable) => variable.type !== 'bool'));
 const characterAnimationOptions = computed(() => {
   const idx = editor.selectedCharIndex.value;
   const currentAnimation = idx >= 0 ? page.value?.characters?.[idx]?.animation : undefined;
@@ -561,6 +765,18 @@ const speakerDisplay = computed(() => {
   if (!dlg?.speaker) return '';
   const char = script.data?.characters?.[dlg.speaker];
   return char ? char.name : dlg.speaker;
+});
+
+const conditionSummary = computed(() => {
+  if (!page.value || page.value.type !== 'condition') {
+    return '';
+  }
+
+  const sceneLabels = Object.fromEntries(allScenes.value.map(([sceneId, scene]) => [sceneId, scene.name || sceneId]));
+  return formatConditionSummary(page.value, {
+    registry: script.data?.systems?.variables ?? {},
+    sceneLabels,
+  });
 });
 
 // ─── Per-page font override ──────────────────────────────
@@ -624,6 +840,11 @@ function clearBackground() {
   if (!page.value) return;
   page.value.background = '';
   script.pushState();
+}
+
+function setPageType(type) {
+  if (!editor.selectedSceneId.value || !Number.isInteger(editor.selectedPageIndex.value)) return;
+  script.setPageType(editor.selectedSceneId.value, editor.selectedPageIndex.value, type);
 }
 
 function clearBgm() {
@@ -1007,49 +1228,210 @@ function setOptionTarget(idx, target) {
   script.pushState();
 }
 
-function optionVarKey(opt) {
-  const compat = getLegacySetVariableCompat(opt);
-  if (!compat) return '';
-  const keys = Object.keys(compat);
-  return keys.length > 0 ? keys[0] : '';
+function isVariableEffect(effect) {
+  return effect?.type === 'var:set' || effect?.type === 'var:add' || effect?.type === 'var:sub';
 }
 
-function optionVarValue(opt) {
-  const compat = getLegacySetVariableCompat(opt);
-  if (!compat) return '';
-  const keys = Object.keys(compat);
-  return keys.length > 0 ? compat[keys[0]] : '';
+function isEndingUnlockEffect(effect) {
+  return effect?.type === 'unlock:ending';
 }
 
-function replaceOptionEffects(opt, variableId, value) {
-  const normalized = setLegacySetVariableCompat(opt, variableId, value);
+function variableEntry(variableId) {
+  return script.data?.systems?.variables?.[variableId] ?? null;
+}
 
-  for (const key of Object.keys(opt)) {
-    if (!(key in normalized)) {
-      delete opt[key];
-    }
+function variableOptionsForEffect(effectType) {
+  if (effectType === 'var:add' || effectType === 'var:sub') {
+    return numberVariableOptions.value.length ? numberVariableOptions.value : variableOptions.value;
   }
-
-  Object.assign(opt, normalized);
+  return variableOptions.value;
 }
 
-function setOptionVarKey(idx, newKey) {
-  if (!page.value?.options?.[idx]) return;
-  const opt = page.value.options[idx];
-  const compat = getLegacySetVariableCompat(opt);
-  const oldValue = compat ? Object.values(compat)[0] ?? 0 : 0;
-  replaceOptionEffects(opt, newKey.trim(), oldValue);
-  // Continuous typing — do NOT call pushState
+function defaultVariableIdForEffect(effectType) {
+  return variableOptionsForEffect(effectType)[0]?.id ?? '';
 }
 
-function setOptionVarValue(idx, newVal) {
-  if (!page.value?.options?.[idx]) return;
-  const opt = page.value.options[idx];
-  const oldKey = optionVarKey(opt);
-  if (oldKey) {
-    replaceOptionEffects(opt, oldKey, parseFloat(newVal) || 0);
-    script.pushState();
+function effectValueType(effect) {
+  return variableEntry(effect?.id)?.type === 'bool' && effect?.type === 'var:set' ? 'bool' : 'number';
+}
+
+function effectNumberBounds(effect) {
+  const entry = variableEntry(effect?.id) ?? {};
+  return {
+    min: entry.min ?? undefined,
+    max: entry.max ?? undefined,
+    step: entry.step ?? 1,
+  };
+}
+
+function normalizeEffectValue(effectType, variableId, value) {
+  const entry = variableEntry(variableId);
+  if (effectType === 'var:set' && entry?.type === 'bool') {
+    return value === true;
   }
+  return Number(value ?? (effectType === 'var:set' ? 0 : 1)) || 0;
+}
+
+function ensureOptionEffects(option) {
+  option.effects ??= [];
+  return option.effects;
+}
+
+function addChoiceEffectRow(optionIndex) {
+  const option = page.value?.options?.[optionIndex];
+  if (!option || !variableOptions.value.length) return;
+  const type = 'var:add';
+  const id = defaultVariableIdForEffect(type);
+  if (!id) return;
+  ensureOptionEffects(option).push({ type, id, value: 1 });
+  script.pushState();
+}
+
+function addEndingUnlockRow(optionIndex) {
+  const option = page.value?.options?.[optionIndex];
+  const endingId = endingOptions.value[0]?.id;
+  if (!option || !endingId) return;
+  ensureOptionEffects(option).push({ type: 'unlock:ending', id: endingId });
+  script.pushState();
+}
+
+function removeChoiceEffectRow(optionIndex, effectIndex) {
+  const option = page.value?.options?.[optionIndex];
+  if (!option?.effects?.[effectIndex]) return;
+  option.effects.splice(effectIndex, 1);
+  if (option.effects.length === 0) {
+    delete option.effects;
+  }
+  script.pushState();
+}
+
+function setEndingUnlockId(optionIndex, effectIndex, endingId) {
+  const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isEndingUnlockEffect(effect)) return;
+  effect.id = endingId;
+  script.pushState();
+}
+
+function patchChoiceEffect(optionIndex, effectIndex, patch) {
+  const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isVariableEffect(effect)) return;
+  Object.assign(effect, patch);
+  effect.value = normalizeEffectValue(effect.type, effect.id, effect.value);
+  script.pushState();
+}
+
+function setChoiceEffectType(optionIndex, effectIndex, type) {
+  const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isVariableEffect(effect)) return;
+  let id = effect.id;
+  if (!variableOptionsForEffect(type).some((variable) => variable.id === id)) {
+    id = defaultVariableIdForEffect(type);
+  }
+  patchChoiceEffect(optionIndex, effectIndex, {
+    type,
+    id,
+    value: normalizeEffectValue(type, id, effect.value),
+  });
+}
+
+function setChoiceEffectVariable(optionIndex, effectIndex, variableId) {
+  const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isVariableEffect(effect)) return;
+  patchChoiceEffect(optionIndex, effectIndex, {
+    id: variableId,
+    value: normalizeEffectValue(effect.type, variableId, effect.value),
+  });
+}
+
+function setChoiceEffectValue(optionIndex, effectIndex, value) {
+  const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isVariableEffect(effect)) return;
+  patchChoiceEffect(optionIndex, effectIndex, {
+    value: normalizeEffectValue(effect.type, effect.id, value),
+  });
+}
+
+function conditionValueType(condition) {
+  return variableEntry(condition?.variableId)?.type === 'bool' ? 'bool' : 'number';
+}
+
+function conditionOperators(condition) {
+  return conditionValueType(condition) === 'bool' ? ['==', '!='] : CONDITION_OPERATORS;
+}
+
+function conditionNumberBounds(condition) {
+  const entry = variableEntry(condition?.variableId) ?? {};
+  return {
+    min: entry.min ?? undefined,
+    max: entry.max ?? undefined,
+    step: entry.step ?? 1,
+  };
+}
+
+function commitConditionPage(nextPage) {
+  const normalized = normalizeConditionPage(nextPage, {
+    registry: script.data?.systems?.variables ?? {},
+  });
+  page.value.conditionMode = normalized.conditionMode;
+  page.value.conditions = normalized.conditions;
+  page.value.trueTarget = normalized.trueTarget;
+  page.value.falseTarget = normalized.falseTarget;
+  delete page.value.variable;
+  delete page.value.operator;
+  delete page.value.value;
+  delete page.value.target;
+  delete page.value.unresolvedCondition;
+  script.pushState();
+}
+
+function setConditionMode(mode) {
+  if (!page.value || page.value.type !== 'condition') return;
+  commitConditionPage({ ...page.value, conditionMode: mode });
+}
+
+function addConditionRow() {
+  if (!page.value || page.value.type !== 'condition' || !variableOptions.value.length) return;
+  const conditions = [...(page.value.conditions ?? [])];
+  if (conditions.length >= 3) return;
+  const variable = variableOptions.value[0];
+  conditions.push({
+    variableId: variable.id,
+    operator: variable.type === 'bool' ? '==' : '>=',
+    value: variable.type === 'bool' ? true : 0,
+  });
+  commitConditionPage({ ...page.value, conditions });
+}
+
+function removeConditionRow(rowIndex) {
+  if (!page.value?.conditions?.[rowIndex]) return;
+  const conditions = [...page.value.conditions];
+  conditions.splice(rowIndex, 1);
+  commitConditionPage({ ...page.value, conditions });
+}
+
+function updateConditionRow(rowIndex, patch) {
+  if (!page.value?.conditions?.[rowIndex]) return;
+  const conditions = page.value.conditions.map((condition, index) => (
+    index === rowIndex ? { ...condition, ...patch } : condition
+  ));
+  commitConditionPage({ ...page.value, conditions });
+}
+
+function setConditionVariable(rowIndex, variableId) {
+  const entry = variableEntry(variableId);
+  updateConditionRow(rowIndex, {
+    variableId,
+    operator: entry?.type === 'bool' ? '==' : '>=',
+    value: entry?.type === 'bool' ? true : 0,
+  });
+}
+
+function setConditionTarget(field, target) {
+  if (!page.value || page.value.type !== 'condition') return;
+  commitConditionPage({
+    ...page.value,
+    [field]: target || null,
+  });
 }
 
 // Option drag reorder
@@ -1450,6 +1832,118 @@ function onOptDragEnd() {
   font-size: 14px;
   cursor: grab;
   flex: 1;
+}
+
+.choice-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.effect-row,
+.condition-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(72px, 92px) 24px;
+  gap: 6px;
+  align-items: center;
+}
+
+.condition-row {
+  grid-template-columns: minmax(0, 1fr) 64px minmax(72px, 92px) 24px;
+}
+
+.effect-type-toggle,
+.condition-mode-toggle {
+  display: inline-flex;
+  border: 1px solid #555;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #333;
+}
+
+.effect-type-toggle button,
+.condition-mode-toggle button {
+  min-width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #555;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.condition-mode-toggle button {
+  min-width: 56px;
+}
+
+.effect-type-toggle button:last-child,
+.condition-mode-toggle button:last-child {
+  border-right: none;
+}
+
+.effect-type-toggle button.active,
+.condition-mode-toggle button.active {
+  background: #094771;
+  color: #fff;
+}
+
+.effect-variable,
+.condition-variable {
+  min-width: 0;
+}
+
+.effect-value,
+.condition-value {
+  min-width: 0;
+}
+
+.effect-empty,
+.condition-summary {
+  color: #777;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.secondary-add-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px dashed #555;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.secondary-add-btn:hover:not(:disabled) {
+  border-color: #007acc;
+  color: #fff;
+}
+
+.secondary-add-btn:disabled {
+  color: #666;
+  cursor: not-allowed;
+}
+
+.readonly-effect,
+.readonly-effect-id {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.target-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.condition-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .option-variable .variable-row {

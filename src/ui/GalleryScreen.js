@@ -81,15 +81,45 @@ export class GalleryScreen {
     return card;
   }
 
-  _showFocus(entry) {
+  _showFocus(entry, imageIndex = 0) {
     const focus = this.el.querySelector('.gallery-focus');
     focus.innerHTML = '';
-    const imagePath = entry.images?.[0] ?? entry.thumbnail;
+    const images = Array.isArray(entry.images) && entry.images.length > 0
+      ? entry.images
+      : [entry.thumbnail].filter(Boolean);
+    const safeIndex = Math.min(
+      Math.max(Number(imageIndex) || 0, 0),
+      Math.max(images.length - 1, 0),
+    );
+    const imagePath = images[safeIndex] ?? entry.thumbnail;
+    focus.classList.toggle('has-navigation', images.length > 1);
     focus.appendChild(this._createImage(imagePath, entry.title || entry.id, 'gallery-focus-image'));
     const title = document.createElement('p');
     title.className = 'gallery-focus-title';
     title.textContent = entry.title || entry.id;
     focus.appendChild(title);
+
+    if (images.length > 1) {
+      const controls = document.createElement('div');
+      controls.className = 'gallery-focus-controls';
+      const previous = document.createElement('button');
+      previous.className = 'gallery-nav gallery-nav-prev';
+      previous.type = 'button';
+      previous.textContent = '上一张';
+      previous.disabled = safeIndex === 0;
+      previous.addEventListener('click', () => this._showFocus(entry, safeIndex - 1));
+      const position = document.createElement('span');
+      position.className = 'gallery-position';
+      position.textContent = `${safeIndex + 1} / ${images.length}`;
+      const next = document.createElement('button');
+      next.className = 'gallery-nav gallery-nav-next';
+      next.type = 'button';
+      next.textContent = '下一张';
+      next.disabled = safeIndex === images.length - 1;
+      next.addEventListener('click', () => this._showFocus(entry, safeIndex + 1));
+      controls.append(previous, position, next);
+      focus.appendChild(controls);
+    }
   }
 
   _createImage(path, alt, className = 'gallery-card-image') {

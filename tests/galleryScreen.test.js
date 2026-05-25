@@ -39,6 +39,28 @@ describe('runtime CG gallery', () => {
     expect(screen.el.querySelector('.gallery-focus-title').textContent).toBe('Confession');
   });
 
+  it('navigates all images of an unlocked multi-image CG', () => {
+    const screen = new GalleryScreen(document.getElementById('game'));
+    screen.show({
+      confession: {
+        title: 'Confession',
+        images: ['backgrounds/cg/first.png', 'backgrounds/cg/second.png'],
+      },
+    }, {
+      confession: { count: 1 },
+    });
+
+    screen.el.querySelector('.gallery-card').click();
+    expect(screen.el.querySelector('.gallery-focus-image img').getAttribute('src')).toContain('first.png');
+    expect(screen.el.querySelector('.gallery-position').textContent).toBe('1 / 2');
+    expect(screen.el.querySelector('.gallery-nav-prev').disabled).toBe(true);
+
+    screen.el.querySelector('.gallery-nav-next').click();
+    expect(screen.el.querySelector('.gallery-focus-image img').getAttribute('src')).toContain('second.png');
+    expect(screen.el.querySelector('.gallery-position').textContent).toBe('2 / 2');
+    expect(screen.el.querySelector('.gallery-nav-next').disabled).toBe(true);
+  });
+
   it('exposes a gallery action from default and structured title buttons', () => {
     const screen = new TitleScreen(document.getElementById('game'), 'Story');
     screen.onGallery = vi.fn();

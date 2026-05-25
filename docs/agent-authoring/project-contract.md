@@ -114,7 +114,7 @@ Ending ids use the same stable id shape as variables. Register endings before wr
 }
 ```
 
-CG ids use the stable registry id shape. Register a CG with `add-cg` before writing `unlock:cg` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.cg`. For legacy data, a single `image` field normalizes to the first canonical `images` item and the default thumbnail. A title button with action `"gallery"` opens the runtime gallery; missing artwork shows a fallback rather than breaking playback.
+CG ids use the stable registry id shape. Register a CG with `add-cg` before writing `unlock:cg` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.cg`, and Story Systems can read and refresh it for debugging without writing author data. For legacy data, a single `image` field normalizes to the first canonical `images` item and the default thumbnail. A title button with action `"gallery"` opens the runtime gallery; unlocked multi-image entries can be browsed there, and missing artwork shows a fallback rather than breaking playback.
 
 ## Scenes
 

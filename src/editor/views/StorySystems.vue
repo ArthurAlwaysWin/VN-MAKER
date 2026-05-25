@@ -53,6 +53,7 @@
         :items="allCgs"
         :selected-id="script.selectedCgId"
         :is-empty="allCgs.length === 0"
+        :profile-status="project.playerProfileStatus"
         @create="onCreateCg"
         @select="script.selectCg"
       />
@@ -104,9 +105,13 @@
         :cg-id="selectedCg.id"
         :cg-entry="selectedCgEntry"
         :unlock-count="selectedCg.unlockCount"
+        :unlock-record="selectedCg.unlockRecord"
+        :profile-status="project.playerProfileStatus"
+        :profile-error="project.playerProfileError"
         :focus-token="cgInspectorFocusToken"
         @request-delete="openCgDeleteImpact"
         @request-rename="openCgRenameImpact"
+        @refresh-profile="refreshPlayerProfile"
       />
 
       <div v-else class="detail-card detail-placeholder">
@@ -235,6 +240,8 @@ const cgUsageCounts = computed(() => {
   return counts;
 });
 
+const cgUnlockRecords = computed(() => project.playerProfile?.unlocks?.cg ?? {});
+
 const allCgs = computed(() => {
   const cgs = script.data?.systems?.gallery?.cg ?? {};
   return Object.entries(cgs).map(([id, entry]) => ({
@@ -243,6 +250,7 @@ const allCgs = computed(() => {
     order: Number(entry.order ?? 0),
     imageCount: (entry.images || []).length,
     unlockCount: cgUsageCounts.value.get(id) ?? 0,
+    unlockRecord: cgUnlockRecords.value[id] ?? null,
   })).sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
 });
 

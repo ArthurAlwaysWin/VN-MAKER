@@ -612,4 +612,51 @@ describe('variable registry workspace', () => {
       images: ['backgrounds/cg/original.png', 'backgrounds/cg/extra.png'],
     });
   });
+
+  it('shows actual CG unlock progress separately from configured unlock points', async () => {
+    harness = await mountStorySystems(makeScriptData({
+      systems: {
+        variables: {},
+        gallery: {
+          cg: {
+            confession: { title: 'Confession', images: ['backgrounds/cg/confession.png'], order: 1 },
+            memory: { title: 'Memory', images: ['backgrounds/cg/memory.png'], order: 2 },
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [{
+              text: 'Remember',
+              effects: [{ type: 'unlock:cg', id: 'confession' }],
+            }],
+          }],
+        },
+      },
+    }), {
+      projectId: 'gm_workspace',
+      unlocks: {
+        endings: {},
+        cg: {
+          confession: {
+            count: 3,
+            firstUnlockedAt: 1000,
+            lastUnlockedAt: 3000,
+          },
+        },
+      },
+    });
+
+    harness.script.selectStorySystemsPanel('cgs');
+    harness.script.selectCg('confession');
+    await flushUi();
+
+    expect(harness.container.textContent).toContain('1 解锁点');
+    expect(harness.container.textContent).toContain('已解锁 3 次');
+    expect(harness.container.textContent).toContain('未解锁');
+    expect(harness.container.querySelector('[data-test="cg-profile-status"]').textContent).toContain('玩家进度调试');
+    expect(harness.container.querySelector('[data-test="cg-profile-status"]').textContent).toContain('3 次解锁');
+  });
 });

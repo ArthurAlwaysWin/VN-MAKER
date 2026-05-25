@@ -25,10 +25,10 @@ Open **Story Systems**:
 
 1. In **Variables**, confirm `sakura_affection` is marked as an affection variable for Sakura.
 2. In **Endings**, confirm `good_end` and `quiet_end` have their intended titles, thumbnails, and locked visibility.
-3. In **CG Gallery**, confirm `cg_confession` has an image, thumbnail, and locked thumbnail.
+3. In **CG Gallery**, confirm `cg_confession` has an image, thumbnail, locked thumbnail, and a read-only player progress status.
 4. In **Flow**, open the branch graph target and confirm both ending routes are reachable and no dead-end badge appears.
 
-The player-profile ending progress panel is runtime data. It can confirm playtest unlocks, but it must not be edited as authored route content.
+The player-profile ending and CG progress panels are runtime data. They can confirm playtest unlocks, but they must not be edited as authored route content.
 
 ## 3. Review Pages
 
@@ -48,8 +48,8 @@ Run each route once:
 
 1. Choose the honest response, reach `good_ending`, return to title, and open Gallery/Ending review surfaces.
 2. Start again, choose the quiet response, and reach `quiet_ending`.
-3. Confirm the CG unlock remains available after returning to title.
-4. Confirm ending progress records each ending independently in the player profile panel.
+3. Confirm the CG unlock remains available after returning to title and browse each registered unlocked image.
+4. Confirm ending and CG progress records are shown independently in their player profile panels.
 
 Reloading a save on a terminal page should not add another arrival unlock count merely because the page is redrawn.
 

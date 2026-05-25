@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
+import { createGraphAnalysis, findAssetIssues, findDeadEnds } from '../../src/authoring/branchAnalysis.js';
 import { createExportReadiness } from '../../src/authoring/exportReadiness.js';
 import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
 import { createCharacterBlocking, LAYOUT_PRESETS } from '../../src/authoring/layoutPresets.js';
@@ -676,7 +677,19 @@ function galleryTargetsFromChangedPaths(changedPaths = []) {
     : [];
 }
 
-function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, transactionGalleryTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
+function branchGraphTargetsFromChangedPaths(changedPaths = []) {
+  const hasSceneChange = changedPaths.some((changedPath) => String(changedPath).startsWith('scenes.'));
+  return hasSceneChange
+    ? [{
+      type: 'branch-graph',
+      kind: 'branch-graph',
+      pathString: 'analysis.sceneGraph',
+      reason: 'changed-scene-flow',
+    }]
+    : [];
+}
+
+function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, transactionGalleryTargets, transactionBranchGraphTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
   if (explicitSceneId || explicitPageIndex != null) {
     return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
@@ -687,7 +700,7 @@ function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction,
       : checkedSceneIds
         .filter((sceneId) => script.scenes?.[sceneId]?.pages?.[0])
         .map((sceneId) => ({ type: 'scene', sceneId, pageIndex: 0 }));
-    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets, ...transactionGalleryTargets];
+    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets, ...transactionGalleryTargets, ...transactionBranchGraphTargets];
     return targets.length ? targets : [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
 
@@ -702,6 +715,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
   const transactionScreenTargets = screenTargetsFromChangedPaths(changedPaths);
   const transactionEndingTargets = endingTargetsFromChangedPaths(changedPaths);
   const transactionGalleryTargets = galleryTargetsFromChangedPaths(changedPaths);
+  const transactionBranchGraphTargets = branchGraphTargetsFromChangedPaths(changedPaths);
   const explicitSceneId = getArgValue(args, '--scene', null);
   const explicitPageIndex = getIntArg(args, '--page', null);
   const defaultSceneId = explicitSceneId ?? transactionPageTargets[0]?.sceneId ?? transactionSceneIds[0] ?? 'start';
@@ -719,6 +733,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     transactionScreenTargets,
     transactionEndingTargets,
     transactionGalleryTargets,
+    transactionBranchGraphTargets,
     checkedSceneIds,
     defaultSceneId,
     defaultPageIndex,
@@ -734,6 +749,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     screenTargets: transaction?.data ? transactionScreenTargets : [],
     endingTargets: transaction?.data ? transactionEndingTargets : [],
     galleryTargets: transaction?.data ? transactionGalleryTargets : [],
+    branchGraphTargets: transaction?.data ? transactionBranchGraphTargets : [],
     previewTargets,
     previewTarget: previewTargets[0] ?? {
       sceneId: defaultSceneId,
@@ -861,6 +877,7 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'delete-scene',
   'set-scene-next',
   'retarget-scene',
+  'repair-scene-target',
   'clear-scene-references',
   'add-character',
   'add-variable',
@@ -1117,6 +1134,13 @@ function applyPlanOperation(session, operation = {}, index = 0) {
   }
 
   if (command === 'retarget-scene') {
+    return session.retargetSceneReferences({
+      fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
+      toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
+    });
+  }
+
+  if (command === 'repair-scene-target') {
     return session.retargetSceneReferences({
       fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
       toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
@@ -1757,6 +1781,26 @@ function collectGalleryPreviewIssues(galleryTargets = []) {
   }));
 }
 
+function collectBranchGraphPreviewIssues(branchGraphTargets = []) {
+  return branchGraphTargets.map((target) => ({
+    source: 'preview',
+    severity: 'warning',
+    category: 'branch-graph-preview',
+    code: 'branch-graph-preview-required',
+    pathString: target.pathString ?? 'analysis.sceneGraph',
+    message: 'Scene flow changed and needs review in the Story Systems branch graph.',
+    suggestedAction: {
+      summary: 'Open Story Systems, review branch reachability and terminal routes, then resolve any graph diagnostics.',
+      commands: [
+        {
+          command: 'graph-report',
+          args: ['--script', '<script.json>', '--json'],
+        },
+      ],
+    },
+  }));
+}
+
 function collectAuthorCheckSuggestions({
   validation,
   layout,
@@ -1767,6 +1811,7 @@ function collectAuthorCheckSuggestions({
   screenPreviewIssues,
   endingPreviewIssues,
   galleryPreviewIssues,
+  branchGraphPreviewIssues,
 }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
@@ -1840,6 +1885,15 @@ function collectAuthorCheckSuggestions({
   }
 
   for (const issue of galleryPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of branchGraphPreviewIssues ?? []) {
     suggestions.push({
       source: issue.source,
       code: issue.code,
@@ -2540,6 +2594,90 @@ async function exportReport(args) {
   return report.validation.ok ? 0 : 1;
 }
 
+async function graphReport(args) {
+  const { scriptPath, script } = await readScript(args);
+  const graph = createGraphAnalysis(script, {
+    entrySceneId: getArgValue(args, '--entry', undefined),
+  });
+  const output = { scriptPath, ...graph };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else if (hasFlag(args, '--mermaid')) {
+    process.stdout.write(graph.mermaid);
+  } else {
+    process.stdout.write(`Branch graph: ${graph.nodeCount} scenes, ${graph.edgeCount} links\n`);
+    process.stdout.write(`Entry: ${graph.entrySceneId ?? '(none)'}\n`);
+    process.stdout.write(`Unreachable: ${graph.unreachableSceneIds.join(', ') || '(none)'}\n`);
+    process.stdout.write(`Dead ends: ${graph.deadEndSceneIds.join(', ') || '(none)'}\n`);
+    process.stdout.write(`Closed cycles: ${graph.cyclesWithoutExit.length}\n`);
+  }
+
+  return 0;
+}
+
+async function findDeadEndsCommand(args) {
+  const { scriptPath, script } = await readScript(args);
+  const analysis = findDeadEnds(script, {
+    entrySceneId: getArgValue(args, '--entry', undefined),
+  });
+  const output = { scriptPath, ...analysis };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Dead ends: ${analysis.deadEndSceneIds.join(', ') || '(none)'}\n`);
+    process.stdout.write(`Closed cycles: ${analysis.cyclesWithoutExit.length}\n`);
+  }
+  return 0;
+}
+
+async function findMissingAssets(args) {
+  const { scriptPath, script } = await readScript(args);
+  const knownAssets = await getKnownAssetsForReadiness(args, scriptPath);
+  const analysis = findAssetIssues(script, { knownAssets, requireAssetCheck: true });
+  const output = {
+    scriptPath,
+    checked: analysis.checked,
+    missing: analysis.missing,
+    issues: analysis.missingIssues,
+    count: analysis.missing.length,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Missing assets: ${output.count}\n`);
+    for (const missing of output.missing) {
+      process.stdout.write(`- ${missing.assetPath} (${missing.pathString})\n`);
+    }
+  }
+  return 0;
+}
+
+async function findUnusedAssets(args) {
+  const { scriptPath, script } = await readScript(args);
+  const knownAssets = await getKnownAssetsForReadiness(args, scriptPath);
+  const analysis = findAssetIssues(script, { knownAssets, requireAssetCheck: true });
+  const output = {
+    scriptPath,
+    checked: analysis.checked,
+    unused: analysis.unused,
+    issues: analysis.unusedIssues,
+    count: analysis.unused.length,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Unused assets: ${output.count}\n`);
+    for (const assetPath of output.unused) {
+      process.stdout.write(`- ${assetPath}\n`);
+    }
+  }
+  return 0;
+}
+
 async function handoffReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -2767,6 +2905,7 @@ async function authorCheck(args) {
   const screenPreviewIssues = collectScreenPreviewIssues(focus.screenTargets);
   const endingPreviewIssues = collectEndingPreviewIssues(focus.endingTargets);
   const galleryPreviewIssues = collectGalleryPreviewIssues(focus.galleryTargets);
+  const branchGraphPreviewIssues = collectBranchGraphPreviewIssues(focus.branchGraphTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
 
   let preview = null;
@@ -2840,6 +2979,7 @@ async function authorCheck(args) {
       screenPreviewReviewItems: screenPreviewIssues.length,
       endingPreviewReviewItems: endingPreviewIssues.length,
       galleryPreviewReviewItems: galleryPreviewIssues.length,
+      branchGraphPreviewReviewItems: branchGraphPreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewPlanned: Boolean(preview),
     },
@@ -2860,6 +3000,10 @@ async function authorCheck(args) {
       issues: galleryPreviewIssues,
     },
     galleryPreviewIssues,
+    branchGraphPreview: {
+      issues: branchGraphPreviewIssues,
+    },
+    branchGraphPreviewIssues,
     referenceScreenshotIssues,
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
@@ -2877,6 +3021,7 @@ async function authorCheck(args) {
       ...summarizeIssues('preview', screenPreviewIssues),
       ...summarizeIssues('preview', endingPreviewIssues),
       ...summarizeIssues('preview', galleryPreviewIssues),
+      ...summarizeIssues('preview', branchGraphPreviewIssues),
       ...summarizeIssues('preview', referenceScreenshotIssues),
       ...referenceDiagnostics,
     ],
@@ -3037,6 +3182,31 @@ async function retargetScene(args) {
     writeJson(output);
   } else {
     process.stdout.write(`Retargeted scene references: ${fromSceneId}->${toSceneId}\n`);
+    printMutationResult('Updated references', {
+      ...output,
+      result: { updatedReferenceCount: output.result.updatedReferenceCount },
+    });
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function repairSceneTarget(args) {
+  const fromSceneId = getArgValue(args, '--from', getArgValue(args, '--scene', null));
+  const toSceneId = getArgValue(args, '--to', getArgValue(args, '--target', null));
+  if (!fromSceneId || !toSceneId) {
+    throw new Error('repair-scene-target requires --from and --to');
+  }
+
+  const output = await mutateScript(args, (session) => session.retargetSceneReferences({
+    fromSceneId,
+    toSceneId,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Repaired scene targets: ${fromSceneId}->${toSceneId}\n`);
     printMutationResult('Updated references', {
       ...output,
       result: { updatedReferenceCount: output.result.updatedReferenceCount },
@@ -4623,6 +4793,10 @@ function printHelp() {
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
   list-assets [--project path|--script path] [--json]
+  graph-report [--script path] [--entry scene_id] [--mermaid] [--json]
+  find-dead-ends [--script path] [--entry scene_id] [--json]
+  find-missing-assets [--script path] [--asset-root path] [--json]
+  find-unused-assets [--script path] [--asset-root path] [--json]
   author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
@@ -4635,6 +4809,7 @@ function printHelp() {
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   scene-references --scene scene_id|--all [--script path] [--json]
   retarget-scene --from scene_id --to scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  repair-scene-target --from scene_id --to scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   clear-scene-references --scene scene_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   rename-scene --scene scene_id --new-id scene_id [--name name] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   delete-scene --scene scene_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -4709,6 +4884,26 @@ async function main() {
       return;
     }
 
+    if (command === 'graph-report') {
+      process.exitCode = await graphReport(args);
+      return;
+    }
+
+    if (command === 'find-dead-ends') {
+      process.exitCode = await findDeadEndsCommand(args);
+      return;
+    }
+
+    if (command === 'find-missing-assets') {
+      process.exitCode = await findMissingAssets(args);
+      return;
+    }
+
+    if (command === 'find-unused-assets') {
+      process.exitCode = await findUnusedAssets(args);
+      return;
+    }
+
     if (command === 'author-check') {
       process.exitCode = await authorCheck(args);
       return;
@@ -4776,6 +4971,11 @@ async function main() {
 
     if (command === 'retarget-scene') {
       process.exitCode = await retargetScene(args);
+      return;
+    }
+
+    if (command === 'repair-scene-target') {
+      process.exitCode = await repairSceneTarget(args);
       return;
     }
 

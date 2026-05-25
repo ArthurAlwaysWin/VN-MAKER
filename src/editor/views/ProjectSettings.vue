@@ -264,6 +264,7 @@ function getAgentReviewItemLabel(item) {
     'screen-ui-preview': 'screen preview',
     'ending-list-preview': 'ending preview',
     'gallery-preview': 'gallery preview',
+    'branch-graph-preview': 'flow preview',
     'reference-screenshot-fidelity': 'reference fidelity',
   };
   return labels[item?.category] ?? item?.code ?? item?.source ?? 'review';
@@ -291,6 +292,7 @@ function getAgentPathTitle(pathString) {
   if (target?.kind === 'variable') return '在剧情系统中定位';
   if (target?.kind === 'ending') return '在剧情系统中定位';
   if (target?.kind === 'cg') return '在剧情系统中定位';
+  if (target?.kind === 'graph') return '在剧情系统中定位';
   if (target?.kind === 'character' || target?.kind === 'asset') return '在资源库中定位';
   if (target?.kind === 'ui') return '在项目设置中定位';
   return '定位';
@@ -302,6 +304,9 @@ function getPreviewTargetKey(target) {
   }
   if (target?.type === 'gallery' || target?.kind === 'gallery') {
     return 'gallery:systems.gallery.cg';
+  }
+  if (target?.type === 'branch-graph' || target?.kind === 'branch-graph') {
+    return 'branch-graph:analysis.sceneGraph';
   }
   if (target?.type === 'screen' || target?.screenId) {
     return `screen:${target.screenId}`;
@@ -316,6 +321,9 @@ function getPreviewTargetKindLabel(target) {
   if (target?.type === 'gallery' || target?.kind === 'gallery') {
     return 'gallery';
   }
+  if (target?.type === 'branch-graph' || target?.kind === 'branch-graph') {
+    return 'flow';
+  }
   return target?.type === 'screen' || target?.screenId ? 'screen' : 'scene';
 }
 
@@ -325,6 +333,9 @@ function getPreviewTargetLabel(target) {
   }
   if (target?.type === 'gallery' || target?.kind === 'gallery') {
     return 'CG 图库';
+  }
+  if (target?.type === 'branch-graph' || target?.kind === 'branch-graph') {
+    return '剧情流程图';
   }
   if (target?.type === 'screen' || target?.screenId) {
     return target.screenId || 'screen';
@@ -339,6 +350,9 @@ function getPreviewTargetTitle(target) {
   if (target?.type === 'gallery' || target?.kind === 'gallery') {
     return '在剧情系统中定位 CG 图库';
   }
+  if (target?.type === 'branch-graph' || target?.kind === 'branch-graph') {
+    return '在剧情系统中定位流程图';
+  }
   return target?.type === 'screen' || target?.screenId ? '在右侧预览画面' : '在游戏内容中定位页面';
 }
 
@@ -347,6 +361,9 @@ function getPreviewTargetActionLabel(target) {
     return '定位';
   }
   if (target?.type === 'gallery' || target?.kind === 'gallery') {
+    return '定位';
+  }
+  if (target?.type === 'branch-graph' || target?.kind === 'branch-graph') {
     return '定位';
   }
   return target?.type === 'screen' || target?.screenId ? '预览' : '定位';
@@ -360,6 +377,10 @@ function openPreviewTarget(target) {
   }
   if (target.type === 'gallery' || target.kind === 'gallery') {
     project.requestAgentPathNavigation('systems.gallery.cg');
+    return;
+  }
+  if (target.type === 'branch-graph' || target.kind === 'branch-graph') {
+    project.requestAgentPathNavigation('analysis.sceneGraph');
     return;
   }
   if (target.type === 'screen' || target.screenId) {

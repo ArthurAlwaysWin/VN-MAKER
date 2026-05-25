@@ -17,7 +17,7 @@ import {
   isKnownTransitionType,
 } from './cinematicContract.js';
 import { normalizeEffects } from './effectDsl.js';
-import { traceReachableScenes } from './sceneGraph.js';
+import { createBranchGraphReport } from './sceneGraph.js';
 import { isValidVariableId, normalizeVariableId, normalizeVariableRegistry } from './variableRegistry.js';
 
 export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
@@ -675,23 +675,53 @@ function validatePageCinematics(page, context, report) {
   }
 }
 
-function validateSceneReachability(script, report, options) {
+function validateBranchFlow(script, endings, cgs, report, options) {
   if (options.checkReachability === false) {
     return;
   }
 
-  const scenes = isPlainObject(script?.scenes) ? script.scenes : {};
-  const sceneIds = Object.keys(scenes);
-  if (sceneIds.length <= 1) {
-    return;
-  }
-
-  const graphReport = traceReachableScenes(script, { entrySceneId: options.entrySceneId });
+  const graphReport = createBranchGraphReport(script, { entrySceneId: options.entrySceneId });
   for (const sceneId of graphReport.unreachableSceneIds) {
     addWarning(report, 'unreachable-scene', `Scene "${sceneId}" is not reachable from entry scene "${graphReport.entrySceneId}".`, ['scenes', sceneId], {
       sceneId,
       entrySceneId: graphReport.entrySceneId,
     });
+  }
+
+  if (Object.keys(endings).length > 0) {
+    for (const sceneId of graphReport.deadEndSceneIds) {
+      addWarning(report, 'dead-end-scene', `Reachable scene "${sceneId}" has no outgoing route or ending unlock.`, ['scenes', sceneId], {
+        sceneId,
+        entrySceneId: graphReport.entrySceneId,
+      });
+    }
+
+    for (const cycle of graphReport.cyclesWithoutExit) {
+      const sceneId = cycle.sceneIds[0];
+      addWarning(report, 'cycle-without-exit', `Reachable cycle "${cycle.sceneIds.join(' -> ')}" has no route exit or ending unlock.`, ['scenes', sceneId], {
+        sceneId,
+        sceneIds: cycle.sceneIds,
+        entrySceneId: graphReport.entrySceneId,
+      });
+    }
+  }
+
+  for (const endingId of graphReport.endings.unreachableUnlockIds) {
+    if (endings[endingId]) {
+      addWarning(report, 'ending-unlock-unreachable', `Ending "${endingId}" is only unlocked from unreachable scenes.`, ['systems', 'endings', endingId], {
+        endingId,
+        entrySceneId: graphReport.entrySceneId,
+      });
+    }
+  }
+
+  for (const cgId of graphReport.cgs.unreachableUnlockIds) {
+    if (cgs[cgId]) {
+      addWarning(report, 'cg-unlock-unreachable', `CG "${cgId}" is only unlocked from unreachable scenes.`, ['systems', 'gallery', 'cg', cgId], {
+        cgId,
+        entrySceneId: graphReport.entrySceneId,
+      });
+    }
   }
 }
 
@@ -729,7 +759,7 @@ function validateEndingProgression(script, endings, report, options) {
     return;
   }
 
-  const graphReport = traceReachableScenes(script, { entrySceneId: options.entrySceneId });
+  const graphReport = createBranchGraphReport(script, { entrySceneId: options.entrySceneId });
   const reachableSceneIds = new Set(graphReport.reachableSceneIds);
   const hasReachableEndingUnlock = references.some((reference) => (
     endings[reference.endingId] && reachableSceneIds.has(reference.sceneId)
@@ -863,7 +893,7 @@ export function validateProject(script, options = {}) {
   };
 
   validateScenes(script, context, report, config);
-  validateSceneReachability(script, report, {
+  validateBranchFlow(script, endings, cgs, report, {
     checkReachability: options.checkReachability,
     entrySceneId: options.entrySceneId,
   });

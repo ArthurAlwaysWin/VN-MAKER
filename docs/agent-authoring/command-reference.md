@@ -39,10 +39,19 @@ These commands are not plan operations. Use them to inspect the project before d
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
 | `list-assets` | | `project`, `script`, `json` | Lists files under `assets/backgrounds`, `assets/characters`, `assets/audio`, `assets/voices`, `assets/ui`, and `assets/fonts`. Each entry includes `path`, `name`, `tokens`, `extension`, and `size`. `--script` derives the project path from the script parent folder. |
+| `graph-report` | | `script`, `entry`, `mermaid`, `json` | Reports attributed scene edges, reachability, terminal/dead-end routes, closed cycles, unlock reachability, and Mermaid flowchart text. |
+| `find-dead-ends` | | `script`, `entry`, `json` | Returns terminal routes without an ending resolution plus closed cycles without an exit. |
+| `find-missing-assets` | | `script`, `asset-root`, `json` | Returns referenced assets absent from the checked asset root. |
+| `find-unused-assets` | | `script`, `asset-root`, `json` | Returns files in the checked asset root that are not referenced by the script. |
 
 ```bash
 npm run vn -- list-assets --script public/game/script.json --json
 npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
+npm run vn -- graph-report --script public/game/script.json --json
+npm run vn -- graph-report --script public/game/script.json --mermaid
+npm run vn -- find-dead-ends --script public/game/script.json --json
+npm run vn -- find-missing-assets --script public/game/script.json --json
+npm run vn -- find-unused-assets --script public/game/script.json --json
 ```
 
 ## Scene Commands
@@ -54,6 +63,7 @@ npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
 | `delete-scene` | `sceneId` | `forceReferences` | Refuses to delete referenced scenes unless forced. Aliases: `scene`, `id`, `force-references`. |
 | `set-scene-next` | `sceneId` | `next` | Set `next` to `null` by omitting it or passing `null`. Aliases: `scene`, `id`. |
 | `retarget-scene` | `fromSceneId`, `toSceneId` | | Retargets all references from one scene to another. Aliases: `from`, `scene`; `to`, `target`. |
+| `repair-scene-target` | `fromSceneId`, `toSceneId` | | Repair-oriented alias that retargets all references to a missing or obsolete scene target. Aliases: `from`, `scene`; `to`, `target`. |
 | `clear-scene-references` | `sceneId` | | Clears references to a scene, making those jumps terminal/unset. Aliases: `scene`, `id`. |
 
 ## Character And Variable Commands
@@ -223,7 +233,7 @@ Plan manifest example:
 }
 ```
 
-`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `systems.endings.*` paths become an `ending-list` preview target and changed `systems.gallery.cg.*` paths become a `gallery` preview target for Story Systems review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
+`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `systems.endings.*` paths become an `ending-list` preview target, changed `systems.gallery.cg.*` paths become a `gallery` preview target, and changed `scenes.*` paths also create a `branch-graph` target at `analysis.sceneGraph` for Story Systems review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
 
 ## Shared UI Commands
 

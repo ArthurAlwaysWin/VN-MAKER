@@ -86,6 +86,7 @@ Plan command names match the CLI command names:
 - `delete-scene`
 - `set-scene-next`
 - `retarget-scene`
+- `repair-scene-target`
 - `clear-scene-references`
 - `add-page`
 - `remove-page`

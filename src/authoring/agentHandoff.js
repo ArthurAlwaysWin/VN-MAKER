@@ -56,6 +56,12 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
         sceneId: scenePageMatch[1],
         pageIndex: Number(scenePageMatch[2]),
       });
+      targets.push({
+        type: 'branch-graph',
+        kind: 'branch-graph',
+        pathString: 'analysis.sceneGraph',
+        reason: 'changed-scene-flow',
+      });
       continue;
     }
 
@@ -65,6 +71,12 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
         type: 'scene',
         sceneId: sceneMatch[1],
         pageIndex: 0,
+      });
+      targets.push({
+        type: 'branch-graph',
+        kind: 'branch-graph',
+        pathString: 'analysis.sceneGraph',
+        reason: 'changed-scene-flow',
       });
       continue;
     }
@@ -100,6 +112,8 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
       ? 'ending-list:systems.endings'
       : target.type === 'gallery'
       ? 'gallery:systems.gallery.cg'
+      : target.type === 'branch-graph'
+      ? 'branch-graph:analysis.sceneGraph'
       : target.type === 'screen'
       ? `screen:${target.screenId}`
       : `scene:${target.sceneId}:${target.pageIndex}`;
@@ -252,7 +266,27 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
-  return [...screenItems, ...endingItems, ...galleryItems];
+  const branchGraphItems = previewTargets
+    .filter((target) => target?.type === 'branch-graph' || target?.kind === 'branch-graph')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'branch-graph-preview',
+      code: 'branch-graph-preview-required',
+      pathString: target.pathString ?? 'analysis.sceneGraph',
+      message: 'Scene flow changed and needs review in the Story Systems branch graph.',
+      suggestedAction: {
+        summary: 'Open Story Systems and review route reachability, dead ends, closed cycles, and unlock routing.',
+        commands: [
+          {
+            command: 'graph-report',
+            args: ['--script', '<script.json>', '--json'],
+          },
+        ],
+      },
+    }));
+
+  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {

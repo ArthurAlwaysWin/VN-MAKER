@@ -17,6 +17,11 @@
           :class="{ active: script.storySystemsPanel === 'cgs' }"
           @click="script.selectStorySystemsPanel('cgs')"
         >CG</button>
+        <button
+          type="button"
+          :class="{ active: script.storySystemsPanel === 'graph' }"
+          @click="script.selectStorySystemsPanel('graph')"
+        >流程</button>
       </div>
       <VariableRegistryList
         v-if="script.storySystemsPanel === 'variables'"
@@ -43,13 +48,17 @@
         @select="script.selectEnding"
       />
       <CgRegistryList
-        v-else
+        v-else-if="script.storySystemsPanel === 'cgs'"
         :items="allCgs"
         :selected-id="script.selectedCgId"
         :is-empty="allCgs.length === 0"
         @create="onCreateCg"
         @select="script.selectCg"
       />
+      <div v-else class="graph-sidebar">
+        <strong>剧情流程</strong>
+        <p>查看场景连接、不可达路线、终点与解锁收束。</p>
+      </div>
     </aside>
 
     <section class="detail-pane">
@@ -66,6 +75,12 @@
         :focus-token="inspectorFocusToken"
         @request-delete="openDeleteImpact"
         @request-rename="openRenameImpact"
+      />
+
+      <BranchGraphPanel
+        v-else-if="script.storySystemsPanel === 'graph'"
+        :script-data="script.data"
+        @navigate-scene="openGraphScene"
       />
 
       <EndingInspector
@@ -110,6 +125,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
+import BranchGraphPanel from '../components/story-systems/BranchGraphPanel.vue';
 import CgInspector from '../components/story-systems/CgInspector.vue';
 import CgRegistryList from '../components/story-systems/CgRegistryList.vue';
 import EndingInspector from '../components/story-systems/EndingInspector.vue';
@@ -328,6 +344,10 @@ function onCreateCg() {
   }
 }
 
+function openGraphScene(sceneId) {
+  project.requestSceneNavigation(`scenes.${sceneId}`);
+}
+
 function openRenameImpact(payload) {
   const preview = script.renameVariable(payload.variableId, payload.nextVariableId, {
     previewOnly: true,
@@ -487,6 +507,9 @@ watch(() => project.agentPathNavigationRequest?.nonce, () => {
     }
     cgInspectorFocusToken.value++;
   }
+  if (request?.kind === 'graph') {
+    script.selectStorySystemsPanel('graph');
+  }
 }, {
   immediate: true,
 });
@@ -511,11 +534,29 @@ watch(() => project.agentPathNavigationRequest?.nonce, () => {
 
 .system-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 10px;
   background: #202020;
   border-bottom: 1px solid #111;
+}
+
+.graph-sidebar {
+  color: #ccc;
+  padding: 18px 14px;
+}
+
+.graph-sidebar strong {
+  color: #fff;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.graph-sidebar p {
+  color: #999;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .system-tabs button {

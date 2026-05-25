@@ -97,13 +97,16 @@ export function collectCgUnlockReferences(scriptData = {}) {
   const references = [];
 
   for (const [sceneId, scene] of Object.entries(scriptData?.scenes ?? {})) {
-    for (const [pageIndex, page] of (scene?.pages ?? []).entries()) {
+    const pages = Array.isArray(scene?.pages) ? scene.pages : [];
+    for (const [pageIndex, page] of pages.entries()) {
       if (page?.type !== 'choice') {
         continue;
       }
 
-      for (const [optionIndex, option] of (page.options ?? []).entries()) {
-        for (const [effectIndex, effect] of (option?.effects ?? []).entries()) {
+      const options = Array.isArray(page.options) ? page.options : [];
+      for (const [optionIndex, option] of options.entries()) {
+        const effects = Array.isArray(option?.effects) ? option.effects : [];
+        for (const [effectIndex, effect] of effects.entries()) {
           if (effect?.type !== 'unlock:cg') {
             continue;
           }

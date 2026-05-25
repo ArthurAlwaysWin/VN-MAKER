@@ -161,6 +161,11 @@ describe('agent handoff editor integration', () => {
       tab: 'story-systems',
       id: 'confession',
     });
+    expect(project.requestAgentPathNavigation('analysis.sceneGraph')).toBe(true);
+    expect(project.agentPathNavigationRequest).toMatchObject({
+      kind: 'graph',
+      tab: 'story-systems',
+    });
     expect(project.requestAgentPathNavigation('characters.sakura')).toBe(true);
     expect(project.agentPathNavigationRequest).toMatchObject({
       kind: 'character',
@@ -260,6 +265,8 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('ending preview');
     expect(source).toContain('gallery-preview');
     expect(source).toContain('gallery preview');
+    expect(source).toContain('branch-graph-preview');
+    expect(source).toContain('flow preview');
     expect(source).toContain('setAgentReviewItemStatus');
     expect(source).toContain('clearAgentReviewItemStatus');
     expect(source).toContain('agent-review-status');
@@ -293,6 +300,7 @@ describe('agent handoff editor integration', () => {
           'systems.variables.sakura_affection',
           'systems.endings.good_end',
           'systems.gallery.cg.confession',
+          'analysis.sceneGraph',
           'ui.theme.buttonFamilies.qab',
         ],
       },
@@ -302,6 +310,7 @@ describe('agent handoff editor integration', () => {
         { source: 'validation', code: 'bad-variable', pathString: 'systems.variables.sakura_affection' },
         { source: 'validation', code: 'ending-never-unlocked', pathString: 'systems.endings.good_end' },
         { source: 'validation', code: 'cg-never-unlocked', pathString: 'systems.gallery.cg.confession' },
+        { source: 'preview', code: 'branch-graph-preview-required', pathString: 'analysis.sceneGraph' },
       ],
     });
 
@@ -320,6 +329,10 @@ describe('agent handoff editor integration', () => {
       tab: 'story-systems',
       id: 'confession',
     });
+    expect(parseAgentPathTarget('analysis.sceneGraph')).toMatchObject({
+      kind: 'graph',
+      tab: 'story-systems',
+    });
     expect(parseAgentPathTarget('characters.sakura')).toMatchObject({
       kind: 'character',
       tab: 'resource-library',
@@ -335,6 +348,7 @@ describe('agent handoff editor integration', () => {
       'systems:variables',
       'systems:endings',
       'systems:cgs',
+      'analysis:graph',
       'ui',
     ]);
     expect(groups.find((group) => group.key === 'characters')).toMatchObject({
@@ -351,6 +365,11 @@ describe('agent handoff editor integration', () => {
       label: 'CG Gallery',
       changedPaths: ['systems.gallery.cg.confession'],
       reviewItems: [expect.objectContaining({ code: 'cg-never-unlocked' })],
+    });
+    expect(groups.find((group) => group.key === 'analysis:graph')).toMatchObject({
+      label: 'Branch Flow',
+      changedPaths: ['analysis.sceneGraph'],
+      reviewItems: [expect.objectContaining({ code: 'branch-graph-preview-required' })],
     });
   });
 
@@ -408,6 +427,12 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('agentIncomingReferenceCount');
     expect(source).toContain('agentReviewCount');
     expect(source).toContain('agent-page-dot');
+    expect(source).toContain('createBranchGraphReport');
+    expect(source).toContain('isSceneUnreachable');
+    expect(source).toContain('isSceneDeadEnd');
+    expect(source).toContain('isSceneClosedCycle');
+    expect(source).toContain('isSceneEnding');
+    expect(source).toContain('flow-badge');
   });
 
   it('wires scene navigation requests through App and PageEditor', () => {
@@ -448,5 +473,7 @@ describe('agent handoff editor integration', () => {
     expect(pageInspectorSource).toContain('unlock:cg');
     expect(pageInspectorSource).toContain('addCgUnlockRow');
     expect(pageInspectorSource).toContain('cgOptions');
+    expect(storySystemsSource).toContain('BranchGraphPanel');
+    expect(storySystemsSource).toContain("script.storySystemsPanel === 'graph'");
   });
 });

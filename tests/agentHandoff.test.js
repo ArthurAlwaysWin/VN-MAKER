@@ -126,6 +126,12 @@ describe('agent handoff report', () => {
 
     expect(handoff.previewTargets).toEqual([
       { type: 'scene', sceneId: 'start', pageIndex: 0 },
+      {
+        type: 'branch-graph',
+        kind: 'branch-graph',
+        pathString: 'analysis.sceneGraph',
+        reason: 'changed-scene-flow',
+      },
       { type: 'screen', screenId: 'titleScreen' },
       { type: 'screen', screenId: 'gameMenu' },
     ]);
@@ -143,6 +149,12 @@ describe('agent handoff report', () => {
         code: 'screen-ui-preview-required',
         pathString: 'ui.gameMenu',
         screenId: 'gameMenu',
+      }),
+      expect.objectContaining({
+        source: 'preview',
+        category: 'branch-graph-preview',
+        code: 'branch-graph-preview-required',
+        pathString: 'analysis.sceneGraph',
       }),
     ]));
   });

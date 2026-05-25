@@ -88,6 +88,14 @@ export function parseAgentPathTarget(pathString = '') {
     };
   }
 
+  if (normalized === 'analysis.sceneGraph') {
+    return {
+      kind: 'graph',
+      tab: 'story-systems',
+      pathString: normalized,
+    };
+  }
+
   const characterMatch = /^characters\.([^.]+)/.exec(normalized);
   if (characterMatch) {
     return {
@@ -123,6 +131,9 @@ function getPathGroupKey(pathString = '') {
   if (target?.kind === 'cg') {
     return 'systems:cgs';
   }
+  if (target?.kind === 'graph') {
+    return 'analysis:graph';
+  }
   if (target?.kind === 'character') {
     return 'characters';
   }
@@ -140,6 +151,7 @@ function createPathGroup(key) {
   const labelMap = {
     scene: id ? `Scene ${id}` : 'Scene',
     systems: 'Variables',
+    analysis: 'Branch Flow',
     characters: 'Characters',
     assets: 'Assets',
     ui: 'UI',

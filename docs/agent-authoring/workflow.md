@@ -124,7 +124,7 @@ npm run vn -- set-theme --script public/game/script.json --config .tmp/theme.jso
 npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
 ```
 
-When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, or `ui.backlogScreen`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions. It also creates an `ending-list` target for changed endings and a `gallery` target for changed `systems.gallery.cg` entries:
+When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, or `ui.backlogScreen`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions. It also creates an `ending-list` target for changed endings, a `gallery` target for changed `systems.gallery.cg` entries, and a `branch-graph` target for changed scene flow:
 
 ```bash
 npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
@@ -190,10 +190,23 @@ Before deleting or merging branch scenes, inspect references:
 npm run vn:scene-references -- --all --script public/game/script.json --json
 npm run vn:scene-references -- --scene chapter_1_old_route --script public/game/script.json --json
 npm run vn -- retarget-scene --from chapter_1_old_route --to chapter_1_new_route --script public/game/script.json --force --checkpoint --json
+npm run vn -- repair-scene-target --from missing_route --to chapter_1_new_route --script public/game/script.json --force --checkpoint --json
 npm run vn -- clear-scene-references --scene unused_branch --script public/game/script.json --force --checkpoint --json
 ```
 
 `scene-references` reports exact `pathString` values for scene `next`, choice targets, and condition targets, plus suggested repair commands. Use `retarget-scene` when preserving branch flow; use `clear-scene-references` only when those jumps should become terminal or intentionally unset.
+
+Inspect route and asset analysis before handoff:
+
+```bash
+npm run vn -- graph-report --script public/game/script.json --json
+npm run vn -- graph-report --script public/game/script.json --mermaid
+npm run vn -- find-dead-ends --script public/game/script.json --json
+npm run vn -- find-missing-assets --script public/game/script.json --json
+npm run vn -- find-unused-assets --script public/game/script.json --json
+```
+
+The desktop editor exposes the same derived report under Story Systems > Flow. A `branch-graph` handoff target navigates there without writing analysis data into `script.json`.
 
 ## 5. Validate Again
 
@@ -246,7 +259,7 @@ If you saved a previous mutation result, attach it so the editor can show change
 npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --json
 ```
 
-The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability, recent checkpoints from `.checkpoints/`, transaction summaries, preview targets, and review items with suggested actions where available. Review items include categories such as `missing-asset`, `unused-asset`, `placeholder-asset`, `ambiguous-asset`, and `screen-ui-preview` so humans can see what to import, rename, remove, replace, or visually inspect. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel for human review, including visual preview targets for changed scenes and supported screens.
+The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability/dead ends/closed cycles, recent checkpoints from `.checkpoints/`, transaction summaries, preview targets, and review items with suggested actions where available. Review items include categories such as `missing-asset`, `unused-asset`, `placeholder-asset`, `ambiguous-asset`, `screen-ui-preview`, and `branch-graph-preview` so humans can see what to import, rename, remove, replace, or inspect. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel with links into changed pages, supported screens, galleries, endings, and branch flow.
 
 Tell the human creator:
 

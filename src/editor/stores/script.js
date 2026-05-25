@@ -210,7 +210,7 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function selectStorySystemsPanel(panel) {
-    storySystemsPanel.value = ['endings', 'cgs'].includes(panel) ? panel : 'variables';
+    storySystemsPanel.value = ['endings', 'cgs', 'graph'].includes(panel) ? panel : 'variables';
   }
 
   function ensureVariableRegistryState() {

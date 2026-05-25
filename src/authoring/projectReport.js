@@ -1,5 +1,5 @@
 import { validateProject } from '../shared/projectValidator.js';
-import { collectSceneReferences, traceReachableScenes } from '../shared/sceneGraph.js';
+import { collectSceneReferences, createBranchGraphReport } from '../shared/sceneGraph.js';
 import { createExportReadiness } from './exportReadiness.js';
 import { lintProjectLayout } from './layoutLint.js';
 
@@ -96,7 +96,7 @@ function collectVariableSummaries(script = {}) {
 export function createProjectReport(script = {}, options = {}) {
   const validation = validateProject(script, options.validation);
   const layout = lintProjectLayout(script, options.layout);
-  const sceneGraph = traceReachableScenes(script, options.graph);
+  const sceneGraph = createBranchGraphReport(script, options.graph);
   const readiness = options.readiness
     ? createExportReadiness(script, options.readiness)
     : null;

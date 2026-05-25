@@ -292,7 +292,8 @@ export function collectVariableReferences(scriptData = {}) {
       }
 
       if (page.type === 'choice') {
-        (page.options ?? []).forEach((option, optionIndex) => {
+        const options = Array.isArray(page.options) ? page.options : [];
+        options.forEach((option, optionIndex) => {
           normalizeOptionEffectsForReferences(option).forEach((effect, effectIndex) => {
             if (!isVariableEffect(effect)) {
               return;

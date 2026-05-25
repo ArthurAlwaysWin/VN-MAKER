@@ -135,6 +135,8 @@ Inspect and repair scene references before deleting or merging branch scenes:
 npm run vn -- scene-references --all --script public/game/script.json --json
 npm run vn -- scene-references --scene old_route --script public/game/script.json --json
 npm run vn -- retarget-scene --from old_route --to new_route --script public/game/script.json --force --checkpoint --json
+npm run vn -- graph-report --script public/game/script.json --json
+npm run vn -- find-dead-ends --script public/game/script.json --json
 npm run vn -- clear-scene-references --scene unused_route --script public/game/script.json --force --checkpoint --json
 ```
 
@@ -244,6 +246,10 @@ Common warnings:
 - `ending-never-unlocked`
 - `no-reachable-ending`
 - `unregistered-cg-unlock`
+- `dead-end-scene`
+- `cycle-without-exit`
+- `ending-unlock-unreachable`
+- `cg-unlock-unreachable`
 - `long-dialogue-text`
 
 ## Current Limits
@@ -253,3 +259,4 @@ Common warnings:
 - Advanced agent-only effects should not be invented until a shared contract exists.
 - Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.
 - CG gallery registry authoring is supported through `add-cg`, `update-cg`, `remove-cg`, `add-cg-unlock`, and `list-cg`; do not invent gallery fields or flows outside the shared contract.
+- Branch flow analysis is supported through `graph-report`, `find-dead-ends`, `find-missing-assets`, and `find-unused-assets`; flow reports are derived review data, not fields to write into `script.json`.

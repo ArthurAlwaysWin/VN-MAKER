@@ -377,6 +377,8 @@ Required diagnostics:
 
 ### Branch Graph And Asset Analysis
 
+The first M4 slice is implemented. `analysis.sceneGraph` is a review/navigation target rather than canonical author data; it is derived from scenes and effects each time a report is requested.
+
 Paths:
 
 - `analysis.sceneGraph`
@@ -395,6 +397,8 @@ Required diagnostics:
 - `unreachable-scene`
 - `dead-end-scene`
 - `cycle-without-exit`
+- `ending-unlock-unreachable`
+- `cg-unlock-unreachable`
 - `unused-asset`
 - `missing-asset-reference`
 

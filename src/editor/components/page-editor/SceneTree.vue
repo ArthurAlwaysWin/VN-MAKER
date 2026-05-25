@@ -36,6 +36,10 @@
             class="agent-badge review"
             :title="agentReviewTitle(sceneId)"
           >审阅 {{ agentReviewCount(sceneId) }}</span>
+          <span v-if="isSceneUnreachable(sceneId)" class="flow-badge muted" title="该场景无法从入口到达">不可达</span>
+          <span v-if="isSceneDeadEnd(sceneId)" class="flow-badge warning" title="该终点没有结局解锁">死路</span>
+          <span v-if="isSceneClosedCycle(sceneId)" class="flow-badge warning" title="该循环没有出口或结局解锁">循环</span>
+          <span v-if="isSceneEnding(sceneId)" class="flow-badge ending" title="该场景完成结局解锁">结局</span>
           <span v-if="scene.next" class="scene-jump-badge" :title="'跳转到: ' + getSceneName(scene.next)">🔗</span>
           <button class="scene-voice-btn" @click.stop="onBatchMatchScene(sceneId)" title="批量语音匹配">🔊</button>
           <button class="scene-menu-btn" @click.stop="showSceneMenu(sceneId, $event)" title="场景操作">⋯</button>
@@ -128,6 +132,7 @@ import { useProjectStore } from '../../stores/project.js';
 import { useVoiceMatch } from '../../composables/useVoiceMatch.js';
 import { useAssetStore } from '../../stores/assets.js';
 import { summarizeHandoffByScene } from '../../utils/agentHandoff.js';
+import { createBranchGraphReport } from '../../../shared/sceneGraph.js';
 import VoiceMatchPreview from './VoiceMatchPreview.vue';
 import HelpTip from '../HelpTip.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
@@ -179,6 +184,7 @@ watch(selectedSceneId, (sceneId) => {
 
 const sceneEntries = computed(() => Object.entries(script.data?.scenes || {}));
 const agentSceneSummaries = computed(() => summarizeHandoffByScene(project.agentHandoff));
+const branchGraph = computed(() => createBranchGraphReport(script.data ?? {}));
 
 const contextMenuStyle = computed(() => ({
   left: contextMenu.x + 'px',
@@ -231,6 +237,26 @@ function agentIncomingReferenceTitle(sceneId) {
 function agentReviewTitle(sceneId) {
   const items = getAgentSceneSummary(sceneId)?.reviewItems ?? [];
   return items.map((item) => item.code || item.message).slice(0, 3).join('\n');
+}
+
+function getBranchNode(sceneId) {
+  return branchGraph.value.nodes.find((node) => node.id === sceneId) ?? null;
+}
+
+function isSceneUnreachable(sceneId) {
+  return getBranchNode(sceneId)?.reachable === false;
+}
+
+function isSceneDeadEnd(sceneId) {
+  return getBranchNode(sceneId)?.deadEnd === true;
+}
+
+function isSceneClosedCycle(sceneId) {
+  return getBranchNode(sceneId)?.cycleWithoutExit === true;
+}
+
+function isSceneEnding(sceneId) {
+  return getBranchNode(sceneId)?.endingResolved === true;
 }
 
 onMounted(() => {
@@ -795,6 +821,33 @@ function onMatchApply(overwrite) {
   border-color: #7a5a28;
   color: #ffc06a;
   background: rgba(170, 112, 35, 0.12);
+}
+
+.flow-badge {
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 16px;
+  margin-left: 4px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.flow-badge.warning {
+  background: rgba(170, 112, 35, 0.14);
+  border: 1px solid #7a5a28;
+  color: #ffc06a;
+}
+
+.flow-badge.muted {
+  background: rgba(120, 120, 120, 0.14);
+  border: 1px solid #555;
+  color: #aaa;
+}
+
+.flow-badge.ending {
+  background: rgba(39, 133, 82, 0.16);
+  border: 1px solid #326a4a;
+  color: #84d7ac;
 }
 
 .agent-page-dot {

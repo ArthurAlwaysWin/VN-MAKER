@@ -100,12 +100,14 @@ export function collectEndingUnlockReferences(scriptData = {}) {
   const references = [];
 
   for (const [sceneId, scene] of Object.entries(scriptData?.scenes ?? {})) {
-    for (const [pageIndex, page] of (scene?.pages ?? []).entries()) {
+    const pages = Array.isArray(scene?.pages) ? scene.pages : [];
+    for (const [pageIndex, page] of pages.entries()) {
       if (page?.type !== 'choice') {
         continue;
       }
 
-      for (const [optionIndex, option] of (page.options ?? []).entries()) {
+      const options = Array.isArray(page.options) ? page.options : [];
+      for (const [optionIndex, option] of options.entries()) {
         normalizeEffectsForReferences(option).forEach((effect, effectIndex) => {
           if (effect?.type !== 'unlock:ending') {
             return;

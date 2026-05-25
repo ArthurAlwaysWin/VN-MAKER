@@ -78,6 +78,10 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `empty-normal-page` | Normal page has no useful content. |
 | `long-dialogue-text` | Dialogue text is longer than the validator limit. |
 | `unreachable-scene` | Scene cannot be reached from `start` or the selected entry scene. |
+| `dead-end-scene` | A reachable terminal route in a project with registered endings has no ending resolution. |
+| `cycle-without-exit` | A reachable route cycle in a project with registered endings has no exit and no ending resolution. |
+| `ending-unlock-unreachable` | An ending has unlock effects, but all of them are on unreachable scenes. |
+| `cg-unlock-unreachable` | A CG has unlock effects, but all of them are on unreachable scenes. |
 | `unknown-camera-effect` | Page camera effect is preserved but ignored at runtime. |
 | `unknown-transition-type` | Page transition type is preserved but falls back to `fade` at runtime. |
 | `unknown-character-animation` | Character animation is preserved but ignored at runtime. |
@@ -149,12 +153,13 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. |
 | `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
 | `gallery-preview` | `systems.gallery.cg` changed and needs review in Story Systems and the runtime gallery. |
+| `branch-graph-preview` | `scenes.*` changed and needs review in the Story Systems branch flow panel. |
 | `reference-screenshot-fidelity` | A plan used a reference screenshot and includes notes about what matched and what still needs human visual comparison. |
 | `layout`, `readiness`, `validation` | Existing structural and quality gates that should be resolved or explicitly accepted before handoff. |
 
 ## Scene Graph
 
-`export-report` includes scene graph data:
+`graph-report` and `export-report` include derived scene graph data; `graph-report --mermaid` prints a Mermaid flowchart:
 
 ```json
 {
@@ -165,9 +170,11 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
       "route_a": ["ending_check"]
     },
     "reachableSceneIds": ["start", "route_a", "route_b"],
-    "unreachableSceneIds": []
+    "unreachableSceneIds": [],
+    "deadEndSceneIds": [],
+    "cyclesWithoutExit": []
   }
 }
 ```
 
-By default, validation starts graph traversal from `start` when it exists, otherwise the first scene in the script. Partial drafts can suppress reachability warnings through the authoring API with `checkReachability: false`, but handoff-ready projects should have no unreachable scenes.
+By default, validation starts graph traversal from `start` when it exists, otherwise the first scene in the script. Dead-end and closed-cycle validation warnings apply once the project has explicit registered endings; basic drafts can still inspect those graph findings without making validation noisy. Partial drafts can suppress reachability warnings through the authoring API with `checkReachability: false`, but handoff-ready projects should have no unresolved graph findings.

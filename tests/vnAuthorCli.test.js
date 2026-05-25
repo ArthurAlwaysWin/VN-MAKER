@@ -3073,6 +3073,104 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('reports branch flow and asset findings and repairs targets through M4 commands', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const assetsDir = path.join(dir, 'backgrounds');
+      await mkdir(assetsDir, { recursive: true });
+      await writeFile(path.join(assetsDir, 'unused.png'), 'unused', 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_flow_analysis',
+        systems: {
+          endings: { good: { title: 'Good End' } },
+        },
+        characters: {},
+        scenes: {
+          start: {
+            pages: [{
+              type: 'choice',
+              background: 'backgrounds/missing.png',
+              options: [
+                { text: 'Good', target: 'final', effects: [{ type: 'unlock:ending', id: 'good' }] },
+                { text: 'Lost', target: 'dead' },
+                { text: 'Loop', target: 'loop' },
+              ],
+            }],
+          },
+          final: { pages: [] },
+          dead: { pages: [] },
+          loop: { next: 'loop', pages: [] },
+        },
+      }), 'utf8');
+
+      const graph = JSON.parse((await execFileAsync('node', [
+        cliPath, 'graph-report', '--script', scriptPath, '--json',
+      ])).stdout);
+      expect(graph).toMatchObject({
+        deadEndSceneIds: ['dead'],
+        cyclesWithoutExit: [{ sceneIds: ['loop'] }],
+      });
+      expect(graph.mermaid).toContain('flowchart TD');
+
+      const deadEnds = JSON.parse((await execFileAsync('node', [
+        cliPath, 'find-dead-ends', '--script', scriptPath, '--json',
+      ])).stdout);
+      expect(deadEnds.deadEndSceneIds).toEqual(['dead']);
+
+      const missing = JSON.parse((await execFileAsync('node', [
+        cliPath, 'find-missing-assets', '--script', scriptPath, '--json',
+      ])).stdout);
+      const unused = JSON.parse((await execFileAsync('node', [
+        cliPath, 'find-unused-assets', '--script', scriptPath, '--json',
+      ])).stdout);
+      expect(missing.missing).toEqual(expect.arrayContaining([
+        expect.objectContaining({ assetPath: 'backgrounds/missing.png' }),
+      ]));
+      expect(unused.unused).toContain('backgrounds/unused.png');
+
+      const planPath = path.join(dir, 'repair-plan.json');
+      await writeFile(planPath, JSON.stringify({
+        operations: [{
+          command: 'repair-scene-target',
+          params: { from: 'dead', to: 'final' },
+        }],
+      }), 'utf8');
+      const planRepair = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--dry-run',
+        '--json',
+      ])).stdout);
+      expect(planRepair.operations[0]).toMatchObject({
+        command: 'repair-scene-target',
+        status: 'applied',
+        changedPaths: ['scenes.start.pages.0.options.1.target'],
+      });
+
+      const repair = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'repair-scene-target',
+        '--script',
+        scriptPath,
+        '--from',
+        'dead',
+        '--to',
+        'final',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(repair.result).toMatchObject({
+        fromSceneId: 'dead',
+        toSceneId: 'final',
+        updatedReferenceCount: 1,
+      });
+      expect(repair.changeSummary.changedPaths).toEqual(['scenes.start.pages.0.options.1.target']);
+    });
+  });
+
   it('moves and removes pages through structure commands', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -3543,7 +3641,16 @@ describe('vn-author CLI', () => {
         changedPaths: ['scenes.start.pages.0', 'scenes.start.pages.1'],
         checkedSceneIds: ['start'],
         pageTargets: [{ sceneId: 'start', pageIndex: 0 }, { sceneId: 'start', pageIndex: 1 }],
-        previewTargets: [{ sceneId: 'start', pageIndex: 0 }, { sceneId: 'start', pageIndex: 1 }],
+        branchGraphTargets: [{
+          type: 'branch-graph',
+          kind: 'branch-graph',
+          pathString: 'analysis.sceneGraph',
+        }],
+        previewTargets: [
+          { type: 'scene', sceneId: 'start', pageIndex: 0 },
+          { type: 'scene', sceneId: 'start', pageIndex: 1 },
+          { type: 'branch-graph', pathString: 'analysis.sceneGraph' },
+        ],
         previewTarget: { sceneId: 'start', pageIndex: 0 },
       });
       expect(result.transactionSummary).toMatchObject({
@@ -3556,6 +3663,7 @@ describe('vn-author CLI', () => {
       expect(result.summary).toMatchObject({
         layoutWarnings: 0,
         readinessBlockers: 0,
+        branchGraphPreviewReviewItems: 1,
         previewPlanned: true,
       });
       expect(result.layout.aggregate).toMatchObject({

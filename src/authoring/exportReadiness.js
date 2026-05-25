@@ -1,6 +1,6 @@
 import { scanAssets } from '../engine/scanAssets.js';
 import { validateProject } from '../shared/projectValidator.js';
-import { traceReachableScenes } from '../shared/sceneGraph.js';
+import { createBranchGraphReport } from '../shared/sceneGraph.js';
 import { FULL_THEME_COVERAGE_KEYS } from '../shared/themePackageContract.js';
 import {
   UI_BUTTON_FAMILY_STATE_KEYS,
@@ -214,7 +214,7 @@ export function createExportReadiness(script = {}, options = {}) {
     knownAssets: options.knownAssets,
   });
   const layout = lintProjectLayout(script, options.layout);
-  const sceneGraph = traceReachableScenes(script, options.graph);
+  const sceneGraph = createBranchGraphReport(script, options.graph);
   const blockers = [];
   const warnings = [];
 
@@ -225,7 +225,7 @@ export function createExportReadiness(script = {}, options = {}) {
   for (const warning of validation.warnings) {
     if (warning.code === 'missing-asset-reference') {
       blockers.push(createReadinessIssue('assets', warning, 'error'));
-    } else if (warning.code === 'unreachable-scene') {
+    } else if (['unreachable-scene', 'dead-end-scene', 'cycle-without-exit'].includes(warning.code)) {
       blockers.push(createReadinessIssue('scene-graph', warning, 'error'));
     } else {
       warnings.push(createReadinessIssue('validation', warning));
@@ -288,6 +288,8 @@ export function createExportReadiness(script = {}, options = {}) {
       entrySceneId: sceneGraph.entrySceneId,
       reachableCount: sceneGraph.reachableSceneIds.length,
       unreachableSceneIds: sceneGraph.unreachableSceneIds,
+      deadEndSceneIds: sceneGraph.deadEndSceneIds,
+      cyclesWithoutExit: sceneGraph.cyclesWithoutExit,
     },
     assets: {
       checked: hasKnownAssets,

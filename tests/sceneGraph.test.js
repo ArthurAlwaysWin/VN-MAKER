@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createBranchGraphMermaid,
+  createBranchGraphReport,
   collectSceneGraph,
+  collectSceneEdges,
   collectSceneReferences,
   resolveEntrySceneId,
   traceReachableScenes,
@@ -123,5 +126,80 @@ describe('scene graph helpers', () => {
         pathString: 'scenes.start.pages.1.trueTarget',
       }),
     ]);
+  });
+
+  it('reports dead ends, closed cycles, unlock reachability, and Mermaid flow output', () => {
+    const script = {
+      systems: {
+        endings: { good: {}, secret: {} },
+        gallery: { cg: { hidden_cg: {} } },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [
+              { target: 'final', effects: [{ type: 'unlock:ending', id: 'good' }] },
+              { target: 'stranded' },
+              { target: 'loop' },
+            ],
+          }],
+        },
+        final: { pages: [] },
+        stranded: { pages: [] },
+        loop: { next: 'loop', pages: [] },
+        orphan: {
+          pages: [{
+            type: 'choice',
+            options: [{
+              effects: [
+                { type: 'unlock:ending', id: 'secret' },
+                { type: 'unlock:cg', id: 'hidden_cg' },
+              ],
+            }],
+          }],
+        },
+      },
+    };
+
+    expect(collectSceneEdges(script)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        fromSceneId: 'start',
+        toSceneId: 'final',
+        kind: 'choice-option',
+        pathString: 'scenes.start.pages.0.options.0.target',
+        targetExists: true,
+      }),
+    ]));
+
+    const report = createBranchGraphReport(script);
+    expect(report).toMatchObject({
+      entrySceneId: 'start',
+      unreachableSceneIds: ['orphan'],
+      deadEndSceneIds: ['stranded'],
+      cyclesWithoutExit: [{ sceneIds: ['loop'] }],
+      endings: { unreachableUnlockIds: ['secret'] },
+      cgs: { unreachableUnlockIds: ['hidden_cg'] },
+    });
+    expect(report.nodes.find((node) => node.id === 'final')).toMatchObject({
+      endingResolved: true,
+      deadEnd: false,
+    });
+    expect(createBranchGraphMermaid(report)).toContain('scene_start -->|choice option| scene_final');
+  });
+
+  it('keeps colliding sanitized scene ids distinct in Mermaid output', () => {
+    const report = createBranchGraphReport({
+      scenes: {
+        start: { next: 'route-a', pages: [] },
+        'route-a': { next: 'route_a', pages: [] },
+        route_a: { pages: [] },
+      },
+    });
+
+    const mermaid = createBranchGraphMermaid(report);
+    expect(mermaid).toContain('scene_route_a["route-a');
+    expect(mermaid).toContain('scene_route_a_2["route_a');
+    expect(mermaid).toContain('scene_route_a -->|next| scene_route_a_2');
   });
 });

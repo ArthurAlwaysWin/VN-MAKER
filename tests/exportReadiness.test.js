@@ -150,6 +150,34 @@ describe('export readiness', () => {
     ]);
   });
 
+  it('blocks explicit ending projects with unresolved dead ends and closed cycles', () => {
+    const report = createExportReadiness(createReadyScript({
+      systems: {
+        variables: {},
+        endings: { good: { title: 'Good End' } },
+        gallery: { cg: {} },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [{ text: 'Lost', target: 'dead' }, { text: 'Again', target: 'loop' }],
+          }],
+        },
+        dead: { pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Lost.' }] }] },
+        loop: { next: 'loop', pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Again.' }] }] },
+      },
+    }), {
+      knownAssets: [],
+    });
+
+    expect(report.ready).toBe(false);
+    expect(report.blockers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: 'scene-graph', code: 'dead-end-scene', pathString: 'scenes.dead' }),
+      expect.objectContaining({ source: 'scene-graph', code: 'cycle-without-exit', pathString: 'scenes.loop' }),
+    ]));
+  });
+
   it('reports partial theme slot coverage without blocking export', () => {
     const report = createExportReadiness(createReadyScript({
       ui: {

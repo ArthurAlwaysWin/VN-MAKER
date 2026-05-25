@@ -144,6 +144,16 @@ describe('project validator', () => {
     ]));
   });
 
+  it('keeps branch analysis safe while reporting malformed choice containers', () => {
+    const script = createValidScript();
+    script.scenes.start.pages[1].options = { broken: true };
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(codes(report)).toContain('invalid-choice-options');
+  });
+
   it('reports variable registry and branch GUI diagnostics for agent-authored system data', () => {
     const script = createValidScript();
     script.systems.variables['bad id'] = { type: 'number', initial: 0 };
@@ -425,5 +435,42 @@ describe('project validator', () => {
     const report = validateProject(script, { checkReachability: false });
 
     expect(codes(report)).not.toContain('unreachable-scene');
+  });
+
+  it('diagnoses unresolved terminal routes, closed cycles, and unreachable unlock routes', () => {
+    const script = createValidScript();
+    script.systems.endings.hidden_end = { title: 'Hidden End' };
+    script.systems.gallery.cg.hidden_cg = {
+      title: 'Hidden CG',
+      images: ['backgrounds/hidden.png'],
+      thumbnail: 'backgrounds/hidden.png',
+    };
+    script.scenes.start.pages[1].options.push(
+      { text: 'Lost', target: 'dead' },
+      { text: 'Loop', target: 'loop' },
+    );
+    script.scenes.dead = { pages: [{ type: 'normal', dialogues: [{ speaker: null, text: '...' }] }] };
+    script.scenes.loop = { next: 'loop', pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Again.' }] }] };
+    script.scenes.orphan = {
+      pages: [{
+        type: 'choice',
+        options: [{
+          text: 'Hidden',
+          effects: [
+            { type: 'unlock:ending', id: 'hidden_end' },
+            { type: 'unlock:cg', id: 'hidden_cg' },
+          ],
+        }],
+      }],
+    };
+
+    const report = validateProject(script);
+
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'dead-end-scene', pathString: 'scenes.dead' }),
+      expect.objectContaining({ code: 'cycle-without-exit', pathString: 'scenes.loop' }),
+      expect.objectContaining({ code: 'ending-unlock-unreachable', pathString: 'systems.endings.hidden_end' }),
+      expect.objectContaining({ code: 'cg-unlock-unreachable', pathString: 'systems.gallery.cg.hidden_cg' }),
+    ]));
   });
 });

@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 
+const assetMocks = vi.hoisted(() => ({
+  selectAsset: vi.fn(),
+}));
+
 vi.mock('../src/editor/views/WelcomeScreen.vue', () => ({
   default: {
     template: '<button data-test="open-project" @click="$emit(\'open-recent\', \'demo-project\')">打开</button>',
@@ -58,6 +62,7 @@ vi.mock('../src/editor/stores/assets.js', () => ({
     loadProjectFonts: vi.fn().mockResolvedValue({ failed: [] }),
     syncFontMeta: vi.fn(),
     deleteAsset: vi.fn().mockResolvedValue(undefined),
+    selectAsset: assetMocks.selectAsset,
   }),
 }));
 
@@ -236,6 +241,7 @@ describe('variable registry workspace', () => {
 
   beforeEach(() => {
     window.alert = vi.fn();
+    assetMocks.selectAsset.mockReset();
   });
 
   afterEach(() => {
@@ -533,5 +539,44 @@ describe('variable registry workspace', () => {
     expect(harness.container.textContent).toContain('未解锁');
     expect(harness.container.querySelector('[data-test="ending-profile-status"]').textContent).toContain('玩家进度调试');
     expect(harness.container.querySelector('[data-test="ending-profile-status"]').textContent).toContain('2 次解锁');
+  });
+
+  it('selects CG images and thumbnails through the project asset picker', async () => {
+    harness = await mountStorySystems(makeScriptData({
+      systems: {
+        variables: {},
+        gallery: {
+          cg: {
+            confession: {
+              title: 'Confession',
+              images: ['backgrounds/cg/original.png'],
+            },
+          },
+        },
+      },
+    }));
+    harness.script.selectCg('confession');
+    await flushUi();
+
+    assetMocks.selectAsset
+      .mockResolvedValueOnce('backgrounds/cg/thumb.png')
+      .mockResolvedValueOnce('ui/gallery/locked.png')
+      .mockResolvedValueOnce('backgrounds/cg/extra.png');
+
+    harness.container.querySelector('[data-test="cg-pick-thumbnail"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+    harness.container.querySelector('[data-test="cg-pick-locked-thumbnail"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+    harness.container.querySelector('[data-test="cg-add-image"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(assetMocks.selectAsset).toHaveBeenNthCalledWith(1, ['backgrounds', 'ui']);
+    expect(assetMocks.selectAsset).toHaveBeenNthCalledWith(2, ['ui']);
+    expect(assetMocks.selectAsset).toHaveBeenNthCalledWith(3, ['backgrounds']);
+    expect(harness.script.data.systems.gallery.cg.confession).toMatchObject({
+      thumbnail: 'backgrounds/cg/thumb.png',
+      lockedThumbnail: 'ui/gallery/locked.png',
+      images: ['backgrounds/cg/original.png', 'backgrounds/cg/extra.png'],
+    });
   });
 });

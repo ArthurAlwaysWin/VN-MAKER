@@ -35,18 +35,27 @@
       </label>
       <label class="field">
         <span>缩略图</span>
-        <input :value="cgEntry.thumbnail || ''" type="text" placeholder="backgrounds/cg/thumb.png"
-          @input="script.updateCgFields(cgId, { thumbnail: $event.target.value || undefined })">
+        <div class="asset-field">
+          <input :value="cgEntry.thumbnail || ''" type="text" placeholder="backgrounds/cg/thumb.png"
+            @input="script.updateCgFields(cgId, { thumbnail: $event.target.value || undefined })">
+          <button data-test="cg-pick-thumbnail" type="button" @click="pickThumbnail">选择</button>
+        </div>
       </label>
       <label class="field">
         <span>锁定缩略图</span>
-        <input :value="cgEntry.lockedThumbnail || ''" type="text" placeholder="ui/gallery/locked.png"
-          @input="script.updateCgFields(cgId, { lockedThumbnail: $event.target.value || undefined })">
+        <div class="asset-field">
+          <input :value="cgEntry.lockedThumbnail || ''" type="text" placeholder="ui/gallery/locked.png"
+            @input="script.updateCgFields(cgId, { lockedThumbnail: $event.target.value || undefined })">
+          <button data-test="cg-pick-locked-thumbnail" type="button" @click="pickLockedThumbnail">选择</button>
+        </div>
       </label>
     </div>
 
     <label class="field notes-field">
-      <span>图片路径（每行一张）</span>
+      <span class="field-heading">
+        图片路径（每行一张）
+        <button data-test="cg-add-image" type="button" @click="addImageFromPicker">+ 选择图片</button>
+      </span>
       <textarea data-test="cg-images-input" :value="imagesText" rows="4"
         placeholder="backgrounds/cg/confession.png" @change="onImagesChange"></textarea>
     </label>
@@ -62,6 +71,7 @@
 
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
+import { useAssetStore } from '../../stores/assets.js';
 import { useScriptStore } from '../../stores/script.js';
 
 const DRAFT_PREFIX = '__draft_cg__';
@@ -73,6 +83,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['requestDelete', 'requestRename']);
 const script = useScriptStore();
+const assets = useAssetStore();
 const titleInputRef = ref(null);
 const validationMessage = ref('');
 const draftIdValue = ref(props.cgId || '');
@@ -134,6 +145,29 @@ function onImagesChange(event) {
   const images = event.target.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   script.updateCgFields(props.cgId, { images });
 }
+
+async function pickThumbnail() {
+  const assetPath = await assets.selectAsset(['backgrounds', 'ui']);
+  if (assetPath) {
+    script.updateCgFields(props.cgId, { thumbnail: assetPath });
+  }
+}
+
+async function pickLockedThumbnail() {
+  const assetPath = await assets.selectAsset(['ui']);
+  if (assetPath) {
+    script.updateCgFields(props.cgId, { lockedThumbnail: assetPath });
+  }
+}
+
+async function addImageFromPicker() {
+  const assetPath = await assets.selectAsset(['backgrounds']);
+  if (assetPath) {
+    script.updateCgFields(props.cgId, {
+      images: [...(props.cgEntry?.images || []), assetPath],
+    });
+  }
+}
 </script>
 
 <style scoped>
@@ -149,6 +183,11 @@ function onImagesChange(event) {
 .field { display: flex; flex-direction: column; gap: 8px; color: #d0d0d0; font-size: 12px; }
 .field input, .field textarea { background: #1e1e1e; border: 1px solid #3d3d3d; border-radius: 6px; color: #e4e4e4; font-size: 13px; outline: none; padding: 10px 12px; }
 .field input:focus, .field textarea:focus { border-color: #007acc; }
+.asset-field { display: flex; gap: 8px; }
+.asset-field input { flex: 1; min-width: 0; }
+.asset-field button,
+.field-heading button { background: #303030; border: 1px solid #4a4a4a; border-radius: 6px; color: #ddd; cursor: pointer; font-size: 12px; padding: 7px 12px; white-space: nowrap; }
+.field-heading { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
 .notes-field { margin-top: 16px; }
 .validation-error { margin: 16px 0 0; color: #ff9d9d; }
 </style>

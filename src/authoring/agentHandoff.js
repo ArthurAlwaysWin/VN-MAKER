@@ -170,6 +170,29 @@ function createAssetSuggestedAction(issue = {}) {
   return undefined;
 }
 
+function createConditionSuggestedAction(issue = {}) {
+  const summaries = {
+    'condition-always-false': 'Revise the conflicting comparisons or retarget the false route intentionally.',
+    'condition-always-true': 'Revise the exhaustive comparisons or retarget the true route intentionally.',
+    'duplicate-condition-comparison': 'Remove the duplicate comparison or replace it with the intended branch criterion.',
+    'condition-identical-targets': 'Choose distinct true/false destinations or replace this condition page with direct flow.',
+  };
+  const summary = summaries[issue.code];
+  if (!summary) {
+    return undefined;
+  }
+
+  return {
+    summary,
+    commands: [
+      {
+        command: 'set-condition-page',
+        args: ['--scene', '<scene-id>', '--page', '<page-index>', '--conditions', '<revised-json>'],
+      },
+    ],
+  };
+}
+
 function getReviewCategory(source, issue = {}) {
   if (issue.code === 'missing-asset-reference') return 'missing-asset';
   if (issue.code === 'unused-asset') return 'unused-asset';
@@ -181,7 +204,9 @@ function getReviewCategory(source, issue = {}) {
 }
 
 function createReviewItem(source, severity, issue = {}) {
-  const suggestedAction = issue.suggestedAction ?? createAssetSuggestedAction(issue);
+  const suggestedAction = issue.suggestedAction
+    ?? createAssetSuggestedAction(issue)
+    ?? createConditionSuggestedAction(issue);
   return {
     source,
     severity,
@@ -192,6 +217,8 @@ function createReviewItem(source, severity, issue = {}) {
     ...('assetPath' in issue ? { assetPath: issue.assetPath } : {}),
     ...('assetKind' in issue ? { assetKind: issue.assetKind } : {}),
     ...('sceneId' in issue ? { sceneId: issue.sceneId } : {}),
+    ...('variableId' in issue ? { variableId: issue.variableId } : {}),
+    ...('outcome' in issue ? { outcome: issue.outcome } : {}),
     ...('missingSlots' in issue ? { missingSlots: issue.missingSlots } : {}),
     ...('missingStates' in issue ? { missingStates: issue.missingStates } : {}),
     ...('familyKey' in issue ? { familyKey: issue.familyKey } : {}),

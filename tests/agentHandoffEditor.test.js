@@ -475,5 +475,13 @@ describe('agent handoff editor integration', () => {
     expect(pageInspectorSource).toContain('cgOptions');
     expect(storySystemsSource).toContain('BranchGraphPanel');
     expect(storySystemsSource).toContain("script.storySystemsPanel === 'graph'");
+    expect(storySystemsSource).toContain('openGraphPath');
+    const graphPanelSource = readFileSync(
+      resolve(process.cwd(), 'src', 'editor', 'components', 'story-systems', 'BranchGraphPanel.vue'),
+      'utf8',
+    );
+    expect(graphPanelSource).toContain('condition-always-false');
+    expect(graphPanelSource).toContain('condition-always-true');
+    expect(graphPanelSource).toContain("emit('navigate-path'");
   });
 });

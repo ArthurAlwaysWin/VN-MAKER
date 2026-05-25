@@ -4,13 +4,14 @@
       <div>
         <p class="eyebrow">Branch Flow</p>
         <h1>剧情流程审查</h1>
-        <p class="copy">检查可达性、终点结局解锁、封闭循环和 CG 解锁路径。</p>
+        <p class="copy">检查可达性、终点结局解锁、封闭循环、CG 解锁和确定性条件路线。</p>
       </div>
       <div class="stats">
         <span>{{ report.nodeCount }} 场景</span>
         <span>{{ report.edgeCount }} 连接</span>
         <span :class="{ warn: report.deadEndSceneIds.length }">{{ report.deadEndSceneIds.length }} 死路</span>
         <span :class="{ warn: report.cyclesWithoutExit.length }">{{ report.cyclesWithoutExit.length }} 封闭循环</span>
+        <span :class="{ warn: conditionDiagnostics.length }">{{ conditionDiagnostics.length }} 条件问题</span>
       </div>
     </header>
 
@@ -21,14 +22,14 @@
         :key="issue.key"
         type="button"
         class="issue"
-        @click="$emit('navigate-scene', issue.sceneId)"
+        @click="openIssue(issue)"
       >
         <strong>{{ issue.label }}</strong>
         <span>{{ issue.text }}</span>
       </button>
     </section>
     <section v-else class="clean">
-      当前流程没有不可达场景、未收束终点或无出口循环。
+      当前流程没有不可达场景、未收束终点、无出口循环或确定性条件问题。
     </section>
 
     <section class="nodes">
@@ -61,6 +62,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { analyzeConditionPage } from '../../../shared/conditionAnalysis.js';
 import { createBranchGraphMermaid, createBranchGraphReport } from '../../../shared/sceneGraph.js';
 
 const props = defineProps({
@@ -70,30 +72,75 @@ const props = defineProps({
   },
 });
 
-defineEmits(['navigate-scene']);
+const emit = defineEmits(['navigate-scene', 'navigate-path']);
 
 const report = computed(() => createBranchGraphReport(props.scriptData));
 const mermaid = computed(() => createBranchGraphMermaid(report.value));
+const conditionDiagnostics = computed(() => Object.entries(props.scriptData?.scenes ?? {}).flatMap(([sceneId, scene]) => (
+  (scene?.pages ?? []).flatMap((page, pageIndex) => {
+    if (page?.type !== 'condition') {
+      return [];
+    }
+
+    return analyzeConditionPage(page, {
+      registry: props.scriptData?.systems?.variables ?? {},
+    }).map((finding) => {
+      const path = ['scenes', sceneId, 'pages', pageIndex];
+      if (finding.conditionIndex !== undefined) {
+        path.push('conditions', finding.conditionIndex);
+      }
+      return {
+        ...finding,
+        path,
+        pathString: path.join('.'),
+      };
+    });
+  })
+)));
 const issues = computed(() => [
   ...report.value.unreachableSceneIds.map((sceneId) => ({
     key: `unreachable:${sceneId}`,
     sceneId,
+    pathString: `scenes.${sceneId}`,
     label: '不可达场景',
     text: sceneId,
   })),
   ...report.value.deadEndSceneIds.map((sceneId) => ({
     key: `dead-end:${sceneId}`,
     sceneId,
+    pathString: `scenes.${sceneId}`,
     label: '没有结局解锁的终点',
     text: sceneId,
   })),
   ...report.value.cyclesWithoutExit.map((cycle) => ({
     key: `cycle:${cycle.sceneIds.join(':')}`,
     sceneId: cycle.sceneIds[0],
+    pathString: `scenes.${cycle.sceneIds[0]}`,
     label: '无出口循环',
     text: cycle.sceneIds.join(' -> '),
   })),
+  ...conditionDiagnostics.value.map((diagnostic) => ({
+    key: `${diagnostic.code}:${diagnostic.pathString}`,
+    sceneId: diagnostic.path[1],
+    pathString: diagnostic.pathString,
+    label: {
+      'condition-always-false': '条件恒为假',
+      'condition-always-true': '条件恒为真',
+      'duplicate-condition-comparison': '重复条件',
+      'condition-identical-targets': '相同分支目标',
+    }[diagnostic.code],
+    text: `${diagnostic.path[1]} / 第 ${Number(diagnostic.path[3] ?? 0) + 1} 页`,
+  })),
 ]);
+
+function openIssue(issue) {
+  if (issue.pathString) {
+    emit('navigate-path', issue.pathString);
+    return;
+  }
+
+  emit('navigate-scene', issue.sceneId);
+}
 </script>
 
 <style scoped>

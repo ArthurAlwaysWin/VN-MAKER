@@ -260,6 +260,48 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('provides repair guidance for deterministic condition route findings', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_condition_analysis',
+      systems: {
+        variables: {
+          affection: { type: 'number', initial: 0 },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'condition',
+            conditionMode: 'all',
+            conditions: [
+              { variableId: 'affection', operator: '>=', value: 5 },
+              { variableId: 'affection', operator: '<', value: 5 },
+            ],
+            trueTarget: 'good',
+            falseTarget: 'bad',
+          }],
+        },
+        good: { pages: [{ type: 'normal', dialogues: [{ text: 'Good.' }] }] },
+        bad: { pages: [{ type: 'normal', dialogues: [{ text: 'Bad.' }] }] },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+    });
+
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'validation',
+        code: 'condition-always-false',
+        pathString: 'scenes.start.pages.0',
+        variableId: 'affection',
+        outcome: false,
+        suggestedAction: expect.objectContaining({
+          commands: [expect.objectContaining({ command: 'set-condition-page' })],
+        }),
+      }),
+    ]));
+  });
+
   it('turns transaction reference screenshot notes into screen fidelity review items', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_reference_fidelity',

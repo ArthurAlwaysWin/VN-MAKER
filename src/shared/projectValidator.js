@@ -1,4 +1,5 @@
 import { normalizeConditionPage } from './branchingContract.js';
+import { analyzeConditionPage } from './conditionAnalysis.js';
 import {
   collectCgUnlockReferences,
   isValidCgId,
@@ -530,6 +531,16 @@ function getRawConditionRows(page = {}) {
   return [];
 }
 
+function validateConditionComparisonAnalysis(page, registry, pagePath, report) {
+  for (const finding of analyzeConditionPage(page, { registry })) {
+    const { conditionIndex, code, message, ...details } = finding;
+    const path = conditionIndex === undefined
+      ? pagePath
+      : [...pagePath, 'conditions', conditionIndex];
+    addWarning(report, code, message, path, details);
+  }
+}
+
 function validateNormalPage(page, context, report, options) {
   validatePageMedia(page, context, report, options);
 
@@ -645,6 +656,7 @@ function validateConditionPage(page, context, report, options) {
     }
   });
 
+  validateConditionComparisonAnalysis(page, registry, pagePath, report);
   validateSceneTarget(report, sceneIds, normalized.trueTarget, [...pagePath, 'trueTarget']);
   validateSceneTarget(report, sceneIds, normalized.falseTarget, [...pagePath, 'falseTarget']);
 }

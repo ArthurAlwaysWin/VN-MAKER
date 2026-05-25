@@ -82,6 +82,7 @@
         v-else-if="script.storySystemsPanel === 'graph'"
         :script-data="script.data"
         @navigate-scene="openGraphScene"
+        @navigate-path="openGraphPath"
       />
 
       <EndingInspector
@@ -358,6 +359,10 @@ async function refreshPlayerProfile() {
 
 function openGraphScene(sceneId) {
   project.requestSceneNavigation(`scenes.${sceneId}`);
+}
+
+function openGraphPath(pathString) {
+  project.requestSceneNavigation(pathString);
 }
 
 function openRenameImpact(payload) {

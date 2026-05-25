@@ -75,7 +75,7 @@ function createValidScript(overrides = {}) {
               { variableId: 'route_locked', operator: '==', value: false },
             ],
             trueTarget: 'start',
-            falseTarget: 'start',
+            falseTarget: 'good',
           },
         ],
       },
@@ -197,6 +197,69 @@ describe('project validator', () => {
       expect.objectContaining({
         code: 'affection-character-missing',
         pathString: 'systems.variables.sakura_affection.characterId',
+      }),
+    ]));
+  });
+
+  it('reports provably ineffective or deterministic condition routing', () => {
+    const script = createValidScript();
+    script.scenes.good.pages = [
+      {
+        type: 'condition',
+        conditionMode: 'all',
+        conditions: [
+          { variableId: 'affection', operator: '>=', value: 2 },
+          { variableId: 'affection', operator: '<', value: 2 },
+        ],
+        trueTarget: 'start',
+        falseTarget: 'good',
+      },
+      {
+        type: 'condition',
+        conditionMode: 'any',
+        conditions: [
+          { variableId: 'route_locked', operator: '==', value: true },
+          { variableId: 'route_locked', operator: '!=', value: true },
+        ],
+        trueTarget: 'start',
+        falseTarget: 'good',
+      },
+      {
+        type: 'condition',
+        conditionMode: 'all',
+        conditions: [
+          { variableId: 'affection', operator: '>=', value: 1 },
+          { variableId: 'affection', operator: '>=', value: 1 },
+        ],
+        trueTarget: 'start',
+        falseTarget: 'start',
+      },
+    ];
+
+    const report = validateProject(script);
+
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'condition-always-false',
+        pathString: 'scenes.good.pages.0',
+        variableId: 'affection',
+        outcome: false,
+      }),
+      expect.objectContaining({
+        code: 'condition-always-true',
+        pathString: 'scenes.good.pages.1',
+        variableId: 'route_locked',
+        outcome: true,
+      }),
+      expect.objectContaining({
+        code: 'duplicate-condition-comparison',
+        pathString: 'scenes.good.pages.2.conditions.1',
+        variableId: 'affection',
+      }),
+      expect.objectContaining({
+        code: 'condition-identical-targets',
+        pathString: 'scenes.good.pages.2',
+        target: 'start',
       }),
     ]));
   });

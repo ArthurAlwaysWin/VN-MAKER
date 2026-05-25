@@ -66,6 +66,10 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `variable-type-mismatch` | A variable effect or condition compares/sets a bool/number with an incompatible operator or value. |
 | `affection-character-missing` | An affection variable does not point at an existing character. |
 | `condition-missing-targets` | A configured condition page has neither a true nor false target. |
+| `condition-always-false` | Same-variable comparisons on an `all` condition page can never take the true route. |
+| `condition-always-true` | Same-variable comparisons on an `any` condition page always take the true route. |
+| `duplicate-condition-comparison` | A condition page repeats the same variable comparison. |
+| `condition-identical-targets` | A condition page sends both outcomes to the same target scene. |
 | `unregistered-ending-unlock` | Ending unlock references an unregistered ending. |
 | `ending-never-unlocked` | An ending is registered but no `unlock:ending` effect references it. |
 | `no-reachable-ending` | No registered ending unlock is reachable from the entry scene. |

@@ -397,6 +397,10 @@ Required diagnostics:
 - `unreachable-scene`
 - `dead-end-scene`
 - `cycle-without-exit`
+- `condition-always-false`
+- `condition-always-true`
+- `duplicate-condition-comparison`
+- `condition-identical-targets`
 - `ending-unlock-unreachable`
 - `cg-unlock-unreachable`
 - `unused-asset`

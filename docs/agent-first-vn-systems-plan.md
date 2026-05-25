@@ -338,7 +338,7 @@ Definition of done:
 
 **Goal:** Make long projects analyzable by humans and agents.
 
-**Current minimal slice:** Shared branch-flow reports now expose attributed edges, reachability, terminal/dead-end routes, closed cycles, per-registry unlock reachability, and Mermaid output. Validator/readiness diagnostics, agent CLI analysis/repair commands, handoff `branch-graph` preview routing, and a Story Systems flow review panel are implemented together.
+**Current minimal slice:** Shared branch-flow reports now expose attributed edges, reachability, terminal/dead-end routes, closed cycles, per-registry unlock reachability, and Mermaid output. Validator/readiness diagnostics include deterministic or ineffective condition-route findings; agent CLI analysis/repair commands, handoff `branch-graph` preview routing, and a Story Systems flow review panel with condition-page navigation are implemented together.
 
 Shared analysis:
 

@@ -1269,7 +1269,7 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     return session.addEndingUnlock({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
       pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      optionIndex: getParam(params, 'optionIndex', 'option'),
       endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
     });
   }
@@ -3640,10 +3640,7 @@ async function addEndingUnlock(args) {
     throw new Error('add-ending-unlock requires --page');
   }
 
-  const optionIndex = getIntArg(args, '--option', null);
-  if (optionIndex == null) {
-    throw new Error('add-ending-unlock requires --option');
-  }
+  const optionIndex = getIntArg(args, '--option', undefined);
 
   const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
   if (!endingId) {
@@ -4973,7 +4970,7 @@ function printHelp() {
   add-ending --id ending_id [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-ending --id ending_id [--patch json] [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-ending --id ending_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  add-ending-unlock --scene scene_id --page index --option index --id ending_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-ending-unlock --scene scene_id --page index [--option index] --id ending_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-cg [--script path] [--json]
   add-cg --id cg_id [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-cg --id cg_id [--patch json] [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]

@@ -44,7 +44,7 @@ function assertNonEmptyString(value, label) {
 }
 
 function createDefaultNormalPage(overrides = {}) {
-  return {
+  return normalizeEffectContainer({
     id: overrides.id,
     type: 'normal',
     background: overrides.background ?? '',
@@ -55,7 +55,7 @@ function createDefaultNormalPage(overrides = {}) {
     ...cloneJsonValue(overrides),
     type: 'normal',
     transition: getPageTransitionContract(overrides.transition ?? { type: 'fade', duration: 800 }),
-  };
+  });
 }
 
 function createDefaultChoicePage(overrides = {}) {
@@ -312,6 +312,25 @@ function removeEndingUnlockReferences(script, endingId) {
 
   for (const scene of Object.values(script.scenes ?? {})) {
     for (const page of scene?.pages ?? []) {
+      if (page?.type === 'normal') {
+        const normalizedPage = normalizeEffectContainer(page);
+        const effects = (normalizedPage.effects ?? []).filter((effect) => {
+          const shouldKeep = !isEndingUnlockEffect(effect) || effect.id !== endingId;
+          if (!shouldKeep) {
+            deletedReferenceCount += 1;
+          }
+          return shouldKeep;
+        });
+
+        if (effects.length > 0) {
+          normalizedPage.effects = effects;
+        } else {
+          delete normalizedPage.effects;
+        }
+        delete page.effects;
+        Object.assign(page, normalizedPage);
+      }
+
       if (page?.type !== 'choice') {
         continue;
       }
@@ -674,6 +693,28 @@ export function createProjectSession(input = {}) {
       }
 
       const page = getPage(script, sceneId, pageIndex);
+      if (optionIndex == null) {
+        if (page.type !== 'normal') {
+          throw new Error('Page-enter ending unlocks can only be added to normal pages');
+        }
+
+        const normalizedPage = normalizeEffectContainer(page);
+        normalizedPage.effects = [
+          ...(normalizedPage.effects ?? []),
+          { type: 'unlock:ending', id: targetEndingId },
+        ];
+        Object.assign(page, normalizedPage);
+        const effectIndex = normalizedPage.effects.length - 1;
+        return {
+          sceneId,
+          pageIndex,
+          optionIndex: null,
+          effectIndex,
+          endingId: targetEndingId,
+          changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.effects.${effectIndex}`],
+        };
+      }
+
       if (page.type !== 'choice') {
         throw new Error('Ending unlocks can only be added to choice pages');
       }

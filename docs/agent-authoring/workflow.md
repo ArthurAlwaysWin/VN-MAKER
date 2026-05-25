@@ -192,6 +192,7 @@ npm run vn -- set-page-transitions --scene chapter_1 --from-page 0 --to-page 8 -
 npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
 npm run vn -- add-cg --id cg_confession --title "Confession" --images '["backgrounds/cg/confession.png"]' --thumbnail backgrounds/cg/confession_thumb.png --script public/game/script.json --force --backup --json
 npm run vn -- add-cg-unlock --scene chapter_1 --page 1 --option 0 --id cg_confession --script public/game/script.json --force --backup --json
+npm run vn -- add-ending-unlock --scene good_ending --page 0 --id good_end --script public/game/script.json --force --checkpoint --json
 ```
 
 `rename-scene` updates scene references in `next`, choice option targets, and condition targets. `delete-scene` refuses to delete scenes referenced from other scenes unless `--force-references` is present.

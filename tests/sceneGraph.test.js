@@ -188,6 +188,32 @@ describe('scene graph helpers', () => {
     expect(createBranchGraphMermaid(report)).toContain('scene_start -->|choice option| scene_final');
   });
 
+  it('treats terminal normal pages with page-enter ending unlocks as resolved endings', () => {
+    const report = createBranchGraphReport({
+      systems: { endings: { quiet_end: {} } },
+      scenes: {
+        start: { next: 'quiet', pages: [] },
+        quiet: {
+          pages: [{
+            type: 'normal',
+            effects: [{ type: 'unlock:ending', id: 'quiet_end' }],
+          }],
+        },
+      },
+    });
+
+    expect(report.deadEndSceneIds).toEqual([]);
+    expect(report.nodes.find((node) => node.id === 'quiet')).toMatchObject({
+      terminal: true,
+      unlocksEnding: true,
+      endingResolved: true,
+    });
+    expect(report.endings.entries[0]).toMatchObject({
+      id: 'quiet_end',
+      reachableReferenceCount: 1,
+    });
+  });
+
   it('keeps colliding sanitized scene ids distinct in Mermaid output', () => {
     const report = createBranchGraphReport({
       scenes: {

@@ -51,8 +51,9 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `invalid-cg-id` | A CG id or CG reference uses an unsupported id shape. |
 | `duplicate-cg-id` | Two CG registry keys collide after normalization. |
 | `invalid-cg-entry` | A CG registry entry is not an object. |
-| `invalid-effects` | A choice effect cannot normalize. |
+| `invalid-effects` | A choice or normal page entry effect cannot normalize. |
 | `unsupported-effect` | Effect type is outside the shared DSL. |
+| `unsupported-page-enter-effect` | A normal page entry effect is not `unlock:ending`; page-enter effects are intentionally limited to ending progression. |
 
 ## Common Warning Codes
 

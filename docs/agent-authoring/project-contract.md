@@ -147,11 +147,14 @@ CG ids use the stable registry id shape. Register a CG with `add-cg` before writ
   "dialogues": [
     { "speaker": "sakura", "text": "Hello.", "expression": "smile", "voice": null }
   ],
+  "effects": [
+    { "type": "unlock:ending", "id": "good_end" }
+  ],
   "transition": { "type": "fade", "duration": 800 }
 }
 ```
 
-Narration uses `"speaker": null`.
+Narration uses `"speaker": null`. For a terminal normal page, `effects` may contain `unlock:ending`; it runs when the player enters the page during story traversal, not when a saved page is merely redrawn after load.
 
 ## Choice Page
 
@@ -204,6 +207,8 @@ Supported effect types:
 ```
 
 Register variables, endings, and CG entries before referencing them in effects.
+
+Choice option `effects` support the full DSL above. Normal page entry `effects` are reserved for `unlock:ending`, so a route conclusion can unlock naturally on arrival without introducing an extra confirmation choice.
 
 ## Advanced Staging
 

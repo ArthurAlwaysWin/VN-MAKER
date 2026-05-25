@@ -3,14 +3,14 @@
     <header class="ending-toolbar">
       <div>
         <h2>结局注册表</h2>
-        <p>管理可解锁结局和选项页解锁引用。</p>
+        <p>管理可解锁结局、终点页进入解锁与选项解锁引用。</p>
       </div>
       <button class="create-btn" type="button" @click="$emit('create')">+ 新建结局</button>
     </header>
 
     <div v-if="isEmpty" class="state-card">
       <h3>还没有结局</h3>
-      <p>先注册结局，再在选择页添加解锁效果。</p>
+      <p>先注册结局，再在终点普通页或选择页添加解锁效果。</p>
       <button class="empty-btn" type="button" @click="$emit('create')">新建结局</button>
     </div>
 

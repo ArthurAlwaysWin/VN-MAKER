@@ -337,6 +337,32 @@ describe('project validator', () => {
     ]));
   });
 
+  it('accepts reachable page-enter ending unlocks and rejects unrelated page-enter effects', () => {
+    const script = createValidScript();
+    script.scenes.start.pages[1].options[0].effects = [
+      { type: 'unlock:cg', id: 'cg_001' },
+    ];
+    script.scenes.start.pages[0].effects = [
+      { type: 'unlock:ending', id: 'good_end' },
+    ];
+
+    const validReport = validateProject(script);
+    expect(validReport.warnings.map((issue) => issue.code)).not.toContain('ending-never-unlocked');
+    expect(validReport.warnings.map((issue) => issue.code)).not.toContain('no-reachable-ending');
+    expect(validReport.errors.map((issue) => issue.code)).not.toContain('unsupported-page-enter-effect');
+
+    script.scenes.start.pages[0].effects = [
+      { type: 'unlock:cg', id: 'cg_001' },
+    ];
+    const invalidReport = validateProject(script);
+    expect(invalidReport.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'unsupported-page-enter-effect',
+        pathString: 'scenes.start.pages.0.effects.0.type',
+      }),
+    ]));
+  });
+
   it('reports CG registry, artwork, and unlock diagnostics', () => {
     const script = createValidScript();
     script.systems.gallery.cg = {

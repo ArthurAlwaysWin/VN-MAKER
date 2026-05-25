@@ -1295,6 +1295,7 @@ describe('vn-author CLI', () => {
     const skill = await readFile(path.resolve('docs/agent-authoring/skill.md'), 'utf8');
 
     expect(skill).toContain('Register endings with `add-ending` before writing `unlock:ending`');
+    expect(skill).toContain('add-ending-unlock --scene good_ending --page 0 --id good_end');
     expect(skill).toContain('CG gallery registry authoring is supported through `add-cg`, `update-cg`, `remove-cg`, `add-cg-unlock`, and `list-cg`');
   });
 
@@ -2066,6 +2067,10 @@ describe('vn-author CLI', () => {
                 prompt: 'Finish?',
                 options: [{ text: 'Good end', target: null }],
               },
+              {
+                type: 'normal',
+                dialogues: [{ speaker: null, text: 'A peaceful conclusion.' }],
+              },
             ],
           },
         },
@@ -2091,6 +2096,11 @@ describe('vn-author CLI', () => {
             command: 'add-ending-unlock',
             params: { scene: 'start', page: 0, option: 0, ending: 'good_end' },
           },
+          {
+            id: 'unlock-ending-on-page-entry',
+            command: 'add-ending-unlock',
+            params: { scene: 'start', page: 1, ending: 'good_end' },
+          },
         ],
       }), 'utf8');
 
@@ -2110,6 +2120,7 @@ describe('vn-author CLI', () => {
       expect(result.changeSummary.changedPaths).toEqual(expect.arrayContaining([
         'systems.endings.good_end',
         'scenes.start.pages.0.options.0.effects.0',
+        'scenes.start.pages.1.effects.0',
       ]));
       expect(script.systems.endings.good_end).toMatchObject({
         title: 'Good End',
@@ -2120,6 +2131,9 @@ describe('vn-author CLI', () => {
         hiddenUntilUnlocked: true,
       });
       expect(script.scenes.start.pages[0].options[0].effects).toEqual([
+        { type: 'unlock:ending', id: 'good_end' },
+      ]);
+      expect(script.scenes.start.pages[1].effects).toEqual([
         { type: 'unlock:ending', id: 'good_end' },
       ]);
 
@@ -2169,14 +2183,16 @@ describe('vn-author CLI', () => {
       const removedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
       expect(removed.result).toMatchObject({
         deletedEndingId: 'good_end',
-        deletedReferenceCount: 1,
+        deletedReferenceCount: 2,
       });
       expect(removed.changeSummary.changedPaths).toEqual([
         'systems.endings.good_end',
         'scenes.start.pages.0.options.0.effects.0',
+        'scenes.start.pages.1.effects.0',
       ]);
       expect(removedScript.systems.endings.good_end).toBeUndefined();
       expect(removedScript.scenes.start.pages[0].options[0].effects).toBeUndefined();
+      expect(removedScript.scenes.start.pages[1].effects).toBeUndefined();
     });
   });
 

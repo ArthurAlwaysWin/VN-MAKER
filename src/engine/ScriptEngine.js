@@ -295,6 +295,7 @@ export class ScriptEngine extends EventEmitter {
 
     switch (page.type) {
       case 'normal':
+        void this._applyPageEffects(page);
         this._renderPage(page);
         this.dialogueIndex = 0;
         this._playCurrentDialogue();
@@ -538,6 +539,19 @@ export class ScriptEngine extends EventEmitter {
       });
     } catch (error) {
       console.error('[ScriptEngine] Failed to apply choice effects:', error);
+    }
+  }
+
+  async _applyPageEffects(page) {
+    try {
+      const endingEffects = (Array.isArray(page?.effects) ? page.effects : [])
+        .filter((effect) => effect?.type === 'unlock:ending');
+      await applyEffects(endingEffects, {
+        variables: this.variables,
+        playerDataRepository: this._playerDataRepository,
+      });
+    } catch (error) {
+      console.error('[ScriptEngine] Failed to apply page-enter effects:', error);
     }
   }
 }

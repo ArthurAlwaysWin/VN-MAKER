@@ -204,7 +204,7 @@ Definition of done:
 
 **Goal:** Implement explicit ending tracking with clean save/profile separation.
 
-**Current implemented coverage:** Ending registry/API/CLI/apply-plan operations, profile-backed runtime unlock tracking and reset separation, validation/handoff routing, Story Systems editing and unlock selection, plus a read-only Story Systems player-progress status panel with refresh support are implemented together.
+**Current implemented coverage:** Ending registry/API/CLI/apply-plan operations, terminal normal-page entry unlocks and choice unlocks, profile-backed runtime unlock tracking and reset separation, validation/handoff/branch-flow routing, Story Systems editing and unlock selection, plus a read-only Story Systems player-progress status panel with refresh support are implemented together.
 
 Data contract:
 
@@ -234,6 +234,8 @@ Authoring API/CLI:
 - `remove-ending`
 - `add-ending-unlock`
 - `list-endings`
+
+`add-ending-unlock` may target a choice option or, when no option is supplied, a normal ending page whose arrival should unlock the ending.
 
 Editor:
 

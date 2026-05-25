@@ -422,6 +422,42 @@ describe('project authoring session', () => {
     ]);
   });
 
+  it('authors page-enter ending unlocks for ordinary terminal pages', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_m2_page_enter',
+        characters: {},
+        systems: { endings: { quiet_end: { title: 'Quiet End' } } },
+        scenes: {
+          ending: {
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'The end.' }] }],
+          },
+        },
+      },
+    });
+
+    expect(session.addEndingUnlock({
+      sceneId: 'ending',
+      pageIndex: 0,
+      endingId: 'quiet_end',
+    })).toEqual({
+      sceneId: 'ending',
+      pageIndex: 0,
+      optionIndex: null,
+      effectIndex: 0,
+      endingId: 'quiet_end',
+      changedPaths: ['scenes.ending.pages.0.effects.0'],
+    });
+    expect(session.toJSON().scenes.ending.pages[0].effects).toEqual([
+      { type: 'unlock:ending', id: 'quiet_end' },
+    ]);
+    expect(session.removeEnding({ endingId: 'quiet_end', forceReferences: true })).toMatchObject({
+      deletedReferenceCount: 1,
+      changedPaths: ['systems.endings.quiet_end', 'scenes.ending.pages.0.effects.0'],
+    });
+    expect(session.toJSON().scenes.ending.pages[0].effects).toBeUndefined();
+  });
+
   it('authors M3 CG gallery entries and unlock effects through one session contract', () => {
     const session = createProjectSession({
       script: {

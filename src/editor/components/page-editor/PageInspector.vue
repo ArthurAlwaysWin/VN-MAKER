@@ -235,6 +235,41 @@
         </div>
         <button class="add-btn" @click="addDialogue" title="添加新对话">+ 添加对话</button>
 
+        <div class="form-group choice-effects page-ending-effects" data-test="page-ending-effects">
+          <label>进入页面时解锁结局</label>
+          <p class="effect-empty">玩家到达此普通页面时写入结局进度；读取存档重绘页面不会重复触发。</p>
+          <div
+            v-for="(effect, effectIdx) in (page.effects || [])"
+            :key="`page-${effectIdx}-${effect.type}-${effect.id}`"
+            class="effect-row"
+          >
+            <template v-if="isEndingUnlockEffect(effect)">
+              <code class="readonly-effect">结局</code>
+              <select
+                class="field-input effect-variable"
+                :value="effect.id"
+                @change="setPageEndingUnlockId(effectIdx, $event.target.value)"
+              >
+                <option v-for="ending in endingOptions" :key="ending.id" :value="ending.id">
+                  {{ ending.label }}
+                </option>
+              </select>
+              <span class="readonly-effect-id">进入解锁</span>
+            </template>
+            <template v-else>
+              <code class="readonly-effect">{{ effect.type }}</code>
+              <span class="readonly-effect-id">{{ effect.id }}</span>
+            </template>
+            <button class="delete-x" type="button" @click="removePageEffectRow(effectIdx)" title="删除效果">✕</button>
+          </div>
+          <button
+            class="secondary-add-btn"
+            type="button"
+            :disabled="!endingOptions.length"
+            @click="addPageEndingUnlockRow"
+          >+ 添加到达结局解锁</button>
+        </div>
+
         <!-- Detail editor for selected dialogue -->
         <div v-if="selectedDialogue" class="dialogue-editor">
           <div class="editor-divider">── 编辑选中对话 ──</div>
@@ -1323,6 +1358,14 @@ function addEndingUnlockRow(optionIndex) {
   script.pushState();
 }
 
+function addPageEndingUnlockRow() {
+  const endingId = endingOptions.value[0]?.id;
+  if (!page.value || page.value.type !== 'normal' || !endingId) return;
+  page.value.effects ??= [];
+  page.value.effects.push({ type: 'unlock:ending', id: endingId });
+  script.pushState();
+}
+
 function addCgUnlockRow(optionIndex) {
   const option = page.value?.options?.[optionIndex];
   const cgId = cgOptions.value[0]?.id;
@@ -1343,6 +1386,23 @@ function removeChoiceEffectRow(optionIndex, effectIndex) {
 
 function setEndingUnlockId(optionIndex, effectIndex, endingId) {
   const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isEndingUnlockEffect(effect)) return;
+  effect.id = endingId;
+  script.pushState();
+}
+
+function removePageEffectRow(effectIndex) {
+  const effects = page.value?.effects;
+  if (!effects?.[effectIndex]) return;
+  effects.splice(effectIndex, 1);
+  if (effects.length === 0) {
+    delete page.value.effects;
+  }
+  script.pushState();
+}
+
+function setPageEndingUnlockId(effectIndex, endingId) {
+  const effect = page.value?.effects?.[effectIndex];
   if (!effect || !isEndingUnlockEffect(effect)) return;
   effect.id = endingId;
   script.pushState();

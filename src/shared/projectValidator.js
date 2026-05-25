@@ -543,6 +543,25 @@ function validateConditionComparisonAnalysis(page, registry, pagePath, report) {
 
 function validateNormalPage(page, context, report, options) {
   validatePageMedia(page, context, report, options);
+  validateEffects(page, {
+    ...context,
+    path: ['scenes', context.sceneId, 'pages', context.pageIndex],
+  }, report);
+  try {
+    normalizeEffects(page).forEach((effect, effectIndex) => {
+      if (effect.type !== 'unlock:ending') {
+        addError(
+          report,
+          'unsupported-page-enter-effect',
+          `Normal page entry effects only support "unlock:ending"; received "${effect.type}".`,
+          ['scenes', context.sceneId, 'pages', context.pageIndex, 'effects', effectIndex, 'type'],
+          { effectType: effect.type },
+        );
+      }
+    });
+  } catch {
+    // validateEffects reports malformed effect entries.
+  }
 
   if (!Array.isArray(page.dialogues)) {
     addWarning(report, 'missing-normal-dialogues', 'Normal page has no dialogues array.', ['scenes', context.sceneId, 'pages', context.pageIndex, 'dialogues']);
@@ -820,7 +839,7 @@ function validateEndingProgression(script, endings, report, options) {
   for (const endingId of endingIds) {
     const ending = endings[endingId] ?? {};
     if (!referencesByEnding.has(endingId)) {
-      addWarning(report, 'ending-never-unlocked', `Ending "${endingId}" is registered but never unlocked by a choice effect.`, ['systems', 'endings', endingId], {
+      addWarning(report, 'ending-never-unlocked', `Ending "${endingId}" is registered but never unlocked by a page or choice effect.`, ['systems', 'endings', endingId], {
         endingId,
       });
     }

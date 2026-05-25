@@ -74,7 +74,7 @@ Current:
 - Handoff review items include categories for missing assets, unused assets, skipped asset checks, and required screen UI preview review.
 - Handoff flags placeholder-like and highly ambiguous referenced asset names for human replacement or rename review.
 - Handoff can carry reference screenshot fidelity notes from an apply-plan result into structured review items for Project Settings.
-- Story Systems shows a read-only, refreshable player-profile status for registered endings so creators can distinguish authored unlock points from runtime unlock progress.
+- Story Systems supports registered endings, terminal normal-page arrival unlocks and choice unlocks, plus a read-only, refreshable player-profile status so creators can distinguish authored unlock points from runtime unlock progress.
 - Story Systems exposes editable CG registry entries with project asset selection for images/thumbnails, and choice effects can select registered `unlock:cg` targets.
 - Transition authoring exposes the shared catalog in page-inspector controls and allows agents to apply background transitions to a scene, an inclusive page range, or bounded page-type/background predicates through `set-page-transitions`.
 

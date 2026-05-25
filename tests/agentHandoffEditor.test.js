@@ -465,6 +465,8 @@ describe('agent handoff editor integration', () => {
     expect(storySystemsSource).toContain('collectEndingUnlockReferences');
     expect(pageInspectorSource).toContain('unlock:ending');
     expect(pageInspectorSource).toContain('addEndingUnlockRow');
+    expect(pageInspectorSource).toContain('addPageEndingUnlockRow');
+    expect(pageInspectorSource).toContain('page-ending-effects');
     expect(pageInspectorSource).toContain('endingOptions');
     expect(storySystemsSource).toContain('CgRegistryList');
     expect(storySystemsSource).toContain('CgInspector');

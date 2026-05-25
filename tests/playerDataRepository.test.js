@@ -377,6 +377,41 @@ describe('player data runtime wiring', () => {
     });
   });
 
+  it('unlocks an ending on normal page entry without replaying it when a save render is restored', async () => {
+    vi.setSystemTime(2000);
+    const storage = createMemoryStorage();
+    const repository = new PlayerDataRepository('gm_page_ending', storage);
+    await repository.load();
+
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {},
+      scenes: {
+        ending: {
+          pages: [{
+            type: 'normal',
+            effects: [{ type: 'unlock:ending', id: 'quiet_end' }],
+            dialogues: [{ speaker: null, text: 'The end.' }],
+          }],
+        },
+      },
+    };
+    engine.setPlayerDataRepository(repository);
+    engine.startGame('ending');
+    await Promise.resolve();
+
+    expect(storage.state.profiles.get('gm_page_ending').unlocks.endings.quiet_end).toEqual({
+      firstUnlockedAt: 2000,
+      lastUnlockedAt: 2000,
+      count: 1,
+    });
+
+    engine.restoreState({ currentScene: 'ending', pageIndex: 0, dialogueIndex: 0 });
+    engine.renderCurrentPage();
+    await Promise.resolve();
+    expect(storage.state.profiles.get('gm_page_ending').unlocks.endings.quiet_end.count).toBe(1);
+  });
+
   it('save-slot, load-slot, delete-slot, and quicksave stay slot-only while reset and rebuild use the dedicated player-data IPC surface', async () => {
     const ipcCalls = [];
     const profileState = new Map();

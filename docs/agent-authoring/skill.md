@@ -125,6 +125,7 @@ npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sa
 npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script public/game/script.json --force --backup --json
 npm run vn -- add-ending --id good_end --title "Good End" --category main --order 1 --script public/game/script.json --force --backup --json
 npm run vn -- add-ending-unlock --scene chapter_1 --page 1 --option 0 --id good_end --script public/game/script.json --force --backup --json
+npm run vn -- add-ending-unlock --scene good_ending --page 0 --id good_end --script public/game/script.json --force --checkpoint --json
 npm run vn -- add-cg --id cg_confession --title "Confession" --images '["backgrounds/cg/confession.png"]' --thumbnail backgrounds/cg/confession_thumb.png --script public/game/script.json --force --backup --json
 npm run vn -- add-cg-unlock --scene chapter_1 --page 1 --option 0 --id cg_confession --script public/game/script.json --force --backup --json
 npm run vn -- set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json

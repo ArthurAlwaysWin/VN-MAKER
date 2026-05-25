@@ -168,6 +168,23 @@ function collectUnlockReferences(script = {}, type) {
   for (const [sceneId, scene] of Object.entries(script.scenes ?? {})) {
     const pages = Array.isArray(scene?.pages) ? scene.pages : [];
     for (const [pageIndex, page] of pages.entries()) {
+      if (type === 'unlock:ending' && page?.type === 'normal') {
+        const effects = Array.isArray(page.effects) ? page.effects : [];
+        for (const [effectIndex, effect] of effects.entries()) {
+          if (effect?.type !== type || !isNonEmptyString(effect.id)) {
+            continue;
+          }
+          references.push({
+            id: effect.id,
+            sceneId,
+            pageIndex,
+            optionIndex: null,
+            effectIndex,
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.effects.${effectIndex}`,
+          });
+        }
+      }
+
       if (page?.type !== 'choice') {
         continue;
       }

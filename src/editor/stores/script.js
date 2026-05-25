@@ -43,7 +43,7 @@ function formatVariableReferenceLocation(reference = {}) {
   return `${sceneName} > ${pageLabel} > 条件 ${reference.conditionIndex + 1}`;
 }
 
-function normalizeChoiceEffects(scriptData) {
+function normalizeStoryEffects(scriptData) {
   if (!scriptData?.scenes) {
     return scriptData;
   }
@@ -54,13 +54,22 @@ function normalizeChoiceEffects(scriptData) {
     }
 
     for (const page of scene.pages) {
-      if (!page || page.type !== 'choice') {
+      if (!page) {
         continue;
       }
 
-      page.options = Array.isArray(page.options)
-        ? page.options.map((option) => normalizeEffectContainer(option))
-        : [];
+      if (page.type === 'normal') {
+        const normalizedPage = normalizeEffectContainer(page);
+        delete page.effects;
+        delete page.setVariable;
+        Object.assign(page, normalizedPage);
+      }
+
+      if (page.type === 'choice') {
+        page.options = Array.isArray(page.options)
+          ? page.options.map((option) => normalizeEffectContainer(option))
+          : [];
+      }
     }
   }
 
@@ -77,7 +86,7 @@ function normalizeStoryContracts(scriptData) {
   scriptData.systems.endings = normalizeEndingRegistry(scriptData.systems.endings);
   scriptData.systems.gallery ??= {};
   scriptData.systems.gallery.cg = normalizeCgRegistry(scriptData.systems.gallery.cg);
-  normalizeChoiceEffects(scriptData);
+  normalizeStoryEffects(scriptData);
   normalizeConditionPages(scriptData, {
     registry: scriptData.systems.variables,
   });
@@ -368,7 +377,9 @@ export const useScriptStore = defineStore('script', () => {
       .filter((reference) => reference.endingId === endingId)
       .map((reference) => ({
         ...reference,
-        locationText: `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`,
+        locationText: reference.optionIndex == null
+          ? `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 进入页效果 ${reference.effectIndex + 1}`
+          : `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`,
       }));
   }
 
@@ -404,6 +415,23 @@ export const useScriptStore = defineStore('script', () => {
     let rewriteCount = 0;
     for (const scene of Object.values(data.value?.scenes ?? {})) {
       for (const page of scene.pages || []) {
+        if (page?.type === 'normal') {
+          const normalizedPage = normalizeEffectContainer(page);
+          normalizedPage.effects = (normalizedPage.effects || []).map((effect) => {
+            if (effect?.type !== 'unlock:ending' || effect.id !== endingId) {
+              return effect;
+            }
+
+            rewriteCount++;
+            return { ...effect, id: normalizedId };
+          });
+          if (normalizedPage.effects.length === 0) {
+            delete normalizedPage.effects;
+          }
+          delete page.effects;
+          Object.assign(page, normalizedPage);
+        }
+
         if (page?.type !== 'choice') {
           continue;
         }
@@ -456,6 +484,24 @@ export const useScriptStore = defineStore('script', () => {
     let deletedReferenceCount = 0;
     for (const scene of Object.values(data.value?.scenes ?? {})) {
       for (const page of scene.pages || []) {
+        if (page?.type === 'normal') {
+          const normalizedPage = normalizeEffectContainer(page);
+          const nextEffects = (normalizedPage.effects || []).filter((effect) => {
+            const keep = effect?.type !== 'unlock:ending' || effect.id !== endingId;
+            if (!keep) {
+              deletedReferenceCount++;
+            }
+            return keep;
+          });
+          if (nextEffects.length > 0) {
+            normalizedPage.effects = nextEffects;
+          } else {
+            delete normalizedPage.effects;
+          }
+          delete page.effects;
+          Object.assign(page, normalizedPage);
+        }
+
         if (page?.type !== 'choice') {
           continue;
         }
@@ -1057,6 +1103,7 @@ export const useScriptStore = defineStore('script', () => {
 
     if (page.type === 'normal' || !page.type) {
       page.type = 'choice';
+      delete page.effects;
       page.prompt = '';
       page.options = [
         { text: '', target: null, effects: [] },
@@ -1093,6 +1140,7 @@ export const useScriptStore = defineStore('script', () => {
         ? page.dialogues
         : [{ speaker: null, text: '', expression: null, voice: null }];
     } else if (page.type === 'choice') {
+      delete page.effects;
       delete page.dialogues;
       delete page.conditionMode;
       delete page.conditions;
@@ -1104,6 +1152,7 @@ export const useScriptStore = defineStore('script', () => {
         ? page.options.map((option) => normalizeEffectContainer(option))
         : [{ text: '', target: null, effects: [] }, { text: '', target: null, effects: [] }];
     } else if (page.type === 'condition') {
+      delete page.effects;
       delete page.dialogues;
       delete page.prompt;
       delete page.options;

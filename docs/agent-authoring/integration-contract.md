@@ -328,6 +328,7 @@ Required diagnostics:
 Paths:
 
 - `systems.endings.<endingId>`
+- `scenes.<sceneId>.pages.<pageIndex>.effects.<effectIndex>` for terminal normal-page `unlock:ending` effects
 - `player-data/profile.json.unlocks.endings.<endingId>`
 
 Required commands:
@@ -348,6 +349,7 @@ Required diagnostics:
 - `ending-never-unlocked`
 - `no-reachable-ending`
 - `missing-ending-thumbnail`
+- `unsupported-page-enter-effect`
 
 ### CG Gallery
 

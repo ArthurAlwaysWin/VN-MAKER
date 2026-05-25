@@ -27,12 +27,16 @@ describe('ending registry contract', () => {
     expect(isValidEndingId('bad id')).toBe(false);
   });
 
-  it('collects unlock references from choice effects', () => {
+  it('collects unlock references from page-enter and choice effects', () => {
     const references = collectEndingUnlockReferences({
       scenes: {
         start: {
           name: 'Start',
           pages: [
+            {
+              type: 'normal',
+              effects: [{ type: 'unlock:ending', id: 'arrival_end' }],
+            },
             {
               type: 'choice',
               options: [
@@ -50,12 +54,23 @@ describe('ending registry contract', () => {
     expect(references).toEqual([
       expect.objectContaining({
         kind: 'ending-unlock',
-        endingId: 'good_end',
+        source: 'page-enter-effect',
+        endingId: 'arrival_end',
         sceneId: 'start',
         pageIndex: 0,
+        optionIndex: null,
+        effectIndex: 0,
+        pathString: 'scenes.start.pages.0.effects.0',
+      }),
+      expect.objectContaining({
+        kind: 'ending-unlock',
+        source: 'choice-effect',
+        endingId: 'good_end',
+        sceneId: 'start',
+        pageIndex: 1,
         optionIndex: 0,
         effectIndex: 0,
-        pathString: 'scenes.start.pages.0.options.0.effects.0',
+        pathString: 'scenes.start.pages.1.options.0.effects.0',
       }),
     ]);
   });

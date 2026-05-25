@@ -509,11 +509,9 @@ describe('variable registry workspace', () => {
       scenes: {
         start: {
           pages: [{
-            type: 'choice',
-            options: [{
-              text: 'Finish',
-              effects: [{ type: 'unlock:ending', id: 'good_end' }],
-            }],
+            type: 'normal',
+            dialogues: [{ speaker: null, text: 'Finish' }],
+            effects: [{ type: 'unlock:ending', id: 'good_end' }],
           }],
         },
       },
@@ -539,6 +537,41 @@ describe('variable registry workspace', () => {
     expect(harness.container.textContent).toContain('未解锁');
     expect(harness.container.querySelector('[data-test="ending-profile-status"]').textContent).toContain('玩家进度调试');
     expect(harness.container.querySelector('[data-test="ending-profile-status"]').textContent).toContain('2 次解锁');
+  });
+
+  it('rewrites and removes normal page ending unlock references from ending editor actions', async () => {
+    harness = await mountStorySystems(makeScriptData({
+      systems: {
+        variables: {},
+        endings: {
+          quiet_end: { title: 'Quiet End', category: 'main', order: 1 },
+        },
+      },
+      scenes: {
+        ending: {
+          name: 'Ending',
+          pages: [{
+            type: 'normal',
+            dialogues: [{ speaker: null, text: 'Finish' }],
+            effects: [{ type: 'unlock:ending', id: 'quiet_end' }],
+          }],
+        },
+      },
+    }));
+
+    expect(harness.script.findEndingReferences('quiet_end')[0].locationText).toContain('进入页效果 1');
+
+    expect(harness.script.renameEnding('quiet_end', 'peace_end')).toMatchObject({
+      success: true,
+      rewriteCount: 1,
+    });
+    expect(harness.script.data.scenes.ending.pages[0].effects[0].id).toBe('peace_end');
+
+    expect(harness.script.deleteEnding('peace_end')).toMatchObject({
+      success: true,
+      deletedReferenceCount: 1,
+    });
+    expect(harness.script.data.scenes.ending.pages[0].effects).toBeUndefined();
   });
 
   it('selects CG images and thumbnails through the project asset picker', async () => {

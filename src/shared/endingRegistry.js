@@ -102,6 +102,27 @@ export function collectEndingUnlockReferences(scriptData = {}) {
   for (const [sceneId, scene] of Object.entries(scriptData?.scenes ?? {})) {
     const pages = Array.isArray(scene?.pages) ? scene.pages : [];
     for (const [pageIndex, page] of pages.entries()) {
+      if (page?.type === 'normal') {
+        normalizeEffectsForReferences(page).forEach((effect, effectIndex) => {
+          if (effect?.type !== 'unlock:ending') {
+            return;
+          }
+
+          references.push({
+            kind: 'ending-unlock',
+            source: 'page-enter-effect',
+            endingId: effect.id,
+            sceneId,
+            sceneName: scene.name || sceneId,
+            pageIndex,
+            optionIndex: null,
+            effectIndex,
+            path: ['scenes', sceneId, 'pages', pageIndex, 'effects', effectIndex],
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.effects.${effectIndex}`,
+          });
+        });
+      }
+
       if (page?.type !== 'choice') {
         continue;
       }
@@ -115,6 +136,7 @@ export function collectEndingUnlockReferences(scriptData = {}) {
 
           references.push({
             kind: 'ending-unlock',
+            source: 'choice-effect',
             endingId: effect.id,
             sceneId,
             sceneName: scene.name || sceneId,

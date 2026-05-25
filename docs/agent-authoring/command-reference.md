@@ -87,9 +87,9 @@ npm run vn -- list-transitions --target background --supported-only --json
 | `add-ending` | `id` | `title`, `category`, `order`, `description`, `thumbnail`, `hiddenUntilUnlocked` | Registers a new ending. Aliases: `endingId`, `ending`, `name`, `hidden-until-unlocked`. |
 | `update-ending` | `id` | `patch`, `title`, `category`, `order`, `description`, `thumbnail`, `hiddenUntilUnlocked` | Updates one ending through the shared ending normalizer. Aliases: `endingId`, `ending`, `name`, `hidden-until-unlocked`. |
 | `remove-ending` | `id` | `forceReferences` | Refuses to remove endings still referenced by `unlock:ending` effects unless forced; forced removes those effects. Aliases: `endingId`, `ending`, `force-references`. |
-| `add-ending-unlock` | `sceneId`, `pageIndex`, `optionIndex`, `endingId` | | Adds `{ "type": "unlock:ending" }` to one choice option. Aliases: `scene`, `page`, `option`, `id`, `ending`. |
+| `add-ending-unlock` | `sceneId`, `pageIndex`, `endingId` | `optionIndex` | Without `optionIndex`, adds a page-enter `{ "type": "unlock:ending" }` effect to a normal terminal page. With `optionIndex`, adds the existing choice option effect. Aliases: `scene`, `page`, `option`, `id`, `ending`. |
 
-Changed ending registry paths use `systems.endings.<endingId>`. Unlock effects report the exact choice effect path, such as `scenes.start.pages.2.options.0.effects.0`.
+Changed ending registry paths use `systems.endings.<endingId>`. Unlock effects report an exact path such as `scenes.good_end.pages.0.effects.0` for terminal-page arrival or `scenes.start.pages.2.options.0.effects.0` for a choice.
 
 ## CG Gallery Commands
 
@@ -107,7 +107,7 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
-| `add-page` | `sceneId` | `type`, `id`, `page`, `background`, `characters`, `bgm`, `se`, `transition`, `dialogues`, `prompt`, `options`, `conditionMode`, `conditions`, `trueTarget`, `falseTarget` | `type` defaults to `normal`. Use `page` for a full page object. Aliases: `scene`, `condition-mode`, `true-target`, `false-target`. |
+| `add-page` | `sceneId` | `type`, `id`, `page`, `background`, `characters`, `bgm`, `se`, `transition`, `dialogues`, `prompt`, `options`, `conditionMode`, `conditions`, `trueTarget`, `falseTarget` | `type` defaults to `normal`. Use `page` for a full page object, including terminal normal-page `effects`. Aliases: `scene`, `condition-mode`, `true-target`, `false-target`. |
 | `remove-page` | `sceneId`, `pageIndex` | | Aliases: `scene`, `page`. |
 | `move-page` | `sceneId`, `fromIndex`, `toIndex` | | Aliases: `scene`, `from`, `to`. |
 

@@ -86,6 +86,33 @@
       ></textarea>
     </label>
 
+    <section class="profile-status" data-test="ending-profile-status">
+      <header class="profile-header">
+        <div>
+          <h3>玩家进度调试</h3>
+          <p>只读显示 `player-data/profile.json` 中的结局解锁记录。</p>
+        </div>
+        <button class="refresh-btn" type="button" @click="emit('refreshProfile')">刷新进度</button>
+      </header>
+
+      <p v-if="profileStatus === 'loading'" class="profile-empty">正在读取玩家进度...</p>
+      <p v-else-if="profileStatus === 'error'" class="profile-error">
+        读取玩家进度失败：{{ profileError || '未知错误' }}
+      </p>
+      <div v-else-if="unlockRecord" class="profile-unlocked">
+        <span class="unlocked-badge">已解锁</span>
+        <div class="profile-metrics">
+          <span><strong>{{ unlockRecord.count ?? 1 }}</strong> 次解锁</span>
+          <span>首次：{{ formatProfileTimestamp(unlockRecord.firstUnlockedAt) }}</span>
+          <span>最近：{{ formatProfileTimestamp(unlockRecord.lastUnlockedAt) }}</span>
+        </div>
+      </div>
+      <p v-else-if="profileStatus === 'loaded' || profileStatus === 'empty'" class="profile-empty">
+        当前玩家档案尚未解锁此结局。
+      </p>
+      <p v-else class="profile-empty">打开桌面项目后可检查实际玩家进度。</p>
+    </section>
+
     <p v-if="validationMessage" class="validation-error">{{ validationMessage }}</p>
   </div>
 </template>
@@ -100,9 +127,12 @@ const props = defineProps({
   endingId: { type: String, default: null },
   endingEntry: { type: Object, default: null },
   unlockCount: { type: Number, default: 0 },
+  unlockRecord: { type: Object, default: null },
+  profileStatus: { type: String, default: 'idle' },
+  profileError: { type: String, default: null },
   focusToken: { type: Number, default: 0 },
 });
-const emit = defineEmits(['requestDelete', 'requestRename']);
+const emit = defineEmits(['requestDelete', 'requestRename', 'refreshProfile']);
 
 const script = useScriptStore();
 const titleInputRef = ref(null);
@@ -129,6 +159,11 @@ function slugifyEndingId(value) {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '_')
     .replace(/^_+|_+$/g, '');
+}
+
+function formatProfileTimestamp(timestamp) {
+  const date = new Date(Number(timestamp));
+  return Number.isFinite(date.getTime()) ? date.toLocaleString() : '未知';
 }
 
 function onTitleInput(event) {
@@ -287,6 +322,82 @@ function onIdInput(event) {
 
 .notes-field {
   margin-top: 16px;
+}
+
+.profile-status {
+  background: #1f1f1f;
+  border: 1px solid #353535;
+  border-radius: 8px;
+  margin-top: 22px;
+  padding: 16px;
+}
+
+.profile-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.profile-header h3 {
+  color: #f1f1f1;
+  font-size: 14px;
+  margin: 0 0 5px;
+}
+
+.profile-header p {
+  color: #969696;
+  font-size: 12px;
+  margin: 0;
+}
+
+.refresh-btn {
+  background: #303030;
+  border: 1px solid #4a4a4a;
+  border-radius: 6px;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+
+.profile-unlocked {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  margin-top: 15px;
+}
+
+.unlocked-badge {
+  background: rgba(17, 119, 72, 0.32);
+  border-radius: 999px;
+  color: #8de0b5;
+  font-size: 12px;
+  padding: 4px 11px;
+}
+
+.profile-metrics {
+  color: #bababa;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 14px;
+}
+
+.profile-metrics strong {
+  color: #f4f4f4;
+}
+
+.profile-empty,
+.profile-error {
+  color: #a7a7a7;
+  font-size: 12px;
+  margin: 15px 0 0;
+}
+
+.profile-error {
+  color: #ff9d9d;
 }
 
 .validation-error {

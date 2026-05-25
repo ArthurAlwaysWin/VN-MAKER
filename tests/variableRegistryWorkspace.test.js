@@ -63,10 +63,12 @@ vi.mock('../src/editor/stores/assets.js', () => ({
 
 import App from '../src/editor/App.vue';
 import StorySystems from '../src/editor/views/StorySystems.vue';
+import { useProjectStore } from '../src/editor/stores/project.js';
 import { useScriptStore } from '../src/editor/stores/script.js';
 
 function makeScriptData(overrides = {}) {
   return {
+    projectId: 'gm_workspace',
     meta: { title: '变量工作区测试' },
     characters: {},
     systems: {
@@ -152,12 +154,15 @@ async function flushUi() {
   await nextTick();
 }
 
-async function mountStorySystems(scriptData = makeScriptData()) {
+async function mountStorySystems(scriptData = makeScriptData(), playerProfile = null) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
   const script = useScriptStore();
+  const project = useProjectStore();
   script.loadFromData(scriptData);
+  project.playerProfile = playerProfile;
+  project.playerProfileStatus = playerProfile ? 'loaded' : 'empty';
 
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -169,11 +174,12 @@ async function mountStorySystems(scriptData = makeScriptData()) {
   return {
     app,
     container,
+    project,
     script,
   };
 }
 
-async function mountApp(scriptData = makeScriptData()) {
+async function mountApp(scriptData = makeScriptData(), playerProfile = null) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -189,6 +195,8 @@ async function mountApp(scriptData = makeScriptData()) {
             project: { name: 'Demo Project' },
             script: JSON.parse(JSON.stringify(scriptData)),
           };
+        case 'load-player-profile':
+          return { success: true, data: playerProfile };
         case 'save-project':
         case 'close-project':
         case 'open-preview':
@@ -213,10 +221,12 @@ async function mountApp(scriptData = makeScriptData()) {
   }));
   await flushUi();
   await flushUi();
+  await flushUi();
 
   return {
     app,
     container,
+    project: useProjectStore(),
     script: useScriptStore(),
   };
 }
@@ -369,6 +379,25 @@ describe('variable registry workspace', () => {
     });
   });
 
+  it('loads the desktop player profile after opening a project for read-only story system review', async () => {
+    const playerProfile = {
+      version: 1,
+      projectId: 'gm_workspace',
+      readHistory: { pages: [] },
+      unlocks: { endings: {}, cg: {} },
+    };
+    harness = await mountApp(makeScriptData(), playerProfile);
+
+    expect(window.ipcRenderer.invoke).toHaveBeenCalledWith('load-player-profile', {
+      projectId: 'gm_workspace',
+    });
+    expect(harness.project.playerProfile).toEqual(playerProfile);
+    expect(harness.project.playerProfileStatus).toBe('loaded');
+
+    await harness.project.loadAgentHandoff();
+    expect(harness.project.playerProfile).toEqual(playerProfile);
+  });
+
   it('creates a character affection preset through the shared variable normalizer', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -460,5 +489,49 @@ describe('variable registry workspace', () => {
 
     expect(harness.script.data.systems.variables.sakura_affection).toBeTruthy();
     expect(harness.container.textContent).toContain('sakura_affection');
+  });
+
+  it('shows actual ending unlock progress separately from configured unlock points', async () => {
+    harness = await mountStorySystems(makeScriptData({
+      systems: {
+        variables: {},
+        endings: {
+          good_end: { title: 'Good End', category: 'main', order: 1 },
+          bad_end: { title: 'Bad End', category: 'main', order: 2 },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [{
+              text: 'Finish',
+              effects: [{ type: 'unlock:ending', id: 'good_end' }],
+            }],
+          }],
+        },
+      },
+    }), {
+      projectId: 'gm_workspace',
+      unlocks: {
+        endings: {
+          good_end: {
+            count: 2,
+            firstUnlockedAt: 1000,
+            lastUnlockedAt: 2000,
+          },
+        },
+        cg: {},
+      },
+    });
+
+    harness.script.selectEnding('good_end');
+    await flushUi();
+
+    expect(harness.container.textContent).toContain('1 解锁点');
+    expect(harness.container.textContent).toContain('已解锁 2 次');
+    expect(harness.container.textContent).toContain('未解锁');
+    expect(harness.container.querySelector('[data-test="ending-profile-status"]').textContent).toContain('玩家进度调试');
+    expect(harness.container.querySelector('[data-test="ending-profile-status"]').textContent).toContain('2 次解锁');
   });
 });

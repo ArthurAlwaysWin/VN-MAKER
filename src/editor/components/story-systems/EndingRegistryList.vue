@@ -30,6 +30,9 @@
         <div class="row-side">
           <span v-if="item.category" class="pill">{{ item.category }}</span>
           <span class="pill">{{ item.unlockCount }} 解锁点</span>
+          <span :class="['pill', 'progress-pill', { unlocked: Boolean(item.unlockRecord) }]">
+            {{ playerProgressLabel(item) }}
+          </span>
         </div>
       </button>
     </div>
@@ -37,13 +40,24 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   items: { type: Array, default: () => [] },
   selectedId: { type: String, default: null },
   isEmpty: { type: Boolean, default: false },
+  profileStatus: { type: String, default: 'idle' },
 });
 
 defineEmits(['create', 'select']);
+
+function playerProgressLabel(item) {
+  if (!['loaded', 'empty'].includes(props.profileStatus)) {
+    return '进度未加载';
+  }
+
+  return item.unlockRecord
+    ? `已解锁 ${Number(item.unlockRecord.count ?? 1)} 次`
+    : '未解锁';
+}
 </script>
 
 <style scoped>
@@ -156,5 +170,10 @@ defineEmits(['create', 'select']);
   color: #d8d8d8;
   font-size: 12px;
   padding: 2px 8px;
+}
+
+.progress-pill.unlocked {
+  background: rgba(17, 119, 72, 0.32);
+  color: #8de0b5;
 }
 </style>

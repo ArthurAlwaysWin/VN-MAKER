@@ -9,6 +9,9 @@ export const useProjectStore = defineStore('project', () => {
   const agentHandoff = ref(null);
   const agentHandoffPath = ref(null);
   const agentReviewState = ref({});
+  const playerProfile = ref(null);
+  const playerProfileStatus = ref('idle');
+  const playerProfileError = ref(null);
   const sceneNavigationRequest = ref(null);
   const agentPathNavigationRequest = ref(null);
   const hasCreatedProject = ref(false);
@@ -46,6 +49,7 @@ export const useProjectStore = defineStore('project', () => {
     if (!window.ipcRenderer) return null;
     const result = await window.ipcRenderer.invoke('load-project', projPath);
     if (result.success) {
+      clearPlayerProfile();
       projectPath.value = result.path;
       projectData.value = result.project;
       scriptFileState.value = result.scriptFileState || null;
@@ -54,6 +58,39 @@ export const useProjectStore = defineStore('project', () => {
       isDirty.value = false;
     }
     return result;
+  }
+
+  function clearPlayerProfile() {
+    playerProfile.value = null;
+    playerProfileStatus.value = 'idle';
+    playerProfileError.value = null;
+  }
+
+  async function loadPlayerProfile(projectId) {
+    clearPlayerProfile();
+    const normalizedProjectId = typeof projectId === 'string' ? projectId.trim() : '';
+    if (!window.ipcRenderer || !projectPath.value || !normalizedProjectId) {
+      playerProfileStatus.value = 'unavailable';
+      return null;
+    }
+
+    playerProfileStatus.value = 'loading';
+    try {
+      const result = await window.ipcRenderer.invoke('load-player-profile', {
+        projectId: normalizedProjectId,
+      });
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to load player profile');
+      }
+
+      playerProfile.value = result.data ?? null;
+      playerProfileStatus.value = playerProfile.value ? 'loaded' : 'empty';
+      return playerProfile.value;
+    } catch (error) {
+      playerProfileStatus.value = 'error';
+      playerProfileError.value = error?.message || String(error);
+      return null;
+    }
   }
 
   async function loadAgentHandoff() {
@@ -139,6 +176,7 @@ export const useProjectStore = defineStore('project', () => {
     agentHandoff.value = null;
     agentHandoffPath.value = null;
     agentReviewState.value = {};
+    clearPlayerProfile();
     sceneNavigationRequest.value = null;
     agentPathNavigationRequest.value = null;
     scriptFileState.value = null;
@@ -247,9 +285,9 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   return {
-    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty, scriptFileState, externalScriptChange,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, playerProfile, playerProfileStatus, playerProfileError, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty, scriptFileState, externalScriptChange,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    loadAgentHandoff, loadAgentReviewState, closeProject, markDirty, checkExternalScriptChange, clearExternalScriptChange, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
+    loadAgentHandoff, loadAgentReviewState, loadPlayerProfile, closeProject, markDirty, checkExternalScriptChange, clearExternalScriptChange, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
   };
 });

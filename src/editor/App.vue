@@ -209,6 +209,7 @@ async function openProject(projectPath) {
   const result = await project.loadProject(projectPath);
   if (result && result.success) {
     script.loadFromData(result.script);
+    await project.loadPlayerProfile(script.data?.projectId);
 
     // Load asset file lists for all categories
     try {

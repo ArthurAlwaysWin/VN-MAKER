@@ -90,7 +90,7 @@ Supported variable types are `number` and `bool`. Optional UI metadata is `label
 }
 ```
 
-Ending ids use the same stable id shape as variables. Register endings before writing `unlock:ending` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.endings`, not in save slots or `script.json`.
+Ending ids use the same stable id shape as variables. Register endings before writing `unlock:ending` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.endings`, not in save slots or `script.json`. Story Systems can read and refresh this player progress for debugging, but editing an ending never writes unlock progress back into author data.
 
 ## CG Gallery
 

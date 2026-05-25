@@ -44,6 +44,7 @@
         :items="allEndings"
         :selected-id="script.selectedEndingId"
         :is-empty="allEndings.length === 0"
+        :profile-status="project.playerProfileStatus"
         @create="onCreateEnding"
         @select="script.selectEnding"
       />
@@ -88,9 +89,13 @@
         :ending-id="selectedEnding.id"
         :ending-entry="selectedEndingEntry"
         :unlock-count="selectedEnding.unlockCount"
+        :unlock-record="selectedEnding.unlockRecord"
+        :profile-status="project.playerProfileStatus"
+        :profile-error="project.playerProfileError"
         :focus-token="endingInspectorFocusToken"
         @request-delete="openEndingDeleteImpact"
         @request-rename="openEndingRenameImpact"
+        @refresh-profile="refreshPlayerProfile"
       />
 
       <CgInspector
@@ -203,6 +208,8 @@ const endingUsageCounts = computed(() => {
   return counts;
 });
 
+const endingUnlockRecords = computed(() => project.playerProfile?.unlocks?.endings ?? {});
+
 const allEndings = computed(() => {
   const endings = script.data?.systems?.endings ?? {};
   return Object.entries(endings).map(([id, entry]) => ({
@@ -211,6 +218,7 @@ const allEndings = computed(() => {
     category: entry.category || '',
     order: Number(entry.order ?? 0),
     unlockCount: endingUsageCounts.value.get(id) ?? 0,
+    unlockRecord: endingUnlockRecords.value[id] ?? null,
   })).sort((left, right) => {
     const orderDelta = left.order - right.order;
     if (orderDelta !== 0) return orderDelta;
@@ -342,6 +350,10 @@ function onCreateCg() {
   if (cgId) {
     cgInspectorFocusToken.value++;
   }
+}
+
+async function refreshPlayerProfile() {
+  await project.loadPlayerProfile(script.data?.projectId);
 }
 
 function openGraphScene(sceneId) {

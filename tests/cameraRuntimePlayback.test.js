@@ -148,4 +148,16 @@ describe('camera runtime playback', () => {
     expect(stageLayer.style.getPropertyValue('--camera-duration-ms')).toBe('');
     expect(stageLayer.style.getPropertyValue('--camera-zoom-scale')).toBe('');
   });
+
+  it('caps long authored camera effects at the catalog safety limit', async () => {
+    const { CameraController } = await import('../src/ui/CameraController.js');
+    const { stageLayer } = makeDom();
+    const camera = new CameraController(stageLayer);
+
+    camera.play({ effect: 'zoom', durationMs: 50000, intensity: 'medium' });
+    expect(stageLayer.style.getPropertyValue('--camera-duration-ms')).toBe('2000ms');
+
+    vi.advanceTimersByTime(2051);
+    expect(stageLayer.className).toBe('');
+  });
 });

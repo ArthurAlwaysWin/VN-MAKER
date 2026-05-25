@@ -1,6 +1,12 @@
 /**
  * BackgroundLayer — Manages background image display with transitions
  */
+import {
+  BACKGROUND_TRANSITION_DURATION_SCHEMA,
+  clampNumericTransitionParam,
+} from '../shared/transitionCatalog.js';
+import { getRuntimeTransitionType } from '../shared/cinematicContract.js';
+
 export class BackgroundLayer {
   /**
    * @param {HTMLElement} container — the #background-layer element
@@ -34,7 +40,7 @@ export class BackgroundLayer {
     this._cancelActiveTransition();
 
     const imageUrl = `url(${this.basePath}${data.image})`;
-    const duration = Math.max(0, Number(data.duration) || 0);
+    const duration = clampNumericTransitionParam(data.duration, BACKGROUND_TRANSITION_DURATION_SCHEMA);
     const transition = this._normalizeTransition(data.transition);
     const previewVariant = data.previewVariant === 'same-page' ? 'same-page' : null;
     const token = ++this._transitionToken;
@@ -110,7 +116,7 @@ export class BackgroundLayer {
   }
 
   _normalizeTransition(transition) {
-    return typeof transition === 'string' && transition.trim() ? transition : 'fade';
+    return transition === 'cut' ? 'cut' : getRuntimeTransitionType(transition);
   }
 
   _cancelActiveTransition() {

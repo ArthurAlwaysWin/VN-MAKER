@@ -3396,6 +3396,111 @@ describe('vn-author CLI', () => {
           { id: 'sakura', animation: 'breathe' },
         ],
       });
+
+      const catalog = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'list-transitions',
+        '--target',
+        'background',
+        '--supported-only',
+        '--json',
+      ])).stdout);
+      expect(catalog.transitions.map((entry) => entry.id)).toEqual([
+        'fade',
+        'slide-left',
+        'slide-right',
+        'none',
+        'dissolve',
+        'wipe',
+        'scale',
+        'blur',
+      ]);
+
+      const directCamera = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'set-camera-effect',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--effect',
+        'flash',
+        '--duration-ms',
+        '50000',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(directCamera.result).toMatchObject({
+        camera: { effect: 'flash', durationMs: 2000 },
+        changedPaths: ['scenes.start.pages.0.camera'],
+      });
+
+      const aliasPlanPath = path.join(dir, 'cinematic-alias-plan.json');
+      await writeFile(aliasPlanPath, JSON.stringify({
+        operations: [
+          {
+            command: 'set-camera-effect',
+            params: {
+              scene: 'start',
+              page: 0,
+              effect: 'zoom',
+              durationMs: 50000,
+              intensity: 'medium',
+            },
+          },
+          {
+            command: 'set-character-transition',
+            params: {
+              scene: 'start',
+              page: 0,
+              character: 'sakura',
+              transition: 'bounce',
+            },
+          },
+          {
+            command: 'set-page-transition',
+            params: {
+              scene: 'start',
+              page: 0,
+              type: 'blur',
+              duration: 50000,
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const aliasResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        aliasPlanPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(aliasResult.operations).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          command: 'set-camera-effect',
+          changedPaths: ['scenes.start.pages.0.camera'],
+        }),
+        expect.objectContaining({
+          command: 'set-character-transition',
+          changedPaths: ['scenes.start.pages.0.characters.0.animation'],
+        }),
+        expect.objectContaining({
+          command: 'set-page-transition',
+          changedPaths: ['scenes.start.pages.0.transition'],
+        }),
+      ]));
+
+      const updatedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(updatedScript.scenes.start.pages[0]).toMatchObject({
+        camera: { effect: 'zoom', durationMs: 2000 },
+        transition: { type: 'blur', duration: 5000 },
+        characters: [{ id: 'sakura', animation: 'bounce' }],
+      });
     });
   });
 

@@ -2,7 +2,7 @@ import { normalizeConditionPage } from '../shared/branchingContract.js';
 import {
   getCharacterAnimationValue,
   getPageCameraContract,
-  getRuntimeTransitionType,
+  getPageTransitionContract,
 } from '../shared/cinematicContract.js';
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
 import {
@@ -52,9 +52,9 @@ function createDefaultNormalPage(overrides = {}) {
     bgm: overrides.bgm ?? null,
     se: overrides.se ?? null,
     dialogues: Array.isArray(overrides.dialogues) ? cloneJsonValue(overrides.dialogues) : [],
-    transition: cloneJsonValue(overrides.transition ?? { type: 'fade', duration: 800 }),
     ...cloneJsonValue(overrides),
     type: 'normal',
+    transition: getPageTransitionContract(overrides.transition ?? { type: 'fade', duration: 800 }),
   };
 }
 
@@ -72,10 +72,10 @@ function createDefaultChoicePage(overrides = {}) {
     se: overrides.se ?? null,
     prompt: overrides.prompt ?? '',
     options,
-    transition: cloneJsonValue(overrides.transition ?? { type: 'fade', duration: 800 }),
     ...cloneJsonValue(overrides),
     options,
     type: 'choice',
+    transition: getPageTransitionContract(overrides.transition ?? { type: 'fade', duration: 800 }),
   };
 }
 
@@ -376,20 +376,7 @@ function uniqueChangedPaths(paths = []) {
 }
 
 function normalizePageTransitionInput(transition) {
-  if (transition == null) {
-    return null;
-  }
-
-  const type = typeof transition.type === 'string' && transition.type.trim()
-    ? transition.type.trim()
-    : getRuntimeTransitionType(transition.type);
-  const duration = Number(transition.duration ?? 800);
-
-  return {
-    ...cloneJsonValue(transition),
-    type,
-    duration: Number.isFinite(duration) && duration >= 0 ? duration : 800,
-  };
+  return getPageTransitionContract(transition);
 }
 
 function normalizeTitleElement(element, index = 0) {
@@ -1156,6 +1143,7 @@ export function createProjectSession(input = {}) {
         sceneId,
         pageIndex,
         camera: cloneJsonValue(page.camera),
+        changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.camera`],
       };
     },
 
@@ -1166,6 +1154,7 @@ export function createProjectSession(input = {}) {
         sceneId,
         pageIndex,
         transition: cloneJsonValue(page.transition),
+        changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.transition`],
       };
     },
 
@@ -1176,7 +1165,8 @@ export function createProjectSession(input = {}) {
         page.characters = [];
       }
 
-      const character = page.characters.find(entry => entry?.id === id);
+      const characterIndex = page.characters.findIndex(entry => entry?.id === id);
+      const character = page.characters[characterIndex];
       if (!character) {
         throw new Error(`Character "${id}" is not staged on scene "${sceneId}" page ${pageIndex}`);
       }
@@ -1187,6 +1177,7 @@ export function createProjectSession(input = {}) {
         pageIndex,
         characterId: id,
         animation: character.animation,
+        changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.characters.${characterIndex}.animation`],
       };
     },
 

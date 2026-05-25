@@ -6,18 +6,19 @@
  * paths degrade safely.
  */
 
+import {
+  BACKGROUND_TRANSITION_DURATION_SCHEMA,
+  CAMERA_EFFECT_DURATION_SCHEMA,
+  clampNumericTransitionParam,
+  listTransitionCatalog,
+} from './transitionCatalog.js';
+
 export const DEFAULT_PAGE_CAMERA = null;
 export const DEFAULT_CHARACTER_ANIMATION = 'none';
 export const DEFAULT_CAMERA_TRIGGER = 'onEnter';
-export const KNOWN_CHARACTER_ANIMATIONS = [
-  'fade-in',
-  'slide-in-left',
-  'slide-in-right',
-  'shake',
-  'nod',
-  'breathe',
-  'bounce',
-];
+export const KNOWN_CHARACTER_ANIMATIONS = listTransitionCatalog({ target: 'character', supportedOnly: true })
+  .map((entry) => entry.id)
+  .filter((id) => id !== DEFAULT_CHARACTER_ANIMATION);
 
 export function isKnownCharacterAnimation(animation) {
   return KNOWN_CHARACTER_ANIMATIONS.includes(animation);
@@ -34,7 +35,8 @@ const CHARACTER_ANIMATION_LABELS = {
   bounce: '弹跳',
 };
 
-export const KNOWN_CAMERA_EFFECTS = ['shake', 'zoom', 'pan', 'flash'];
+export const KNOWN_CAMERA_EFFECTS = listTransitionCatalog({ target: 'camera', supportedOnly: true })
+  .map((entry) => entry.id);
 export const CAMERA_EFFECT_DIRECTION_OPTIONS = {
   shake: ['horizontal', 'vertical', 'both'],
   zoom: null,
@@ -138,16 +140,9 @@ export function getCameraDirectionUiOptions(effect, currentDirection) {
   return appendUnknownUiOption(options, currentDirection, '未知方向');
 }
 
-const KNOWN_TRANSITION_OPTIONS = [
-  { value: 'fade', label: '淡入淡出', known: true },
-  { value: 'slide-left', label: '左滑入', known: true },
-  { value: 'slide-right', label: '右滑入', known: true },
-  { value: 'none', label: '无', known: true },
-  { value: 'dissolve', label: '溶解', known: true },
-  { value: 'wipe', label: '擦除', known: true },
-  { value: 'scale', label: '缩放', known: true },
-  { value: 'blur', label: '模糊', known: true },
-];
+const KNOWN_TRANSITION_OPTIONS = listTransitionCatalog({ target: 'background', supportedOnly: true })
+  .filter((entry) => entry.editorSupported)
+  .map((entry) => ({ value: entry.id, label: entry.label, known: true }));
 
 export const LEGACY_TRANSITION_TYPES = KNOWN_TRANSITION_OPTIONS.map(option => option.value);
 
@@ -207,11 +202,35 @@ export function getPageCameraContract(camera) {
   }
 
   contract.trigger = DEFAULT_CAMERA_TRIGGER;
+  if (contract.durationMs !== undefined) {
+    contract.durationMs = clampNumericTransitionParam(contract.durationMs, CAMERA_EFFECT_DURATION_SCHEMA);
+  }
 
   if (contract.effect === 'zoom' || contract.effect === 'flash') {
     delete contract.direction;
   }
 
+  return contract;
+}
+
+export function getPageTransitionContract(transition) {
+  if (transition == null) return null;
+
+  const contract = cloneValue(transition);
+  if (!contract || typeof contract !== 'object') {
+    return {
+      type: 'fade',
+      duration: BACKGROUND_TRANSITION_DURATION_SCHEMA.default,
+    };
+  }
+
+  contract.type = typeof contract.type === 'string' && contract.type.trim()
+    ? contract.type.trim()
+    : 'fade';
+  contract.duration = clampNumericTransitionParam(
+    contract.duration ?? BACKGROUND_TRANSITION_DURATION_SCHEMA.default,
+    BACKGROUND_TRANSITION_DURATION_SCHEMA,
+  );
   return contract;
 }
 

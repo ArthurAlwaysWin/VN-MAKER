@@ -571,25 +571,47 @@ describe('project authoring session', () => {
       sceneId: 'start',
       pageIndex: 0,
       transition: { type: 'dissolve', duration: 500 },
-    }).transition).toEqual({ type: 'dissolve', duration: 500 });
+    })).toMatchObject({
+      transition: { type: 'dissolve', duration: 500 },
+      changedPaths: ['scenes.start.pages.0.transition'],
+    });
     expect(session.setCharacterAnimation({
       sceneId: 'start',
       pageIndex: 0,
       characterId: 'sakura',
       animation: 'breathe',
-    })).toEqual({
+    })).toMatchObject({
       sceneId: 'start',
       pageIndex: 0,
       characterId: 'sakura',
       animation: 'breathe',
+      changedPaths: ['scenes.start.pages.0.characters.0.animation'],
+    });
+
+    expect(session.setPageCamera({
+      sceneId: 'start',
+      pageIndex: 0,
+      camera: { effect: 'flash', durationMs: 50000, intensity: 'medium' },
+    })).toMatchObject({
+      camera: { effect: 'flash', durationMs: 2000 },
+      changedPaths: ['scenes.start.pages.0.camera'],
     });
 
     expect(session.toJSON().scenes.start.pages[0]).toMatchObject({
-      camera: { effect: 'shake', trigger: 'onEnter' },
+      camera: { effect: 'flash', durationMs: 2000, trigger: 'onEnter' },
       transition: { type: 'dissolve', duration: 500 },
       characters: [
         expect.objectContaining({ id: 'sakura', animation: 'breathe' }),
       ],
+    });
+
+    session.addNormalPage({
+      sceneId: 'start',
+      transition: { type: 'iris-in', duration: 50000 },
+    });
+    expect(session.toJSON().scenes.start.pages[1].transition).toEqual({
+      type: 'iris-in',
+      duration: 5000,
     });
   });
 

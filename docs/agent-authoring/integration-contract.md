@@ -404,10 +404,12 @@ Required diagnostics:
 
 ### Transition Catalog
 
+The first M5 slice is implemented as a shared, discoverable catalog over the existing cinematic fields. For compatibility, character transition commands currently write the established `animation` field rather than introducing a second character staging field. Catalog entries marked `runtimeSupported: false` are discoverable candidates only and declare their safe fallback.
+
 Paths:
 
 - `scenes.<sceneId>.pages.<pageIndex>.transition`
-- `scenes.<sceneId>.pages.<pageIndex>.characters.<characterIndex>.transition`
+- `scenes.<sceneId>.pages.<pageIndex>.characters.<characterIndex>.animation`
 - `scenes.<sceneId>.pages.<pageIndex>.camera`
 
 Required commands:
@@ -420,6 +422,8 @@ Required commands:
 Required diagnostics:
 
 - `unknown-transition-type`
+- `unknown-camera-effect`
+- `unknown-character-animation`
 - `unsupported-transition-target`
 - `invalid-transition-param`
 

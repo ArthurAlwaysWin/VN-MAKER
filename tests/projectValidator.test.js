@@ -373,8 +373,8 @@ describe('project validator', () => {
 
   it('warns about unsupported advanced staging values while preserving runtime fallback', () => {
     const script = createValidScript();
-    script.scenes.start.pages[0].camera = { effect: 'spin', durationMs: 300 };
-    script.scenes.start.pages[0].transition = { type: 'portal', duration: 800 };
+    script.scenes.start.pages[0].camera = { effect: 'spin', durationMs: 50000, intensity: 'extreme' };
+    script.scenes.start.pages[0].transition = { type: 'portal', duration: -10 };
     script.scenes.start.pages[0].characters[0].animation = 'moonwalk';
 
     const report = validateProject(script);
@@ -395,6 +395,24 @@ describe('project validator', () => {
         code: 'unknown-character-animation',
         pathString: 'scenes.start.pages.0.characters.0.animation',
         animation: 'moonwalk',
+      }),
+      expect.objectContaining({
+        code: 'invalid-transition-param',
+        pathString: 'scenes.start.pages.0.camera.durationMs',
+        target: 'camera',
+        param: 'durationMs',
+      }),
+      expect.objectContaining({
+        code: 'invalid-transition-param',
+        pathString: 'scenes.start.pages.0.camera.intensity',
+        target: 'camera',
+        param: 'intensity',
+      }),
+      expect.objectContaining({
+        code: 'invalid-transition-param',
+        pathString: 'scenes.start.pages.0.transition.duration',
+        target: 'background',
+        param: 'duration',
       }),
     ]));
   });

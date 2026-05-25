@@ -401,6 +401,8 @@ Definition of done:
 
 **Goal:** Add more visual polish while keeping transitions contract-safe.
 
+**Current minimal slice:** A shared transition catalog exposes supported background, character-motion, and camera entries plus planned fallback-only candidates. Agents can inspect it with `list-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without changing existing `animation` author data.
+
 Contract:
 
 - Introduce a transition catalog in `src/shared/cinematicContract.js` or a new `transitionCatalog.js`.

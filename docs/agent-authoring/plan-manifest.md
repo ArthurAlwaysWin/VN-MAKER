@@ -109,8 +109,10 @@ Plan command names match the CLI command names:
 - `set-page-characters`
 - `set-page-audio`
 - `set-page-camera`
+- `set-camera-effect`
 - `set-page-transition`
 - `set-character-animation`
+- `set-character-transition`
 - `set-title-screen`
 - `add-title-element`
 - `update-title-element`

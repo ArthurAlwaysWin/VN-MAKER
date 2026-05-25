@@ -43,6 +43,7 @@ These commands are not plan operations. Use them to inspect the project before d
 | `find-dead-ends` | | `script`, `entry`, `json` | Returns terminal routes without an ending resolution plus closed cycles without an exit. |
 | `find-missing-assets` | | `script`, `asset-root`, `json` | Returns referenced assets absent from the checked asset root. |
 | `find-unused-assets` | | `script`, `asset-root`, `json` | Returns files in the checked asset root that are not referenced by the script. |
+| `list-transitions` | | `target`, `supported-only`, `json` | Lists shared cinematic catalog entries with target, parameter schema, support flags, defaults, and fallback id. `target` is `background`, `character`, or `camera`. |
 
 ```bash
 npm run vn -- list-assets --script public/game/script.json --json
@@ -52,6 +53,7 @@ npm run vn -- graph-report --script public/game/script.json --mermaid
 npm run vn -- find-dead-ends --script public/game/script.json --json
 npm run vn -- find-missing-assets --script public/game/script.json --json
 npm run vn -- find-unused-assets --script public/game/script.json --json
+npm run vn -- list-transitions --target background --supported-only --json
 ```
 
 ## Scene Commands
@@ -145,9 +147,13 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 | `set-page-characters` | `sceneId`, `pageIndex` | `characters` | Replaces staged characters for the page. Aliases: `scene`, `page`. |
 | `set-page-audio` | `sceneId`, `pageIndex` | `bgm`, `se` | Replaces page audio fields where provided. Aliases: `scene`, `page`. |
 | `set-page-media` | `sceneId`, `pageIndex` | `background`, `bgm`, `se` | Sets background and audio together. Aliases: `scene`, `page`. |
-| `set-page-camera` | `sceneId`, `pageIndex` | `camera`, `clearCamera` | Aliases: `scene`, `page`, `clear-camera`. |
-| `set-page-transition` | `sceneId`, `pageIndex` | `transition`, `clearTransition` | Aliases: `scene`, `page`, `clear-transition`. |
+| `set-page-camera` | `sceneId`, `pageIndex` | `camera`, `effect`, `direction`, `intensity`, `durationMs`, `clearCamera` | Legacy-compatible camera setter. Aliases: `scene`, `page`, `duration-ms`, `clear-camera`. |
+| `set-camera-effect` | `sceneId`, `pageIndex` | `effect`, `camera`, `direction`, `intensity`, `durationMs`, `clearCamera` | Catalog-oriented alias for `set-page-camera`; requires `effect`, `camera`, or `clearCamera`, and clamps duration to `0..2000` ms. Aliases: `scene`, `page`, `id`, `duration-ms`, `clear-camera`. |
+| `set-page-transition` | `sceneId`, `pageIndex` | `transition`, `type`, `duration`, `clearTransition` | Aliases: `scene`, `page`, `clear-transition`. |
 | `set-character-animation` | `sceneId`, `pageIndex`, `characterId` | `animation` | `animation` defaults to `none`. Aliases: `scene`, `page`, `character`. |
+| `set-character-transition` | `sceneId`, `pageIndex`, `characterId` | `transition` | Catalog-oriented compatibility alias for `set-character-animation`; writes canonical `animation`. Aliases: `scene`, `page`, `character`, `animation`, `id`. |
+
+`set-page-transition` clamps background transition duration to `0..5000` ms. Use `list-transitions --supported-only` before writing effects; entries with `runtimeSupported: false` are future candidates that safely fall back at runtime.
 
 ## Title Screen Commands
 

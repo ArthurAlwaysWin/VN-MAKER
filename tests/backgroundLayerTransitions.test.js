@@ -87,4 +87,20 @@ describe('background layer transitions', () => {
     expect(background.layerB.style.transform).toBe('');
     expect(background.layerB.style.backgroundImage).toBe('');
   });
+
+  it('falls back unknown catalog ids and caps transition waits at the shared safety limit', async () => {
+    const background = makeLayer();
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'iris-in',
+      duration: 50000,
+    });
+
+    expect(background.layerB.classList.contains('bg-transition-iris-in')).toBe(false);
+    expect(background.layerB.style.transitionDuration).toBe('5000ms');
+
+    vi.advanceTimersByTime(5001);
+    await completion;
+  });
 });

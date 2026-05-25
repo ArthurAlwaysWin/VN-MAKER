@@ -34,6 +34,7 @@ import {
 import {
   getCharacterAnimationValue,
   getPageCameraContract,
+  getPageTransitionContract,
   getRuntimeTransitionType,
 } from '../shared/cinematicContract.js';
 import { applyEffects } from '../shared/effectDsl.js';
@@ -325,8 +326,10 @@ export class ScriptEngine extends EventEmitter {
       camera: getPageCameraContract(page.camera),
     });
 
-    const transition = getRuntimeTransitionType(page.transition?.type);
-    const duration = page.transition?.duration ?? 800;
+    const transitionContract = getPageTransitionContract(page.transition)
+      ?? getPageTransitionContract({ type: 'fade', duration: 800 });
+    const transition = getRuntimeTransitionType(transitionContract.type);
+    const duration = transitionContract.duration;
 
     // ─── Background (only emit if changed) ───
     if (page.background && page.background !== this._currentBg) {

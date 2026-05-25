@@ -19,6 +19,7 @@ import {
 } from '../../src/authoring/sceneReferenceDiagnostics.js';
 import { validateProject } from '../../src/shared/projectValidator.js';
 import { collectSceneReferences } from '../../src/shared/sceneGraph.js';
+import { listTransitionCatalog } from '../../src/shared/transitionCatalog.js';
 import {
   PREVIEW_BROWSER_UNAVAILABLE,
   PREVIEW_QUALITY_FAILED,
@@ -911,8 +912,10 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-page-audio',
   'set-page-media',
   'set-page-camera',
+  'set-camera-effect',
   'set-page-transition',
   'set-character-animation',
+  'set-character-transition',
   'set-title-screen',
   'add-title-element',
   'update-title-element',
@@ -1486,18 +1489,48 @@ function applyPlanOperation(session, operation = {}, index = 0) {
   }
 
   if (command === 'set-page-camera') {
+    const effect = getParam(params, 'effect');
     return session.setPageCamera({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
       pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      camera: getParam(params, 'clearCamera', 'clear-camera') ? null : getParam(params, 'camera'),
+      camera: getParam(params, 'clearCamera', 'clear-camera')
+        ? null
+        : getParam(params, 'camera') ?? (effect !== undefined ? {
+          effect,
+          direction: getParam(params, 'direction'),
+          intensity: getParam(params, 'intensity') ?? 'medium',
+          durationMs: getParam(params, 'durationMs', 'duration-ms') ?? 800,
+        } : null),
+    });
+  }
+
+  if (command === 'set-camera-effect') {
+    return session.setPageCamera({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      camera: getParam(params, 'clearCamera', 'clear-camera')
+        ? null
+        : getParam(params, 'camera') ?? {
+          effect: requireParam(params, command, 'effect', 'id'),
+          direction: getParam(params, 'direction'),
+          intensity: getParam(params, 'intensity') ?? 'medium',
+          durationMs: getParam(params, 'durationMs', 'duration-ms') ?? 800,
+        },
     });
   }
 
   if (command === 'set-page-transition') {
+    const type = getParam(params, 'type');
+    const duration = getParam(params, 'duration');
     return session.setPageTransition({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
       pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      transition: getParam(params, 'clearTransition', 'clear-transition') ? null : getParam(params, 'transition'),
+      transition: getParam(params, 'clearTransition', 'clear-transition')
+        ? null
+        : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
+          type: type ?? 'fade',
+          duration: duration ?? 800,
+        } : null),
     });
   }
 
@@ -1507,6 +1540,15 @@ function applyPlanOperation(session, operation = {}, index = 0) {
       pageIndex: requireParam(params, command, 'pageIndex', 'page'),
       characterId: requireParam(params, command, 'characterId', 'character'),
       animation: getParam(params, 'animation') ?? 'none',
+    });
+  }
+
+  if (command === 'set-character-transition') {
+    return session.setCharacterAnimation({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      characterId: requireParam(params, command, 'characterId', 'character'),
+      animation: getParam(params, 'transition', 'animation', 'id') ?? 'none',
     });
   }
 
@@ -1996,6 +2038,30 @@ async function listAssets(args) {
     }
   }
 
+  return 0;
+}
+
+function listTransitions(args) {
+  const target = getArgValue(args, '--target', null);
+  const supportedOnly = hasFlag(args, '--supported-only');
+  const transitions = listTransitionCatalog({ target, supportedOnly });
+  const output = {
+    target,
+    supportedOnly,
+    count: transitions.length,
+    transitions,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+    return 0;
+  }
+
+  process.stdout.write(`Transitions: ${output.count}\n`);
+  for (const transition of transitions) {
+    const support = transition.runtimeSupported ? 'supported' : `fallback: ${transition.fallbackId ?? 'none'}`;
+    process.stdout.write(`- ${transition.target}:${transition.id} (${support})\n`);
+  }
   return 0;
 }
 
@@ -4405,7 +4471,7 @@ async function setPageCamera(args) {
       effect: getArgValue(args, '--effect', null),
       direction: getArgValue(args, '--direction', undefined),
       intensity: getArgValue(args, '--intensity', 'medium'),
-      durationMs: parseScalarValue(getArgValue(args, '--duration-ms', '450')),
+      durationMs: parseScalarValue(getArgValue(args, '--duration-ms', '800')),
     });
 
   const output = await mutateScript(args, (session) => session.setPageCamera({
@@ -4431,6 +4497,18 @@ async function setPageCamera(args) {
   }
 
   return output.validation.ok ? 0 : 1;
+}
+
+async function setCameraEffect(args) {
+  if (
+    !hasFlag(args, '--clear-camera')
+    && getArgValue(args, '--effect', null) == null
+    && getArgValue(args, '--camera', null) == null
+  ) {
+    throw new Error('set-camera-effect requires --effect, --camera, or --clear-camera');
+  }
+
+  return setPageCamera(args);
 }
 
 async function setPageTransition(args) {
@@ -4496,7 +4574,7 @@ async function setCharacterAnimation(args) {
     sceneId,
     pageIndex,
     characterId,
-    animation: getArgValue(args, '--animation', 'none'),
+    animation: getArgValue(args, '--animation', getArgValue(args, '--transition', 'none')),
   }));
 
   if (hasFlag(args, '--json')) {
@@ -4793,6 +4871,7 @@ function printHelp() {
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
   list-assets [--project path|--script path] [--json]
+  list-transitions [--target background|character|camera] [--supported-only] [--json]
   graph-report [--script path] [--entry scene_id] [--mermaid] [--json]
   find-dead-ends [--script path] [--entry scene_id] [--json]
   find-missing-assets [--script path] [--asset-root path] [--json]
@@ -4848,8 +4927,10 @@ function printHelp() {
   set-page-characters --scene scene_id --page index [--preset preset] [--character id[:expression]] [--characters json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-audio --scene scene_id --page index [--bgm path] [--bgm-volume number] [--se path] [--clear-bgm] [--clear-se] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-camera --scene scene_id --page index [--effect shake|zoom|pan|flash] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--camera json] [--clear-camera] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-camera-effect --scene scene_id --page index [--effect shake|zoom|pan|flash | --camera json | --clear-camera] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-transition --scene scene_id --page index [--type fade|dissolve|wipe|scale|blur|slide-left|slide-right|none] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-animation --scene scene_id --page index --character character_id [--animation none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-character-transition --scene scene_id --page index --character character_id [--transition none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-title-screen [--background path] [--bgm path] [--elements json] [--config file] [--config-json json] [--clear-background] [--clear-bgm] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-title-element --type text|button|image [--id id] [--content text] [--text text] [--label text] [--action start|continue|settings|quit] [--src path] [--x number] [--y number] [--anchor center|top-left] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-title-element --id id|--index index [--patch json] [--content text] [--text text] [--x number] [--y number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -4881,6 +4962,11 @@ async function main() {
 
     if (command === 'list-assets') {
       process.exitCode = await listAssets(args);
+      return;
+    }
+
+    if (command === 'list-transitions') {
+      process.exitCode = listTransitions(args);
       return;
     }
 
@@ -5164,12 +5250,17 @@ async function main() {
       return;
     }
 
+    if (command === 'set-camera-effect') {
+      process.exitCode = await setCameraEffect(args);
+      return;
+    }
+
     if (command === 'set-page-transition') {
       process.exitCode = await setPageTransition(args);
       return;
     }
 
-    if (command === 'set-character-animation') {
+    if (command === 'set-character-animation' || command === 'set-character-transition') {
       process.exitCode = await setCharacterAnimation(args);
       return;
     }

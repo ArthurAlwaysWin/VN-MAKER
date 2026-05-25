@@ -1,4 +1,4 @@
-import { isKnownCameraEffect } from '../shared/cinematicContract.js';
+import { getPageCameraContract, isKnownCameraEffect } from '../shared/cinematicContract.js';
 
 const EFFECT_CLASSES = ['camera-shake', 'camera-zoom', 'camera-pan'];
 const INTENSITY_PRESETS = {
@@ -19,21 +19,22 @@ export class CameraController {
   play(camera, options = {}) {
     this.clear();
 
-    if (!camera || !isKnownCameraEffect(camera.effect)) {
+    const contract = getPageCameraContract(camera);
+    if (!contract || !isKnownCameraEffect(contract.effect)) {
       return;
     }
 
-    const durationMs = Math.max(0, Number(camera.durationMs) || 0);
+    const durationMs = Math.max(0, Number(contract.durationMs) || 0);
     if (options.immediate || durationMs === 0) {
       return;
     }
 
-    const intensity = INTENSITY_PRESETS[camera.intensity] || INTENSITY_PRESETS.medium;
+    const intensity = INTENSITY_PRESETS[contract.intensity] || INTENSITY_PRESETS.medium;
     this.stageLayer.style.setProperty('--camera-duration-ms', `${durationMs}ms`);
 
-    switch (camera.effect) {
+    switch (contract.effect) {
       case 'shake':
-        this._applyShake(camera.direction, intensity.shake);
+        this._applyShake(contract.direction, intensity.shake);
         this.stageLayer.classList.add('camera-shake');
         break;
       case 'zoom':
@@ -41,7 +42,7 @@ export class CameraController {
         this.stageLayer.classList.add('camera-zoom');
         break;
       case 'pan':
-        this._applyPan(camera.direction, intensity.pan);
+        this._applyPan(contract.direction, intensity.pan);
         this.stageLayer.classList.add('camera-pan');
         break;
       case 'flash':

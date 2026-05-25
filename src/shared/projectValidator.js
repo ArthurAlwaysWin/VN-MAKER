@@ -12,12 +12,18 @@ import {
   normalizeEndingRegistry,
 } from './endingRegistry.js';
 import {
+  CAMERA_EFFECT_DIRECTION_OPTIONS,
   isKnownCameraEffect,
   isKnownCharacterAnimation,
   isKnownTransitionType,
 } from './cinematicContract.js';
 import { normalizeEffects } from './effectDsl.js';
 import { createBranchGraphReport } from './sceneGraph.js';
+import {
+  BACKGROUND_TRANSITION_DURATION_SCHEMA,
+  CAMERA_EFFECT_DURATION_SCHEMA,
+  isValidNumericTransitionParam,
+} from './transitionCatalog.js';
 import { isValidVariableId, normalizeVariableId, normalizeVariableRegistry } from './variableRegistry.js';
 
 export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
@@ -659,9 +665,68 @@ function validatePageCinematics(page, context, report) {
     });
   }
 
+  if (
+    page.camera?.durationMs !== undefined
+    && !isValidNumericTransitionParam(page.camera.durationMs, CAMERA_EFFECT_DURATION_SCHEMA)
+  ) {
+    addWarning(report, 'invalid-transition-param', 'Camera durationMs must be between 0 and 2000 milliseconds and will be clamped at runtime.', [...pagePath, 'camera', 'durationMs'], {
+      target: 'camera',
+      param: 'durationMs',
+      value: page.camera.durationMs,
+      minimum: CAMERA_EFFECT_DURATION_SCHEMA.minimum,
+      maximum: CAMERA_EFFECT_DURATION_SCHEMA.maximum,
+    });
+  }
+
+  if (
+    page.camera?.intensity !== undefined
+    && !['low', 'medium', 'high'].includes(page.camera.intensity)
+  ) {
+    addWarning(report, 'invalid-transition-param', 'Camera intensity must be low, medium, or high and will fall back to medium at runtime.', [...pagePath, 'camera', 'intensity'], {
+      target: 'camera',
+      param: 'intensity',
+      value: page.camera.intensity,
+    });
+  }
+
+  const cameraDirections = CAMERA_EFFECT_DIRECTION_OPTIONS[page.camera?.effect];
+  if (
+    Array.isArray(cameraDirections)
+    && page.camera?.direction !== undefined
+    && !cameraDirections.includes(page.camera.direction)
+  ) {
+    addWarning(report, 'invalid-transition-param', `Camera direction "${page.camera.direction}" is not valid for "${page.camera.effect}".`, [...pagePath, 'camera', 'direction'], {
+      target: 'camera',
+      param: 'direction',
+      value: page.camera.direction,
+      effect: page.camera.effect,
+    });
+  }
+  if (cameraDirections === null && page.camera?.direction != null) {
+    addWarning(report, 'invalid-transition-param', `Camera effect "${page.camera.effect}" does not accept a direction parameter.`, [...pagePath, 'camera', 'direction'], {
+      target: 'camera',
+      param: 'direction',
+      value: page.camera.direction,
+      effect: page.camera.effect,
+    });
+  }
+
   if (page.transition?.type && !isKnownTransitionType(page.transition.type)) {
     addWarning(report, 'unknown-transition-type', `Transition "${page.transition.type}" is not runtime-supported and will fall back to fade.`, [...pagePath, 'transition', 'type'], {
       transitionType: page.transition.type,
+    });
+  }
+
+  if (
+    page.transition?.duration !== undefined
+    && !isValidNumericTransitionParam(page.transition.duration, BACKGROUND_TRANSITION_DURATION_SCHEMA)
+  ) {
+    addWarning(report, 'invalid-transition-param', 'Background transition duration must be between 0 and 5000 milliseconds and will be clamped at runtime.', [...pagePath, 'transition', 'duration'], {
+      target: 'background',
+      param: 'duration',
+      value: page.transition.duration,
+      minimum: BACKGROUND_TRANSITION_DURATION_SCHEMA.minimum,
+      maximum: BACKGROUND_TRANSITION_DURATION_SCHEMA.maximum,
     });
   }
 

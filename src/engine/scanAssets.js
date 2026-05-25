@@ -6,7 +6,7 @@
  * sorted relative paths suitable for export.
  *
  * Covers script-referenced assets across 6 categories (per D-01 + Phase 71 UI baseline):
- *   backgrounds — page backgrounds, UI screen backgrounds, UI image elements
+ *   backgrounds — page backgrounds, ending/CG artwork, UI screen backgrounds, UI image elements
  *   audio       — page BGM, page SE, title screen BGM
  *   fonts       — assets.fonts[].file
  *   characters  — characters[id].expressions values
@@ -84,7 +84,11 @@ export function scanAssets(script) {
     if (font.file) _add(fonts, font.file);
   }
 
-  // 4. Gallery CG artwork and thumbnails
+  // 4. Ending-list and gallery artwork rendered as story visuals
+  for (const ending of Object.values(script.systems?.endings || {})) {
+    _add(bg, ending?.thumbnail);
+  }
+
   for (const cg of Object.values(script.systems?.gallery?.cg || {})) {
     for (const image of (cg?.images || [])) {
       _add(bg, image);

@@ -8,6 +8,27 @@ This example shows the intended external-agent flow:
 4. Run author-check.
 5. Generate `agent-handoff.json` for the no-code editor.
 
+For the release-hardening example that exercises affection, two endings, one CG unlock, condition routing, and transitions together, use [example-plan.json](./example-plan.json). The human review steps are in [human-review-tutorial.md](./human-review-tutorial.md).
+
+## Executable Multi-Ending Route
+
+The checked-in plan can be validated and applied to a fresh or disposable project shell:
+
+```bash
+npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/game/script.json --validate-only --result-out .tmp/multi-ending-validation.json --json
+npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/game/script.json --dry-run --json
+npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/multi-ending-result.json --json
+```
+
+The resulting route is:
+
+```text
+start -- choice/effect --> route_check -- affection >= 1 --> good_ending + good_end unlock
+                                      \-- otherwise -----> quiet_ending + quiet_end unlock
+```
+
+The honest choice also unlocks `cg_confession`; supported transition operations polish the visible pages. Register the referenced example assets, then use `export-readiness` and `handoff-report --transaction .tmp/multi-ending-result.json` to complete the gate.
+
 ## User Request
 
 > Add a small opening branch: Sakura meets the player at the school gate, the player can smile back, and that raises Sakura affection before entering her route.

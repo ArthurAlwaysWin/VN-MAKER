@@ -27,8 +27,11 @@ See also:
 - `docs/agent-authoring/agent-checklist.md`
 - `docs/agent-authoring/asset-naming-guidelines.md`
 - `docs/agent-authoring/example-adaptation-preview.md`
+- `docs/agent-authoring/example-plan.json`
+- `docs/agent-authoring/human-review-tutorial.md`
 - `docs/agent-authoring/layout-rules.md`
 - `docs/agent-authoring/novel-adaptation-skill.md`
+- `docs/agent-authoring/phase-83-migration.md`
 - `docs/agent-authoring/screen-ui-skill.md`
 - `docs/agent-authoring/validation-rules.md`
 
@@ -98,6 +101,7 @@ npm run vn -- apply-plan plan.json --script public/game/script.json --force --ch
 See `docs/agent-authoring/plan-manifest.md` for the manifest shape, `docs/agent-authoring/command-reference.md` for operation params, and `docs/agent-authoring/mini-workflows.md` for focused task examples. If validation fails, `apply-plan` does not write unless `--allow-invalid` is present. When `--checkpoint` is used, JSON output includes a rollback descriptor for `restore-checkpoint`.
 
 See `docs/agent-authoring/end-to-end-example.md` for a complete prose-to-plan-to-handoff example.
+Use `docs/agent-authoring/example-plan.json` when you need an executable reference route covering affection, endings, CG unlocks, branch analysis, and transitions together.
 
 ## Incremental Edits
 

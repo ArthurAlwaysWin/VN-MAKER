@@ -20,6 +20,8 @@
 - **[AI Agent Integration Contract](docs/agent-authoring/integration-contract.md)** — agent 操作、事务、诊断、预览与交接的统一接口约束
 - **[脚本格式参考](docs/script-format.md)** — script.json 技术规格
 - **[外部 Agent 创作工作流](docs/agent-authoring/workflow.md)** — 供 Codex、Claude、opencode、GitHub Copilot 等外部 agent 通过 CLI/API 编辑同一个项目；不是内置 AI 助手
+- **[多结局示例与人工复核](docs/agent-authoring/human-review-tutorial.md)** — 通过可执行示例计划检查好感度、结局、CG、分支图与转场
+- **[Phase 83 项目迁移说明](docs/agent-authoring/phase-83-migration.md)** — 在保留玩家进度权威边界的前提下升级旧项目
 
 ## 快速开始
 

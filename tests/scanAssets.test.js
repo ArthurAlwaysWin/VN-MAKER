@@ -1,9 +1,9 @@
 /**
  * scanAssets — Unit tests for asset reference extraction.
  *
- * Covers all 11 path locations in script.json across 9 describe blocks:
- *   return shape, character expressions, scene page assets, fonts,
- *   UI screens, filtering, deduplication, sorting, graceful handling.
+ * Covers export-facing path locations in script.json, including:
+ *   characters, scene pages, fonts, ending/CG registries, UI screens,
+ *   filtering, deduplication, sorting, and graceful handling.
  *
  * Uses Node.js built-in test runner (node:test + node:assert/strict).
  * Run with: node --test tests/scanAssets.test.js
@@ -510,6 +510,22 @@ describe('CG gallery assets', () => {
       'backgrounds/cg/memory.png',
       'ui/gallery/locked.png',
     ]);
+  });
+});
+
+describe('ending registry assets', () => {
+  it('extracts ending-list thumbnails for export and readiness accounting', () => {
+    const result = scanAssets({
+      systems: {
+        endings: {
+          good: {
+            thumbnail: 'ui/endings/good.png',
+          },
+        },
+      },
+    });
+
+    deepStrictEqual(result.backgrounds, ['ui/endings/good.png']);
   });
 });
 

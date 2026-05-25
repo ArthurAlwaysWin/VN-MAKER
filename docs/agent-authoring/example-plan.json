@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "title": "Example branch polish plan",
+  "title": "Spring Promise multi-ending release example",
   "operations": [
     {
       "id": "add-sakura",
@@ -10,19 +10,61 @@
         "name": "Sakura",
         "color": "#ff99aa",
         "expressions": {
-          "normal": "characters/sakura_normal.svg",
           "smile": "characters/sakura_smile.svg"
         }
       }
     },
     {
       "id": "add-affection",
-      "command": "add-variable",
+      "command": "add-affection-variable",
       "params": {
+        "character": "sakura",
         "id": "sakura_affection",
-        "type": "number",
+        "label": "Sakura Affection",
         "initial": 0,
-        "label": "Sakura Affection"
+        "min": 0,
+        "max": 2,
+        "step": 1
+      }
+    },
+    {
+      "id": "register-good-ending",
+      "command": "add-ending",
+      "params": {
+        "id": "good_end",
+        "title": "Spring Promise",
+        "category": "main",
+        "order": 1,
+        "description": "Sakura shares the promise she kept.",
+        "thumbnail": "ui/endings/good.png",
+        "hiddenUntilUnlocked": true
+      }
+    },
+    {
+      "id": "register-quiet-ending",
+      "command": "add-ending",
+      "params": {
+        "id": "quiet_end",
+        "title": "Passing Platform",
+        "category": "normal",
+        "order": 2,
+        "description": "The train arrives before either person speaks.",
+        "thumbnail": "ui/endings/quiet.png",
+        "hiddenUntilUnlocked": true
+      }
+    },
+    {
+      "id": "register-confession-cg",
+      "command": "add-cg",
+      "params": {
+        "id": "cg_confession",
+        "title": "Rooftop Promise",
+        "category": "route",
+        "order": 1,
+        "description": "A memory unlocked by choosing honesty.",
+        "images": ["backgrounds/cg/sakura_confession.png"],
+        "thumbnail": "backgrounds/cg/sakura_confession_thumb.png",
+        "lockedThumbnail": "ui/gallery/locked.png"
       }
     },
     {
@@ -30,16 +72,31 @@
       "command": "add-scene",
       "params": {
         "id": "start",
-        "name": "Start",
-        "next": "good_route"
+        "name": "School Gate"
       }
     },
     {
-      "id": "add-good-route",
+      "id": "add-route-check",
       "command": "add-scene",
       "params": {
-        "id": "good_route",
-        "name": "Good Route"
+        "id": "route_check",
+        "name": "Route Check"
+      }
+    },
+    {
+      "id": "add-good-end-scene",
+      "command": "add-scene",
+      "params": {
+        "id": "good_ending",
+        "name": "Spring Promise Ending"
+      }
+    },
+    {
+      "id": "add-quiet-end-scene",
+      "command": "add-scene",
+      "params": {
+        "id": "quiet_ending",
+        "name": "Passing Platform Ending"
       }
     },
     {
@@ -64,36 +121,23 @@
           },
           {
             "speaker": "sakura",
-            "text": "You came.",
+            "text": "Will you come to the rooftop with me?",
             "expression": "smile"
           }
         ]
       }
     },
     {
-      "id": "opening-camera",
-      "command": "set-page-camera",
-      "params": {
-        "scene": "start",
-        "page": 0,
-        "camera": {
-          "effect": "zoom",
-          "intensity": "low",
-          "durationMs": 500
-        }
-      }
-    },
-    {
-      "id": "route-choice",
+      "id": "opening-choice",
       "command": "add-page",
       "params": {
         "scene": "start",
         "type": "choice",
-        "prompt": "How do you answer?",
+        "prompt": "How do you answer Sakura?",
         "options": [
           {
-            "text": "Smile back",
-            "target": "good_route",
+            "text": "Tell her you were hoping she would ask.",
+            "target": "route_check",
             "effects": [
               {
                 "type": "var:add",
@@ -103,32 +147,133 @@
             ]
           },
           {
-            "text": "Stay quiet",
-            "target": null
+            "text": "Say you should head home.",
+            "target": "route_check",
+            "effects": [
+              {
+                "type": "var:sub",
+                "id": "sakura_affection",
+                "value": 1
+              }
+            ]
           }
         ]
       }
     },
     {
-      "id": "good-route-page",
+      "id": "unlock-confession-cg",
+      "command": "add-cg-unlock",
+      "params": {
+        "scene": "start",
+        "page": 1,
+        "option": 0,
+        "cg": "cg_confession"
+      }
+    },
+    {
+      "id": "route-condition",
       "command": "add-page",
       "params": {
-        "scene": "good_route",
+        "scene": "route_check",
+        "type": "condition",
+        "conditionMode": "all",
+        "conditions": [
+          {
+            "variableId": "sakura_affection",
+            "operator": ">=",
+            "value": 1
+          }
+        ],
+        "trueTarget": "good_ending",
+        "falseTarget": "quiet_ending"
+      }
+    },
+    {
+      "id": "good-ending-page",
+      "command": "add-page",
+      "params": {
+        "scene": "good_ending",
         "type": "normal",
-        "background": "backgrounds/school_gate.svg",
+        "background": "backgrounds/rooftop_sunset.svg",
         "characters": [
           {
             "id": "sakura",
-            "expression": "normal",
+            "expression": "smile",
             "position": "center"
           }
         ],
         "dialogues": [
           {
             "speaker": "sakura",
-            "text": "Then walk with me."
+            "text": "I wanted this spring to begin with you."
           }
         ]
+      }
+    },
+    {
+      "id": "quiet-ending-page",
+      "command": "add-page",
+      "params": {
+        "scene": "quiet_ending",
+        "type": "normal",
+        "background": "backgrounds/empty_platform.svg",
+        "dialogues": [
+          {
+            "speaker": null,
+            "text": "The platform empties before the unsaid words return."
+          }
+        ]
+      }
+    },
+    {
+      "id": "unlock-good-ending",
+      "command": "add-ending-unlock",
+      "params": {
+        "scene": "good_ending",
+        "page": 0,
+        "ending": "good_end"
+      }
+    },
+    {
+      "id": "unlock-quiet-ending",
+      "command": "add-ending-unlock",
+      "params": {
+        "scene": "quiet_ending",
+        "page": 0,
+        "ending": "quiet_end"
+      }
+    },
+    {
+      "id": "polish-start-transition",
+      "command": "set-page-transitions",
+      "params": {
+        "scene": "start",
+        "predicate": {
+          "pageType": "normal",
+          "hasBackground": true
+        },
+        "type": "dissolve",
+        "duration": 650
+      }
+    },
+    {
+      "id": "polish-good-transition",
+      "command": "set-page-transition",
+      "params": {
+        "scene": "good_ending",
+        "page": 0,
+        "type": "dissolve",
+        "duration": 900
+      }
+    },
+    {
+      "id": "animate-sakura",
+      "command": "set-character-transition",
+      "params": {
+        "scene": "good_ending",
+        "page": 0,
+        "character": "sakura",
+        "transition": "breathe"
       }
     }
   ]

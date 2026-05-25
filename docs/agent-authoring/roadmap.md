@@ -110,6 +110,7 @@ Current:
 - README links to the external-agent authoring workflow.
 - Focused mini-workflows cover adding scenes, revising dialogue, staging characters, setting media, adding branches, and preparing handoff.
 - Screen UI authoring is documented as a skill workflow. `ui.titleScreen` has structured CLI/API commands; `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` can be edited through `set-screen-layout`; shared UI sections can be edited through `set-dialogue-box`, `set-theme`, and `set-widget-styles`.
+- An executable multi-ending example plan now covers affection, terminal ending unlocks, CG gallery unlocks, condition routing, and transition authoring, with a human editor review tutorial and Phase 83 migration guide.
 
 Gaps:
 

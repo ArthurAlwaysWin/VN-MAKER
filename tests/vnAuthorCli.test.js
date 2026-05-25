@@ -479,7 +479,7 @@ describe('vn-author CLI', () => {
     });
   });
 
-  it('keeps the documented example plan executable by apply-plan dry-run', async () => {
+  it('builds the documented multi-ending example plan and passes export readiness', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
       const examplePlanPath = path.resolve('docs/agent-authoring/example-plan.json');
@@ -508,14 +508,80 @@ describe('vn-author CLI', () => {
       });
       expect(result.validation.ok).toBe(true);
       expect(result.changeSummary).toMatchObject({
-        operationCount: 8,
+        operationCount: 20,
         counts: {
           before: { characters: 0, scenes: 0, pages: 0, variables: 0 },
-          after: { characters: 1, scenes: 2, pages: 3, variables: 1 },
-          delta: { characters: 1, scenes: 2, pages: 3, variables: 1 },
+          after: { characters: 1, scenes: 4, pages: 5, variables: 1 },
+          delta: { characters: 1, scenes: 4, pages: 5, variables: 1 },
         },
       });
       expect(script.scenes).toEqual({});
+
+      const applied = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        examplePlanPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--json',
+      ])).stdout);
+      const builtScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(applied.validation.ok).toBe(true);
+      expect(builtScript.systems.variables.sakura_affection).toMatchObject({
+        kind: 'affection',
+        characterId: 'sakura',
+      });
+      expect(Object.keys(builtScript.systems.endings)).toEqual(['good_end', 'quiet_end']);
+      expect(builtScript.systems.gallery.cg.cg_confession).toMatchObject({
+        images: ['backgrounds/cg/sakura_confession.png'],
+      });
+      expect(builtScript.scenes.start.pages[1].options[0].effects).toEqual([
+        { type: 'var:add', id: 'sakura_affection', value: 1 },
+        { type: 'unlock:cg', id: 'cg_confession' },
+      ]);
+      expect(builtScript.scenes.good_ending.pages[0].effects).toEqual([
+        { type: 'unlock:ending', id: 'good_end' },
+      ]);
+      expect(builtScript.scenes.quiet_ending.pages[0].effects).toEqual([
+        { type: 'unlock:ending', id: 'quiet_end' },
+      ]);
+
+      const assetPaths = [
+        'characters/sakura_smile.svg',
+        'backgrounds/school_gate.svg',
+        'backgrounds/rooftop_sunset.svg',
+        'backgrounds/empty_platform.svg',
+        'backgrounds/cg/sakura_confession.png',
+        'backgrounds/cg/sakura_confession_thumb.png',
+        'ui/endings/good.png',
+        'ui/endings/quiet.png',
+        'ui/gallery/locked.png',
+      ];
+      for (const assetPath of assetPaths) {
+        const absolutePath = path.join(dir, ...assetPath.split('/'));
+        await mkdir(path.dirname(absolutePath), { recursive: true });
+        await writeFile(absolutePath, 'example asset', 'utf8');
+      }
+
+      const readiness = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'export-readiness',
+        '--script',
+        scriptPath,
+        '--json',
+      ])).stdout);
+      expect(readiness).toMatchObject({
+        ready: true,
+        blockers: [],
+        sceneGraph: {
+          unreachableSceneIds: [],
+          deadEndSceneIds: [],
+          cyclesWithoutExit: [],
+        },
+      });
+      expect(readiness.warnings).toEqual([]);
     });
   });
 

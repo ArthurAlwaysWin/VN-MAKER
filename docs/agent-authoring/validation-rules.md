@@ -114,7 +114,7 @@ npm run vn:readiness -- --json
 It combines:
 
 - Validator errors.
-- Missing asset references.
+- Missing asset references, including ending thumbnails and CG gallery artwork.
 - Layout lint warnings.
 - Scene graph reachability.
 - Referenced asset counts by category.

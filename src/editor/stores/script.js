@@ -3,6 +3,7 @@ import { computed, ref, nextTick } from 'vue';
 import { normalizeConditionPage, normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 import { normalizeEffectContainer } from '../../shared/effectDsl.js';
+import { collectCgUnlockReferences, normalizeCgRegistry } from '../../shared/cgRegistry.js';
 import {
   collectEndingUnlockReferences,
   normalizeEndingRegistry,
@@ -18,6 +19,7 @@ import {
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 const DRAFT_ENDING_PREFIX = '__draft_ending__';
+const DRAFT_CG_PREFIX = '__draft_cg__';
 
 function slugifyVariableId(value) {
   return String(value ?? '')
@@ -73,6 +75,8 @@ function normalizeStoryContracts(scriptData) {
   scriptData.systems ??= {};
   scriptData.systems.variables = normalizeVariableRegistry(scriptData.systems.variables);
   scriptData.systems.endings = normalizeEndingRegistry(scriptData.systems.endings);
+  scriptData.systems.gallery ??= {};
+  scriptData.systems.gallery.cg = normalizeCgRegistry(scriptData.systems.gallery.cg);
   normalizeChoiceEffects(scriptData);
   normalizeConditionPages(scriptData, {
     registry: scriptData.systems.variables,
@@ -92,6 +96,7 @@ export const useScriptStore = defineStore('script', () => {
   const _skipWatch = ref(false);
   const selectedVariableId = ref(null);
   const selectedEndingId = ref(null);
+  const selectedCgId = ref(null);
   const storySystemsPanel = ref('variables');
   const storySystemsRepairRequest = ref(null);
 
@@ -172,6 +177,7 @@ export const useScriptStore = defineStore('script', () => {
     historyIndex.value = -1;
     selectedVariableId.value = null;
     selectedEndingId.value = null;
+    selectedCgId.value = null;
     storySystemsPanel.value = 'variables';
     storySystemsRepairRequest.value = null;
   }
@@ -194,8 +200,17 @@ export const useScriptStore = defineStore('script', () => {
     }
   }
 
+  function selectCg(cgId) {
+    selectedCgId.value = typeof cgId === 'string' && cgId.trim()
+      ? cgId.trim()
+      : null;
+    if (selectedCgId.value) {
+      storySystemsPanel.value = 'cgs';
+    }
+  }
+
   function selectStorySystemsPanel(panel) {
-    storySystemsPanel.value = panel === 'endings' ? 'endings' : 'variables';
+    storySystemsPanel.value = ['endings', 'cgs'].includes(panel) ? panel : 'variables';
   }
 
   function ensureVariableRegistryState() {
@@ -216,6 +231,17 @@ export const useScriptStore = defineStore('script', () => {
     data.value.systems ??= {};
     data.value.systems.endings = normalizeEndingRegistry(data.value.systems.endings);
     return data.value.systems.endings;
+  }
+
+  function ensureCgRegistryState() {
+    if (!data.value) {
+      return null;
+    }
+
+    data.value.systems ??= {};
+    data.value.systems.gallery ??= {};
+    data.value.systems.gallery.cg = normalizeCgRegistry(data.value.systems.gallery.cg);
+    return data.value.systems.gallery.cg;
   }
 
   function createVariableDraft() {
@@ -465,6 +491,143 @@ export const useScriptStore = defineStore('script', () => {
       references,
       deletedReferenceCount,
     };
+  }
+
+  function createCgDraft() {
+    const cgs = ensureCgRegistryState();
+    if (!cgs) {
+      return null;
+    }
+
+    let index = 1;
+    let draftId = `${DRAFT_CG_PREFIX}${index}`;
+    while (cgs[draftId]) {
+      index++;
+      draftId = `${DRAFT_CG_PREFIX}${index}`;
+    }
+
+    cgs[draftId] = {
+      title: '',
+      images: [],
+      category: 'main',
+      order: Object.keys(cgs).length,
+      description: '',
+    };
+    selectCg(draftId);
+    pushState();
+    return draftId;
+  }
+
+  function updateCgFields(cgId, changes = {}) {
+    const cgs = ensureCgRegistryState();
+    if (!cgs || !cgs[cgId]) {
+      return false;
+    }
+
+    cgs[cgId] = normalizeCgRegistry({
+      [cgId]: {
+        ...cgs[cgId],
+        ...changes,
+      },
+    })[cgId];
+    pushState();
+    return true;
+  }
+
+  function findCgReferences(cgId) {
+    if (!cgId) {
+      return [];
+    }
+
+    return collectCgUnlockReferences(data.value ?? {})
+      .filter((reference) => reference.cgId === cgId)
+      .map((reference) => ({
+        ...reference,
+        locationText: `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`,
+      }));
+  }
+
+  function renameCg(cgId, nextCgId, options = {}) {
+    const cgs = ensureCgRegistryState();
+    if (!cgs || !cgs[cgId]) {
+      return { success: false, error: 'missing-cg' };
+    }
+
+    const normalizedId = slugifyVariableId(nextCgId);
+    if (!normalizedId) {
+      return { success: false, error: 'empty-id' };
+    }
+    if (normalizedId === cgId) {
+      return { success: true, cgId };
+    }
+    if (cgs[normalizedId]) {
+      return { success: false, error: 'duplicate-id' };
+    }
+
+    const references = findCgReferences(cgId);
+    if (options.previewOnly) {
+      return { success: true, cgId: normalizedId, references, rewriteCount: references.length };
+    }
+
+    let rewriteCount = 0;
+    for (const scene of Object.values(data.value?.scenes ?? {})) {
+      for (const page of scene.pages || []) {
+        if (page?.type !== 'choice') continue;
+        page.options = (page.options || []).map((option) => {
+          const normalizedOption = normalizeEffectContainer(option);
+          normalizedOption.effects = (normalizedOption.effects || []).map((effect) => {
+            if (effect?.type !== 'unlock:cg' || effect.id !== cgId) return effect;
+            rewriteCount++;
+            return { ...effect, id: normalizedId };
+          });
+          if (normalizedOption.effects.length === 0) delete normalizedOption.effects;
+          return normalizedOption;
+        });
+      }
+    }
+
+    cgs[normalizedId] = cgs[cgId];
+    delete cgs[cgId];
+    selectCg(normalizedId);
+    pushState();
+    return { success: true, cgId: normalizedId, references, rewriteCount };
+  }
+
+  function deleteCg(cgId, options = {}) {
+    const cgs = ensureCgRegistryState();
+    if (!cgs || !cgs[cgId]) {
+      return { success: false, error: 'missing-cg' };
+    }
+
+    const references = findCgReferences(cgId);
+    if (options.previewOnly) {
+      return { success: true, references, cleanupCount: references.length };
+    }
+
+    let deletedReferenceCount = 0;
+    for (const scene of Object.values(data.value?.scenes ?? {})) {
+      for (const page of scene.pages || []) {
+        if (page?.type !== 'choice') continue;
+        page.options = (page.options || []).map((option) => {
+          const normalizedOption = normalizeEffectContainer(option);
+          const effects = (normalizedOption.effects || []).filter((effect) => {
+            const keep = effect?.type !== 'unlock:cg' || effect.id !== cgId;
+            if (!keep) deletedReferenceCount++;
+            return keep;
+          });
+          if (effects.length > 0) normalizedOption.effects = effects;
+          else delete normalizedOption.effects;
+          return normalizedOption;
+        });
+      }
+    }
+
+    delete cgs[cgId];
+    if (selectedCgId.value === cgId) {
+      selectCg(Object.keys(cgs)[0] ?? null);
+    }
+    pushState();
+    return { success: true, references, deletedReferenceCount };
   }
 
   function renameVariable(variableId, nextVariableId, options = {}) {
@@ -1117,15 +1280,16 @@ export const useScriptStore = defineStore('script', () => {
 
   return {
     data, isLoading, _skipWatch,
-    selectedVariableId, selectedEndingId, storySystemsPanel, storySystemsRepairRequest,
+    selectedVariableId, selectedEndingId, selectedCgId, storySystemsPanel, storySystemsRepairRequest,
     conditionPageIssues, canSaveConditionPages,
     pushState, undo, redo,
     historyIndex, history,
     loadFromData, reset,
-    selectVariable, selectEnding, selectStorySystemsPanel, requestStorySystemsRepair,
+    selectVariable, selectEnding, selectCg, selectStorySystemsPanel, requestStorySystemsRepair,
     createVariableDraft, updateVariableFields, createAffectionVariable, renameVariable,
     findVariableReferences, deleteVariable,
     createEndingDraft, updateEndingFields, renameEnding, findEndingReferences, deleteEnding,
+    createCgDraft, updateCgFields, renameCg, findCgReferences, deleteCg,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,

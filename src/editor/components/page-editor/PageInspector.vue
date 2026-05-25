@@ -337,8 +337,8 @@
             </div>
             <div class="form-group choice-effects">
               <label>选项效果</label>
-              <div v-if="!variableOptions.length && !endingOptions.length" class="effect-empty">
-                请先在剧情系统中创建变量或结局
+              <div v-if="!variableOptions.length && !endingOptions.length && !cgOptions.length" class="effect-empty">
+                请先在剧情系统中创建变量、结局或 CG
               </div>
               <div
                 v-for="(effect, effectIdx) in (opt.effects || [])"
@@ -414,6 +414,19 @@
                   </select>
                   <span class="readonly-effect-id">解锁</span>
                 </template>
+                <template v-else-if="isCgUnlockEffect(effect)">
+                  <code class="readonly-effect">CG</code>
+                  <select
+                    class="field-input effect-variable"
+                    :value="effect.id"
+                    @change="setCgUnlockId(idx, effectIdx, $event.target.value)"
+                  >
+                    <option v-for="cg in cgOptions" :key="cg.id" :value="cg.id">
+                      {{ cg.label }}
+                    </option>
+                  </select>
+                  <span class="readonly-effect-id">解锁</span>
+                </template>
                 <template v-else>
                   <code class="readonly-effect">{{ effect.type }}</code>
                   <span class="readonly-effect-id">{{ effect.id }}</span>
@@ -432,6 +445,12 @@
                 :disabled="!endingOptions.length"
                 @click="addEndingUnlockRow(idx)"
               >+ 添加结局解锁</button>
+              <button
+                class="secondary-add-btn"
+                type="button"
+                :disabled="!cgOptions.length"
+                @click="addCgUnlockRow(idx)"
+              >+ 添加 CG 解锁</button>
             </div>
           </div>
         </div>
@@ -730,6 +749,11 @@ const endingOptions = computed(() => Object.entries(script.data?.systems?.ending
   if (orderDelta !== 0) return orderDelta;
   return left.label.localeCompare(right.label);
 }));
+const cgOptions = computed(() => Object.entries(script.data?.systems?.gallery?.cg || {}).map(([id, cg]) => ({
+  id,
+  label: cg.title || cg.name || id,
+  order: Number(cg.order ?? 0),
+})).sort((left, right) => left.order - right.order || left.label.localeCompare(right.label)));
 const numberVariableOptions = computed(() => variableOptions.value.filter((variable) => variable.type !== 'bool'));
 const characterAnimationOptions = computed(() => {
   const idx = editor.selectedCharIndex.value;
@@ -1236,6 +1260,10 @@ function isEndingUnlockEffect(effect) {
   return effect?.type === 'unlock:ending';
 }
 
+function isCgUnlockEffect(effect) {
+  return effect?.type === 'unlock:cg';
+}
+
 function variableEntry(variableId) {
   return script.data?.systems?.variables?.[variableId] ?? null;
 }
@@ -1295,6 +1323,14 @@ function addEndingUnlockRow(optionIndex) {
   script.pushState();
 }
 
+function addCgUnlockRow(optionIndex) {
+  const option = page.value?.options?.[optionIndex];
+  const cgId = cgOptions.value[0]?.id;
+  if (!option || !cgId) return;
+  ensureOptionEffects(option).push({ type: 'unlock:cg', id: cgId });
+  script.pushState();
+}
+
 function removeChoiceEffectRow(optionIndex, effectIndex) {
   const option = page.value?.options?.[optionIndex];
   if (!option?.effects?.[effectIndex]) return;
@@ -1309,6 +1345,13 @@ function setEndingUnlockId(optionIndex, effectIndex, endingId) {
   const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
   if (!effect || !isEndingUnlockEffect(effect)) return;
   effect.id = endingId;
+  script.pushState();
+}
+
+function setCgUnlockId(optionIndex, effectIndex, cgId) {
+  const effect = page.value?.options?.[optionIndex]?.effects?.[effectIndex];
+  if (!effect || !isCgUnlockEffect(effect)) return;
+  effect.id = cgId;
   script.pushState();
 }
 

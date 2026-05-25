@@ -308,6 +308,7 @@ function togglePreview() {
 const PRESET_BUTTONS = [
   { action: 'start',    label: '开始游戏', icon: '▶️', text: '开始游戏' },
   { action: 'continue', label: '继续游戏', icon: '⏩', text: '继续游戏' },
+  { action: 'gallery',  label: 'CG 鉴赏', icon: '▣', text: 'CG 鉴赏' },
   { action: 'settings', label: '设置',     icon: '⚙️', text: '设置' },
   { action: 'quit',     label: '退出',     icon: '🚪', text: '退出' },
 ];
@@ -760,7 +761,7 @@ function typeLabel(type) {
 }
 
 function actionLabel(action) {
-  const map = { start: '开始游戏', continue: '继续游戏', settings: '设置', quit: '退出' };
+  const map = { start: '开始游戏', continue: '继续游戏', gallery: 'CG 鉴赏', settings: '设置', quit: '退出' };
   return map[action] || action;
 }
 

@@ -264,6 +264,40 @@ describe('project validator', () => {
     ]));
   });
 
+  it('reports CG registry, artwork, and unlock diagnostics', () => {
+    const script = createValidScript();
+    script.systems.gallery.cg = {
+      missing_art: { title: 'Missing Art' },
+      'bad id': { title: 'Bad Id', images: ['backgrounds/cg/bad.png'], thumbnail: 'backgrounds/cg/bad.png' },
+    };
+    script.scenes.start.pages[1].options[0].effects = [
+      { type: 'unlock:cg', id: 'unknown_cg' },
+    ];
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(codes(report)).toEqual(expect.arrayContaining([
+      'invalid-cg-id',
+      'unregistered-cg-unlock',
+      'missing-cg-image',
+      'missing-cg-thumbnail',
+      'cg-never-unlocked',
+    ]));
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'missing-cg-image',
+        pathString: 'systems.gallery.cg.missing_art.images',
+        cgId: 'missing_art',
+      }),
+      expect.objectContaining({
+        code: 'cg-never-unlocked',
+        pathString: 'systems.gallery.cg.missing_art',
+        cgId: 'missing_art',
+      }),
+    ]));
+  });
+
   it('warns on missing projectId, empty pages, and long dialogue text', () => {
     const script = createValidScript({
       projectId: '',

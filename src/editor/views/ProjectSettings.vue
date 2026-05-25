@@ -263,6 +263,7 @@ function getAgentReviewItemLabel(item) {
     'ambiguous-asset': 'ambiguous',
     'screen-ui-preview': 'screen preview',
     'ending-list-preview': 'ending preview',
+    'gallery-preview': 'gallery preview',
     'reference-screenshot-fidelity': 'reference fidelity',
   };
   return labels[item?.category] ?? item?.code ?? item?.source ?? 'review';
@@ -289,6 +290,7 @@ function getAgentPathTitle(pathString) {
   if (target?.kind === 'scene') return '在游戏内容中定位';
   if (target?.kind === 'variable') return '在剧情系统中定位';
   if (target?.kind === 'ending') return '在剧情系统中定位';
+  if (target?.kind === 'cg') return '在剧情系统中定位';
   if (target?.kind === 'character' || target?.kind === 'asset') return '在资源库中定位';
   if (target?.kind === 'ui') return '在项目设置中定位';
   return '定位';
@@ -297,6 +299,9 @@ function getAgentPathTitle(pathString) {
 function getPreviewTargetKey(target) {
   if (target?.type === 'ending-list' || target?.kind === 'ending-list') {
     return 'ending-list:systems.endings';
+  }
+  if (target?.type === 'gallery' || target?.kind === 'gallery') {
+    return 'gallery:systems.gallery.cg';
   }
   if (target?.type === 'screen' || target?.screenId) {
     return `screen:${target.screenId}`;
@@ -308,12 +313,18 @@ function getPreviewTargetKindLabel(target) {
   if (target?.type === 'ending-list' || target?.kind === 'ending-list') {
     return 'ending';
   }
+  if (target?.type === 'gallery' || target?.kind === 'gallery') {
+    return 'gallery';
+  }
   return target?.type === 'screen' || target?.screenId ? 'screen' : 'scene';
 }
 
 function getPreviewTargetLabel(target) {
   if (target?.type === 'ending-list' || target?.kind === 'ending-list') {
     return '结局列表';
+  }
+  if (target?.type === 'gallery' || target?.kind === 'gallery') {
+    return 'CG 图库';
   }
   if (target?.type === 'screen' || target?.screenId) {
     return target.screenId || 'screen';
@@ -325,11 +336,17 @@ function getPreviewTargetTitle(target) {
   if (target?.type === 'ending-list' || target?.kind === 'ending-list') {
     return '在剧情系统中定位结局列表';
   }
+  if (target?.type === 'gallery' || target?.kind === 'gallery') {
+    return '在剧情系统中定位 CG 图库';
+  }
   return target?.type === 'screen' || target?.screenId ? '在右侧预览画面' : '在游戏内容中定位页面';
 }
 
 function getPreviewTargetActionLabel(target) {
   if (target?.type === 'ending-list' || target?.kind === 'ending-list') {
+    return '定位';
+  }
+  if (target?.type === 'gallery' || target?.kind === 'gallery') {
     return '定位';
   }
   return target?.type === 'screen' || target?.screenId ? '预览' : '定位';
@@ -339,6 +356,10 @@ function openPreviewTarget(target) {
   if (!target) return;
   if (target.type === 'ending-list' || target.kind === 'ending-list') {
     project.requestAgentPathNavigation('systems.endings');
+    return;
+  }
+  if (target.type === 'gallery' || target.kind === 'gallery') {
+    project.requestAgentPathNavigation('systems.gallery.cg');
     return;
   }
   if (target.type === 'screen' || target.screenId) {

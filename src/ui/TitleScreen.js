@@ -1,5 +1,5 @@
 /**
- * TitleScreen — Main menu (start, continue, settings)
+ * TitleScreen — Main menu (start, continue, gallery, settings)
  * Supports custom layout from script.json ui.titleScreen config.
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
@@ -22,8 +22,10 @@ export class TitleScreen {
     /** @type {Function|null} */ this.onStart = null;
     /** @type {Function|null} */ this.onContinue = null;
     /** @type {Function|null} */ this.onSettings = null;
+    /** @type {Function|null} */ this.onGallery = null;
 
     /** @type {boolean} */ this.hasSave = false;
+    /** @type {boolean} */ this.hasGallery = false;
   }
 
   /**
@@ -32,7 +34,7 @@ export class TitleScreen {
    */
   setLayout(layout) {
     this.layout = layout;
-    if (this.isVisible) this.show(this.hasSave);
+    if (this.isVisible) this.show(this.hasSave, this.hasGallery);
   }
 
   /** Whether the title screen is currently showing */
@@ -40,8 +42,9 @@ export class TitleScreen {
     return this.el.classList.contains('visible');
   }
 
-  show(hasSave = false) {
+  show(hasSave = false, hasGallery = false) {
     this.hasSave = hasSave;
+    this.hasGallery = hasGallery;
     if (this.layout && this.layout.elements) {
       this._renderCustom();
     } else {
@@ -63,6 +66,7 @@ export class TitleScreen {
       <div class="title-menu">
         <button class="title-button" id="title-start">开 始 游 戏</button>
         ${this.hasSave ? '<button class="title-button" id="title-continue">继 续 游 戏</button>' : ''}
+        ${this.hasGallery ? '<button class="title-button" id="title-gallery">CG 鉴 赏</button>' : ''}
         <button class="title-button" id="title-settings">设 定</button>
       </div>
       <div class="title-subtitle">Powered by Galgame Maker</div>
@@ -147,6 +151,8 @@ export class TitleScreen {
       btn.addEventListener('click', () => { if (this.onContinue) this.onContinue(); });
     } else if (action === 'settings') {
       btn.addEventListener('click', () => { if (this.onSettings) this.onSettings(); });
+    } else if (action === 'gallery') {
+      btn.addEventListener('click', () => { if (this.onGallery) this.onGallery(); });
     } else if (action === 'quit') {
       btn.addEventListener('click', () => { if (window.close) window.close(); });
     }
@@ -199,6 +205,9 @@ export class TitleScreen {
     }
     this.el.querySelector('#title-settings')?.addEventListener('click', () => {
       if (this.onSettings) this.onSettings();
+    });
+    this.el.querySelector('#title-gallery')?.addEventListener('click', () => {
+      if (this.onGallery) this.onGallery();
     });
   }
 }

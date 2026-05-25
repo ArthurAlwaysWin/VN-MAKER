@@ -78,6 +78,16 @@ export function parseAgentPathTarget(pathString = '') {
     };
   }
 
+  const cgMatch = /^systems\.gallery\.cg(?:\.([^.]+))?$/.exec(normalized);
+  if (cgMatch) {
+    return {
+      kind: 'cg',
+      tab: 'story-systems',
+      id: cgMatch[1] ?? null,
+      pathString: normalized,
+    };
+  }
+
   const characterMatch = /^characters\.([^.]+)/.exec(normalized);
   if (characterMatch) {
     return {
@@ -110,6 +120,9 @@ function getPathGroupKey(pathString = '') {
   if (target?.kind === 'ending') {
     return 'systems:endings';
   }
+  if (target?.kind === 'cg') {
+    return 'systems:cgs';
+  }
   if (target?.kind === 'character') {
     return 'characters';
   }
@@ -136,7 +149,7 @@ function createPathGroup(key) {
   return {
     key,
     kind,
-    label: key === 'systems:endings' ? 'Endings' : labelMap[kind] ?? key,
+    label: key === 'systems:endings' ? 'Endings' : key === 'systems:cgs' ? 'CG Gallery' : labelMap[kind] ?? key,
     changedPaths: [],
     reviewItems: [],
   };

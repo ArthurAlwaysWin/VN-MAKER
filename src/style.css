@@ -894,6 +894,102 @@ body {
 }
 
 /* ============================================
+   CG Gallery
+   ============================================ */
+#gallery-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  flex-direction: column;
+  background: var(--gm-panel-bg, rgba(10, 10, 20, 0.96));
+  color: var(--gm-text, rgba(255, 255, 255, 0.9));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#gallery-screen.visible { opacity: 1; pointer-events: auto; }
+#gallery-screen.hidden { opacity: 0; pointer-events: none; }
+
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76px;
+  padding: 0 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.gallery-title { font-size: 24px; letter-spacing: 8px; }
+.gallery-close {
+  padding: 10px 24px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.gallery-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) 440px;
+  gap: 28px;
+  padding: 28px 40px 36px;
+  min-height: 0;
+}
+
+.gallery-focus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.gallery-focus-empty, .gallery-empty { color: rgba(255, 255, 255, 0.46); }
+.gallery-focus-image { display: flex; align-items: center; justify-content: center; width: calc(100% - 32px); height: calc(100% - 64px); }
+.gallery-focus-image img { width: 100%; height: 100%; object-fit: contain; }
+.gallery-focus-title { margin: 14px 0 0; font-size: 16px; letter-spacing: 2px; }
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.gallery-card {
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.gallery-card.locked { cursor: default; opacity: 0.72; }
+.gallery-card-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 112px;
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 12px;
+}
+
+.gallery-card-image img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-card-label { display: block; padding: 10px 12px; font-size: 13px; }
+.gallery-focus-image.missing, .gallery-card-image.missing { color: rgba(255, 180, 180, 0.75); }
+
+/* ============================================
    Screen Decoration Layers (Phase 74)
    ============================================ */
 .screen-decoration {

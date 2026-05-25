@@ -12,6 +12,11 @@
           :class="{ active: script.storySystemsPanel === 'endings' }"
           @click="script.selectStorySystemsPanel('endings')"
         >结局</button>
+        <button
+          type="button"
+          :class="{ active: script.storySystemsPanel === 'cgs' }"
+          @click="script.selectStorySystemsPanel('cgs')"
+        >CG</button>
       </div>
       <VariableRegistryList
         v-if="script.storySystemsPanel === 'variables'"
@@ -30,12 +35,20 @@
         @update:group-filter="groupFilter = $event"
       />
       <EndingRegistryList
-        v-else
+        v-else-if="script.storySystemsPanel === 'endings'"
         :items="allEndings"
         :selected-id="script.selectedEndingId"
         :is-empty="allEndings.length === 0"
         @create="onCreateEnding"
         @select="script.selectEnding"
+      />
+      <CgRegistryList
+        v-else
+        :items="allCgs"
+        :selected-id="script.selectedCgId"
+        :is-empty="allCgs.length === 0"
+        @create="onCreateCg"
+        @select="script.selectCg"
       />
     </aside>
 
@@ -65,10 +78,20 @@
         @request-rename="openEndingRenameImpact"
       />
 
+      <CgInspector
+        v-else-if="script.storySystemsPanel === 'cgs' && selectedCg && selectedCgEntry"
+        :cg-id="selectedCg.id"
+        :cg-entry="selectedCgEntry"
+        :unlock-count="selectedCg.unlockCount"
+        :focus-token="cgInspectorFocusToken"
+        @request-delete="openCgDeleteImpact"
+        @request-rename="openCgRenameImpact"
+      />
+
       <div v-else class="detail-card detail-placeholder">
         <p class="eyebrow">剧情系统</p>
-        <h1>{{ script.storySystemsPanel === 'endings' ? '选择一个结局' : '选择一个变量' }}</h1>
-        <p>{{ script.storySystemsPanel === 'endings' ? '左侧列表会显示结局标题、内部 ID 和解锁点数量。' : '左侧列表会显示变量名称、内部 ID、默认值和引用次数。' }}</p>
+        <h1>{{ placeholderTitle }}</h1>
+        <p>{{ placeholderCopy }}</p>
       </div>
     </section>
 
@@ -87,6 +110,8 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
+import CgInspector from '../components/story-systems/CgInspector.vue';
+import CgRegistryList from '../components/story-systems/CgRegistryList.vue';
 import EndingInspector from '../components/story-systems/EndingInspector.vue';
 import EndingRegistryList from '../components/story-systems/EndingRegistryList.vue';
 import VariableImpactModal from '../components/story-systems/VariableImpactModal.vue';
@@ -95,12 +120,14 @@ import VariableRegistryList from '../components/story-systems/VariableRegistryLi
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { collectEndingUnlockReferences } from '../../shared/endingRegistry.js';
+import { collectCgUnlockReferences } from '../../shared/cgRegistry.js';
 import { collectVariableReferences } from '../../shared/variableRegistry.js';
 
 const script = useScriptStore();
 const project = useProjectStore();
 const inspectorFocusToken = ref(0);
 const endingInspectorFocusToken = ref(0);
+const cgInspectorFocusToken = ref(0);
 const search = ref('');
 const typeFilter = ref('all');
 const groupFilter = ref('all');
@@ -128,6 +155,7 @@ function formatDefaultValue(entry = {}) {
 
 const references = computed(() => collectVariableReferences(script.data ?? {}));
 const endingReferences = computed(() => collectEndingUnlockReferences(script.data ?? {}));
+const cgReferences = computed(() => collectCgUnlockReferences(script.data ?? {}));
 
 const usageCounts = computed(() => {
   const counts = new Map();
@@ -172,6 +200,25 @@ const allEndings = computed(() => {
     if (orderDelta !== 0) return orderDelta;
     return left.title.localeCompare(right.title);
   });
+});
+
+const cgUsageCounts = computed(() => {
+  const counts = new Map();
+  for (const reference of cgReferences.value) {
+    counts.set(reference.cgId, (counts.get(reference.cgId) ?? 0) + 1);
+  }
+  return counts;
+});
+
+const allCgs = computed(() => {
+  const cgs = script.data?.systems?.gallery?.cg ?? {};
+  return Object.entries(cgs).map(([id, entry]) => ({
+    id,
+    title: entry.title || entry.name || id,
+    order: Number(entry.order ?? 0),
+    imageCount: (entry.images || []).length,
+    unlockCount: cgUsageCounts.value.get(id) ?? 0,
+  })).sort((left, right) => left.order - right.order || left.title.localeCompare(right.title));
 });
 
 const groups = computed(() => {
@@ -231,6 +278,21 @@ const selectedEndingEntry = computed(() => {
   return script.data?.systems?.endings?.[script.selectedEndingId] ?? null;
 });
 
+const selectedCg = computed(() => allCgs.value.find((item) => item.id === script.selectedCgId) || null);
+const selectedCgEntry = computed(() => script.selectedCgId
+  ? script.data?.systems?.gallery?.cg?.[script.selectedCgId] ?? null
+  : null);
+const placeholderTitle = computed(() => {
+  if (script.storySystemsPanel === 'endings') return '选择一个结局';
+  if (script.storySystemsPanel === 'cgs') return '选择一张 CG';
+  return '选择一个变量';
+});
+const placeholderCopy = computed(() => {
+  if (script.storySystemsPanel === 'endings') return '左侧列表会显示结局标题、内部 ID 和解锁点数量。';
+  if (script.storySystemsPanel === 'cgs') return '左侧列表会显示 CG 标题、图片数量和解锁点数量。';
+  return '左侧列表会显示变量名称、内部 ID、默认值和引用次数。';
+});
+
 const repairBanner = computed(() => {
   if (script.storySystemsRepairRequest?.source === 'missing-variable-reference' && selectedVariable.value) {
     return `已定位到变量“${selectedVariable.value.name}”，请检查它的引用并完成修复。`;
@@ -256,6 +318,13 @@ function onCreateEnding() {
   const endingId = script.createEndingDraft();
   if (endingId) {
     endingInspectorFocusToken.value++;
+  }
+}
+
+function onCreateCg() {
+  const cgId = script.createCgDraft();
+  if (cgId) {
+    cgInspectorFocusToken.value++;
   }
 }
 
@@ -309,6 +378,28 @@ function openEndingDeleteImpact(payload) {
   impactState.actionCount = preview.cleanupCount || 0;
 }
 
+function openCgRenameImpact(payload) {
+  const preview = script.renameCg(payload.cgId, payload.nextCgId, { previewOnly: true });
+  impactState.visible = true;
+  impactState.mode = 'rename-cg';
+  impactState.variableId = payload.cgId;
+  impactState.variableName = selectedCg.value?.title || payload.cgId;
+  impactState.nextVariableId = payload.nextCgId;
+  impactState.references = preview.references || [];
+  impactState.actionCount = preview.rewriteCount || 0;
+}
+
+function openCgDeleteImpact(payload) {
+  const preview = script.deleteCg(payload.cgId, { previewOnly: true });
+  impactState.visible = true;
+  impactState.mode = 'delete-cg';
+  impactState.variableId = payload.cgId;
+  impactState.variableName = selectedCg.value?.title || payload.cgId;
+  impactState.nextVariableId = '';
+  impactState.references = preview.references || [];
+  impactState.actionCount = preview.cleanupCount || 0;
+}
+
 function closeImpactModal() {
   impactState.visible = false;
 }
@@ -320,6 +411,10 @@ function confirmImpact() {
     script.renameEnding(impactState.variableId, impactState.nextVariableId);
   } else if (impactState.mode === 'delete-ending') {
     script.deleteEnding(impactState.variableId);
+  } else if (impactState.mode === 'rename-cg') {
+    script.renameCg(impactState.variableId, impactState.nextVariableId);
+  } else if (impactState.mode === 'delete-cg') {
+    script.deleteCg(impactState.variableId);
   } else {
     script.deleteVariable(impactState.variableId);
   }
@@ -361,6 +456,17 @@ watch(allEndings, (items) => {
   immediate: true,
 });
 
+watch(allCgs, (items) => {
+  if (script.storySystemsPanel !== 'cgs') return;
+  if (!items.length) {
+    script.selectCg(null);
+    return;
+  }
+  if (!script.selectedCgId || !items.some((item) => item.id === script.selectedCgId)) {
+    script.selectCg(items[0].id);
+  }
+}, { immediate: true });
+
 watch(() => project.agentPathNavigationRequest?.nonce, () => {
   const request = project.agentPathNavigationRequest;
   if (request?.kind === 'variable' && request.id) {
@@ -373,6 +479,13 @@ watch(() => project.agentPathNavigationRequest?.nonce, () => {
       script.selectEnding(request.id);
     }
     endingInspectorFocusToken.value++;
+  }
+  if (request?.kind === 'cg') {
+    script.selectStorySystemsPanel('cgs');
+    if (request.id) {
+      script.selectCg(request.id);
+    }
+    cgInspectorFocusToken.value++;
   }
 }, {
   immediate: true,
@@ -398,7 +511,7 @@ watch(() => project.agentPathNavigationRequest?.nonce, () => {
 
 .system-tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   padding: 10px;
   background: #202020;

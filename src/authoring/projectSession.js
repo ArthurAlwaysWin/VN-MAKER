@@ -6,6 +6,10 @@ import {
 } from '../shared/cinematicContract.js';
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
 import {
+  collectCgUnlockReferences,
+  normalizeCgRegistry,
+} from '../shared/cgRegistry.js';
+import {
   collectEndingUnlockReferences,
   normalizeEndingRegistry,
 } from '../shared/endingRegistry.js';
@@ -195,12 +199,20 @@ function isEndingUnlockEffect(effect) {
   return effect?.type === 'unlock:ending';
 }
 
+function isCgUnlockEffect(effect) {
+  return effect?.type === 'unlock:cg';
+}
+
 function findVariableReferences(script, variableId) {
   return collectVariableReferences(script).filter((reference) => reference.variableId === variableId);
 }
 
 function findEndingUnlockReferences(script, endingId) {
   return collectEndingUnlockReferences(script).filter((reference) => reference.endingId === endingId);
+}
+
+function findCgUnlockReferences(script, cgId) {
+  return collectCgUnlockReferences(script).filter((reference) => reference.cgId === cgId);
 }
 
 function replaceVariableReferences(script, fromVariableId, toVariableId) {
@@ -327,6 +339,38 @@ function removeEndingUnlockReferences(script, endingId) {
   return deletedReferenceCount;
 }
 
+function removeCgUnlockReferences(script, cgId) {
+  let deletedReferenceCount = 0;
+
+  for (const scene of Object.values(script.scenes ?? {})) {
+    for (const page of scene?.pages ?? []) {
+      if (page?.type !== 'choice') {
+        continue;
+      }
+
+      page.options = (page.options ?? []).map((option) => {
+        const normalizedOption = normalizeEffectContainer(option);
+        const effects = (normalizedOption.effects ?? []).filter((effect) => {
+          const shouldKeep = !isCgUnlockEffect(effect) || effect.id !== cgId;
+          if (!shouldKeep) {
+            deletedReferenceCount += 1;
+          }
+          return shouldKeep;
+        });
+
+        if (effects.length > 0) {
+          normalizedOption.effects = effects;
+        } else {
+          delete normalizedOption.effects;
+        }
+        return normalizedOption;
+      });
+    }
+  }
+
+  return deletedReferenceCount;
+}
+
 function uniqueChangedPaths(paths = []) {
   return [...new Set(paths.filter(Boolean))];
 }
@@ -371,7 +415,7 @@ function normalizeTitleElement(element, index = 0) {
     if (normalized.action === 'load') {
       normalized.action = 'continue';
     }
-    if (normalized.action !== undefined && !['start', 'continue', 'settings', 'quit'].includes(normalized.action)) {
+    if (normalized.action !== undefined && !['start', 'continue', 'gallery', 'settings', 'quit'].includes(normalized.action)) {
       throw new Error(`Unsupported title button action: ${normalized.action}`);
     }
   }
@@ -454,6 +498,7 @@ function normalizeScriptForAuthoring(script) {
   const normalized = ensureGalgameContract(script ?? {});
   normalized.systems.variables = normalizeVariableRegistry(normalized.systems.variables);
   normalized.systems.endings = normalizeEndingRegistry(normalized.systems.endings);
+  normalized.systems.gallery.cg = normalizeCgRegistry(normalized.systems.gallery.cg);
 
   for (const scene of Object.values(normalized.scenes ?? {})) {
     if (!Array.isArray(scene.pages)) {
@@ -676,6 +721,123 @@ export function createProjectSession(input = {}) {
           const orderDelta = Number(left.order ?? 0) - Number(right.order ?? 0);
           if (orderDelta !== 0) return orderDelta;
           return String(left.title ?? left.endingId).localeCompare(String(right.title ?? right.endingId));
+        });
+    },
+
+    addCg(cg) {
+      const id = assertNonEmptyString(cg?.id ?? cg?.cgId, 'cg.id');
+      if (script.systems.gallery.cg[id]) {
+        throw new Error(`CG "${id}" already exists`);
+      }
+
+      script.systems.gallery.cg[id] = normalizeCgRegistry({
+        [id]: {
+          title: cg.title ?? cg.name ?? id,
+          images: cg.images,
+          thumbnail: cg.thumbnail,
+          lockedThumbnail: cg.lockedThumbnail,
+          category: cg.category,
+          order: cg.order,
+          description: cg.description,
+          ...cloneJsonValue(cg),
+          id: undefined,
+        },
+      })[id];
+      delete script.systems.gallery.cg[id].id;
+      return {
+        cgId: id,
+        changedPaths: [`systems.gallery.cg.${id}`],
+      };
+    },
+
+    updateCg({ cgId, patch = {}, ...fields } = {}) {
+      const id = assertNonEmptyString(cgId ?? fields.id, 'cgId');
+      if (!script.systems.gallery.cg[id]) {
+        throw new Error(`CG "${id}" does not exist`);
+      }
+
+      script.systems.gallery.cg[id] = normalizeCgRegistry({
+        [id]: {
+          ...script.systems.gallery.cg[id],
+          ...cloneJsonValue(patch),
+          ...cloneJsonValue(fields),
+          id: undefined,
+        },
+      })[id];
+      delete script.systems.gallery.cg[id].id;
+      return {
+        cgId: id,
+        changedPaths: [`systems.gallery.cg.${id}`],
+      };
+    },
+
+    removeCg({ cgId, id, forceReferences = false } = {}) {
+      const targetId = assertNonEmptyString(cgId ?? id, 'cgId');
+      if (!script.systems.gallery.cg[targetId]) {
+        throw new Error(`CG "${targetId}" does not exist`);
+      }
+
+      const references = findCgUnlockReferences(script, targetId);
+      if (references.length > 0 && !forceReferences) {
+        const paths = references.map((reference) => reference.pathString).join(', ');
+        throw new Error(`CG "${targetId}" is still referenced by: ${paths}`);
+      }
+
+      const deletedReferenceCount = removeCgUnlockReferences(script, targetId);
+      delete script.systems.gallery.cg[targetId];
+      return {
+        cgId: targetId,
+        deletedCgId: targetId,
+        deletedReferenceCount,
+        references,
+        changedPaths: uniqueChangedPaths([
+          `systems.gallery.cg.${targetId}`,
+          ...references.map((reference) => reference.pathString),
+        ]),
+      };
+    },
+
+    addCgUnlock({ sceneId, pageIndex, optionIndex, cgId, id } = {}) {
+      const targetCgId = assertNonEmptyString(cgId ?? id, 'cgId');
+      if (!script.systems.gallery.cg[targetCgId]) {
+        throw new Error(`CG "${targetCgId}" does not exist`);
+      }
+
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type !== 'choice') {
+        throw new Error('CG unlocks can only be added to choice pages');
+      }
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= (page.options?.length ?? 0)) {
+        throw new Error(`Choice option index ${optionIndex} is out of range`);
+      }
+
+      const option = normalizeEffectContainer(page.options[optionIndex]);
+      option.effects = [
+        ...(option.effects ?? []),
+        { type: 'unlock:cg', id: targetCgId },
+      ];
+      page.options[optionIndex] = option;
+      const effectIndex = option.effects.length - 1;
+      return {
+        sceneId,
+        pageIndex,
+        optionIndex,
+        effectIndex,
+        cgId: targetCgId,
+        changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects.${effectIndex}`],
+      };
+    },
+
+    listCgs() {
+      return Object.entries(script.systems.gallery.cg ?? {})
+        .map(([cgId, cg]) => ({
+          cgId,
+          ...cloneJsonValue(cg),
+        }))
+        .sort((left, right) => {
+          const orderDelta = Number(left.order ?? 0) - Number(right.order ?? 0);
+          if (orderDelta !== 0) return orderDelta;
+          return String(left.title ?? left.cgId).localeCompare(String(right.title ?? right.cgId));
         });
     },
 

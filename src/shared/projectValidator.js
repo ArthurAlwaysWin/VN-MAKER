@@ -1,5 +1,11 @@
 import { normalizeConditionPage } from './branchingContract.js';
 import {
+  collectCgUnlockReferences,
+  isValidCgId,
+  normalizeCgId,
+  normalizeCgRegistry,
+} from './cgRegistry.js';
+import {
   collectEndingUnlockReferences,
   isValidEndingId,
   normalizeEndingId,
@@ -276,6 +282,66 @@ function validateEndingRegistry(script, endings, report, assetSet) {
     }
 
     validateAssetReference(report, assetSet, normalizedEntry?.thumbnail, [...path, 'thumbnail'], 'ending-thumbnail');
+  }
+}
+
+function validateCgRegistry(script, cgs, report, assetSet) {
+  const rawCgs = script?.systems?.gallery?.cg;
+  if (rawCgs == null) {
+    return;
+  }
+
+  if (!isPlainObject(rawCgs)) {
+    addError(report, 'invalid-cg-registry', 'systems.gallery.cg must be an object map.', ['systems', 'gallery', 'cg']);
+    return;
+  }
+
+  const seenNormalizedIds = new Map();
+  for (const [rawId, entry] of Object.entries(rawCgs)) {
+    const normalizedId = normalizeCgId(rawId);
+    const path = ['systems', 'gallery', 'cg', rawId];
+
+    if (!isValidCgId(rawId)) {
+      addError(report, 'invalid-cg-id', `CG id "${rawId}" must start with a letter or underscore and contain only letters, numbers, underscores, or hyphens.`, path, {
+        cgId: rawId,
+      });
+    }
+
+    if (normalizedId) {
+      const previousRawId = seenNormalizedIds.get(normalizedId);
+      if (previousRawId && previousRawId !== rawId) {
+        addError(report, 'duplicate-cg-id', `CG id "${rawId}" duplicates "${previousRawId}" after normalization.`, path, {
+          cgId: normalizedId,
+          duplicateOf: previousRawId,
+        });
+      }
+      seenNormalizedIds.set(normalizedId, rawId);
+    }
+
+    if (!isPlainObject(entry)) {
+      addError(report, 'invalid-cg-entry', 'CG registry entry must be an object.', path, {
+        cgId: rawId,
+      });
+      continue;
+    }
+
+    const normalizedEntry = normalizedId ? cgs[normalizedId] : null;
+    if ((normalizedEntry?.images ?? []).length === 0) {
+      addWarning(report, 'missing-cg-image', `CG "${rawId}" has no gallery images.`, [...path, 'images'], {
+        cgId: normalizedId ?? rawId,
+      });
+    }
+    if (!normalizedEntry?.thumbnail) {
+      addWarning(report, 'missing-cg-thumbnail', `CG "${rawId}" has no thumbnail for gallery review.`, [...path, 'thumbnail'], {
+        cgId: normalizedId ?? rawId,
+      });
+    }
+
+    for (const [imageIndex, assetPath] of (normalizedEntry?.images ?? []).entries()) {
+      validateAssetReference(report, assetSet, assetPath, [...path, 'images', imageIndex], 'cg-image');
+    }
+    validateAssetReference(report, assetSet, normalizedEntry?.thumbnail, [...path, 'thumbnail'], 'cg-thumbnail');
+    validateAssetReference(report, assetSet, normalizedEntry?.lockedThumbnail, [...path, 'lockedThumbnail'], 'cg-locked-thumbnail');
   }
 }
 
@@ -676,6 +742,25 @@ function validateEndingProgression(script, endings, report, options) {
   }
 }
 
+function validateCgProgression(script, cgs, report) {
+  const cgIds = Object.keys(cgs);
+  if (cgIds.length === 0) {
+    return;
+  }
+
+  const unlockedIds = new Set(
+    collectCgUnlockReferences(script).map((reference) => reference.cgId),
+  );
+
+  for (const cgId of cgIds) {
+    if (!unlockedIds.has(cgId)) {
+      addWarning(report, 'cg-never-unlocked', `CG "${cgId}" is registered but never unlocked by a choice effect.`, ['systems', 'gallery', 'cg', cgId], {
+        cgId,
+      });
+    }
+  }
+}
+
 function validatePage(page, context, report, options) {
   const { sceneId, pageIndex } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
@@ -765,14 +850,16 @@ export function validateProject(script, options = {}) {
 
   const registry = normalizeVariableRegistry(script?.systems?.variables);
   const endings = normalizeEndingRegistry(script?.systems?.endings);
+  const cgs = normalizeCgRegistry(script?.systems?.gallery?.cg);
   validateVariableRegistry(script, registry, report);
   validateEndingRegistry(script, endings, report, config.assetSet);
+  validateCgRegistry(script, cgs, report, config.assetSet);
   const context = {
     script,
     sceneIds: getSceneIds(script),
     registry,
     endings,
-    cgs: isPlainObject(script?.systems?.gallery?.cg) ? script.systems.gallery.cg : {},
+    cgs,
   };
 
   validateScenes(script, context, report, config);
@@ -784,6 +871,7 @@ export function validateProject(script, options = {}) {
     checkReachability: options.checkReachability,
     entrySceneId: options.entrySceneId,
   });
+  validateCgProgression(script, cgs, report);
 
   report.ok = report.errors.length === 0;
   return report;

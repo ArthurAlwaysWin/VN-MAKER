@@ -270,6 +270,8 @@ Definition of done:
 
 **Goal:** Add explicit CG registration, unlocks, and a minimal gallery.
 
+**Current minimal slice:** Shared CG normalization, API/CLI/apply-plan operations, diagnostics, gallery preview/handoff routing, Story Systems editing, choice unlock selection, runtime title/gallery viewing, and export asset scanning are implemented together.
+
 Data contract:
 
 - Keep `systems.gallery.cg`.

@@ -17,7 +17,7 @@
         <button
           data-test="impact-confirm"
           type="button"
-          :class="['confirm-btn', { danger: mode === 'delete' || mode === 'delete-ending' }]"
+          :class="['confirm-btn', { danger: mode.startsWith('delete') }]"
           @click="$emit('confirm')"
         >{{ confirmLabel }}</button>
       </div>
@@ -40,8 +40,9 @@ const props = defineProps({
 defineEmits(['cancel', 'confirm']);
 
 const isEnding = computed(() => props.mode === 'rename-ending' || props.mode === 'delete-ending');
-const isRename = computed(() => props.mode === 'rename' || props.mode === 'rename-ending');
-const entityLabel = computed(() => (isEnding.value ? '结局' : '变量'));
+const isCg = computed(() => props.mode === 'rename-cg' || props.mode === 'delete-cg');
+const isRename = computed(() => props.mode.startsWith('rename'));
+const entityLabel = computed(() => (isEnding.value ? '结局' : isCg.value ? 'CG' : '变量'));
 
 const title = computed(() => isRename.value
   ? `重命名${entityLabel.value}“${props.variableName}”`

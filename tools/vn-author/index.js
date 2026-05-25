@@ -469,6 +469,7 @@ function summarizeScriptShape(script) {
     pages,
     variables: Object.keys(script?.systems?.variables ?? {}).length,
     endings: Object.keys(script?.systems?.endings ?? {}).length,
+    cgs: Object.keys(script?.systems?.gallery?.cg ?? {}).length,
   };
 }
 
@@ -487,6 +488,8 @@ function getMutationTarget(result = {}) {
     'deletedVariableId',
     'endingId',
     'deletedEndingId',
+    'cgId',
+    'deletedCgId',
     'sceneId',
     'newSceneId',
     'deletedSceneId',
@@ -530,6 +533,9 @@ function getChangedPaths(result = {}) {
   }
   if (result.endingId) {
     return [`systems.endings.${result.endingId}`];
+  }
+  if (result.cgId) {
+    return [`systems.gallery.cg.${result.cgId}`];
   }
   if (!result.sceneId) {
     return [];
@@ -654,7 +660,23 @@ function endingTargetsFromChangedPaths(changedPaths = []) {
     : [];
 }
 
-function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
+function galleryTargetsFromChangedPaths(changedPaths = []) {
+  const hasCgChange = changedPaths.some((changedPath) => (
+    changedPath === 'systems.gallery.cg'
+    || String(changedPath).startsWith('systems.gallery.cg.')
+  ));
+
+  return hasCgChange
+    ? [{
+      type: 'gallery',
+      kind: 'gallery',
+      pathString: 'systems.gallery.cg',
+      reason: 'changed-cg-registry',
+    }]
+    : [];
+}
+
+function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, transactionGalleryTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
   if (explicitSceneId || explicitPageIndex != null) {
     return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
@@ -665,7 +687,7 @@ function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction,
       : checkedSceneIds
         .filter((sceneId) => script.scenes?.[sceneId]?.pages?.[0])
         .map((sceneId) => ({ type: 'scene', sceneId, pageIndex: 0 }));
-    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets];
+    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets, ...transactionGalleryTargets];
     return targets.length ? targets : [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
 
@@ -679,6 +701,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
   const transactionPageTargets = pageTargetsFromChangedPaths(changedPaths, script);
   const transactionScreenTargets = screenTargetsFromChangedPaths(changedPaths);
   const transactionEndingTargets = endingTargetsFromChangedPaths(changedPaths);
+  const transactionGalleryTargets = galleryTargetsFromChangedPaths(changedPaths);
   const explicitSceneId = getArgValue(args, '--scene', null);
   const explicitPageIndex = getIntArg(args, '--page', null);
   const defaultSceneId = explicitSceneId ?? transactionPageTargets[0]?.sceneId ?? transactionSceneIds[0] ?? 'start';
@@ -695,6 +718,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     transactionPageTargets,
     transactionScreenTargets,
     transactionEndingTargets,
+    transactionGalleryTargets,
     checkedSceneIds,
     defaultSceneId,
     defaultPageIndex,
@@ -709,6 +733,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     pageTargets: transaction?.data ? transactionPageTargets : [],
     screenTargets: transaction?.data ? transactionScreenTargets : [],
     endingTargets: transaction?.data ? transactionEndingTargets : [],
+    galleryTargets: transaction?.data ? transactionGalleryTargets : [],
     previewTargets,
     previewTarget: previewTargets[0] ?? {
       sceneId: defaultSceneId,
@@ -847,6 +872,10 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'update-ending',
   'remove-ending',
   'add-ending-unlock',
+  'add-cg',
+  'update-cg',
+  'remove-cg',
+  'add-cg-unlock',
   'add-page',
   'remove-page',
   'move-page',
@@ -1214,6 +1243,51 @@ function applyPlanOperation(session, operation = {}, index = 0) {
       pageIndex: requireParam(params, command, 'pageIndex', 'page'),
       optionIndex: requireParam(params, command, 'optionIndex', 'option'),
       endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+    });
+  }
+
+  if (command === 'add-cg') {
+    const id = requireParam(params, command, 'id', 'cgId', 'cg');
+    return session.addCg({
+      id,
+      title: getParam(params, 'title', 'name') ?? id,
+      images: getParam(params, 'images'),
+      thumbnail: getParam(params, 'thumbnail'),
+      lockedThumbnail: getParam(params, 'lockedThumbnail', 'locked-thumbnail'),
+      category: getParam(params, 'category'),
+      order: getParam(params, 'order'),
+      description: getParam(params, 'description'),
+    });
+  }
+
+  if (command === 'update-cg') {
+    return session.updateCg({
+      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
+      patch: getParam(params, 'patch') ?? dropUndefinedFields({
+        title: getParam(params, 'title', 'name'),
+        images: getParam(params, 'images'),
+        thumbnail: getParam(params, 'thumbnail'),
+        lockedThumbnail: getParam(params, 'lockedThumbnail', 'locked-thumbnail'),
+        category: getParam(params, 'category'),
+        order: getParam(params, 'order'),
+        description: getParam(params, 'description'),
+      }),
+    });
+  }
+
+  if (command === 'remove-cg') {
+    return session.removeCg({
+      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }
+
+  if (command === 'add-cg-unlock') {
+    return session.addCgUnlock({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: Number(requireParam(params, command, 'pageIndex', 'page')),
+      optionIndex: Number(requireParam(params, command, 'optionIndex', 'option')),
+      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
     });
   }
 
@@ -1663,6 +1737,26 @@ function collectEndingPreviewIssues(endingTargets = []) {
   }));
 }
 
+function collectGalleryPreviewIssues(galleryTargets = []) {
+  return galleryTargets.map((target) => ({
+    source: 'preview',
+    severity: 'warning',
+    category: 'gallery-preview',
+    code: 'gallery-preview-required',
+    pathString: target.pathString ?? 'systems.gallery.cg',
+    message: 'CG registry changed and needs review in Story Systems and the runtime gallery.',
+    suggestedAction: {
+      summary: 'Open Story Systems, review CG artwork and unlock routing, then preview the gallery.',
+      commands: [
+        {
+          command: 'list-cg',
+          args: ['--script', '<script.json>', '--json'],
+        },
+      ],
+    },
+  }));
+}
+
 function collectAuthorCheckSuggestions({
   validation,
   layout,
@@ -1672,6 +1766,7 @@ function collectAuthorCheckSuggestions({
   referenceScreenshotIssues,
   screenPreviewIssues,
   endingPreviewIssues,
+  galleryPreviewIssues,
 }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
@@ -1736,6 +1831,15 @@ function collectAuthorCheckSuggestions({
   }
 
   for (const issue of endingPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of galleryPreviewIssues ?? []) {
     suggestions.push({
       source: issue.source,
       code: issue.code,
@@ -2662,6 +2766,7 @@ async function authorCheck(args) {
   });
   const screenPreviewIssues = collectScreenPreviewIssues(focus.screenTargets);
   const endingPreviewIssues = collectEndingPreviewIssues(focus.endingTargets);
+  const galleryPreviewIssues = collectGalleryPreviewIssues(focus.galleryTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
 
   let preview = null;
@@ -2734,6 +2839,7 @@ async function authorCheck(args) {
       sceneReferenceDiagnostics: referenceDiagnostics.length,
       screenPreviewReviewItems: screenPreviewIssues.length,
       endingPreviewReviewItems: endingPreviewIssues.length,
+      galleryPreviewReviewItems: galleryPreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewPlanned: Boolean(preview),
     },
@@ -2750,6 +2856,10 @@ async function authorCheck(args) {
       issues: endingPreviewIssues,
     },
     endingPreviewIssues,
+    galleryPreview: {
+      issues: galleryPreviewIssues,
+    },
+    galleryPreviewIssues,
     referenceScreenshotIssues,
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
@@ -2766,6 +2876,7 @@ async function authorCheck(args) {
       ...summarizeIssues('readiness', readiness.warnings),
       ...summarizeIssues('preview', screenPreviewIssues),
       ...summarizeIssues('preview', endingPreviewIssues),
+      ...summarizeIssues('preview', galleryPreviewIssues),
       ...summarizeIssues('preview', referenceScreenshotIssues),
       ...referenceDiagnostics,
     ],
@@ -3294,6 +3405,139 @@ async function addEndingUnlock(args) {
     writeJson(output);
   } else {
     printMutationResult('Added ending unlock', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+function getCgPatchFromArgs(args) {
+  return dropUndefinedFields({
+    title: getOptionalArgValue(args, '--title') ?? getOptionalArgValue(args, '--name'),
+    images: parseJsonArg(args, '--images', undefined),
+    thumbnail: getOptionalArgValue(args, '--thumbnail'),
+    lockedThumbnail: getOptionalArgValue(args, '--locked-thumbnail'),
+    category: getOptionalArgValue(args, '--category'),
+    order: parseOptionalScalarValue(getOptionalArgValue(args, '--order')),
+    description: getOptionalArgValue(args, '--description'),
+  });
+}
+
+async function listCgs(args) {
+  const { scriptPath, script } = await readScript(args);
+  const session = createProjectSession({ script });
+  const cgs = session.listCgs();
+  const output = {
+    scriptPath,
+    count: cgs.length,
+    cgs,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`CGs: ${cgs.length}\n`);
+    for (const cg of cgs) {
+      process.stdout.write(`- ${cg.cgId}: ${cg.title}\n`);
+    }
+  }
+
+  return 0;
+}
+
+async function addCg(args) {
+  const cgId = getArgValue(args, '--id', getArgValue(args, '--cg', null));
+  if (!cgId) {
+    throw new Error('add-cg requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.addCg({
+    id: cgId,
+    title: getArgValue(args, '--title', getArgValue(args, '--name', cgId)),
+    ...getCgPatchFromArgs(args),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Added CG', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateCg(args) {
+  const cgId = getArgValue(args, '--id', getArgValue(args, '--cg', null));
+  if (!cgId) {
+    throw new Error('update-cg requires --id');
+  }
+
+  const patch = parseJsonArg(args, '--patch', null) ?? getCgPatchFromArgs(args);
+  const output = await mutateScript(args, (session) => session.updateCg({
+    cgId,
+    patch,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Updated CG', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeCg(args) {
+  const cgId = getArgValue(args, '--id', getArgValue(args, '--cg', null));
+  if (!cgId) {
+    throw new Error('remove-cg requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.removeCg({
+    cgId,
+    forceReferences: hasFlag(args, '--force-references'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Removed CG', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function addCgUnlock(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
+  if (!sceneId) {
+    throw new Error('add-cg-unlock requires --scene');
+  }
+
+  const pageIndex = getIntArg(args, '--page', null);
+  if (pageIndex == null) {
+    throw new Error('add-cg-unlock requires --page');
+  }
+
+  const optionIndex = getIntArg(args, '--option', null);
+  if (optionIndex == null) {
+    throw new Error('add-cg-unlock requires --option');
+  }
+
+  const cgId = getArgValue(args, '--id', getArgValue(args, '--cg', null));
+  if (!cgId) {
+    throw new Error('add-cg-unlock requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.addCgUnlock({
+    sceneId,
+    pageIndex,
+    optionIndex,
+    cgId,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Added CG unlock', output);
   }
 
   return output.validation.ok ? 0 : 1;
@@ -4406,6 +4650,11 @@ function printHelp() {
   update-ending --id ending_id [--patch json] [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-ending --id ending_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-ending-unlock --scene scene_id --page index --option index --id ending_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  list-cg [--script path] [--json]
+  add-cg --id cg_id [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-cg --id cg_id [--patch json] [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-cg --id cg_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-cg-unlock --scene scene_id --page index --option index --id cg_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-page --scene scene_id [--type normal|choice|condition] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-page --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-page --scene scene_id --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -4597,6 +4846,31 @@ async function main() {
 
     if (command === 'add-ending-unlock') {
       process.exitCode = await addEndingUnlock(args);
+      return;
+    }
+
+    if (command === 'list-cg') {
+      process.exitCode = await listCgs(args);
+      return;
+    }
+
+    if (command === 'add-cg') {
+      process.exitCode = await addCg(args);
+      return;
+    }
+
+    if (command === 'update-cg') {
+      process.exitCode = await updateCg(args);
+      return;
+    }
+
+    if (command === 'remove-cg') {
+      process.exitCode = await removeCg(args);
+      return;
+    }
+
+    if (command === 'add-cg-unlock') {
+      process.exitCode = await addCgUnlock(args);
       return;
     }
 

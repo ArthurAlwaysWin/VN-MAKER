@@ -79,6 +79,18 @@ npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
 
 Changed ending registry paths use `systems.endings.<endingId>`. Unlock effects report the exact choice effect path, such as `scenes.start.pages.2.options.0.effects.0`.
 
+## CG Gallery Commands
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `list-cg` | | | Lists normalized `systems.gallery.cg` entries sorted by `order`, then title. |
+| `add-cg` | `id` | `title`, `images`, `thumbnail`, `lockedThumbnail`, `category`, `order`, `description` | Registers a new gallery entry. `images` is a JSON array. Aliases: `cgId`, `cg`, `locked-thumbnail`. |
+| `update-cg` | `id` | `patch`, `title`, `images`, `thumbnail`, `lockedThumbnail`, `category`, `order`, `description` | Updates one entry through the shared CG normalizer. Aliases: `cgId`, `cg`, `locked-thumbnail`. |
+| `remove-cg` | `id` | `forceReferences` | Refuses to remove entries still referenced by `unlock:cg` effects unless forced; forced removes those effects. Aliases: `cgId`, `cg`, `force-references`. |
+| `add-cg-unlock` | `sceneId`, `pageIndex`, `optionIndex`, `cgId` | | Adds `{ "type": "unlock:cg" }` to one choice option. Aliases: `scene`, `page`, `option`, `id`, `cg`. |
+
+Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report their exact choice effect path.
+
 ## Page Commands
 
 | Command | Required params | Optional params | Notes |
@@ -134,7 +146,7 @@ These commands edit `ui.titleScreen` using the same structured config used by th
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
 | `set-title-screen` | | `background`, `bgm`, `elements`, `config`, `merge`, `clearBackground`, `clearBgm` | Updates title screen background, BGM, or full element list. `merge` defaults to `true`; pass `false` to replace the section. Aliases: `clear-background`, `clear-bgm`. |
-| `add-title-element` | `type` | `id`, `content`, `text`, `label`, `action`, `src`, `x`, `y`, `anchor`, `width`, `height`, `fontSize`, `fontFamily`, `color`, `backgroundColor`, `border`, `borderRadius`, `hoverColor`, `letterSpacing`, `textShadow`, `element` | Adds a `text`, `button`, or `image` element. `label` normalizes to button `text`; button action `load` normalizes to `continue`. |
+| `add-title-element` | `type` | `id`, `content`, `text`, `label`, `action`, `src`, `x`, `y`, `anchor`, `width`, `height`, `fontSize`, `fontFamily`, `color`, `backgroundColor`, `border`, `borderRadius`, `hoverColor`, `letterSpacing`, `textShadow`, `element` | Adds a `text`, `button`, or `image` element. `label` normalizes to button `text`; button action `load` normalizes to `continue`; `gallery` opens the CG gallery. |
 | `update-title-element` | `elementId` or `index` | `patch`, plus the same element fields accepted by `add-title-element` | Updates one existing element by id or index. Aliases: `id`, `element-id`, `element-index`. |
 | `remove-title-element` | `elementId` or `index` | | Removes one title element by id or index. Aliases: `id`, `element-id`, `element-index`. |
 
@@ -144,6 +156,7 @@ Direct CLI examples:
 npm run vn -- set-title-screen --script public/game/script.json --background ui/title/background.png --bgm audio/title.ogg --force --checkpoint --json
 npm run vn -- add-title-element --script public/game/script.json --type text --content "Moonlit Letter" --x 640 --y 170 --anchor center --force --json
 npm run vn -- add-title-element --script public/game/script.json --type button --label "Start" --action start --x 640 --y 430 --anchor center --force --json
+npm run vn -- add-title-element --script public/game/script.json --type button --label "Gallery" --action gallery --x 640 --y 500 --anchor center --force --json
 ```
 
 Plan manifest example:
@@ -210,7 +223,7 @@ Plan manifest example:
 }
 ```
 
-`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `systems.endings.*` paths become an `ending-list` preview target for Story Systems review. `handoff-report` also includes `previewTargets` for changed screen UI and ending registry paths. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
+`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `systems.endings.*` paths become an `ending-list` preview target and changed `systems.gallery.cg.*` paths become a `gallery` preview target for Story Systems review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
 
 ## Shared UI Commands
 

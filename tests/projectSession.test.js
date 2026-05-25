@@ -422,6 +422,55 @@ describe('project authoring session', () => {
     ]);
   });
 
+  it('authors M3 CG gallery entries and unlock effects through one session contract', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_m3_authoring',
+        scenes: {
+          start: {
+            pages: [{ type: 'choice', options: [{ text: 'View memory' }] }],
+          },
+        },
+      },
+    });
+
+    expect(session.addCg({
+      id: 'cg_confession',
+      title: 'Confession',
+      images: ['backgrounds/cg/confession.png'],
+      thumbnail: 'backgrounds/cg/confession_thumb.png',
+      lockedThumbnail: 'ui/gallery/locked.png',
+      category: 'route',
+      order: 1,
+    })).toEqual({
+      cgId: 'cg_confession',
+      changedPaths: ['systems.gallery.cg.cg_confession'],
+    });
+    expect(session.addCgUnlock({
+      sceneId: 'start',
+      pageIndex: 0,
+      optionIndex: 0,
+      cgId: 'cg_confession',
+    })).toMatchObject({
+      cgId: 'cg_confession',
+      changedPaths: ['scenes.start.pages.0.options.0.effects.0'],
+    });
+    expect(() => session.removeCg({ cgId: 'cg_confession' })).toThrow(/still referenced/);
+    expect(session.listCgs()).toEqual([
+      expect.objectContaining({ cgId: 'cg_confession', title: 'Confession' }),
+    ]);
+
+    expect(session.removeCg({ cgId: 'cg_confession', forceReferences: true })).toMatchObject({
+      deletedCgId: 'cg_confession',
+      deletedReferenceCount: 1,
+      changedPaths: [
+        'systems.gallery.cg.cg_confession',
+        'scenes.start.pages.0.options.0.effects.0',
+      ],
+    });
+    expect(session.toJSON().scenes.start.pages[0].options[0].effects).toBeUndefined();
+  });
+
   it('edits choice page data and page media through unified authoring methods', () => {
     const session = createProjectSession({
       script: {

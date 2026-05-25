@@ -92,6 +92,30 @@ Supported variable types are `number` and `bool`. Optional UI metadata is `label
 
 Ending ids use the same stable id shape as variables. Register endings before writing `unlock:ending` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.endings`, not in save slots or `script.json`.
 
+## CG Gallery
+
+```json
+{
+  "systems": {
+    "gallery": {
+      "cg": {
+        "cg_confession": {
+          "title": "Confession",
+          "images": ["backgrounds/cg/confession.png"],
+          "thumbnail": "backgrounds/cg/confession_thumb.png",
+          "lockedThumbnail": "ui/gallery/locked.png",
+          "category": "main",
+          "order": 1,
+          "description": "A route memory."
+        }
+      }
+    }
+  }
+}
+```
+
+CG ids use the stable registry id shape. Register a CG with `add-cg` before writing `unlock:cg` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.cg`. For legacy data, a single `image` field normalizes to the first canonical `images` item and the default thumbnail. A title button with action `"gallery"` opens the runtime gallery; missing artwork shows a fallback rather than breaking playback.
+
 ## Scenes
 
 ```json

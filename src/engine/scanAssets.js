@@ -84,7 +84,16 @@ export function scanAssets(script) {
     if (font.file) _add(fonts, font.file);
   }
 
-  // 4. UI screens (titleScreen, settingsScreen)
+  // 4. Gallery CG artwork and thumbnails
+  for (const cg of Object.values(script.systems?.gallery?.cg || {})) {
+    for (const image of (cg?.images || [])) {
+      _add(bg, image);
+    }
+    _add(bg, cg?.thumbnail);
+    _add(bg, cg?.lockedThumbnail);
+  }
+
+  // 5. UI screens (titleScreen, settingsScreen)
   for (const screenKey of ['titleScreen', 'settingsScreen']) {
     const screen = script.ui?.[screenKey];
     if (!screen) continue;

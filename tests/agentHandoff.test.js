@@ -200,6 +200,54 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('includes gallery preview targets for changed CG registry paths', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_gallery_targets',
+      systems: {
+        gallery: {
+          cg: {
+            confession: {
+              title: 'Confession',
+              images: ['backgrounds/cg/confession.png'],
+              thumbnail: 'backgrounds/cg/confession.png',
+            },
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [{ effects: [{ type: 'unlock:cg', id: 'confession' }] }],
+          }],
+        },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: { changedPaths: ['systems.gallery.cg.confession'] },
+      },
+    });
+
+    expect(handoff.previewTargets).toEqual([
+      {
+        type: 'gallery',
+        kind: 'gallery',
+        pathString: 'systems.gallery.cg',
+        reason: 'changed-cg-registry',
+      },
+    ]);
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'preview',
+        category: 'gallery-preview',
+        code: 'gallery-preview-required',
+        pathString: 'systems.gallery.cg',
+      }),
+    ]));
+  });
+
   it('turns transaction reference screenshot notes into screen fidelity review items', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_reference_fidelity',

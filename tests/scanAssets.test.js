@@ -489,6 +489,30 @@ describe('UI screens', () => {
   });
 });
 
+describe('CG gallery assets', () => {
+  it('extracts registered CG images and thumbnails for export', () => {
+    const result = scanAssets({
+      systems: {
+        gallery: {
+          cg: {
+            memory: {
+              images: ['backgrounds/cg/memory.png'],
+              thumbnail: 'backgrounds/cg/memory-thumb.png',
+              lockedThumbnail: 'ui/gallery/locked.png',
+            },
+          },
+        },
+      },
+    });
+
+    deepStrictEqual(result.backgrounds, [
+      'backgrounds/cg/memory-thumb.png',
+      'backgrounds/cg/memory.png',
+      'ui/gallery/locked.png',
+    ]);
+  });
+});
+
 describe('filtering', () => {
   it('filters out data: URIs', () => {
     const script = {

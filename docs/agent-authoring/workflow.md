@@ -106,6 +106,7 @@ For title screen work, use the structured title commands instead of direct JSON 
 npm run vn -- set-title-screen --script public/game/script.json --background ui/title/background.png --bgm audio/title.ogg --force --checkpoint --json
 npm run vn -- add-title-element --script public/game/script.json --type text --content "Moonlit Letter" --x 640 --y 170 --anchor center --force --json
 npm run vn -- add-title-element --script public/game/script.json --type button --label "Start" --action start --x 640 --y 430 --anchor center --force --json
+npm run vn -- add-title-element --script public/game/script.json --type button --label "Gallery" --action gallery --x 640 --y 500 --anchor center --force --json
 ```
 
 For existing settings, game menu, save/load, and backlog screens, use `set-screen-layout` with a structured JSON config:
@@ -123,7 +124,7 @@ npm run vn -- set-theme --script public/game/script.json --config .tmp/theme.jso
 npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
 ```
 
-When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, or `ui.backlogScreen`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions:
+When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, or `ui.backlogScreen`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions. It also creates an `ending-list` target for changed endings and a `gallery` target for changed `systems.gallery.cg` entries:
 
 ```bash
 npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
@@ -177,6 +178,8 @@ npm run vn -- set-scene-next --scene chapter_1 --next chapter_2 --script public/
 npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset duo-left-right --character sakura:smile --character haruki:normal --script public/game/script.json --force --backup --json
 npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
 npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
+npm run vn -- add-cg --id cg_confession --title "Confession" --images '["backgrounds/cg/confession.png"]' --thumbnail backgrounds/cg/confession_thumb.png --script public/game/script.json --force --backup --json
+npm run vn -- add-cg-unlock --scene chapter_1 --page 1 --option 0 --id cg_confession --script public/game/script.json --force --backup --json
 ```
 
 `rename-scene` updates scene references in `next`, choice option targets, and condition targets. `delete-scene` refuses to delete scenes referenced from other scenes unless `--force-references` is present.

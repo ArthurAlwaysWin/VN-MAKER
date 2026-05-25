@@ -12,7 +12,7 @@ See [example-adaptation-preview.md](./example-adaptation-preview.md) for a compl
 - Preserve the original story intent, but adapt prose into visual novel pacing.
 - Prefer scene/page/dialogue/choice/character/variable/media operations through the authoring CLI/API.
 - Treat missing art, audio, and expression assets as explicit handoff items instead of pretending they exist.
-- Use ending registry and unlock commands for endings; do not create CG/gallery screens unless the editor and authoring commands support them.
+- Use ending registry and unlock commands for endings. Use the CG registry and `unlock:cg` operations for major-beat artwork that should appear in the supported gallery.
 
 ## Required First Response
 

@@ -366,6 +366,10 @@ Required commands:
 
 Required diagnostics:
 
+- `invalid-cg-registry`
+- `invalid-cg-id`
+- `duplicate-cg-id`
+- `invalid-cg-entry`
 - `unregistered-cg-unlock`
 - `cg-never-unlocked`
 - `missing-cg-image`

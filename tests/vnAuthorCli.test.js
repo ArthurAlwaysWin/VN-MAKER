@@ -1214,7 +1214,7 @@ describe('vn-author CLI', () => {
     expect(checklist).toContain('docs/agent-authoring/example-adaptation-preview.md');
     expect(checklist).toContain('docs/agent-authoring/structured-draft-contract.md');
     expect(checklist).toContain('docs/agent-authoring/plan-manifest.md');
-    expect(checklist).toContain('Do not build CG gallery or in-editor AI assistant flows unless the human explicitly asks for that scope.');
+    expect(checklist).toContain('Register CG gallery entries with `add-cg` before writing `unlock:cg`; do not build or imply an in-editor AI assistant.');
     for (const command of [
       'npm run vn:inspect -- --json',
       'npm run vn -- list-assets --script public/game/script.json --json',
@@ -1291,11 +1291,11 @@ describe('vn-author CLI', () => {
     }
   });
 
-  it('keeps the external-agent skill scoped away from unsupported CG authoring', async () => {
+  it('documents supported CG gallery authoring in the external-agent skill', async () => {
     const skill = await readFile(path.resolve('docs/agent-authoring/skill.md'), 'utf8');
 
     expect(skill).toContain('Register endings with `add-ending` before writing `unlock:ending`');
-    expect(skill).toContain('CG gallery authoring commands are not part of the current external-agent layer');
+    expect(skill).toContain('CG gallery registry authoring is supported through `add-cg`, `update-cg`, `remove-cg`, `add-cg-unlock`, and `list-cg`');
   });
 
   it('runs the documented draft artifact chain through apply, author-check, and handoff', async () => {
@@ -2177,6 +2177,77 @@ describe('vn-author CLI', () => {
       ]);
       expect(removedScript.systems.endings.good_end).toBeUndefined();
       expect(removedScript.scenes.start.pages[0].options[0].effects).toBeUndefined();
+    });
+  });
+
+  it('applies M3 CG gallery operations through CLI and apply-plan with changed paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'm3-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_m3',
+        scenes: {
+          start: {
+            pages: [{ type: 'choice', options: [{ text: 'Memory' }] }],
+          },
+        },
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            command: 'add-cg',
+            params: {
+              id: 'cg_confession',
+              title: 'Confession',
+              images: ['backgrounds/cg/confession.png'],
+              thumbnail: 'backgrounds/cg/confession-thumb.png',
+              lockedThumbnail: 'ui/gallery/locked.png',
+              order: 1,
+            },
+          },
+          {
+            command: 'add-cg-unlock',
+            params: { scene: 'start', page: 0, option: 0, cg: 'cg_confession' },
+          },
+        ],
+      }), 'utf8');
+
+      const result = JSON.parse((await execFileAsync('node', [
+        cliPath, 'apply-plan', planPath, '--script', scriptPath, '--force', '--json',
+      ])).stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(result.validation.ok).toBe(true);
+      expect(result.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'systems.gallery.cg.cg_confession',
+        'scenes.start.pages.0.options.0.effects.0',
+      ]));
+      expect(script.systems.gallery.cg.cg_confession).toMatchObject({
+        images: ['backgrounds/cg/confession.png'],
+        thumbnail: 'backgrounds/cg/confession-thumb.png',
+        lockedThumbnail: 'ui/gallery/locked.png',
+      });
+      expect(script.scenes.start.pages[0].options[0].effects).toEqual([
+        { type: 'unlock:cg', id: 'cg_confession' },
+      ]);
+
+      const list = JSON.parse((await execFileAsync('node', [
+        cliPath, 'list-cg', '--script', scriptPath, '--json',
+      ])).stdout);
+      expect(list.cgs).toEqual([expect.objectContaining({ cgId: 'cg_confession', title: 'Confession' })]);
+
+      const update = JSON.parse((await execFileAsync('node', [
+        cliPath, 'update-cg', '--script', scriptPath, '--id', 'cg_confession',
+        '--title', 'Golden Memory', '--force', '--json',
+      ])).stdout);
+      expect(update.changeSummary.changedPaths).toEqual(['systems.gallery.cg.cg_confession']);
+
+      const removed = JSON.parse((await execFileAsync('node', [
+        cliPath, 'remove-cg', '--script', scriptPath, '--id', 'cg_confession',
+        '--force-references', '--force', '--json',
+      ])).stdout);
+      expect(removed.result).toMatchObject({ deletedCgId: 'cg_confession', deletedReferenceCount: 1 });
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).systems.gallery.cg.cg_confession).toBeUndefined();
     });
   });
 
@@ -3726,6 +3797,54 @@ describe('vn-author CLI', () => {
           code: 'ending-list-preview-required',
           pathString: 'systems.endings',
         }),
+      ]);
+    });
+  });
+
+  it('surfaces gallery preview targets for transaction changed CG paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const transactionPath = path.join(dir, 'cg-transaction.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_cg_author_check',
+        systems: {
+          gallery: {
+            cg: {
+              confession: {
+                title: 'Confession',
+                images: ['backgrounds/cg/confession.png'],
+                thumbnail: 'backgrounds/cg/confession.png',
+              },
+            },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [{
+              type: 'choice',
+              options: [{ effects: [{ type: 'unlock:cg', id: 'confession' }] }],
+            }],
+          },
+        },
+      }), 'utf8');
+      await writeFile(transactionPath, JSON.stringify({
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: { changedPaths: ['systems.gallery.cg.confession'] },
+      }), 'utf8');
+
+      const result = JSON.parse((await execFileAsync('node', [
+        cliPath, 'author-check', '--script', scriptPath, '--transaction', transactionPath,
+        '--skip-preview', '--skip-asset-check', '--json',
+      ])).stdout);
+      expect(result.focus.galleryTargets).toEqual([
+        expect.objectContaining({ type: 'gallery', pathString: 'systems.gallery.cg' }),
+      ]);
+      expect(result.focus.previewTargets).toEqual([
+        expect.objectContaining({ type: 'gallery', pathString: 'systems.gallery.cg' }),
+      ]);
+      expect(result.summary.galleryPreviewReviewItems).toBe(1);
+      expect(result.galleryPreview.issues).toEqual([
+        expect.objectContaining({ category: 'gallery-preview', code: 'gallery-preview-required' }),
       ]);
     });
   });

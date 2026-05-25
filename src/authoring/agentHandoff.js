@@ -83,12 +83,23 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
         reason: 'changed-ending-registry',
       });
     }
+
+    if (changedPath === 'systems.gallery.cg' || String(changedPath).startsWith('systems.gallery.cg.')) {
+      targets.push({
+        type: 'gallery',
+        kind: 'gallery',
+        pathString: 'systems.gallery.cg',
+        reason: 'changed-cg-registry',
+      });
+    }
   }
 
   const seen = new Set();
   return targets.filter((target) => {
     const key = target.type === 'ending-list'
       ? 'ending-list:systems.endings'
+      : target.type === 'gallery'
+      ? 'gallery:systems.gallery.cg'
       : target.type === 'screen'
       ? `screen:${target.screenId}`
       : `scene:${target.sceneId}:${target.pageIndex}`;
@@ -221,7 +232,27 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
-  return [...screenItems, ...endingItems];
+  const galleryItems = previewTargets
+    .filter((target) => target?.type === 'gallery' || target?.kind === 'gallery')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'gallery-preview',
+      code: 'gallery-preview-required',
+      pathString: target.pathString ?? 'systems.gallery.cg',
+      message: 'CG registry changed and needs review in Story Systems and the runtime gallery.',
+      suggestedAction: {
+        summary: 'Open Story Systems, inspect CG images and unlock effects, then preview the gallery.',
+        commands: [
+          {
+            command: 'list-cg',
+            args: ['--script', '<script.json>', '--json'],
+          },
+        ],
+      },
+    }));
+
+  return [...screenItems, ...endingItems, ...galleryItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {
@@ -397,6 +428,14 @@ function collectReferencedAssetEntries(script = {}) {
 
   for (const [fontIndex, font] of (script.assets?.fonts ?? []).entries()) {
     add(font?.file, ['assets', 'fonts', fontIndex, 'file'], 'font');
+  }
+
+  for (const [cgId, cg] of Object.entries(script.systems?.gallery?.cg ?? {})) {
+    for (const [imageIndex, assetPath] of (cg?.images ?? []).entries()) {
+      add(assetPath, ['systems', 'gallery', 'cg', cgId, 'images', imageIndex], 'cg-image');
+    }
+    add(cg?.thumbnail, ['systems', 'gallery', 'cg', cgId, 'thumbnail'], 'cg-thumbnail');
+    add(cg?.lockedThumbnail, ['systems', 'gallery', 'cg', cgId, 'lockedThumbnail'], 'cg-locked-thumbnail');
   }
 
   const titleScreen = script.ui?.titleScreen;

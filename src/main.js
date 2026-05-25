@@ -29,6 +29,7 @@ import { SaveLoadScreen } from './ui/SaveLoadScreen.js';
 import { BacklogScreen } from './ui/BacklogScreen.js';
 import { SettingsScreen } from './ui/SettingsScreen.js';
 import { TitleScreen } from './ui/TitleScreen.js';
+import { GalleryScreen } from './ui/GalleryScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
 import { attachResponsiveGameContainer } from './ui/runtimeViewport.js';
@@ -79,6 +80,7 @@ gameContainer.appendChild(skipIndicator);
 
 // Title screen is appended to the game container itself (z-index 100)
 const titleScreen = new TitleScreen(gameContainer, '');
+const galleryScreen = new GalleryScreen(gameContainer);
 
 // ─── State ──────────────────────────────────────────────
 let autoMode = false;
@@ -941,6 +943,7 @@ gameContainer.addEventListener('click', (e) => {
   if (target.closest('#settings-screen')) return;
   if (target.closest('#backlog-screen')) return;
   if (target.closest('#title-screen')) return;
+  if (target.closest('#gallery-screen')) return;
 
   // D-06: Click stops skip — do NOT also advance dialogue (Pitfall 7)
   if (skipMode) {
@@ -1140,16 +1143,18 @@ function updateQuickBtnStates() {
 
 // ─── Title screen ───────────────────────────────────────
 async function showTitle() {
+  galleryScreen.hide();
   const titleLayout = engine.script?.ui?.titleScreen;
   if (titleLayout?.bgm) {
     audio.playBgm({ file: titleLayout.bgm, volume: 1, loop: true });
   }
   try {
     const hasSaves = await saveManager.hasAnySave();
-    titleScreen.show(hasSaves);
+    const hasGallery = Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0;
+    titleScreen.show(hasSaves, hasGallery);
   } catch (e) {
     console.error('[GalgameMaker] Failed to check saves:', e);
-    titleScreen.show(false); // Graceful fallback: show without "continue" option
+    titleScreen.show(false, Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0);
   }
 }
 
@@ -1166,6 +1171,16 @@ titleScreen.onContinue = () => {
 
 titleScreen.onSettings = () => {
   settingsScreen.show();
+};
+
+titleScreen.onGallery = async () => {
+  try {
+    const profile = await playerDataRepository?.load();
+    galleryScreen.show(engine.script?.systems?.gallery?.cg ?? {}, profile?.unlocks?.cg ?? {});
+  } catch (error) {
+    console.error('[GalgameMaker] Failed to open gallery:', error);
+    galleryScreen.show(engine.script?.systems?.gallery?.cg ?? {}, {});
+  }
 };
 
 // ─── Bootstrap — environment detection and conditional init ──

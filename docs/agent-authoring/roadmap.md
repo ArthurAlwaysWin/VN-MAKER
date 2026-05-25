@@ -50,6 +50,7 @@ Current:
 - Example workflows run through dry-run, apply, author-check, and handoff.
 - `author-check --transaction result.json` reads changed paths from an apply result, focuses changed scene/page diagnostics, and plans preview targets for all changed scene pages while preserving a primary preview target for compatibility.
 - `author-check --transaction result.json` also plans screen preview targets for changed title/settings/menu/save-load/backlog `ui.*` paths.
+- CG registry changes produce gallery preview targets and review items for Story Systems and runtime gallery review.
 
 Gaps:
 
@@ -73,6 +74,7 @@ Current:
 - Handoff review items include categories for missing assets, unused assets, skipped asset checks, and required screen UI preview review.
 - Handoff flags placeholder-like and highly ambiguous referenced asset names for human replacement or rename review.
 - Handoff can carry reference screenshot fidelity notes from an apply-plan result into structured review items for Project Settings.
+- Story Systems exposes editable CG registry entries, and choice effects can select registered `unlock:cg` targets.
 
 Gaps:
 

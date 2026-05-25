@@ -155,6 +155,12 @@ describe('agent handoff editor integration', () => {
       tab: 'story-systems',
       id: 'good_end',
     });
+    expect(project.requestAgentPathNavigation('systems.gallery.cg.confession')).toBe(true);
+    expect(project.agentPathNavigationRequest).toMatchObject({
+      kind: 'cg',
+      tab: 'story-systems',
+      id: 'confession',
+    });
     expect(project.requestAgentPathNavigation('characters.sakura')).toBe(true);
     expect(project.agentPathNavigationRequest).toMatchObject({
       kind: 'character',
@@ -252,6 +258,8 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('reference fidelity');
     expect(source).toContain('ending-list-preview');
     expect(source).toContain('ending preview');
+    expect(source).toContain('gallery-preview');
+    expect(source).toContain('gallery preview');
     expect(source).toContain('setAgentReviewItemStatus');
     expect(source).toContain('clearAgentReviewItemStatus');
     expect(source).toContain('agent-review-status');
@@ -284,6 +292,7 @@ describe('agent handoff editor integration', () => {
           'characters.sakura',
           'systems.variables.sakura_affection',
           'systems.endings.good_end',
+          'systems.gallery.cg.confession',
           'ui.theme.buttonFamilies.qab',
         ],
       },
@@ -292,6 +301,7 @@ describe('agent handoff editor integration', () => {
         { source: 'validation', code: 'missing-character', pathString: 'characters.sakura' },
         { source: 'validation', code: 'bad-variable', pathString: 'systems.variables.sakura_affection' },
         { source: 'validation', code: 'ending-never-unlocked', pathString: 'systems.endings.good_end' },
+        { source: 'validation', code: 'cg-never-unlocked', pathString: 'systems.gallery.cg.confession' },
       ],
     });
 
@@ -304,6 +314,11 @@ describe('agent handoff editor integration', () => {
       kind: 'ending',
       tab: 'story-systems',
       id: 'good_end',
+    });
+    expect(parseAgentPathTarget('systems.gallery.cg.confession')).toMatchObject({
+      kind: 'cg',
+      tab: 'story-systems',
+      id: 'confession',
     });
     expect(parseAgentPathTarget('characters.sakura')).toMatchObject({
       kind: 'character',
@@ -319,6 +334,7 @@ describe('agent handoff editor integration', () => {
       'characters',
       'systems:variables',
       'systems:endings',
+      'systems:cgs',
       'ui',
     ]);
     expect(groups.find((group) => group.key === 'characters')).toMatchObject({
@@ -330,6 +346,11 @@ describe('agent handoff editor integration', () => {
       label: 'Endings',
       changedPaths: ['systems.endings.good_end'],
       reviewItems: [expect.objectContaining({ code: 'ending-never-unlocked' })],
+    });
+    expect(groups.find((group) => group.key === 'systems:cgs')).toMatchObject({
+      label: 'CG Gallery',
+      changedPaths: ['systems.gallery.cg.confession'],
+      reviewItems: [expect.objectContaining({ code: 'cg-never-unlocked' })],
     });
   });
 
@@ -420,5 +441,12 @@ describe('agent handoff editor integration', () => {
     expect(pageInspectorSource).toContain('unlock:ending');
     expect(pageInspectorSource).toContain('addEndingUnlockRow');
     expect(pageInspectorSource).toContain('endingOptions');
+    expect(storySystemsSource).toContain('CgRegistryList');
+    expect(storySystemsSource).toContain('CgInspector');
+    expect(storySystemsSource).toContain("script.storySystemsPanel === 'cgs'");
+    expect(storySystemsSource).toContain('collectCgUnlockReferences');
+    expect(pageInspectorSource).toContain('unlock:cg');
+    expect(pageInspectorSource).toContain('addCgUnlockRow');
+    expect(pageInspectorSource).toContain('cgOptions');
   });
 });

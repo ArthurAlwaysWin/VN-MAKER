@@ -47,6 +47,10 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `invalid-ending-id` | An ending id or ending reference uses an unsupported id shape. |
 | `duplicate-ending-id` | Two ending registry keys collide after normalization. |
 | `invalid-ending-entry` | An ending registry entry is not an object. |
+| `invalid-cg-registry` | `systems.gallery.cg` is not an object map. |
+| `invalid-cg-id` | A CG id or CG reference uses an unsupported id shape. |
+| `duplicate-cg-id` | Two CG registry keys collide after normalization. |
+| `invalid-cg-entry` | A CG registry entry is not an object. |
 | `invalid-effects` | A choice effect cannot normalize. |
 | `unsupported-effect` | Effect type is outside the shared DSL. |
 
@@ -67,6 +71,9 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `no-reachable-ending` | No registered ending unlock is reachable from the entry scene. |
 | `missing-ending-thumbnail` | A hidden ending lacks a thumbnail for ending-list review. |
 | `unregistered-cg-unlock` | CG unlock references an unregistered CG. |
+| `cg-never-unlocked` | A registered CG has no `unlock:cg` effect. |
+| `missing-cg-image` | A registered CG has no full gallery image. |
+| `missing-cg-thumbnail` | A registered CG has no thumbnail for gallery review. |
 | `missing-asset-reference` | Asset validation could not find a referenced asset. |
 | `empty-normal-page` | Normal page has no useful content. |
 | `long-dialogue-text` | Dialogue text is longer than the validator limit. |
@@ -141,6 +148,7 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `ambiguous-asset` | A referenced asset path has a generic filename such as `bg01.png`, `img02.png`, or `button.png`, which may confuse future agent matching. |
 | `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. |
 | `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
+| `gallery-preview` | `systems.gallery.cg` changed and needs review in Story Systems and the runtime gallery. |
 | `reference-screenshot-fidelity` | A plan used a reference screenshot and includes notes about what matched and what still needs human visual comparison. |
 | `layout`, `readiness`, `validation` | Existing structural and quality gates that should be resolved or explicitly accepted before handoff. |
 

@@ -3504,6 +3504,96 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('bulk applies page transitions through direct CLI selectors and apply-plan predicates', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_bulk_transitions',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              { type: 'normal', background: 'backgrounds/gate.png', dialogues: [] },
+              { type: 'normal', background: '', dialogues: [] },
+              { type: 'choice', background: 'backgrounds/menu.png', options: [] },
+              { type: 'normal', background: 'backgrounds/room.png', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const directResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'set-page-transitions',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--from-page',
+        '0',
+        '--to-page',
+        '2',
+        '--page-type',
+        'normal',
+        '--has-background',
+        '--type',
+        'dissolve',
+        '--duration',
+        '650',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(directResult.result).toMatchObject({
+        matchedPageIndexes: [0],
+        changedPaths: ['scenes.start.pages.0.transition'],
+        transition: { type: 'dissolve', duration: 650 },
+      });
+
+      const planPath = path.join(dir, 'bulk-transition-plan.json');
+      await writeFile(planPath, JSON.stringify({
+        operations: [{
+          command: 'set-page-transitions',
+          params: {
+            scene: 'start',
+            predicate: { pageType: 'normal', hasBackground: true },
+            type: 'blur',
+            duration: 9000,
+          },
+        }],
+      }), 'utf8');
+
+      const planResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(planResult.operations[0]).toMatchObject({
+        command: 'set-page-transitions',
+        changedPaths: [
+          'scenes.start.pages.0.transition',
+          'scenes.start.pages.3.transition',
+        ],
+      });
+      expect(planResult.operations[0].result).toMatchObject({
+        matchedPageIndexes: [0, 3],
+        transition: { type: 'blur', duration: 5000 },
+      });
+
+      const updatedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(updatedScript.scenes.start.pages.map(page => page.transition ?? null)).toEqual([
+        { type: 'blur', duration: 5000 },
+        null,
+        null,
+        { type: 'blur', duration: 5000 },
+      ]);
+    });
+  });
+
   it('can validate known assets when requested', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

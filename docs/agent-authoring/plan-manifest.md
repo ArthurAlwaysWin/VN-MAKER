@@ -111,6 +111,7 @@ Plan command names match the CLI command names:
 - `set-page-camera`
 - `set-camera-effect`
 - `set-page-transition`
+- `set-page-transitions`
 - `set-character-animation`
 - `set-character-transition`
 - `set-title-screen`

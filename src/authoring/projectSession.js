@@ -1158,6 +1158,68 @@ export function createProjectSession(input = {}) {
       };
     },
 
+    setPageTransitions({
+      sceneId,
+      fromPageIndex,
+      toPageIndex,
+      pageType,
+      hasBackground,
+      transition,
+    }) {
+      const scene = getScene(script, sceneId);
+      const pageCount = scene.pages.length;
+      const fromIndex = fromPageIndex ?? 0;
+      const toIndex = toPageIndex ?? pageCount - 1;
+
+      if (pageType !== undefined && !['normal', 'choice', 'condition'].includes(pageType)) {
+        throw new Error(`Unsupported page type filter: ${pageType}`);
+      }
+      if (hasBackground !== undefined && typeof hasBackground !== 'boolean') {
+        throw new Error('hasBackground must be a boolean');
+      }
+      if (pageCount === 0 && fromPageIndex == null && toPageIndex == null) {
+        return {
+          sceneId,
+          matchedPageIndexes: [],
+          transition: cloneJsonValue(normalizePageTransitionInput(transition)),
+          changedPaths: [],
+        };
+      }
+
+      assertPageIndexInRange(scene, sceneId, fromIndex);
+      assertPageIndexInRange(scene, sceneId, toIndex);
+      if (fromIndex > toIndex) {
+        throw new Error('fromPageIndex must be less than or equal to toPageIndex');
+      }
+
+      const normalizedTransition = normalizePageTransitionInput(transition);
+      const matchedPageIndexes = [];
+      const changedPaths = [];
+
+      for (let pageIndex = fromIndex; pageIndex <= toIndex; pageIndex += 1) {
+        const page = scene.pages[pageIndex];
+        if (pageType !== undefined && page?.type !== pageType) {
+          continue;
+        }
+
+        const pageHasBackground = typeof page?.background === 'string' && page.background.trim() !== '';
+        if (hasBackground !== undefined && pageHasBackground !== hasBackground) {
+          continue;
+        }
+
+        page.transition = cloneJsonValue(normalizedTransition);
+        matchedPageIndexes.push(pageIndex);
+        changedPaths.push(`scenes.${sceneId}.pages.${pageIndex}.transition`);
+      }
+
+      return {
+        sceneId,
+        matchedPageIndexes,
+        transition: cloneJsonValue(normalizedTransition),
+        changedPaths,
+      };
+    },
+
     setCharacterAnimation({ sceneId, pageIndex, characterId, animation }) {
       const id = assertNonEmptyString(characterId, 'characterId');
       const page = getPage(script, sceneId, pageIndex);

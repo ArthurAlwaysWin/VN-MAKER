@@ -615,6 +615,64 @@ describe('project authoring session', () => {
     });
   });
 
+  it('bulk applies page transitions with bounded structural selectors', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_bulk_transitions',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              { type: 'normal', background: 'backgrounds/gate.png', dialogues: [] },
+              { type: 'normal', background: '', dialogues: [] },
+              { type: 'choice', background: 'backgrounds/menu.png', options: [] },
+              { type: 'normal', background: 'backgrounds/room.png', dialogues: [] },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(session.setPageTransitions({
+      sceneId: 'start',
+      fromPageIndex: 0,
+      toPageIndex: 2,
+      pageType: 'normal',
+      hasBackground: true,
+      transition: { type: 'dissolve', duration: 650 },
+    })).toMatchObject({
+      matchedPageIndexes: [0],
+      changedPaths: ['scenes.start.pages.0.transition'],
+      transition: { type: 'dissolve', duration: 650 },
+    });
+
+    expect(session.setPageTransitions({
+      sceneId: 'start',
+      pageType: 'normal',
+      hasBackground: true,
+      transition: { type: 'blur', duration: 9000 },
+    })).toMatchObject({
+      matchedPageIndexes: [0, 3],
+      changedPaths: [
+        'scenes.start.pages.0.transition',
+        'scenes.start.pages.3.transition',
+      ],
+      transition: { type: 'blur', duration: 5000 },
+    });
+
+    expect(session.toJSON().scenes.start.pages.map(page => page.transition ?? null)).toEqual([
+      { type: 'blur', duration: 5000 },
+      null,
+      null,
+      { type: 'blur', duration: 5000 },
+    ]);
+    expect(() => session.setPageTransitions({
+      sceneId: 'start',
+      pageType: 'video',
+      transition: { type: 'fade', duration: 800 },
+    })).toThrow('Unsupported page type filter: video');
+  });
+
   it('renames and deletes scenes safely while preserving scene references', () => {
     const session = createProjectSession({
       script: {

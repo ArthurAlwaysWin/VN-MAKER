@@ -914,6 +914,7 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-page-camera',
   'set-camera-effect',
   'set-page-transition',
+  'set-page-transitions',
   'set-character-animation',
   'set-character-transition',
   'set-title-screen',
@@ -1525,6 +1526,25 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     return session.setPageTransition({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
       pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      transition: getParam(params, 'clearTransition', 'clear-transition')
+        ? null
+        : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
+          type: type ?? 'fade',
+          duration: duration ?? 800,
+        } : null),
+    });
+  }
+
+  if (command === 'set-page-transitions') {
+    const type = getParam(params, 'type');
+    const duration = getParam(params, 'duration');
+    const predicate = getParam(params, 'predicate') ?? {};
+    return session.setPageTransitions({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      fromPageIndex: getParam(params, 'fromPageIndex', 'fromPage', 'from-page'),
+      toPageIndex: getParam(params, 'toPageIndex', 'toPage', 'to-page'),
+      pageType: getParam(params, 'pageType', 'page-type') ?? predicate.pageType,
+      hasBackground: getParam(params, 'hasBackground', 'has-background') ?? predicate.hasBackground,
       transition: getParam(params, 'clearTransition', 'clear-transition')
         ? null
         : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
@@ -4554,6 +4574,56 @@ async function setPageTransition(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setPageTransitions(args) {
+  const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
+  if (!sceneId) {
+    throw new Error('set-page-transitions requires --scene');
+  }
+  if (hasFlag(args, '--has-background') && hasFlag(args, '--without-background')) {
+    throw new Error('set-page-transitions accepts only one of --has-background or --without-background');
+  }
+
+  const predicate = parseJsonArg(args, '--predicate', {}) ?? {};
+  const transition = hasFlag(args, '--clear-transition')
+    ? null
+    : parseJsonArg(args, '--transition', {
+      type: getArgValue(args, '--type', 'fade'),
+      duration: parseScalarValue(getArgValue(args, '--duration', '800')),
+    });
+  const hasBackground = hasFlag(args, '--has-background')
+    ? true
+    : hasFlag(args, '--without-background')
+      ? false
+      : predicate.hasBackground;
+
+  const output = await mutateScript(args, (session) => session.setPageTransitions({
+    sceneId,
+    fromPageIndex: getIntArg(args, '--from-page', undefined),
+    toPageIndex: getIntArg(args, '--to-page', undefined),
+    pageType: getOptionalArgValue(args, '--page-type') ?? predicate.pageType,
+    hasBackground,
+    transition,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Set page transitions: ${output.result.sceneId} (${output.result.matchedPageIndexes.length} pages)\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote script: ${output.outPath}\n`);
+    }
+    process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of output.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation.warnings) {
+      printIssue(issue);
+    }
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function setCharacterAnimation(args) {
   const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
   if (!sceneId) {
@@ -4929,6 +4999,7 @@ function printHelp() {
   set-page-camera --scene scene_id --page index [--effect shake|zoom|pan|flash] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--camera json] [--clear-camera] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-camera-effect --scene scene_id --page index [--effect shake|zoom|pan|flash | --camera json | --clear-camera] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-transition --scene scene_id --page index [--type fade|dissolve|wipe|scale|blur|slide-left|slide-right|none] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|condition] [--has-background|--without-background] [--predicate json] [--type fade|dissolve|wipe|scale|blur|slide-left|slide-right|none] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-animation --scene scene_id --page index --character character_id [--animation none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-transition --scene scene_id --page index --character character_id [--transition none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-title-screen [--background path] [--bgm path] [--elements json] [--config file] [--config-json json] [--clear-background] [--clear-bgm] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5257,6 +5328,11 @@ async function main() {
 
     if (command === 'set-page-transition') {
       process.exitCode = await setPageTransition(args);
+      return;
+    }
+
+    if (command === 'set-page-transitions') {
+      process.exitCode = await setPageTransitions(args);
       return;
     }
 

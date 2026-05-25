@@ -150,10 +150,27 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 | `set-page-camera` | `sceneId`, `pageIndex` | `camera`, `effect`, `direction`, `intensity`, `durationMs`, `clearCamera` | Legacy-compatible camera setter. Aliases: `scene`, `page`, `duration-ms`, `clear-camera`. |
 | `set-camera-effect` | `sceneId`, `pageIndex` | `effect`, `camera`, `direction`, `intensity`, `durationMs`, `clearCamera` | Catalog-oriented alias for `set-page-camera`; requires `effect`, `camera`, or `clearCamera`, and clamps duration to `0..2000` ms. Aliases: `scene`, `page`, `id`, `duration-ms`, `clear-camera`. |
 | `set-page-transition` | `sceneId`, `pageIndex` | `transition`, `type`, `duration`, `clearTransition` | Aliases: `scene`, `page`, `clear-transition`. |
+| `set-page-transitions` | `sceneId` | `transition`, `type`, `duration`, `clearTransition`, `fromPageIndex`, `toPageIndex`, `pageType`, `hasBackground`, `predicate` | Applies one transition to matching pages in a scene; range endpoints are inclusive. `predicate` is restricted to `pageType` and `hasBackground`, never executable code. Aliases: `scene`, `from-page`, `to-page`, `page-type`, `has-background`, `clear-transition`. |
 | `set-character-animation` | `sceneId`, `pageIndex`, `characterId` | `animation` | `animation` defaults to `none`. Aliases: `scene`, `page`, `character`. |
 | `set-character-transition` | `sceneId`, `pageIndex`, `characterId` | `transition` | Catalog-oriented compatibility alias for `set-character-animation`; writes canonical `animation`. Aliases: `scene`, `page`, `character`, `animation`, `id`. |
 
-`set-page-transition` clamps background transition duration to `0..5000` ms. Use `list-transitions --supported-only` before writing effects; entries with `runtimeSupported: false` are future candidates that safely fall back at runtime.
+`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. Use `list-transitions --supported-only` before writing effects; entries with `runtimeSupported: false` are future candidates that safely fall back at runtime.
+
+Example bounded bulk operation:
+
+```json
+{
+  "command": "set-page-transitions",
+  "params": {
+    "scene": "chapter_1",
+    "fromPageIndex": 0,
+    "toPageIndex": 8,
+    "predicate": { "pageType": "normal", "hasBackground": true },
+    "type": "dissolve",
+    "duration": 700
+  }
+}
+```
 
 ## Title Screen Commands
 

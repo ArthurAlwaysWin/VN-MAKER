@@ -420,6 +420,7 @@ Required commands:
 
 - `list-transitions`
 - `set-page-transition`
+- `set-page-transitions`
 - `set-character-transition`
 - `set-camera-effect`
 

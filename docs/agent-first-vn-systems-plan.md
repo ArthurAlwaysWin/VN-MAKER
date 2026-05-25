@@ -403,7 +403,7 @@ Definition of done:
 
 **Goal:** Add more visual polish while keeping transitions contract-safe.
 
-**Current minimal slice:** A shared transition catalog exposes supported background, character-motion, and camera entries plus planned fallback-only candidates. Agents can inspect it with `list-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without changing existing `animation` author data.
+**Current implemented coverage:** A shared transition catalog exposes supported background, character-motion, and camera entries plus planned fallback-only candidates. Agents can inspect it with `list-transitions`, apply page transitions singly or in bounded structural batches with `set-page-transition` / `set-page-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without changing existing `animation` author data. The editor page inspector consumes shared transition/camera options and offers per-page previews.
 
 Contract:
 
@@ -434,6 +434,7 @@ Authoring API/CLI:
 
 - `list-transitions`
 - `set-page-transition`
+- `set-page-transitions`
 - `set-character-transition`
 - `set-camera-effect`
 
@@ -452,7 +453,7 @@ Validation:
 
 Agent adaptation:
 
-- Agents can bulk apply transitions by scene, page range, or predicate.
+- Agents can bulk apply transitions by scene, page range, or the bounded `pageType` / `hasBackground` structural predicate.
 - Agents can inspect available transition catalog before writing.
 
 Tests:

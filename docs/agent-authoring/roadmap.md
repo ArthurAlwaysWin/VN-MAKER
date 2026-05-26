@@ -1,5 +1,8 @@
 # External Agent Authoring Roadmap
 
+**Status:** Complete for the current roadmap
+**Closure Date:** 2026-05-26
+
 This roadmap tracks the external AI agent authoring layer. For the active product/system roadmap covering variables, affection, endings, CG gallery, branch graph analysis, and transition expansion, see `docs/agent-first-vn-systems-plan.md`.
 
 The older high-level plan now lives in `docs/archive/agent-authoring-architecture.md`. It is historical context only; follow `docs/agent-authoring/integration-contract.md` for current integration rules.
@@ -26,9 +29,9 @@ Current:
 - A novel adaptation skill documents the required human-readable breakdown before turning raw prose into structured draft operations.
 - A concrete adaptation preview example documents resource matching, choices, variables, and missing assets before draft creation.
 
-Gaps:
+Post-roadmap / non-blocking:
 
-- Prose-to-draft guidance is now linked across workflow, skill docs, and an example preview; it is not enforced by CLI because prose interpretation remains an external-agent responsibility.
+- P3: Prose-to-draft guidance is linked across workflow, skill docs, and an example preview; optional future enforcement or automation remains external-agent workflow enhancement rather than an M6 requirement.
 
 ### 2. Transaction Execution
 
@@ -52,12 +55,10 @@ Current:
 - `author-check --transaction result.json` also plans screen preview targets for changed title/settings/menu/save-load/backlog `ui.*` paths.
 - CG registry changes produce gallery preview targets and review items for Story Systems and runtime gallery review.
 
-Gaps:
+Post-roadmap / non-blocking:
 
-- Handoff and author-check are adjacent rather than one continuous command that consumes an apply result and checks exactly changed content.
-- Preview screenshot quality is available, but the workflow still tolerates dry-run preview in common paths.
-
-Priority:
+- P2: Combine handoff and author-check behind an optional continuous command; the current verified command chain already consumes apply results and produces review artifacts.
+- P3: Require captured preview screenshots in more workflows; current dry-run preview planning plus human editor review satisfies the present handoff contract.
 
 ### 4. Human Handoff
 
@@ -79,9 +80,9 @@ Current:
 - Transition authoring exposes the completed M5 shared catalog in page-inspector controls: directional wipe, zoom, flash, iris, and crossfade-pan background rendering/preview; character fade/slide/pop/scale/blur motion; camera vignette/letterbox overlays; and bounded bulk background operations through `set-page-transitions`.
 - Story Systems flow review exposes repair-ready broken scene links, unreachable ending/CG unlocks, asset handoff findings, per-scene review badges, and exact page/system navigation; CLI repair commands can retarget or clear references to missing target ids.
 
-Gaps:
+Post-roadmap / non-blocking:
 
-- Review item lifecycle state is local to the editor and is not written back into the handoff artifact.
+- P2: Persist review lifecycle state outside editor-local storage if cross-machine review synchronization becomes necessary; it is not gameplay or author-data truth.
 
 ### 4.5. External File Change Safety
 
@@ -91,11 +92,9 @@ Current:
 - Saves are blocked when `script.json` changed on disk after load/save, preventing stale editor state from overwriting external agent edits.
 - The editor polls for external `script.json` changes and shows a reload warning.
 
-Gaps:
+Post-roadmap / non-blocking:
 
-- The warning does not yet offer a structured diff/merge view.
-
-Priority:
+- P2: Add a structured diff/merge view; stale writes are already prevented and reload guidance already protects agent changes.
 
 ### 5. Agent Documentation And Examples
 
@@ -114,7 +113,7 @@ Current:
 - An executable multi-ending example plan now covers affection, terminal ending unlocks, CG gallery unlocks, condition routing, and transition authoring, with a human editor review tutorial and Phase 83 migration guide.
 - `npm run verify:agent-example` materializes that plan as an editor-openable project with example assets and runs the apply, graph, author-check, handoff, and export-readiness acceptance chain.
 
-Gaps:
+Closure result:
 
 - No P0 documentation gaps remain for the current structured screen UI authoring layer.
 
@@ -126,18 +125,20 @@ Current:
 - A full-chain CLI artifact test covers `draft-plan -> apply-plan --result-out -> author-check -> handoff-report --write-editor-handoff`.
 - `npm run test:focused` and `npm run build` are the current closure gates for this branch.
 
-Gaps:
+Post-roadmap / non-blocking:
 
-- Mounted editor tests cover Story Systems flow navigation for broken targets and unreachable unlock entries; broader Project Settings handoff lifecycle interactions remain primarily source-level.
+- P2: Add broader component-level Project Settings handoff lifecycle tests when test harness support is ready; current tests already cover Story Systems flow navigation, handoff loading/state, navigation routing, and external-change save blocking.
 
-Priority:
+## Roadmap Closure Audit
 
-- P2: add component-level handoff UX tests when test harness support is ready.
+M6 has no remaining blocker: the executable plan and verifier cover the two-ending affection/CG route, human review is documented for the editor, export readiness accounts for system assets and graph findings, and Phase 83 migration guidance is present.
 
-## Current Branch Closure Gate
-
-Before considering this branch ready for review:
+Release closure verification requires:
 
 - `npm run test:focused` passes.
+- `npm run test` passes.
 - `npm run build` passes.
+- `npm run build:web` passes.
+- `npm audit --audit-level=moderate` passes.
+- `npm run verify:agent-example -- --out .tmp/agent-example-project --force --json` reports all gates `true`.
 - Docs name the external-agent path clearly and do not imply an in-editor AI assistant.

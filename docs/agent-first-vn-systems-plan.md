@@ -1,7 +1,8 @@
 # Agent-First VN Systems Development Plan
 
-**Status:** Active plan  
+**Status:** Complete
 **Date:** 2026-05-23  
+**Closure Date:** 2026-05-26
 **Supersedes:** `docs/archive/v1.7-planning-report.md`, `docs/archive/gap-analysis-vs-mature-engines.md`, and the older high-level plan in `docs/archive/agent-authoring-architecture.md`
 
 This plan defines the next development cycle for Galgame Maker. The product direction is:
@@ -477,7 +478,7 @@ Status: complete.
 
 **Goal:** Make the new systems usable outside development sessions.
 
-**Current implemented slice:** The checked-in executable example plan now builds a two-ending affection route with a CG unlock and transition polish, `verify:agent-example` materializes it as an editor-openable review project with example assets and complete handoff/readiness artifacts, ending thumbnails participate in export asset accounting, and human-review plus Phase 83 migration guidance is documented.
+**Current implemented coverage:** M6 is complete. The checked-in executable example plan builds a two-ending affection route with a CG unlock and transition polish, `verify:agent-example` materializes it as an editor-openable review project with example assets and complete handoff/readiness artifacts, ending thumbnails participate in export asset accounting, and human-review plus Phase 83 migration guidance is documented.
 
 Deliverables:
 
@@ -491,6 +492,18 @@ Acceptance:
 
 - A fresh agent can use docs to add a two-ending route with one affection variable and one CG unlock.
 - A human can inspect that result in the editor without reading JSON.
+
+Closure evidence:
+
+| Requirement | Implementation And Verification Evidence |
+| --- | --- |
+| Example route and agent plan | `docs/agent-authoring/example-plan.json` authors Sakura affection, two ending registrations/unlocks, one CG unlock, condition routing, and catalog-backed transition polish. `tests/vnAuthorCli.test.js` verifies the authored canonical result. |
+| Editor-openable example project | `tools/vn-author/verify-example-workflow.js` generates `project.json`, `script.json`, illustrative assets, review artifacts, and `agent-handoff.json`; its CLI test verifies all six workflow gates and branch review targets. |
+| Human review tutorial | `docs/agent-authoring/human-review-tutorial.md` walks through Project Settings, Story Systems, page preview, branch flow, and profile-backed playtest review without JSON inspection. |
+| Export readiness for new systems | `src/authoring/exportReadiness.js` and `src/engine/scanAssets.js` account for branch findings and system assets; `tests/exportReadiness.test.js`, `tests/scanAssets.test.js`, `tests/exportGame.test.js`, and `tests/exportDesktop.test.js` cover route/asset readiness and ending thumbnail export. |
+| Phase 83 migration notes | `docs/agent-authoring/phase-83-migration.md` preserves profile/save authority rules and documents incremental registry, unlock, graph, transition, and handoff migration. |
+
+Status: complete.
 
 ## 4. Global Engineering Constraints
 
@@ -568,13 +581,16 @@ If scope grows too large, protect these in order:
 
 Do not ship a visually nice GUI that produces data agents cannot validate or edit.
 
-## 6. Immediate Next Steps
+## 6. Roadmap Closure
 
-Recommended implementation order:
+The M0-M6 roadmap is complete as of 2026-05-26. The release closure audit found no unresolved M6 deliverable or acceptance-criteria blocker, and it does not expand the completed M1-M5 contracts.
 
-1. Finish M0 docs and update links.
-2. Implement M1 variable/condition/affection operation parity.
-3. Extend editor routing for `systems.variables.*`.
-4. Add ending registry commands before ending UI.
-5. Add graph diagnostics before graph visualization.
-6. Expand transition catalog only after graph/system contracts are stable.
+Deferred post-roadmap enhancements:
+
+| Priority | Enhancement | Why It Does Not Block Closure |
+| --- | --- | --- |
+| P2 | Consolidate `author-check` and `handoff-report` into a single optional workflow command. | The existing executable example already verifies the deterministic apply, author-check, handoff, and readiness chain. |
+| P2 | Add structured diff/merge UI for externally changed `script.json`. | Stale writes are already blocked and the editor already provides reload guidance. |
+| P2 | Add broader mounted-component tests for Project Settings handoff lifecycle interactions. | Current editor integration tests cover handoff loading, local lifecycle state, navigation, and stale-save protection. |
+| P2 | Optionally persist human review lifecycle decisions outside editor-local state. | Review state is intentionally non-gameplay data; canonical author data and handoff generation are unaffected. |
+| P3 | Enforce or further automate prose-to-draft preparation and captured preview quality. | Structured plans, dry-run preview planning, editor review, and release gates already satisfy the current agent/human contract. |

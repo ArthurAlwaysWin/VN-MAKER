@@ -289,7 +289,7 @@ Every new feature must answer this checklist before implementation:
 
 If any answer is "none", document why.
 
-## 12. Planned System Extensions
+## 12. Implemented System Extensions
 
 ### Variables And Affection
 

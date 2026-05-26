@@ -1,32 +1,36 @@
 # Agent Authoring Implementation Plan
 
-**Status:** Active entry point
+**Status:** Roadmap complete; active extension reference
 **Date:** 2026-05-23
+**Closure Date:** 2026-05-26
 **Supersedes:** `docs/archive/agent-authoring-implementation-plan.md`
 
 The previous implementation plan described the first external-agent authoring layer. Most of that work is now implemented: `apply-plan`, `author-check`, preview planning, handoff artifacts, external file-change safety, structured screen UI commands, and asset listing all exist.
 
 Current implementation should follow these active documents:
 
-- `docs/agent-first-vn-systems-plan.md` — next system roadmap and engineering framework.
+- `docs/agent-first-vn-systems-plan.md` — completed system roadmap and engineering framework.
 - `docs/agent-authoring/integration-contract.md` — operation, transaction, diagnostics, preview, handoff, and conflict rules.
 - `docs/agent-authoring/project-contract.md` — canonical `script.json` author-data contract.
 - `docs/agent-authoring/command-reference.md` — current CLI/apply-plan command surface.
 - `docs/agent-authoring/validation-rules.md` — current diagnostics and readiness gates.
 
-## Current Development Focus
+## Closure State
 
-The next cycle is not a rewrite of the agent layer. It extends the existing layer into these systems:
+The current agent-first system roadmap is complete:
 
-1. Variable registry, condition GUI, and affection presets.
-2. Ending registry and persistent profile progression.
-3. CG registry and gallery.
-4. Branch graph, dead-end checks, and asset analysis.
-5. Transition catalog expansion.
+1. Variable registry, condition GUI, and affection presets are complete.
+2. Ending registry and persistent profile progression are complete.
+3. CG registry and gallery are complete.
+4. Branch graph, dead-end checks, and asset analysis are complete.
+5. Transition catalog expansion is complete.
+6. Release hardening, executable examples, editor review guidance, readiness coverage, and Phase 83 migration guidance are complete.
+
+Future work listed in `docs/agent-authoring/roadmap.md` is post-roadmap P2/P3 enhancement work, not a release-closure blocker.
 
 ## Required Implementation Order
 
-For each system:
+For any post-roadmap system extension:
 
 1. Update shared contract and normalizer.
 2. Add or update runtime/profile behavior.
@@ -42,10 +46,12 @@ For each system:
 Use these gates before closing a milestone:
 
 ```bash
+npm run test:focused
 npm run test
 npm run build
 npm run build:web
 npm audit --audit-level=moderate
+npm run verify:agent-example -- --out .tmp/agent-example-project --force --json
 ```
 
 Feature-specific tests should run before the full gates. Export/profile/Electron changes require targeted regression tests.

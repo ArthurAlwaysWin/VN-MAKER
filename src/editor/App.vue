@@ -57,25 +57,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, markRaw } from 'vue';
+import { ref, computed, defineAsyncComponent, onMounted, onBeforeUnmount, watch, markRaw } from 'vue';
 import { useScriptStore } from './stores/script.js';
 import { useProjectStore } from './stores/project.js';
 import { useAssetStore } from './stores/assets.js';
 
 import WelcomeScreen from './views/WelcomeScreen.vue';
-import CreateProjectWizard from './views/CreateProjectWizard.vue';
-import CreateProjectQuick from './views/CreateProjectQuick.vue';
 import TabBar from './components/TabBar.vue';
 import ExternalScriptDiffPanel from './components/ExternalScriptDiffPanel.vue';
-import PageEditor from './views/PageEditor.vue';
-import StorySystems from './views/StorySystems.vue';
-import TitleDesigner from './views/TitleDesigner.vue';
-import SettingsPageEditor from './views/SettingsPageEditor.vue';
-import GameMenuEditor from './views/GameMenuEditor.vue';
-import SaveLoadEditor from './views/SaveLoadEditor.vue';
-import BacklogEditor from './views/BacklogEditor.vue';
-import ResourceLibrary from './views/ResourceLibrary.vue';
-import ProjectSettings from './views/ProjectSettings.vue';
+
+function lazyComponent(loader) {
+  return defineAsyncComponent(() => loader().then(module => module.default));
+}
+
+const CreateProjectWizard = lazyComponent(() => import('./views/CreateProjectWizard.vue'));
+const CreateProjectQuick = lazyComponent(() => import('./views/CreateProjectQuick.vue'));
 
 const script = useScriptStore();
 const project = useProjectStore();
@@ -99,16 +95,20 @@ const tabs = [
   { id: 'project-settings', icon: '⚡', label: '项目设置' },
 ];
 
+function asyncWorkspace(loader) {
+  return markRaw(lazyComponent(loader));
+}
+
 const tabComponents = {
-  'scenes': markRaw(PageEditor),
-  'story-systems': markRaw(StorySystems),
-  'title': markRaw(TitleDesigner),
-  'settings-page': markRaw(SettingsPageEditor),
-  'game-menu': markRaw(GameMenuEditor),
-  'save-load': markRaw(SaveLoadEditor),
-  'backlog': markRaw(BacklogEditor),
-  'resource-library': markRaw(ResourceLibrary),
-  'project-settings': markRaw(ProjectSettings),
+  'scenes': asyncWorkspace(() => import('./views/PageEditor.vue')),
+  'story-systems': asyncWorkspace(() => import('./views/StorySystems.vue')),
+  'title': asyncWorkspace(() => import('./views/TitleDesigner.vue')),
+  'settings-page': asyncWorkspace(() => import('./views/SettingsPageEditor.vue')),
+  'game-menu': asyncWorkspace(() => import('./views/GameMenuEditor.vue')),
+  'save-load': asyncWorkspace(() => import('./views/SaveLoadEditor.vue')),
+  'backlog': asyncWorkspace(() => import('./views/BacklogEditor.vue')),
+  'resource-library': asyncWorkspace(() => import('./views/ResourceLibrary.vue')),
+  'project-settings': asyncWorkspace(() => import('./views/ProjectSettings.vue')),
 };
 
 // --- Undo/Redo ---

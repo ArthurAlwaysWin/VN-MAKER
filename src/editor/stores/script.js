@@ -112,6 +112,7 @@ export const useScriptStore = defineStore('script', () => {
   // Undo/Redo history
   const history = ref([]);
   const historyIndex = ref(-1);
+  const historySerialized = [];
   const conditionPageIssues = computed(() => {
     const issues = [];
     if (!data.value?.scenes) {
@@ -141,14 +142,22 @@ export const useScriptStore = defineStore('script', () => {
   function pushState() {
     if (!data.value) return;
     normalizeStoryContracts(data.value);
-    const snapshot = JSON.parse(JSON.stringify(data.value));
+    const serialized = JSON.stringify(data.value);
+    if (serialized === historySerialized[historyIndex.value]) {
+      return;
+    }
+
+    const snapshot = JSON.parse(serialized);
     if (historyIndex.value < history.value.length - 1) {
       history.value = history.value.slice(0, historyIndex.value + 1);
+      historySerialized.splice(historyIndex.value + 1);
     }
     history.value.push(snapshot);
+    historySerialized.push(serialized);
     historyIndex.value++;
     if (history.value.length > 50) {
       history.value.shift();
+      historySerialized.shift();
       historyIndex.value--;
     }
   }
@@ -176,6 +185,7 @@ export const useScriptStore = defineStore('script', () => {
       ensureGalgameContract(migrateLegacyAppliedThemeData(scriptData).script),
     );
     history.value = [];
+    historySerialized.length = 0;
     historyIndex.value = -1;
     pushState();
   }
@@ -183,6 +193,7 @@ export const useScriptStore = defineStore('script', () => {
   function reset() {
     data.value = null;
     history.value = [];
+    historySerialized.length = 0;
     historyIndex.value = -1;
     selectedVariableId.value = null;
     selectedEndingId.value = null;

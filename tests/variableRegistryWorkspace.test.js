@@ -325,13 +325,13 @@ describe('variable registry workspace', () => {
       variableId: 'affection',
       source: 'missing-variable-reference',
     });
-    await flushUi();
+    await vi.waitFor(() => {
+      const activeTab = harness.container.querySelector('.tab.active');
+      expect(activeTab?.textContent).toContain('剧情系统');
 
-    const activeTab = harness.container.querySelector('.tab.active');
-    expect(activeTab?.textContent).toContain('剧情系统');
-
-    const selectedRow = harness.container.querySelector('[data-test="variable-row"].selected');
-    expect(selectedRow?.textContent).toContain('樱好感');
+      const selectedRow = harness.container.querySelector('[data-test="variable-row"].selected');
+      expect(selectedRow?.textContent).toContain('樱好感');
+    });
   });
 
   it('creates a draft variable, focuses display name, and auto-generates the first internal id from that name', async () => {

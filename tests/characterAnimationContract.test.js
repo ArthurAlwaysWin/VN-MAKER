@@ -44,7 +44,7 @@ function makeEngine(pageOverrides = {}) {
 }
 
 describe('character animation contract', () => {
-  it('exports the exact locked preset list and keeps none as the default no-op value', () => {
+  it('exports the completed M5 preset list and keeps none as the default no-op value', () => {
     expect(KNOWN_CHARACTER_ANIMATIONS).toEqual([
       'fade-in',
       'slide-in-left',
@@ -53,6 +53,12 @@ describe('character animation contract', () => {
       'nod',
       'breathe',
       'bounce',
+      'fade',
+      'slide-left',
+      'slide-right',
+      'pop',
+      'scale-in',
+      'blur-in',
     ]);
     expect(DEFAULT_CHARACTER_ANIMATION).toBe('none');
     expect(getCharacterAnimationValue(undefined)).toBe('none');

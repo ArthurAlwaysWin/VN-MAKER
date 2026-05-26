@@ -34,6 +34,12 @@ const CHARACTER_ANIMATION_LABELS = {
   nod: '点头',
   breathe: '呼吸',
   bounce: '弹跳',
+  fade: '淡入',
+  'slide-left': '左滑入',
+  'slide-right': '右滑入',
+  pop: '弹出',
+  'scale-in': '缩放进入',
+  'blur-in': '模糊进入',
 };
 
 export const KNOWN_CAMERA_EFFECTS = listTransitionCatalog({ target: 'camera', supportedOnly: true })
@@ -43,6 +49,8 @@ export const CAMERA_EFFECT_DIRECTION_OPTIONS = {
   zoom: null,
   pan: ['left', 'right', 'up', 'down'],
   flash: null,
+  vignette: null,
+  letterbox: null,
 };
 
 export function isKnownCameraEffect(effect) {
@@ -55,6 +63,8 @@ const CAMERA_EFFECT_LABELS = {
   zoom: '缩放',
   pan: '平移',
   flash: '闪白',
+  vignette: '暗角',
+  letterbox: '宽银幕',
 };
 
 const CAMERA_DIRECTION_LABELS = {
@@ -212,7 +222,7 @@ export function getPageCameraContract(camera) {
     contract.durationMs = clampNumericTransitionParam(contract.durationMs, CAMERA_EFFECT_DURATION_SCHEMA);
   }
 
-  if (contract.effect === 'zoom' || contract.effect === 'flash') {
+  if (['zoom', 'flash', 'vignette', 'letterbox'].includes(contract.effect)) {
     delete contract.direction;
   }
 

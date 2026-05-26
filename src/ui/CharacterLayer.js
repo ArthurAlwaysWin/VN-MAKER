@@ -17,6 +17,12 @@ const CHARACTER_MOTION_PRESETS = {
   'nod': { className: 'motion-nod', loop: false, duration: 280 },
   'breathe': { className: 'motion-breathe', loop: true, duration: 2200 },
   'bounce': { className: 'motion-bounce', loop: false, duration: 420 },
+  'fade': { className: 'motion-fade-in', loop: false, duration: 320 },
+  'slide-left': { className: 'motion-slide-in-left', loop: false, duration: 380 },
+  'slide-right': { className: 'motion-slide-in-right', loop: false, duration: 380 },
+  'pop': { className: 'motion-pop', loop: false, duration: 360 },
+  'scale-in': { className: 'motion-scale-in', loop: false, duration: 380 },
+  'blur-in': { className: 'motion-blur-in', loop: false, duration: 420 },
 };
 
 export class CharacterLayer {

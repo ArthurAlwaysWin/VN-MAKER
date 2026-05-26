@@ -42,7 +42,7 @@ describe('background layer transitions', () => {
     expect(background.layerA.classList.contains('active')).toBe(false);
   });
 
-  it('supports directional wipes and existing background transitions without a second controller', async () => {
+  it('supports all M5 background transitions without a second controller', async () => {
     const background = makeLayer();
     const transitions = [
       'fade',
@@ -55,6 +55,12 @@ describe('background layer transitions', () => {
       'blur',
       'slide-left',
       'slide-right',
+      'zoom-in',
+      'zoom-out',
+      'flash',
+      'iris-in',
+      'iris-out',
+      'crossfade-pan',
       'none',
       'cut',
     ];
@@ -79,13 +85,19 @@ describe('background layer transitions', () => {
     expect(background.container.querySelector('.bg-transition-wipe-down')).toBeNull();
   });
 
-  it('defines concrete directional wipe keyframes for runtime rendering', () => {
+  it('defines concrete M5 transition keyframes for runtime rendering', () => {
     const css = readFileSync(resolve(process.cwd(), 'src/style.css'), 'utf8');
 
     for (const direction of ['left', 'right', 'up', 'down']) {
       expect(css).toContain(`.bg-image-layer.bg-transition-wipe-${direction}`);
       expect(css).toContain(`@keyframes bg-transition-wipe-${direction}-in`);
       expect(css).toContain(`@keyframes bg-transition-wipe-${direction}-out`);
+    }
+
+    for (const type of ['zoom-in', 'zoom-out', 'flash', 'iris-in', 'iris-out', 'crossfade-pan']) {
+      expect(css).toContain(`.bg-image-layer.bg-transition-${type}`);
+      expect(css).toContain(`@keyframes bg-transition-${type}-in`);
+      expect(css).toContain(`@keyframes bg-transition-${type}-out`);
     }
   });
 
@@ -114,23 +126,23 @@ describe('background layer transitions', () => {
     expect(background.layerB.style.backgroundImage).toBe('');
   });
 
-  it('falls back unknown catalog ids and caps transition waits at the shared safety limit', async () => {
+  it('falls back unknown ids and caps transition waits at the shared safety limit', async () => {
     const background = makeLayer();
 
     const completion = background.setBackground({
       image: 'backgrounds/scene-a.png',
-      transition: 'iris-in',
+      transition: 'legacy-portal',
       duration: 50000,
     });
 
-    expect(background.layerB.classList.contains('bg-transition-iris-in')).toBe(false);
+    expect(background.layerB.classList.contains('bg-transition-legacy-portal')).toBe(false);
     expect(background.layerB.style.transitionDuration).toBe('5000ms');
 
     vi.advanceTimersByTime(5001);
     await completion;
   });
 
-  it('plays declared catalog fallbacks for discoverable future transitions', async () => {
+  it('plays completed catalog entries directly instead of their compatibility fallback', async () => {
     const background = makeLayer();
 
     const completion = background.setBackground({
@@ -139,8 +151,8 @@ describe('background layer transitions', () => {
       duration: 400,
     });
 
-    expect(background.layerB.classList.contains('bg-transition-scale')).toBe(true);
-    expect(background.layerB.classList.contains('bg-transition-zoom-in')).toBe(false);
+    expect(background.layerB.classList.contains('bg-transition-zoom-in')).toBe(true);
+    expect(background.layerB.classList.contains('bg-transition-scale')).toBe(false);
 
     vi.advanceTimersByTime(401);
     await completion;

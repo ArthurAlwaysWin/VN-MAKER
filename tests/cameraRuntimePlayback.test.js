@@ -27,7 +27,7 @@ describe('camera runtime playback', () => {
     vi.useRealTimers();
   });
 
-  it('binds only to #stage-layer and keeps flash overlay inside the stage', async () => {
+  it('binds only to #stage-layer and keeps camera overlays inside the stage', async () => {
     const { CameraController } = await import('../src/ui/CameraController.js');
     const { stageLayer, uiOverlay } = makeDom();
     const camera = new CameraController(stageLayer);
@@ -37,10 +37,16 @@ describe('camera runtime playback', () => {
 
     camera.play({ effect: 'flash', durationMs: 200, intensity: 'high', trigger: 'onEnter' });
     const flashOverlay = stageLayer.querySelector('.camera-flash-overlay');
+    const vignetteOverlay = stageLayer.querySelector('.camera-vignette-overlay');
+    const letterboxOverlay = stageLayer.querySelector('.camera-letterbox-overlay');
 
     expect(flashOverlay).not.toBeNull();
     expect(flashOverlay?.parentElement).toBe(stageLayer);
+    expect(vignetteOverlay?.parentElement).toBe(stageLayer);
+    expect(letterboxOverlay?.parentElement).toBe(stageLayer);
     expect(uiOverlay.querySelector('.camera-flash-overlay')).toBeNull();
+    expect(uiOverlay.querySelector('.camera-vignette-overlay')).toBeNull();
+    expect(uiOverlay.querySelector('.camera-letterbox-overlay')).toBeNull();
   });
 
   it('supports the locked page camera effect set on the reserved stage scope', async () => {
@@ -64,6 +70,14 @@ describe('camera runtime playback', () => {
 
     camera.play({ effect: 'flash', durationMs: 150, intensity: 'medium', trigger: 'onEnter' });
     expect(stageLayer.querySelector('.camera-flash-overlay')?.classList.contains('active')).toBe(true);
+
+    camera.play({ effect: 'vignette', durationMs: 240, intensity: 'high', trigger: 'onEnter' });
+    expect(stageLayer.querySelector('.camera-vignette-overlay')?.classList.contains('active')).toBe(true);
+    expect(stageLayer.querySelector('.camera-vignette-overlay')?.style.getPropertyValue('--camera-vignette-opacity')).toBe('0.62');
+
+    camera.play({ effect: 'letterbox', durationMs: 240, intensity: 'low', trigger: 'onEnter' });
+    expect(stageLayer.querySelector('.camera-letterbox-overlay')?.classList.contains('active')).toBe(true);
+    expect(stageLayer.querySelector('.camera-letterbox-overlay')?.style.getPropertyValue('--camera-letterbox-size')).toBe('6%');
   });
 
   it('clears the previous effect before starting a new one and safe-noops unknown effects without mutating input', async () => {
@@ -132,6 +146,8 @@ describe('camera runtime playback', () => {
     expect(stageLayer.style.transform).toBe('');
     expect(stageLayer.style.filter).toBe('');
     expect(stageLayer.querySelector('.camera-flash-overlay')?.classList.contains('active')).toBe(false);
+    expect(stageLayer.querySelector('.camera-vignette-overlay')?.classList.contains('active')).toBe(false);
+    expect(stageLayer.querySelector('.camera-letterbox-overlay')?.classList.contains('active')).toBe(false);
   });
 
   it('self-cleans effect state after the configured timer elapses', async () => {

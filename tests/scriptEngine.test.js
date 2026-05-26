@@ -517,7 +517,7 @@ describe('unknown cinematic compatibility', () => {
     strictEqual(bgEvents[0].duration, 640);
   });
 
-  it('resolves a catalog-declared fallback before dispatching background playback', () => {
+  it('dispatches completed catalog transitions directly to background playback', () => {
     const engine = makeEngine({
       start: {
         name: 'Opening',
@@ -538,7 +538,7 @@ describe('unknown cinematic compatibility', () => {
 
     engine.startGame('start');
 
-    strictEqual(bgEvents[0].transition, 'scale');
+    strictEqual(bgEvents[0].transition, 'zoom-in');
     strictEqual(bgEvents[0].duration, 420);
   });
 });

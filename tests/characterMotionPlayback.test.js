@@ -28,26 +28,32 @@ describe('character motion playback', () => {
     vi.useRealTimers();
   });
 
-  it('applies locked preset classes only on .character-motion and treats none/unknown as no-op', () => {
+  it('applies completed M5 preset classes only on .character-motion and treats none/unknown as no-op', () => {
     const presets = [
-      'fade-in',
-      'slide-in-left',
-      'slide-in-right',
-      'shake',
-      'nod',
-      'breathe',
-      'bounce',
+      ['fade-in', 'motion-fade-in'],
+      ['slide-in-left', 'motion-slide-in-left'],
+      ['slide-in-right', 'motion-slide-in-right'],
+      ['shake', 'motion-shake'],
+      ['nod', 'motion-nod'],
+      ['breathe', 'motion-breathe'],
+      ['bounce', 'motion-bounce'],
+      ['fade', 'motion-fade-in'],
+      ['slide-left', 'motion-slide-in-left'],
+      ['slide-right', 'motion-slide-in-right'],
+      ['pop', 'motion-pop'],
+      ['scale-in', 'motion-scale-in'],
+      ['blur-in', 'motion-blur-in'],
     ];
 
-    for (const preset of presets) {
+    for (const [preset, className] of presets) {
       const layer = makeLayer();
       showCharacter(layer, preset);
 
       const sprite = document.querySelector('.character-sprite');
       const motion = document.querySelector('.character-motion');
 
-      expect(motion?.classList.contains(`motion-${preset}`)).toBe(true);
-      expect(sprite?.classList.contains(`motion-${preset}`)).toBe(false);
+      expect(motion?.classList.contains(className)).toBe(true);
+      expect(sprite?.classList.contains(className)).toBe(false);
     }
 
     const noneLayer = makeLayer();

@@ -46,8 +46,8 @@ function makeEngine(pageOverrides = {}) {
 }
 
 describe('camera contract', () => {
-  it('exports the exact locked effect set, null default, and onEnter runtime trigger', () => {
-    expect(KNOWN_CAMERA_EFFECTS).toEqual(['shake', 'zoom', 'pan', 'flash']);
+  it('exports the completed M5 effect set, null default, and onEnter runtime trigger', () => {
+    expect(KNOWN_CAMERA_EFFECTS).toEqual(['shake', 'zoom', 'pan', 'flash', 'vignette', 'letterbox']);
     expect(DEFAULT_PAGE_CAMERA).toBeNull();
     expect(DEFAULT_CAMERA_TRIGGER).toBe('onEnter');
     expect(getPageCameraContract(undefined)).toBeNull();
@@ -59,6 +59,8 @@ describe('camera contract', () => {
       pan: ['left', 'right', 'up', 'down'],
       zoom: null,
       flash: null,
+      vignette: null,
+      letterbox: null,
     });
   });
 
@@ -120,7 +122,7 @@ describe('camera contract', () => {
     });
   });
 
-  it('does not require direction for zoom or flash contracts', () => {
+  it('does not require direction for directionless camera contracts', () => {
     expect(getPageCameraContract({
       effect: 'zoom',
       durationMs: 500,
@@ -142,6 +144,30 @@ describe('camera contract', () => {
       effect: 'flash',
       durationMs: 200,
       intensity: 'high',
+      trigger: 'onEnter',
+    });
+
+    expect(getPageCameraContract({
+      effect: 'vignette',
+      durationMs: 350,
+      intensity: 'medium',
+      direction: 'left',
+    })).toEqual({
+      effect: 'vignette',
+      durationMs: 350,
+      intensity: 'medium',
+      trigger: 'onEnter',
+    });
+
+    expect(getPageCameraContract({
+      effect: 'letterbox',
+      durationMs: 350,
+      intensity: 'low',
+      direction: 'up',
+    })).toEqual({
+      effect: 'letterbox',
+      durationMs: 350,
+      intensity: 'low',
       trigger: 'onEnter',
     });
   });

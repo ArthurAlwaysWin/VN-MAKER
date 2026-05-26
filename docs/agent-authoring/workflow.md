@@ -124,13 +124,13 @@ npm run vn -- set-theme --script public/game/script.json --config .tmp/theme.jso
 npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
 ```
 
-For cinematic staging, inspect the shared catalog before authoring transitions. Supported ids are safe runtime/editor selections; candidate background ids remain discoverable and play through their reported fallback:
+For cinematic staging, inspect the shared catalog before authoring transitions. The complete M5 background, character-motion, and camera catalog is available as safe runtime/editor selections:
 
 ```bash
 npm run vn -- list-transitions --target background --supported-only --json
-npm run vn -- set-page-transition --scene chapter_1 --page 0 --type wipe-right --duration 500 --script public/game/script.json --force --json
-npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect pan --direction left --duration-ms 450 --script public/game/script.json --force --json
-npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition breathe --script public/game/script.json --force --json
+npm run vn -- set-page-transition --scene chapter_1 --page 0 --type crossfade-pan --duration 700 --script public/game/script.json --force --json
+npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect vignette --intensity medium --duration-ms 450 --script public/game/script.json --force --json
+npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition pop --script public/game/script.json --force --json
 ```
 
 `set-character-transition` writes the compatible `characters[].animation` field. Background durations are limited to `0..5000` ms and camera effect durations to `0..2000` ms; direct out-of-contract project data is reported as `invalid-transition-param`.

@@ -76,7 +76,7 @@ Current:
 - Handoff can carry reference screenshot fidelity notes from an apply-plan result into structured review items for Project Settings.
 - Story Systems supports registered endings, terminal normal-page arrival unlocks and choice unlocks, plus a read-only, refreshable player-profile status so creators can distinguish authored unlock points from runtime unlock progress.
 - Story Systems exposes editable CG registry entries with project asset selection for images/thumbnails and read-only, refreshable player-profile progress; choice effects can select registered `unlock:cg` targets, and the runtime gallery browses multi-image unlocked entries.
-- Transition authoring exposes the shared catalog in page-inspector controls, supports directional background wipe rendering/preview and catalog-declared background fallbacks, and allows agents to apply background transitions to a scene, an inclusive page range, or bounded page-type/background predicates through `set-page-transitions`.
+- Transition authoring exposes the completed M5 shared catalog in page-inspector controls: directional wipe, zoom, flash, iris, and crossfade-pan background rendering/preview; character fade/slide/pop/scale/blur motion; camera vignette/letterbox overlays; and bounded bulk background operations through `set-page-transitions`.
 - Story Systems flow review exposes repair-ready broken scene links, unreachable ending/CG unlocks, asset handoff findings, per-scene review badges, and exact page/system navigation; CLI repair commands can retarget or clear references to missing target ids.
 
 Gaps:

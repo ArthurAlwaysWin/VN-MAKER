@@ -154,7 +154,7 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 | `set-character-animation` | `sceneId`, `pageIndex`, `characterId` | `animation` | `animation` defaults to `none`. Aliases: `scene`, `page`, `character`. |
 | `set-character-transition` | `sceneId`, `pageIndex`, `characterId` | `transition` | Catalog-oriented compatibility alias for `set-character-animation`; writes canonical `animation`. Aliases: `scene`, `page`, `character`, `animation`, `id`. |
 
-`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. Supported directional wipes are `wipe-left`, `wipe-right`, `wipe-up`, and `wipe-down`; all appear in the page inspector preview through the same shared catalog. Use `list-transitions --supported-only` before writing effects; entries with `runtimeSupported: false` are future candidates that safely play through their catalog-declared fallback.
+`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. The completed background catalog includes directional wipes, zoom, flash, iris, and crossfade-pan effects; the character catalog includes `pop`, `scale-in`, and `blur-in`; camera effects include `vignette` and `letterbox`. All are exposed by the same shared catalog and editor controls. Use `list-transitions --supported-only` before writing effects; unknown future ids remain safe through runtime fallback or no-op behavior.
 
 Example bounded bulk operation:
 

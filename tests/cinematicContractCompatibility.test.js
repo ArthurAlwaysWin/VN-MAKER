@@ -147,6 +147,8 @@ describe('cinematic contract compatibility', () => {
     });
     expect(getCameraDirectionUiOptions('zoom')).toEqual([]);
     expect(getCameraDirectionUiOptions('flash', 'legacy-dir')).toEqual([]);
+    expect(getCameraDirectionUiOptions('vignette', 'legacy-dir')).toEqual([]);
+    expect(getCameraDirectionUiOptions('letterbox', 'legacy-dir')).toEqual([]);
   });
 
   it('keeps transition compatibility intact while animation and camera helpers follow the same unknown-safe pattern', () => {
@@ -174,6 +176,12 @@ describe('cinematic contract compatibility', () => {
       'wipe-right',
       'wipe-up',
       'wipe-down',
+      'zoom-in',
+      'zoom-out',
+      'flash',
+      'iris-in',
+      'iris-out',
+      'crossfade-pan',
     ]);
     expect(getCharacterAnimationUiOptions('legacy-bounce').at(-1)).toMatchObject({
       value: 'legacy-bounce',
@@ -185,10 +193,11 @@ describe('cinematic contract compatibility', () => {
     });
   });
 
-  it('falls back unknown transitions to fade only at runtime consumption, not in editor helpers', () => {
+  it('executes supported catalog transitions and falls back only unknown values at runtime consumption', () => {
     expect(getRuntimeTransitionType('scale')).toBe('scale');
     expect(getRuntimeTransitionType('wipe-left')).toBe('wipe-left');
-    expect(getRuntimeTransitionType('zoom-in')).toBe('scale');
+    expect(getRuntimeTransitionType('zoom-in')).toBe('zoom-in');
+    expect(getRuntimeTransitionType('crossfade-pan')).toBe('crossfade-pan');
     expect(getRuntimeTransitionType('legacy-wipe')).toBe('fade');
     expect(getCharacterAnimationUiOptions('legacy-bounce').some(option => option.value === 'legacy-bounce')).toBe(true);
     expect(getCameraEffectUiOptions('legacy-zoom').some(option => option.value === 'legacy-zoom')).toBe(true);

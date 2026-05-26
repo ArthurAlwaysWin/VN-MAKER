@@ -46,7 +46,7 @@ Use changed-page and branch-graph navigation from the handoff panel:
 2. Preview `start` page 1 and check that its honest option grants affection and the CG unlock.
 3. Select `route_check` and verify the condition routes affection `>= 1` to `good_ending` and otherwise to `quiet_ending`.
 4. Open each terminal normal page and verify its ending arrival-unlock picker points at the matching registered ending.
-5. Preview `good_ending` and confirm its supported character motion and background transition are visually acceptable.
+5. Preview `good_ending` and confirm its `pop` character motion, `crossfade-pan` background transition, and `vignette` camera overlay are visually acceptable.
 
 Normal-page entry effects are intentionally limited to `unlock:ending`. Any other page-entry effect is a contract error, not a feature to approve.
 
@@ -68,6 +68,6 @@ Before export, resolve or explicitly accept handoff review items and run the edi
 - missing or placeholder ending/CG art;
 - unused assets intentionally left for later polish;
 - unreachable scenes, dead ends, or closed cycles;
-- transition fallback warnings.
+- unknown transition or camera warnings.
 
 Once accepted, mark local handoff review items resolved and continue normal visual editing.

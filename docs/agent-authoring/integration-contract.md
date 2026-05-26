@@ -412,7 +412,7 @@ Required diagnostics:
 
 ### Transition Catalog
 
-M5 is implemented as a shared, discoverable catalog over the existing cinematic fields. Directional background wipes (`wipe-left`, `wipe-right`, `wipe-up`, `wipe-down`) are runtime/editor-supported alongside the earlier background set. For compatibility, character transition commands currently write the established `animation` field rather than introducing a second character staging field. Background catalog entries marked `runtimeSupported: false` are discoverable candidates only; runtime playback and validator diagnostics use their declared safe fallback.
+M5 is implemented as a shared, discoverable catalog over the existing cinematic fields. The complete background candidate set, character motion set, and camera set are runtime/editor-supported: this includes zoom/flash/iris/crossfade-pan backgrounds, `pop`/`scale-in`/`blur-in` character motion, and `vignette`/`letterbox` camera overlays. For compatibility, character transition commands write the established `animation` field rather than introducing a second character staging field, and screen/camera polish remains in `camera.effect`. Unknown future background ids are preserved and safely fall back to `fade`; unknown character animations and camera effects are preserved but not played.
 
 Paths:
 

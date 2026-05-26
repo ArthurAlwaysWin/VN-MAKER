@@ -12,7 +12,7 @@ import {
 } from '../src/shared/transitionCatalog.js';
 
 describe('transition catalog', () => {
-  it('exposes supported cinematic surfaces and planned fallbacks to agents', () => {
+  it('exposes the completed M5 cinematic surfaces to agents', () => {
     const supportedBackground = listTransitionCatalog({ target: 'background', supportedOnly: true });
     expect(supportedBackground.map((entry) => entry.id)).toEqual([
       'fade',
@@ -27,6 +27,12 @@ describe('transition catalog', () => {
       'wipe-right',
       'wipe-up',
       'wipe-down',
+      'zoom-in',
+      'zoom-out',
+      'flash',
+      'iris-in',
+      'iris-out',
+      'crossfade-pan',
     ]);
     expect(getTransitionUiOptions().map((entry) => entry.value)).toEqual(
       supportedBackground.map((entry) => entry.id),
@@ -39,12 +45,20 @@ describe('transition catalog', () => {
     });
     expect(getTransitionCatalogEntry('background', 'iris-in')).toMatchObject({
       target: 'background',
-      runtimeSupported: false,
-      editorSupported: false,
+      runtimeSupported: true,
+      editorSupported: true,
       fallbackId: 'fade',
     });
-    expect(getRuntimeTransitionType('zoom-in')).toBe('scale');
-    expect(getRuntimeTransitionType('crossfade-pan')).toBe('dissolve');
+    expect(getRuntimeTransitionType('zoom-in')).toBe('zoom-in');
+    expect(getRuntimeTransitionType('crossfade-pan')).toBe('crossfade-pan');
+    expect(getTransitionCatalogEntry('character', 'pop')).toMatchObject({
+      runtimeSupported: true,
+      editorSupported: true,
+    });
+    expect(getTransitionCatalogEntry('camera', 'vignette')).toMatchObject({
+      runtimeSupported: true,
+      editorSupported: true,
+    });
     expect(getTransitionCatalogEntry('camera', 'shake')).toMatchObject({
       storageField: 'camera.effect',
       runtimeSupported: true,

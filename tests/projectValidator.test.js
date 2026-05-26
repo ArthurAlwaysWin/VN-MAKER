@@ -516,20 +516,14 @@ describe('project validator', () => {
     expect(codes(report)).not.toContain('invalid-transition-param');
   });
 
-  it('reports the declared safe fallback for catalog transition candidates', () => {
+  it('accepts the completed M5 background transition catalog without fallback warnings', () => {
     const script = createValidScript();
     script.scenes.start.pages[0].transition = { type: 'zoom-in', duration: 700 };
 
     const report = validateProject(script);
 
-    expect(report.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: 'unknown-transition-type',
-        pathString: 'scenes.start.pages.0.transition.type',
-        transitionType: 'zoom-in',
-        fallbackId: 'scale',
-      }),
-    ]));
+    expect(codes(report)).not.toContain('unknown-transition-type');
+    expect(codes(report)).not.toContain('invalid-transition-param');
   });
 
   it('warns about scenes that cannot be reached from the entry scene', () => {

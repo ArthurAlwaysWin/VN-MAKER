@@ -2,9 +2,9 @@ import { getPageCameraContract, isKnownCameraEffect } from '../shared/cinematicC
 
 const EFFECT_CLASSES = ['camera-shake', 'camera-zoom', 'camera-pan'];
 const INTENSITY_PRESETS = {
-  low: { shake: 8, zoom: 1.03, pan: 18, flash: 0.45 },
-  medium: { shake: 14, zoom: 1.06, pan: 32, flash: 0.7 },
-  high: { shake: 22, zoom: 1.1, pan: 48, flash: 0.9 },
+  low: { shake: 8, zoom: 1.03, pan: 18, flash: 0.45, vignette: 0.28, letterbox: '6%' },
+  medium: { shake: 14, zoom: 1.06, pan: 32, flash: 0.7, vignette: 0.45, letterbox: '10%' },
+  high: { shake: 22, zoom: 1.1, pan: 48, flash: 0.9, vignette: 0.62, letterbox: '14%' },
 };
 
 export class CameraController {
@@ -13,7 +13,13 @@ export class CameraController {
     this._timer = null;
     this._flashOverlay = document.createElement('div');
     this._flashOverlay.className = 'camera-flash-overlay';
+    this._vignetteOverlay = document.createElement('div');
+    this._vignetteOverlay.className = 'camera-vignette-overlay';
+    this._letterboxOverlay = document.createElement('div');
+    this._letterboxOverlay.className = 'camera-letterbox-overlay';
     this.stageLayer.appendChild(this._flashOverlay);
+    this.stageLayer.appendChild(this._vignetteOverlay);
+    this.stageLayer.appendChild(this._letterboxOverlay);
   }
 
   play(camera, options = {}) {
@@ -49,6 +55,14 @@ export class CameraController {
         this._flashOverlay.style.setProperty('--camera-flash-opacity', String(intensity.flash));
         this._flashOverlay.classList.add('active');
         break;
+      case 'vignette':
+        this._vignetteOverlay.style.setProperty('--camera-vignette-opacity', String(intensity.vignette));
+        this._vignetteOverlay.classList.add('active');
+        break;
+      case 'letterbox':
+        this._letterboxOverlay.style.setProperty('--camera-letterbox-size', intensity.letterbox);
+        this._letterboxOverlay.classList.add('active');
+        break;
       default:
         return;
     }
@@ -74,6 +88,10 @@ export class CameraController {
 
     this._flashOverlay.classList.remove('active');
     this._flashOverlay.style.removeProperty('--camera-flash-opacity');
+    this._vignetteOverlay.classList.remove('active');
+    this._vignetteOverlay.style.removeProperty('--camera-vignette-opacity');
+    this._letterboxOverlay.classList.remove('active');
+    this._letterboxOverlay.style.removeProperty('--camera-letterbox-size');
   }
 
   _applyShake(direction, distance) {

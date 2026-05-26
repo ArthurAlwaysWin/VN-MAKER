@@ -128,11 +128,11 @@ npm run vn -- set-page-background --scene chapter_1 --page 0 --background backgr
 npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
 npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset speaker-emphasis --character sakura:smile --script public/game/script.json --force --backup --json
 npm run vn -- set-page-camera --scene chapter_1 --page 0 --effect shake --direction both --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
-npm run vn -- set-page-transition --scene chapter_1 --page 0 --type wipe-right --duration 500 --script public/game/script.json --force --backup --json
-npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation breathe --script public/game/script.json --force --backup --json
+npm run vn -- set-page-transition --scene chapter_1 --page 0 --type crossfade-pan --duration 700 --script public/game/script.json --force --backup --json
+npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation pop --script public/game/script.json --force --backup --json
 npm run vn -- list-transitions --target background --supported-only --json
-npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect shake --direction both --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
-npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition breathe --script public/game/script.json --force --backup --json
+npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect vignette --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
+npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition pop --script public/game/script.json --force --backup --json
 npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script public/game/script.json --force --backup --json
 npm run vn -- add-ending --id good_end --title "Good End" --category main --order 1 --script public/game/script.json --force --backup --json
 npm run vn -- add-ending-unlock --scene chapter_1 --page 1 --option 0 --id good_end --script public/game/script.json --force --backup --json
@@ -276,4 +276,4 @@ Common warnings:
 - Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.
 - CG gallery registry authoring is supported through `add-cg`, `update-cg`, `remove-cg`, `add-cg-unlock`, and `list-cg`; do not invent gallery fields or flows outside the shared contract.
 - Branch flow analysis is supported through `graph-report`, `find-dead-ends`, `find-missing-assets`, and `find-unused-assets`; reports include repair-ready broken targets and unreachable unlock review, while Story Systems exposes exact route/asset navigation. Flow reports are derived review data, not fields to write into `script.json`.
-- Cinematic catalog discovery is supported through `list-transitions`; write only runtime-supported ids unless the reported catalog fallback is acceptable, and treat `set-character-transition` as the `characters[].animation` compatibility surface.
+- Cinematic catalog discovery is supported through `list-transitions`; M5 catalog ids are runtime/editor-supported, unknown future ids retain safe fallback or no-op behavior, and `set-character-transition` remains the `characters[].animation` compatibility surface.

@@ -406,7 +406,7 @@ Definition of done:
 
 **Goal:** Add more visual polish while keeping transitions contract-safe.
 
-**Current implemented coverage:** A shared transition catalog exposes supported background, character-motion, and camera entries plus planned fallback-only candidates. Agents can inspect it with `list-transitions`, apply page transitions singly or in bounded structural batches with `set-page-transition` / `set-page-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without changing existing `animation` author data. The editor page inspector consumes shared transition/camera options and offers per-page previews. Directional background wipes (`wipe-left`, `wipe-right`, `wipe-up`, `wipe-down`) now have runtime CSS playback, editor selection/preview, CLI discovery, and example-workflow coverage; fallback-only background candidates now execute and report their declared catalog fallback.
+**Current implemented coverage:** M5 is complete. A shared transition catalog exposes runtime/editor-supported background, character-motion, and camera entries through the existing `transition.type`, `characters[].animation`, and `camera.effect` fields. Agents can inspect it with `list-transitions`, apply page transitions singly or in bounded structural batches with `set-page-transition` / `set-page-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without adding canonical author data. The editor page inspector consumes the same options and offers per-page previews. Background zoom, flash, iris, crossfade-pan, and directional wipe playback; character fade/slide/pop/scale/blur motion; and camera vignette/letterbox overlays are all wired through runtime, editor discovery, CLI, tests, and the executable example workflow. Unknown future ids remain preserved in author data and fall back or no-op safely at runtime.
 
 Contract:
 
@@ -470,6 +470,8 @@ Definition of done:
 
 - Transition ids are discoverable and safe for agents.
 - GUI and CLI share the same transition list.
+
+Status: complete.
 
 ### M6 — Release Hardening And Examples
 

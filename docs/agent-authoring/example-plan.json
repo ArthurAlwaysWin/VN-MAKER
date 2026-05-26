@@ -262,7 +262,7 @@
       "params": {
         "scene": "good_ending",
         "page": 0,
-        "type": "dissolve",
+        "type": "crossfade-pan",
         "duration": 900
       }
     },
@@ -273,7 +273,18 @@
         "scene": "good_ending",
         "page": 0,
         "character": "sakura",
-        "transition": "breathe"
+        "transition": "pop"
+      }
+    },
+    {
+      "id": "frame-good-ending",
+      "command": "set-camera-effect",
+      "params": {
+        "scene": "good_ending",
+        "page": 0,
+        "effect": "vignette",
+        "intensity": "medium",
+        "durationMs": 900
       }
     }
   ]

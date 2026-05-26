@@ -509,7 +509,7 @@ describe('vn-author CLI', () => {
       });
       expect(result.validation.ok).toBe(true);
       expect(result.changeSummary).toMatchObject({
-        operationCount: 20,
+        operationCount: 21,
         counts: {
           before: { characters: 0, scenes: 0, pages: 0, variables: 0 },
           after: { characters: 1, scenes: 4, pages: 5, variables: 1 },
@@ -551,6 +551,11 @@ describe('vn-author CLI', () => {
       expect(builtScript.scenes.start.pages[0].transition).toEqual({
         type: 'wipe-right',
         duration: 650,
+      });
+      expect(builtScript.scenes.good_ending.pages[0]).toMatchObject({
+        transition: { type: 'crossfade-pan', duration: 900 },
+        camera: { effect: 'vignette', intensity: 'medium', durationMs: 900 },
+        characters: [{ id: 'sakura', animation: 'pop' }],
       });
 
       const assetPaths = [
@@ -623,6 +628,11 @@ describe('vn-author CLI', () => {
       expect(script.scenes.start.pages[0].transition).toEqual({
         type: 'wipe-right',
         duration: 650,
+      });
+      expect(script.scenes.good_ending.pages[0]).toMatchObject({
+        transition: { type: 'crossfade-pan', duration: 900 },
+        camera: { effect: 'vignette', intensity: 'medium', durationMs: 900 },
+        characters: [{ id: 'sakura', animation: 'pop' }],
       });
       expect(handoff.previewTargets).toEqual(expect.arrayContaining([
         expect.objectContaining({ kind: 'branch-graph' }),
@@ -3612,6 +3622,12 @@ describe('vn-author CLI', () => {
         'wipe-right',
         'wipe-up',
         'wipe-down',
+        'zoom-in',
+        'zoom-out',
+        'flash',
+        'iris-in',
+        'iris-out',
+        'crossfade-pan',
       ]);
 
       const directCamera = JSON.parse((await execFileAsync('node', [

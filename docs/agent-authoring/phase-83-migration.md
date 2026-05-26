@@ -41,7 +41,7 @@ For terminal normal pages, page-entry `effects` may contain only `unlock:ending`
 - two registered endings with terminal arrival unlocks;
 - one registered CG unlocked on a choice;
 - condition-driven branch routing;
-- catalog-backed transition polish, including a supported directional background wipe.
+- catalog-backed transition polish, including a directional background wipe plus `crossfade-pan`, `pop`, and `vignette` examples from the completed M5 surface.
 
 Dry-run it against a disposable script or adapt its operations to the existing scene ids:
 

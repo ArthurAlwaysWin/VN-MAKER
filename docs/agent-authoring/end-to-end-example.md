@@ -12,6 +12,14 @@ For the release-hardening example that exercises affection, two endings, one CG 
 
 ## Executable Multi-Ending Route
 
+To generate an editor-openable example project with illustrative assets and run the whole acceptance chain in one command:
+
+```bash
+npm run verify:agent-example -- --out .tmp/agent-example-project --json
+```
+
+The output directory contains `project.json`, `script.json`, `assets/`, `agent-handoff.json`, and review artifacts under `review/`. Pass `--force` to rebuild that generated directory after the initial run; the verifier refuses to replace directories it did not generate.
+
 The checked-in plan can be validated and applied to a fresh or disposable project shell:
 
 ```bash
@@ -27,7 +35,7 @@ start -- choice/effect --> route_check -- affection >= 1 --> good_ending + good_
                                       \-- otherwise -----> quiet_ending + quiet_end unlock
 ```
 
-The honest choice also unlocks `cg_confession`; supported transition operations polish the visible pages. Register the referenced example assets, then use `export-readiness` and `handoff-report --transaction .tmp/multi-ending-result.json` to complete the gate.
+The honest choice also unlocks `cg_confession`; supported transition operations polish the visible pages. The one-command verifier creates the referenced SVG example assets and completes `author-check`, `handoff-report`, graph analysis, and `export-readiness`. When adapting the plan to another project, register real assets and run the same gates against that project.
 
 ## User Request
 

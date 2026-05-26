@@ -102,6 +102,13 @@ See `docs/agent-authoring/plan-manifest.md` for the manifest shape, `docs/agent-
 
 See `docs/agent-authoring/end-to-end-example.md` for a complete prose-to-plan-to-handoff example.
 Use `docs/agent-authoring/example-plan.json` when you need an executable reference route covering affection, endings, CG unlocks, branch analysis, and transitions together.
+To create a complete editor-review project from that plan and exercise its handoff/readiness gates, run:
+
+```bash
+npm run verify:agent-example -- --out .tmp/agent-example-project --json
+```
+
+The generated directory includes project metadata, illustrative SVG assets, the applied script, `agent-handoff.json`, and review artifacts.
 
 ## Incremental Edits
 

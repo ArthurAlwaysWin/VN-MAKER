@@ -474,7 +474,7 @@ Definition of done:
 
 **Goal:** Make the new systems usable outside development sessions.
 
-**Current implemented slice:** The checked-in executable example plan now builds a two-ending affection route with a CG unlock and transition polish, its CLI regression verifies export readiness, ending thumbnails participate in export asset accounting, and human-review plus Phase 83 migration guidance is documented.
+**Current implemented slice:** The checked-in executable example plan now builds a two-ending affection route with a CG unlock and transition polish, `verify:agent-example` materializes it as an editor-openable review project with example assets and complete handoff/readiness artifacts, ending thumbnails participate in export asset accounting, and human-review plus Phase 83 migration guidance is documented.
 
 Deliverables:
 

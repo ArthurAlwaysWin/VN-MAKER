@@ -22,6 +22,9 @@ Desktop.ini
 *.log
 npm-debug.log*
 
+# Generated verification artifacts
+.tmp/
+
 # Environment
 .env
 .env.local

@@ -36,7 +36,7 @@
         "category": "main",
         "order": 1,
         "description": "Sakura shares the promise she kept.",
-        "thumbnail": "ui/endings/good.png",
+        "thumbnail": "ui/endings/good.svg",
         "hiddenUntilUnlocked": true
       }
     },
@@ -49,7 +49,7 @@
         "category": "normal",
         "order": 2,
         "description": "The train arrives before either person speaks.",
-        "thumbnail": "ui/endings/quiet.png",
+        "thumbnail": "ui/endings/quiet.svg",
         "hiddenUntilUnlocked": true
       }
     },
@@ -62,9 +62,9 @@
         "category": "route",
         "order": 1,
         "description": "A memory unlocked by choosing honesty.",
-        "images": ["backgrounds/cg/sakura_confession.png"],
-        "thumbnail": "backgrounds/cg/sakura_confession_thumb.png",
-        "lockedThumbnail": "ui/gallery/locked.png"
+        "images": ["backgrounds/cg/sakura_confession.svg"],
+        "thumbnail": "backgrounds/cg/sakura_confession_thumb.svg",
+        "lockedThumbnail": "ui/gallery/locked.svg"
       }
     },
     {

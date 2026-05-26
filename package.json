@@ -27,6 +27,7 @@
     "vn:handoff-report": "node tools/vn-author/index.js handoff-report",
     "vn:render-preview": "node tools/vn-author/index.js render-preview",
     "vn:readiness": "node tools/vn-author/index.js export-readiness",
+    "verify:agent-example": "node tools/vn-author/verify-example-workflow.js",
     "verify": "npm run build && npm run test",
     "postinstall": "patch-package"
   },

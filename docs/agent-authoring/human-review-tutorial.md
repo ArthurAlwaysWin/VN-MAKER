@@ -10,6 +10,14 @@ The checked-in [example-plan.json](./example-plan.json) builds a compact referen
 - terminal page arrival unlocks for both endings;
 - shared transition catalog operations.
 
+Generate a ready-to-open review project and its handoff artifact with:
+
+```bash
+npm run verify:agent-example -- --out .tmp/agent-example-project --json
+```
+
+On repeated runs, add `--force` to rebuild the previously generated directory. Open `.tmp/agent-example-project` in the desktop editor to follow the walkthrough below.
+
 ## 1. Open The Handoff
 
 1. Open the project in the desktop editor.

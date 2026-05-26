@@ -31,6 +31,9 @@ npm install
 
 # 启动开发模式（编辑器 + 引擎）
 npm run dev
+
+# 生成并验收可在编辑器中打开的外部 Agent 多结局示例项目
+npm run verify:agent-example -- --out .tmp/agent-example-project --json
 ```
 
 ## 技术栈

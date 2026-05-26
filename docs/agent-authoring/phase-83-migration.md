@@ -50,6 +50,12 @@ npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/
 npm run vn:apply-plan -- docs/agent-authoring/example-plan.json --script public/game/script.json --dry-run --json
 ```
 
+To inspect the upgraded systems and handoff flow without modifying an existing project, generate the standalone reference project first:
+
+```bash
+npm run verify:agent-example -- --out .tmp/agent-example-project --json
+```
+
 Do not apply it unchanged to a project that already contains `sakura`, `start`, or the example registry ids.
 
 ## Verification

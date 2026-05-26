@@ -10,6 +10,7 @@ import { analyzePreviewScreenshot } from '../tools/vn-author/preview-renderer.js
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.resolve('tools/vn-author/index.js');
+const exampleWorkflowPath = path.resolve('tools/vn-author/verify-example-workflow.js');
 
 function chunk(type, data) {
   const length = Buffer.alloc(4);
@@ -535,7 +536,7 @@ describe('vn-author CLI', () => {
       });
       expect(Object.keys(builtScript.systems.endings)).toEqual(['good_end', 'quiet_end']);
       expect(builtScript.systems.gallery.cg.cg_confession).toMatchObject({
-        images: ['backgrounds/cg/sakura_confession.png'],
+        images: ['backgrounds/cg/sakura_confession.svg'],
       });
       expect(builtScript.scenes.start.pages[1].options[0].effects).toEqual([
         { type: 'var:add', id: 'sakura_affection', value: 1 },
@@ -553,11 +554,11 @@ describe('vn-author CLI', () => {
         'backgrounds/school_gate.svg',
         'backgrounds/rooftop_sunset.svg',
         'backgrounds/empty_platform.svg',
-        'backgrounds/cg/sakura_confession.png',
-        'backgrounds/cg/sakura_confession_thumb.png',
-        'ui/endings/good.png',
-        'ui/endings/quiet.png',
-        'ui/gallery/locked.png',
+        'backgrounds/cg/sakura_confession.svg',
+        'backgrounds/cg/sakura_confession_thumb.svg',
+        'ui/endings/good.svg',
+        'ui/endings/quiet.svg',
+        'ui/gallery/locked.svg',
       ];
       for (const assetPath of assetPaths) {
         const absolutePath = path.join(dir, ...assetPath.split('/'));
@@ -582,6 +583,55 @@ describe('vn-author CLI', () => {
         },
       });
       expect(readiness.warnings).toEqual([]);
+    });
+  });
+
+  it('generates a reviewable agent example project through the full verification workflow', async () => {
+    await withTempDir(async (dir) => {
+      const projectPath = path.join(dir, 'spring-promise-example');
+      const { stdout } = await execFileAsync('node', [
+        exampleWorkflowPath,
+        '--out',
+        projectPath,
+        '--json',
+      ]);
+
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(path.join(projectPath, 'script.json'), 'utf8'));
+      const handoff = JSON.parse(await readFile(path.join(projectPath, 'agent-handoff.json'), 'utf8'));
+      const summary = JSON.parse(await readFile(path.join(projectPath, 'review', 'verification-summary.json'), 'utf8'));
+      await stat(path.join(projectPath, 'project.json'));
+      await stat(path.join(projectPath, 'assets', 'backgrounds', 'cg', 'sakura_confession.svg'));
+      await stat(path.join(projectPath, 'review', 'author-check-preview.png.json'));
+
+      expect(result.gates).toEqual({
+        validation: true,
+        dryRun: true,
+        apply: true,
+        authorCheck: true,
+        handoff: true,
+        readiness: true,
+      });
+      expect(script.systems.endings).toHaveProperty('good_end');
+      expect(script.systems.gallery.cg.cg_confession.images).toEqual([
+        'backgrounds/cg/sakura_confession.svg',
+      ]);
+      expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({ kind: 'branch-graph' }),
+        expect.objectContaining({ kind: 'ending-list' }),
+        expect.objectContaining({ kind: 'gallery' }),
+      ]));
+      expect(summary.sceneGraph).toMatchObject({
+        deadEndSceneIds: [],
+        cyclesWithoutExit: [],
+      });
+
+      await expect(execFileAsync('node', [
+        exampleWorkflowPath,
+        '--out',
+        projectPath,
+        '--json',
+      ])).rejects.toMatchObject({ code: 1 });
     });
   });
 

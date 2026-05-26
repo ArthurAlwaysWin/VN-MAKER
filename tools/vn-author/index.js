@@ -2609,9 +2609,60 @@ async function draftPlan(args) {
 
   const draftPath = path.resolve(repoRoot, draftPathArg);
   const draft = JSON.parse(await readFile(draftPath, 'utf8'));
+  const adaptationPreview = {
+    required: hasFlag(args, '--require-adaptation-preview'),
+    present: Boolean(draft.adaptationPreview),
+    approved: draft.adaptationPreview?.approved === true,
+    assetsReviewed: draft.adaptationPreview?.assetsReviewed === true,
+    pageBeatCount: Number.isInteger(draft.adaptationPreview?.pageBeatCount)
+      ? draft.adaptationPreview.pageBeatCount
+      : null,
+    choiceCount: Number.isInteger(draft.adaptationPreview?.choiceCount)
+      ? draft.adaptationPreview.choiceCount
+      : null,
+    missingAssetsRecorded: Array.isArray(draft.adaptationPreview?.missingAssets),
+    missingAssets: Array.isArray(draft.adaptationPreview?.missingAssets)
+      ? draft.adaptationPreview.missingAssets
+      : [],
+  };
+  adaptationPreview.ok = !adaptationPreview.required || (
+    adaptationPreview.present
+    && adaptationPreview.approved
+    && adaptationPreview.assetsReviewed
+    && adaptationPreview.pageBeatCount >= 1
+    && adaptationPreview.choiceCount >= 0
+    && adaptationPreview.missingAssetsRecorded
+  );
+  if (!adaptationPreview.ok) {
+    const output = {
+      ok: false,
+      code: 'adaptation-preview-required',
+      draftPath,
+      message: 'A required approved adaptation preview with reviewed assets and beat/choice counts is missing.',
+      adaptationPreview,
+    };
+    if (hasFlag(args, '--json')) {
+      writeJson(output);
+    } else {
+      process.stderr.write(`${output.code}: ${output.message}\n`);
+    }
+    return 1;
+  }
   const plan = createNovelDraftPlan(draft, {
     title: getArgValue(args, '--title', undefined),
   });
+  if (adaptationPreview.present) {
+    plan.source = {
+      ...(plan.source ?? {}),
+      adaptationPreview: {
+        approved: adaptationPreview.approved,
+        assetsReviewed: adaptationPreview.assetsReviewed,
+        pageBeatCount: adaptationPreview.pageBeatCount,
+        choiceCount: adaptationPreview.choiceCount,
+        missingAssets: adaptationPreview.missingAssets,
+      },
+    };
+  }
   const outPathArg = getArgValue(args, '--out', null);
   const outPath = outPathArg ? path.resolve(repoRoot, outPathArg) : null;
   if (outPath) {
@@ -2624,6 +2675,7 @@ async function draftPlan(args) {
     outPath,
     operationCount: plan.operations.length,
     warningCount: plan.warnings.length,
+    adaptationPreview,
     plan,
   };
 
@@ -2766,7 +2818,7 @@ async function findUnusedAssets(args) {
   return 0;
 }
 
-async function handoffReport(args) {
+async function handoffReport(args, { emit = true } = {}) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
   const knownAssets = hasFlag(args, '--skip-asset-check')
@@ -2806,9 +2858,9 @@ async function handoffReport(args) {
     handoff.outPath = outPath;
   }
 
-  if (hasFlag(args, '--json')) {
+  if (emit && hasFlag(args, '--json')) {
     writeJson(handoff);
-  } else {
+  } else if (emit) {
     process.stdout.write(`Agent handoff: ${handoff.ok ? 'OK' : 'NEEDS REVIEW'}\n`);
     process.stdout.write(`Script: ${scriptPath}\n`);
     if (handoff.outPath) {
@@ -2818,7 +2870,7 @@ async function handoffReport(args) {
     process.stdout.write(`Review items: ${handoff.reviewItemCount}\n`);
   }
 
-  return handoff.ok ? 0 : 1;
+  return { exitCode: handoff.ok ? 0 : 1, output: handoff };
 }
 
 async function exportReadiness(args) {
@@ -2972,7 +3024,7 @@ async function renderPreview(args) {
   }
 }
 
-async function authorCheck(args) {
+async function authorCheck(args, { emit = true } = {}) {
   const { scriptPath, script } = await readScript(args);
   const transaction = await readTransactionArg(args);
   const focus = createAuthorCheckFocus({ args, script, transaction });
@@ -2995,8 +3047,11 @@ async function authorCheck(args) {
   const galleryPreviewIssues = collectGalleryPreviewIssues(focus.galleryTargets);
   const branchGraphPreviewIssues = collectBranchGraphPreviewIssues(focus.branchGraphTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
+  const requirePreviewScreenshot = hasFlag(args, '--require-preview-screenshot');
+  const capturePreview = requirePreviewScreenshot || hasFlag(args, '--capture-preview');
 
   let preview = null;
+  const previewRenderIssues = [];
   if (!hasFlag(args, '--skip-preview')) {
     const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
     const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
@@ -3005,17 +3060,45 @@ async function authorCheck(args) {
       .filter(isRenderablePreviewTarget);
     const previews = [];
     for (const [index, target] of previewTargets.entries()) {
-      previews.push(await renderPreviewScreenshot({
-        repoRoot,
-        script,
-        sceneId: target.sceneId,
-        pageIndex: target.pageIndex,
-        screenId: target.screenId,
-        outPath: previewOutPathForTarget(outPath, target, index),
-        width,
-        height,
-        dryRun: true,
-      }));
+      const targetOutPath = previewOutPathForTarget(outPath, target, index);
+      try {
+        previews.push(await renderPreviewScreenshot({
+          repoRoot,
+          script,
+          sceneId: target.sceneId,
+          pageIndex: target.pageIndex,
+          screenId: target.screenId,
+          outPath: targetOutPath,
+          width,
+          height,
+          dryRun: !capturePreview,
+        }));
+      } catch (error) {
+        if (!capturePreview || ![
+          PREVIEW_BROWSER_UNAVAILABLE,
+          PREVIEW_QUALITY_FAILED,
+          PREVIEW_RENDERER_UNAVAILABLE,
+        ].includes(error.code)) {
+          throw error;
+        }
+        previewRenderIssues.push({
+          severity: 'error',
+          code: error.code,
+          message: error.message,
+          pathString: target.pathString ?? '',
+        });
+        previews.push({
+          dryRun: false,
+          sceneId: target.sceneId,
+          pageIndex: target.pageIndex,
+          screenId: target.screenId,
+          outPath: targetOutPath,
+          width,
+          height,
+          quality: error.quality ?? { ok: false },
+          error: { code: error.code, message: error.message },
+        });
+      }
     }
 
     if (previews.length > 0) {
@@ -3033,11 +3116,28 @@ async function authorCheck(args) {
     }
   }
 
+  const previewScreenshotOk = !requirePreviewScreenshot || Boolean(
+    preview?.targets?.length
+    && preview.targets.every((target) => target.dryRun === false && target.quality?.ok === true),
+  );
+  const previewQualityIssues = [
+    ...previewRenderIssues,
+    ...(previewScreenshotOk ? [] : [{
+      severity: 'error',
+      code: 'preview-screenshot-required',
+      message: 'This author check requires captured preview screenshots that pass quality checks.',
+      pathString: '',
+    }]),
+  ];
   const gates = {
     validation: validation.ok,
     layout: layout.ok,
     readiness: readiness.ready,
-    preview: preview ? preview.dryRun === true : true,
+    preview: requirePreviewScreenshot
+      ? previewScreenshotOk
+      : preview
+        ? (preview.dryRun === true || preview.quality?.ok === true)
+        : true,
   };
   const ok = Object.values(gates).every(Boolean);
   const output = {
@@ -3069,6 +3169,7 @@ async function authorCheck(args) {
       galleryPreviewReviewItems: galleryPreviewIssues.length,
       branchGraphPreviewReviewItems: branchGraphPreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
+      previewQualityBlockers: previewQualityIssues.length,
       previewPlanned: Boolean(preview),
     },
     sceneReferences: {
@@ -3096,6 +3197,10 @@ async function authorCheck(args) {
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
     },
+    previewQuality: {
+      requiredScreenshot: requirePreviewScreenshot,
+      issues: previewQualityIssues,
+    },
     validation,
     layout,
     readiness,
@@ -3111,14 +3216,15 @@ async function authorCheck(args) {
       ...summarizeIssues('preview', galleryPreviewIssues),
       ...summarizeIssues('preview', branchGraphPreviewIssues),
       ...summarizeIssues('preview', referenceScreenshotIssues),
+      ...summarizeIssues('preview', previewQualityIssues),
       ...referenceDiagnostics,
     ],
   };
   output.suggestions = collectAuthorCheckSuggestions(output);
 
-  if (hasFlag(args, '--json')) {
+  if (emit && hasFlag(args, '--json')) {
     writeJson(output);
-  } else {
+  } else if (emit) {
     process.stdout.write(`Author check: ${output.ok ? 'OK' : 'NEEDS ATTENTION'}\n`);
     process.stdout.write(`Script: ${scriptPath}\n`);
     process.stdout.write(`Validation: ${gates.validation ? 'OK' : 'FAILED'}\n`);
@@ -3135,7 +3241,46 @@ async function authorCheck(args) {
     }
   }
 
-  return ok ? 0 : 1;
+  return { exitCode: ok ? 0 : 1, output };
+}
+
+async function reviewHandoff(args) {
+  const authorCheckResult = await authorCheck(args, { emit: false });
+  const handoffResult = await handoffReport(args, { emit: false });
+  const output = {
+    kind: 'agent-review-handoff',
+    version: 1,
+    ok: authorCheckResult.output.ok && handoffResult.output.ok,
+    gates: {
+      authorCheck: authorCheckResult.output.ok,
+      handoff: handoffResult.output.ok,
+      previewScreenshot: hasFlag(args, '--require-preview-screenshot')
+        ? authorCheckResult.output.gates.preview
+        : null,
+    },
+    authorCheck: authorCheckResult.output,
+    handoff: handoffResult.output,
+  };
+  const reviewOutArg = getArgValue(args, '--review-out', null);
+  if (reviewOutArg) {
+    const outPath = path.resolve(repoRoot, reviewOutArg);
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+    output.outPath = outPath;
+  }
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Review and handoff: ${output.ok ? 'OK' : 'NEEDS ATTENTION'}\n`);
+    process.stdout.write(`Author check: ${output.gates.authorCheck ? 'OK' : 'FAILED'}\n`);
+    process.stdout.write(`Handoff: ${output.gates.handoff ? 'OK' : 'FAILED'}\n`);
+    if (output.outPath) {
+      process.stdout.write(`Wrote review report: ${output.outPath}\n`);
+    }
+  }
+
+  return output.ok ? 0 : 1;
 }
 
 async function addScene(args) {
@@ -4947,13 +5092,14 @@ function printHelp() {
   find-dead-ends [--script path] [--entry scene_id] [--json]
   find-missing-assets [--script path] [--asset-root path] [--json]
   find-unused-assets [--script path] [--asset-root path] [--json]
-  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
+  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--capture-preview] [--require-preview-screenshot] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
   handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
+  review-handoff [author-check/handoff-report options] [--review-out path] [--capture-preview] [--require-preview-screenshot] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
-  draft-plan draft.json [--out plan.json] [--title title] [--json]
+  draft-plan draft.json [--out plan.json] [--title title] [--require-adaptation-preview] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5063,7 +5209,7 @@ async function main() {
     }
 
     if (command === 'author-check') {
-      process.exitCode = await authorCheck(args);
+      process.exitCode = (await authorCheck(args)).exitCode;
       return;
     }
 
@@ -5098,7 +5244,12 @@ async function main() {
     }
 
     if (command === 'handoff-report') {
-      process.exitCode = await handoffReport(args);
+      process.exitCode = (await handoffReport(args)).exitCode;
+      return;
+    }
+
+    if (command === 'review-handoff') {
+      process.exitCode = await reviewHandoff(args);
       return;
     }
 

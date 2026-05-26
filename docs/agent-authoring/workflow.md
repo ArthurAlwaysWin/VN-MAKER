@@ -64,12 +64,12 @@ npm run vn -- import-draft draft.json --fresh --out public/game/script.json --js
 or convert the structured draft into a transactional plan manifest first:
 
 ```bash
-npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json
+npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --dry-run --json
 ```
 
-Use `draft-plan` when prose-derived work should be inspected as operations before anything is written. Use `apply-plan --validate-only` before writing when an external agent needs a saved artifact that proves the plan can be applied and pass validation without mutating the project.
+Use `draft-plan --require-adaptation-preview` when prose-derived work should be inspected as operations before anything is written; it confirms the accepted breakdown and asset review were recorded without adding fields to `script.json`. Use `apply-plan --validate-only` before writing when an external agent needs a saved artifact that proves the plan can be applied and pass validation without mutating the project.
 
 or code:
 
@@ -143,7 +143,7 @@ npm run vn:author-check -- --script public/game/script.json --transaction .tmp/a
 
 For reference-screenshot-based screen work, include `handoff.referenceScreenshotNotes` in the plan manifest so `handoff-report --transaction` creates a structured fidelity review item for the human reviewer.
 
-If the editor is open while an external agent changes `script.json`, the editor detects the changed file state, blocks stale saves, and shows a reload warning. Reload the project before continuing GUI edits so agent-authored changes are not overwritten.
+If the editor is open while an external agent changes `script.json`, the editor detects the changed file state, blocks stale saves, and shows a read-only structured path diff before reload. Reload the project before continuing GUI edits so agent-authored changes are not overwritten.
 
 Then dry-run and apply it:
 
@@ -232,6 +232,14 @@ npm run vn:readiness -- --json
 
 Do not finish with validation errors or readiness blockers. `author-check` is the preferred external-agent gate because it aggregates validation, layout lint, export readiness, and preview dry-run planning into one JSON payload. Use `--transaction` after `apply-plan --result-out` so the check focuses layout/readiness and scene reference review on changed scenes/pages, writes preview targets for changed scenes/screens, and emits screen UI preview review items. Pass `--scene` and `--page` only when you need to override that target list.
 
+For a final handoff, run the continuous gate instead of issuing two separate commands:
+
+```bash
+npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
+```
+
+For releases that require captured visual evidence, add `--require-preview-screenshot`; the command will render screenshots and fail unless every renderable preview target passes the screenshot quality checks.
+
 When `lint-layout --json` returns warnings, read `suggestions[]` before editing again. Each suggestion carries the page location and repair command templates where the CLI can express the fix.
 
 ## 6. Preview When Available
@@ -270,9 +278,10 @@ If you saved a previous mutation result, attach it so the editor can show change
 
 ```bash
 npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --json
+npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
 ```
 
-The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability/dead ends/closed cycles, recent checkpoints from `.checkpoints/`, transaction summaries, preview targets, and review items with suggested actions where available. Review items include categories such as `missing-asset`, `unused-asset`, `placeholder-asset`, `ambiguous-asset`, `screen-ui-preview`, and `branch-graph-preview` so humans can see what to import, rename, remove, replace, or inspect. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel with links into changed pages, supported screens, galleries, endings, and branch flow.
+The handoff report includes validation/layout/readiness gates, project counts, scene graph reachability/dead ends/closed cycles, recent checkpoints from `.checkpoints/`, transaction summaries, preview targets, and review items with suggested actions where available. Review items include categories such as `missing-asset`, `unused-asset`, `placeholder-asset`, `ambiguous-asset`, `screen-ui-preview`, and `branch-graph-preview` so humans can see what to import, rename, remove, replace, or inspect. When a desktop project contains `agent-handoff.json` at the project root, Project Settings shows a compact external-agent handoff panel with links into changed pages, supported screens, galleries, endings, and branch flow; acknowledged/resolved review lifecycle state is saved separately in `agent-review-state.json`.
 
 Tell the human creator:
 

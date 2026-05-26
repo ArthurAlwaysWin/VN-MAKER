@@ -3,7 +3,8 @@ import { ipcRenderer, contextBridge, webUtils } from 'electron';
 // Whitelist of allowed IPC channels
 const ALLOWED_CHANNELS = [
   'create-project', 'open-project', 'load-project', 'save-project', 'close-project',
-  'read-agent-handoff', 'check-project-file-state',
+  'read-agent-handoff', 'read-agent-review-state', 'write-agent-review-state',
+  'check-project-file-state', 'read-project-script-for-conflict',
   'read-dir', 'upload-asset', 'select-asset', 'import-assets', 'delete-asset',
   'rename-asset', 'save-processed-image', 'list-assets',
   'get-recent-projects', 'update-recent-projects',

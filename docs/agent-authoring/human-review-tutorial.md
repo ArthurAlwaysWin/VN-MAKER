@@ -25,7 +25,7 @@ On repeated runs, add `--force` to rebuild the previously generated directory. O
 3. Confirm the validation, layout, and readiness gates are green.
 4. Review the changed paths and checkpoint before accepting visual changes.
 
-If the editor reports that `script.json` changed externally, reload before editing. Do not save stale editor state over an agent transaction.
+If the editor reports that `script.json` changed externally, inspect its structured path diff and reload before editing. Do not save stale editor state over an agent transaction; external changes are never auto-merged.
 
 ## 2. Review Story Systems
 
@@ -70,4 +70,4 @@ Before export, resolve or explicitly accept handoff review items and run the edi
 - unreachable scenes, dead ends, or closed cycles;
 - unknown transition or camera warnings.
 
-Once accepted, mark local handoff review items resolved and continue normal visual editing.
+Once accepted, mark handoff review items resolved and continue normal visual editing. Those acknowledgement/resolution decisions are kept in project-local `agent-review-state.json`, scoped to the active handoff and separate from `script.json` and player progress.

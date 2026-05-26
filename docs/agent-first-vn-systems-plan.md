@@ -77,7 +77,7 @@ The GUI must not become the only way to create or modify a feature.
 | Project shell metadata | `project.json` | Duplicate story systems here |
 | Persistent player progress | `player-data/profile.json` | Store route-local save snapshots here |
 | Save snapshots | `saves/` | Store global unlock truth here |
-| Agent review state | `agent-handoff.json` plus local editor state | Mutate gameplay data directly |
+| Agent review state | `agent-handoff.json` plus `agent-review-state.json` | Mutate gameplay data directly |
 | Assets | `assets/<category>/...` | Reference files outside project assets |
 
 ### 2.3 Required Feature Shape
@@ -498,7 +498,7 @@ Closure evidence:
 | Requirement | Implementation And Verification Evidence |
 | --- | --- |
 | Example route and agent plan | `docs/agent-authoring/example-plan.json` authors Sakura affection, two ending registrations/unlocks, one CG unlock, condition routing, and catalog-backed transition polish. `tests/vnAuthorCli.test.js` verifies the authored canonical result. |
-| Editor-openable example project | `tools/vn-author/verify-example-workflow.js` generates `project.json`, `script.json`, illustrative assets, review artifacts, and `agent-handoff.json`; its CLI test verifies all six workflow gates and branch review targets. |
+| Editor-openable example project | `tools/vn-author/verify-example-workflow.js` generates `project.json`, `script.json`, illustrative assets, review artifacts, and `agent-handoff.json`; its CLI test verifies the workflow gates, including continuous review/handoff, and branch review targets. |
 | Human review tutorial | `docs/agent-authoring/human-review-tutorial.md` walks through Project Settings, Story Systems, page preview, branch flow, and profile-backed playtest review without JSON inspection. |
 | Export readiness for new systems | `src/authoring/exportReadiness.js` and `src/engine/scanAssets.js` account for branch findings and system assets; `tests/exportReadiness.test.js`, `tests/scanAssets.test.js`, `tests/exportGame.test.js`, and `tests/exportDesktop.test.js` cover route/asset readiness and ending thumbnail export. |
 | Phase 83 migration notes | `docs/agent-authoring/phase-83-migration.md` preserves profile/save authority rules and documents incremental registry, unlock, graph, transition, and handoff migration. |
@@ -585,12 +585,12 @@ Do not ship a visually nice GUI that produces data agents cannot validate or edi
 
 The M0-M6 roadmap is complete as of 2026-05-26. The release closure audit found no unresolved M6 deliverable or acceptance-criteria blocker, and it does not expand the completed M1-M5 contracts.
 
-Deferred post-roadmap enhancements:
+Delivered post-roadmap enhancements:
 
-| Priority | Enhancement | Why It Does Not Block Closure |
+| Priority | Enhancement | Delivery |
 | --- | --- | --- |
-| P2 | Consolidate `author-check` and `handoff-report` into a single optional workflow command. | The existing executable example already verifies the deterministic apply, author-check, handoff, and readiness chain. |
-| P2 | Add structured diff/merge UI for externally changed `script.json`. | Stale writes are already blocked and the editor already provides reload guidance. |
-| P2 | Add broader mounted-component tests for Project Settings handoff lifecycle interactions. | Current editor integration tests cover handoff loading, local lifecycle state, navigation, and stale-save protection. |
-| P2 | Optionally persist human review lifecycle decisions outside editor-local state. | Review state is intentionally non-gameplay data; canonical author data and handoff generation are unaffected. |
-| P3 | Enforce or further automate prose-to-draft preparation and captured preview quality. | Structured plans, dry-run preview planning, editor review, and release gates already satisfy the current agent/human contract. |
+| P2 | Consolidate `author-check` and `handoff-report` into a single optional workflow command. | `review-handoff` runs both review phases and can persist one continuous review artifact. |
+| P2 | Add safe structured review for externally changed `script.json`. | The editor displays a read-only path diff while retaining stale-save blocking and explicit reload; automatic merge is intentionally not introduced. |
+| P2 | Add UI regression coverage for handoff lifecycle and conflict review interactions. | Focused tests cover persisted lifecycle IPC/store behavior and mount the external conflict diff panel. |
+| P2 | Persist human review lifecycle decisions outside editor-local state. | `agent-review-state.json` stores non-gameplay lifecycle metadata scoped to the generated handoff. |
+| P3 | Enforce or further automate prose-to-draft preparation and captured preview quality. | `--require-adaptation-preview` and `--require-preview-screenshot` provide opt-in strict gates without forcing new scope into normal workflows. |

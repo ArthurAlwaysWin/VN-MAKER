@@ -612,11 +612,13 @@ describe('vn-author CLI', () => {
       await stat(path.join(projectPath, 'project.json'));
       await stat(path.join(projectPath, 'assets', 'backgrounds', 'cg', 'sakura_confession.svg'));
       await stat(path.join(projectPath, 'review', 'author-check-preview.png.json'));
+      await stat(path.join(projectPath, 'review', 'review-handoff.json'));
 
       expect(result.gates).toEqual({
         validation: true,
         dryRun: true,
         apply: true,
+        continuousReview: true,
         authorCheck: true,
         handoff: true,
         readiness: true,
@@ -670,15 +672,27 @@ describe('vn-author CLI', () => {
         exampleDraftPath,
         '--out',
         planPath,
+        '--require-adaptation-preview',
         '--json',
       ]);
       const generated = JSON.parse(planResult.stdout);
 
       expect(generated.operationCount).toBe(6);
       expect(generated.warningCount).toBe(0);
+      expect(generated.adaptationPreview).toMatchObject({
+        required: true,
+        approved: true,
+        assetsReviewed: true,
+        missingAssetsRecorded: true,
+        ok: true,
+      });
       expect(generated.plan.source).toMatchObject({
         kind: 'novel-draft',
         projectId: 'gm_example_agent_draft',
+        adaptationPreview: {
+          approved: true,
+          assetsReviewed: true,
+        },
       });
 
       const dryRun = await execFileAsync('node', [
@@ -705,6 +719,51 @@ describe('vn-author CLI', () => {
           delta: { characters: 2, scenes: 1, pages: 2, variables: 1 },
         },
       });
+    });
+  });
+
+  it('blocks strict prose draft conversion without an approved adaptation preview', async () => {
+    await withTempDir(async (dir) => {
+      const draftPath = path.join(dir, 'unreviewed-draft.json');
+      await writeFile(draftPath, JSON.stringify({
+        projectId: 'gm_unreviewed',
+        adaptationPreview: {
+          approved: true,
+          assetsReviewed: true,
+          pageBeatCount: 1,
+          choiceCount: 0,
+        },
+        scenes: [{ id: 'start', beats: [{ dialogues: [{ speaker: null, text: 'Unreviewed.' }] }] }],
+      }), 'utf8');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'draft-plan',
+        draftPath,
+        '--require-adaptation-preview',
+        '--json',
+      ])).rejects.toMatchObject({ code: 1 });
+
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'draft-plan',
+          draftPath,
+          '--require-adaptation-preview',
+          '--json',
+        ]);
+      } catch (error) {
+        expect(JSON.parse(error.stdout)).toMatchObject({
+          ok: false,
+          code: 'adaptation-preview-required',
+          adaptationPreview: {
+            required: true,
+            approved: true,
+            missingAssetsRecorded: false,
+            ok: false,
+          },
+        });
+      }
     });
   });
 
@@ -1321,7 +1380,7 @@ describe('vn-author CLI', () => {
   it('documents the structured draft contract used by the example draft', async () => {
     const contract = await readFile(path.resolve('docs/agent-authoring/structured-draft-contract.md'), 'utf8');
 
-    expect(contract).toContain('npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json');
+    expect(contract).toContain('npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json');
     expect(contract).toContain('docs/agent-authoring/example-draft.json');
     for (const heading of [
       '## Top-Level Shape',
@@ -1352,11 +1411,12 @@ describe('vn-author CLI', () => {
     for (const command of [
       'npm run vn:inspect -- --json',
       'npm run vn -- list-assets --script public/game/script.json --json',
-      'npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json',
+      'npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json',
       'npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json',
       'npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json',
       'npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json',
       'npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff',
+      'npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json',
     ]) {
       expect(checklist).toContain(command);
     }
@@ -1565,6 +1625,86 @@ describe('vn-author CLI', () => {
       expect((await stat(resultOutPath)).isFile()).toBe(true);
       expect((await stat(`${previewPath}.json`)).isFile()).toBe(true);
       expect((await stat(handoffPath)).isFile()).toBe(true);
+    });
+  });
+
+  it('runs author-check and editor handoff as one continuous review command', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const reviewPath = path.join(dir, 'review-handoff.json');
+      const handoffPath = path.join(dir, 'agent-handoff.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_continuous_review',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [{
+              type: 'normal',
+              background: 'backgrounds/room.png',
+              dialogues: [{ speaker: null, text: 'Ready for review.' }],
+            }],
+          },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'review-handoff',
+        '--script',
+        scriptPath,
+        '--skip-asset-check',
+        '--skip-preview',
+        '--write-editor-handoff',
+        '--review-out',
+        reviewPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const artifact = JSON.parse(await readFile(reviewPath, 'utf8'));
+      const handoff = JSON.parse(await readFile(handoffPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        kind: 'agent-review-handoff',
+        ok: true,
+        gates: { authorCheck: true, handoff: true, previewScreenshot: null },
+      });
+      expect(artifact.kind).toBe('agent-review-handoff');
+      expect(artifact.authorCheck.ok).toBe(true);
+      expect(handoff.kind).toBe('agent-authoring-handoff');
+    });
+  });
+
+  it('can require captured preview evidence in the continuous review gate', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_strict_preview_gate',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Screenshot required.' }] }],
+          },
+        },
+      }), 'utf8');
+
+      const failure = await execFileAsync('node', [
+        cliPath,
+        'review-handoff',
+        '--script',
+        scriptPath,
+        '--skip-asset-check',
+        '--skip-preview',
+        '--require-preview-screenshot',
+        '--json',
+      ]).catch((error) => error);
+      const result = JSON.parse(failure.stdout);
+
+      expect(failure.code).toBe(1);
+      expect(result.ok).toBe(false);
+      expect(result.gates.previewScreenshot).toBe(false);
+      expect(result.authorCheck.previewQuality.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: 'preview-screenshot-required' }),
+      ]));
     });
   });
 

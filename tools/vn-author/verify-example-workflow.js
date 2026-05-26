@@ -228,18 +228,17 @@ async function verifyExampleWorkflow(args) {
   ]);
   const graph = await runCli(['graph-report', '--script', scriptPath, '--json']);
   await writeJson(path.join(reviewPath, 'graph-report.json'), graph);
-  const authorCheck = await runCli([
-    'author-check', '--script', scriptPath, '--asset-root', assetRoot,
+  const continuousReview = await runCli([
+    'review-handoff', '--script', scriptPath, '--asset-root', assetRoot,
     '--transaction', transactionPath, '--preview-out', previewPath,
-    '--write-preview-plan', '--json',
-  ]);
-  await writeJson(path.join(reviewPath, 'author-check.json'), authorCheck);
-  const handoff = await runCli([
-    'handoff-report', '--script', scriptPath, '--asset-root', assetRoot,
-    '--transaction', transactionPath, '--write-editor-handoff',
+    '--write-preview-plan', '--write-editor-handoff',
+    '--review-out', path.join(reviewPath, 'review-handoff.json'),
     '--note', 'Review the generated Spring Promise multi-ending example route.',
     '--json',
   ]);
+  const authorCheck = continuousReview.authorCheck;
+  await writeJson(path.join(reviewPath, 'author-check.json'), authorCheck);
+  const handoff = continuousReview.handoff;
   await writeJson(path.join(reviewPath, 'handoff-report.json'), handoff);
   const readiness = await runCli([
     'export-readiness', '--script', scriptPath, '--asset-root', assetRoot, '--json',
@@ -254,6 +253,7 @@ async function verifyExampleWorkflow(args) {
       validation: validation.validation?.ok === true,
       dryRun: dryRun.validation?.ok === true,
       apply: transaction.transaction?.wrote === true && transaction.validation?.ok === true,
+      continuousReview: continuousReview.ok === true,
       authorCheck: authorCheck.ok === true,
       handoff: handoff.ok === true,
       readiness: readiness.ready === true,
@@ -270,6 +270,7 @@ async function verifyExampleWorkflow(args) {
       validation: validationPath,
       transaction: transactionPath,
       authorCheck: path.join(reviewPath, 'author-check.json'),
+      continuousReview: path.join(reviewPath, 'review-handoff.json'),
       previewPlan: `${previewPath}.json`,
       graph: path.join(reviewPath, 'graph-report.json'),
       readiness: path.join(reviewPath, 'export-readiness.json'),

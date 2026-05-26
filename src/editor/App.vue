@@ -26,11 +26,13 @@
       </div>
     </header>
 
-    <div v-if="project.externalScriptChange" class="external-change-banner">
-      <span>检测到 script.json 已被外部工具修改。为避免覆盖外部 Agent 的更改，保存已暂停。</span>
-      <button @click="reloadCurrentProject">重新载入项目</button>
-      <button @click="project.clearExternalScriptChange()">稍后处理</button>
-    </div>
+    <ExternalScriptDiffPanel
+      v-if="project.externalScriptChange"
+      :diff="project.externalScriptDiff"
+      @refresh="project.loadExternalScriptDiff(script.data)"
+      @reload="reloadCurrentProject"
+      @dismiss="project.clearExternalScriptChange()"
+    />
 
     <TabBar v-model="activeTab" :tabs="tabs" />
 
@@ -64,6 +66,7 @@ import WelcomeScreen from './views/WelcomeScreen.vue';
 import CreateProjectWizard from './views/CreateProjectWizard.vue';
 import CreateProjectQuick from './views/CreateProjectQuick.vue';
 import TabBar from './components/TabBar.vue';
+import ExternalScriptDiffPanel from './components/ExternalScriptDiffPanel.vue';
 import PageEditor from './views/PageEditor.vue';
 import StorySystems from './views/StorySystems.vue';
 import TitleDesigner from './views/TitleDesigner.vue';
@@ -185,7 +188,7 @@ onMounted(async () => {
     : Promise.resolve(false);
   externalChangeTimer = setInterval(() => {
     if (currentView.value === 'editing' && project.projectPath) {
-      void project.checkExternalScriptChange();
+      void project.checkExternalScriptChange(script.data);
     }
   }, 3000);
 });
@@ -344,23 +347,4 @@ function manualSave() {
 
 .workspace { flex: 1; background: #1e1e1e; position: relative; overflow-y: auto; }
 
-.external-change-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #4a2f05;
-  border-bottom: 1px solid #8a5a12;
-  color: #ffe7b0;
-  font-size: 12px;
-}
-.external-change-banner button {
-  background: #6f470a;
-  border: 1px solid #a66d15;
-  color: #fff3cf;
-  border-radius: 4px;
-  padding: 3px 8px;
-  cursor: pointer;
-}
-.external-change-banner button:hover { background: #83550f; }
 </style>

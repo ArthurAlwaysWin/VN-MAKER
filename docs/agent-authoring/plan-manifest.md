@@ -11,7 +11,7 @@ npm run vn:apply-plan -- plan.json --script public/game/script.json --force --ch
 See `docs/agent-authoring/example-plan.json` for an executable multi-ending route covering affection, ending unlocks, a CG unlock, condition routing, and transitions. Follow it with `docs/agent-authoring/human-review-tutorial.md` for no-code editor review. If you start from a structured draft, follow `docs/agent-authoring/structured-draft-contract.md` and generate a plan first:
 
 ```bash
-npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --json
+npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --require-adaptation-preview --json
 ```
 
 ## Shape

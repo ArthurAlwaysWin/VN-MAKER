@@ -72,11 +72,11 @@ npm run vn -- import-draft draft.json --fresh --out public/game/script.json --js
 For reviewable prose-derived edits, convert that structured draft into an apply-plan manifest first:
 
 ```bash
-npm run vn -- draft-plan draft.json --out .tmp/draft-plan.json --json
+npm run vn -- draft-plan draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json
 npm run vn -- apply-plan .tmp/draft-plan.json --script public/game/script.json --dry-run --json
 ```
 
-Use `--fresh` for a new generated project. Omit `--fresh` when importing into an existing script and preserving current content is intended.
+`--require-adaptation-preview` requires reviewed adaptation metadata before prose-derived plans are emitted. Use `--fresh` for a new generated project. Omit `--fresh` when importing into an existing script and preserving current content is intended.
 
 `--out` refuses to overwrite existing files unless `--force` is present. Use `--checkpoint` before larger edits and `--backup` with `--force` when overwriting important scripts:
 
@@ -175,6 +175,14 @@ Generate a handoff report when returning work to the no-code editor or a human r
 npm run vn -- handoff-report --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review newly authored branch." --json
 ```
 
+For one final continuous review step, combine author-check and editor handoff generation:
+
+```bash
+npm run vn:review-handoff -- --script public/game/script.json --asset-root public/game --transaction .tmp/apply-plan-result.json --preview-out .tmp/agent-preview.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
+```
+
+Add `--require-preview-screenshot` when a workflow must capture and quality-check preview screenshots instead of accepting planned preview targets for later human inspection.
+
 ## Draft Shape
 
 ```json
@@ -270,7 +278,7 @@ Common warnings:
 
 ## Current Limits
 
-- Preview screenshot automation requires optional Playwright support; use `render-preview --dry-run --write-plan` to verify the render payload without a browser.
+- Preview screenshot automation requires optional Playwright support; use `render-preview --dry-run --write-plan` to verify the render payload without a browser, or opt into captured evidence with `review-handoff --require-preview-screenshot`.
 - Layout lint is heuristic-only; runtime preview remains the visual source of truth.
 - Advanced agent-only effects should not be invented until a shared contract exists.
 - Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.

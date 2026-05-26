@@ -51,6 +51,7 @@ This contract does not define:
 | `player-data/profile.json` | Persistent player progress | Inspect/reset through explicit commands only | Runtime/editor profile tools |
 | `saves/` | Save slots | Usually read-only for agents | Runtime save/load |
 | `agent-handoff.json` | Review artifact | Written by `handoff-report` | Read by editor Project Settings |
+| `agent-review-state.json` | Human review lifecycle artifact | Read-only unless explicitly coordinating review | Written/read by editor Project Settings |
 
 Agents must not invent hidden state outside these artifacts.
 
@@ -72,9 +73,11 @@ npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --json
+npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
 ```
 
 Agents may use direct single commands for tiny edits, but meaningful edits should still produce validation and handoff output.
+`review-handoff` is the continuous optional gate: it runs author-check and writes the human handoff through one command while retaining the individual commands for compatibility. Add `--require-preview-screenshot` when final visual delivery must include captured, quality-checked preview targets instead of dry-run plans.
 
 ## 5. Operation Contract
 
@@ -241,6 +244,7 @@ Review items must include:
 ```
 
 Editor local review state may track acknowledged/resolved status, but gameplay truth must not depend on it.
+The desktop editor may persist that lifecycle state in project-root `agent-review-state.json` so another editor session can resume human review. This artifact is review metadata only; it must never be read as runtime progression or canonical authored story data.
 
 ## 10. Conflict And Reload Contract
 
@@ -268,6 +272,7 @@ Conflict shape:
 Rules:
 
 - The editor should show reload guidance.
+- The editor may show a read-only structural comparison between its loaded script and the changed disk script before reload; conflict review must not merge or overwrite data implicitly.
 - Agents should not edit while the user is actively editing without telling the user to reload.
 - Future merge tooling must consume the same file-state information.
 

@@ -38,7 +38,7 @@ Use semantic asset names from `docs/agent-authoring/asset-naming-guidelines.md`;
 ## Draft To Plan
 
 ```bash
-npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json
+npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --dry-run --json
 ```
@@ -93,9 +93,12 @@ Treat runtime preview as the visual source of truth. Repair blank, low-variety, 
 
 ```bash
 npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review the external-agent changes." --json
+npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
 ```
 
-The editor reads `agent-handoff.json` and shows gates, changed paths, review items, checkpoint information, and locate actions.
+Prefer `review-handoff` for final delivery because it runs author-check and writes editor handoff output in one gate. Add `--require-preview-screenshot` when captured visual quality evidence is required.
+
+The editor reads `agent-handoff.json` and shows gates, changed paths, review items, checkpoint information, and locate actions. It stores acknowledged/resolved lifecycle state in separate review metadata and provides a read-only structured diff when external changes arrive while the editor is open.
 
 ## Final Response To Human
 

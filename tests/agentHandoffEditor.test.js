@@ -3,11 +3,14 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createApp, nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { useProjectStore } from '../src/editor/stores/project.js';
+import ExternalScriptDiffPanel from '../src/editor/components/ExternalScriptDiffPanel.vue';
+import { createScriptDiffSummary } from '../src/editor/utils/scriptDiff.js';
 import {
   countHandoffReviewStatuses,
   createHandoffReviewItemKey,
@@ -124,6 +127,52 @@ describe('agent handoff editor integration', () => {
       acknowledged: 0,
       resolved: 0,
     });
+    await Promise.resolve();
+    expect(window.ipcRenderer.invoke).toHaveBeenCalledWith('write-agent-review-state', expect.objectContaining({
+      handoffCreatedAt: '2026-05-20T10:00:00.000Z',
+      items: expect.any(Object),
+    }));
+  });
+
+  it('loads persisted handoff review lifecycle state from the project artifact when available', async () => {
+    setActivePinia(createPinia());
+    const reviewItem = { source: 'layout', code: 'layout-blank-page', pathString: 'scenes.start.pages.0' };
+    const itemKey = createHandoffReviewItemKey(reviewItem);
+    const handoff = {
+      kind: 'agent-authoring-handoff',
+      createdAt: '2026-05-20T10:00:00.000Z',
+      reviewItems: [reviewItem],
+    };
+    window.ipcRenderer = {
+      invoke: vi.fn(async (channel) => {
+        if (channel === 'load-project') {
+          return { success: true, path: 'E:/demo-project', project: { name: 'Demo Project' } };
+        }
+        if (channel === 'read-agent-handoff') {
+          return { success: true, handoff, path: 'E:/demo-project/agent-handoff.json' };
+        }
+        if (channel === 'read-agent-review-state') {
+          return {
+            success: true,
+            state: {
+              handoffCreatedAt: handoff.createdAt,
+              items: { [itemKey]: { status: 'resolved', updatedAt: '2026-05-21T00:00:00.000Z' } },
+            },
+          };
+        }
+        return { success: true };
+      }),
+    };
+
+    const project = useProjectStore();
+    await project.loadProject('E:/demo-project');
+
+    expect(project.agentReviewState[itemKey].status).toBe('resolved');
+    expect(countHandoffReviewStatuses(handoff, project.agentReviewState)).toEqual({
+      open: 0,
+      acknowledged: 0,
+      resolved: 1,
+    });
   });
 
   it('creates scene navigation requests from handoff paths', () => {
@@ -179,9 +228,15 @@ describe('agent handoff editor integration', () => {
     const preload = readFileSync(resolve(process.cwd(), 'electron', 'preload.js'), 'utf8');
     const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
     expect(preload).toContain("'read-agent-handoff'");
+    expect(preload).toContain("'read-agent-review-state'");
+    expect(preload).toContain("'write-agent-review-state'");
     expect(preload).toContain("'check-project-file-state'");
+    expect(preload).toContain("'read-project-script-for-conflict'");
     expect(main).toContain("ipcMain.handle('read-agent-handoff'");
+    expect(main).toContain("ipcMain.handle('read-agent-review-state'");
+    expect(main).toContain("ipcMain.handle('write-agent-review-state'");
     expect(main).toContain("ipcMain.handle('check-project-file-state'");
+    expect(main).toContain("ipcMain.handle('read-project-script-for-conflict'");
     expect(main).toContain('expectedScriptFileState');
     expect(main).toContain('conflict: true');
     expect(main).toContain("'agent-handoff.json'");
@@ -208,6 +263,13 @@ describe('agent handoff editor integration', () => {
         if (channel === 'check-project-file-state') {
           return { success: true, scriptFileState: changedState };
         }
+        if (channel === 'read-project-script-for-conflict') {
+          return {
+            success: true,
+            script: { projectId: 'demo', scenes: { new_route: { pages: [] } } },
+            scriptFileState: changedState,
+          };
+        }
         if (channel === 'save-project') {
           return {
             success: false,
@@ -224,11 +286,15 @@ describe('agent handoff editor integration', () => {
     await project.loadProject('E:/demo-project');
 
     expect(project.scriptFileState).toEqual(loadedState);
-    await expect(project.checkExternalScriptChange()).resolves.toBe(true);
+    await expect(project.checkExternalScriptChange({ projectId: 'demo', scenes: {} })).resolves.toBe(true);
     expect(project.externalScriptChange).toMatchObject({
       source: 'poll',
       scriptFileState: changedState,
       expectedScriptFileState: loadedState,
+    });
+    expect(project.externalScriptDiff).toMatchObject({
+      changedPathCount: 1,
+      entries: [expect.objectContaining({ pathString: 'scenes.new_route', type: 'added-on-disk' })],
     });
 
     project.clearExternalScriptChange();
@@ -241,6 +307,59 @@ describe('agent handoff editor integration', () => {
     expect(window.ipcRenderer.invoke).toHaveBeenCalledWith('save-project', expect.objectContaining({
       expectedScriptFileState: loadedState,
     }));
+  });
+
+  it('creates stable structured path summaries for external script conflict review', () => {
+    const diff = createScriptDiffSummary({
+      scenes: { start: { pages: [{ type: 'normal', background: 'backgrounds/old.png' }] } },
+      systems: { endings: { good: { title: 'Good' } } },
+    }, {
+      scenes: { start: { pages: [{ type: 'normal', background: 'backgrounds/new.png' }] }, bonus: { pages: [] } },
+      systems: { endings: {} },
+    });
+
+    expect(diff.changedPathCount).toBe(3);
+    expect(diff.entries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ pathString: 'scenes.bonus', type: 'added-on-disk' }),
+      expect.objectContaining({ pathString: 'scenes.start.pages.0.background', type: 'changed-on-disk' }),
+      expect.objectContaining({ pathString: 'systems.endings.good', type: 'removed-on-disk' }),
+    ]));
+  });
+
+  it('mounts the external script diff review panel with actions and structured changes', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const refresh = vi.fn();
+    const reload = vi.fn();
+    const dismiss = vi.fn();
+    const app = createApp(ExternalScriptDiffPanel, {
+      diff: {
+        changedPathCount: 1,
+        entries: [{
+          pathString: 'scenes.start.pages.0.background',
+          type: 'changed-on-disk',
+          editorValue: '"backgrounds/old.png"',
+          diskValue: '"backgrounds/new.png"',
+        }],
+        truncated: false,
+      },
+      onRefresh: refresh,
+      onReload: reload,
+      onDismiss: dismiss,
+    });
+    app.mount(container);
+    await nextTick();
+
+    expect(container.textContent).toContain('1 处结构化变更');
+    expect(container.textContent).toContain('scenes.start.pages.0.background');
+    container.querySelector('[data-test="refresh-external-diff"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    container.querySelector('[data-test="reload-external-script"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    container.querySelector('[data-test="dismiss-external-change"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await nextTick();
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(reload).toHaveBeenCalledOnce();
+    expect(dismiss).toHaveBeenCalledOnce();
+    app.unmount();
   });
 
   it('renders compact handoff gates and review items in ProjectSettings', () => {
@@ -283,12 +402,16 @@ describe('agent handoff editor integration', () => {
 
   it('renders external script change warning and reload action in the editor shell', () => {
     const source = readFileSync(resolve(process.cwd(), 'src', 'editor', 'App.vue'), 'utf8');
+    const panelSource = readFileSync(resolve(process.cwd(), 'src', 'editor', 'components', 'ExternalScriptDiffPanel.vue'), 'utf8');
 
     expect(source).toContain('project.externalScriptChange');
-    expect(source).toContain('检测到 script.json 已被外部工具修改');
+    expect(source).toContain('ExternalScriptDiffPanel');
+    expect(source).toContain('project.externalScriptDiff');
+    expect(source).toContain('loadExternalScriptDiff');
     expect(source).toContain('reloadCurrentProject');
-    expect(source).toContain('project.checkExternalScriptChange()');
-    expect(source).toContain('external-change-banner');
+    expect(source).toContain('project.checkExternalScriptChange(script.data)');
+    expect(panelSource).toContain('检测到 script.json 已被外部工具修改');
+    expect(panelSource).toContain('external-script-diff');
   });
 
   it('groups handoff review items by scene and non-scene path targets', () => {

@@ -86,4 +86,4 @@ After the human approves this preview, the agent can create a structured draft w
 - `scenes[]` with three normal beats and one choice beat.
 - `choices[]` with `effects[]` for route state.
 
-Then run `draft-plan`, `apply-plan --validate-only`, `apply-plan --checkpoint`, `author-check --transaction`, and `handoff-report --write-editor-handoff`.
+Then run `draft-plan --require-adaptation-preview`, `apply-plan --validate-only`, `apply-plan --checkpoint`, and `review-handoff --write-editor-handoff`.

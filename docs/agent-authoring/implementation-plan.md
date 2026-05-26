@@ -1,6 +1,6 @@
 # Agent Authoring Implementation Plan
 
-**Status:** Roadmap complete; active extension reference
+**Status:** Roadmap and recorded post-roadmap enhancements complete; active extension reference
 **Date:** 2026-05-23
 **Closure Date:** 2026-05-26
 **Supersedes:** `docs/archive/agent-authoring-implementation-plan.md`
@@ -26,7 +26,7 @@ The current agent-first system roadmap is complete:
 5. Transition catalog expansion is complete.
 6. Release hardening, executable examples, editor review guidance, readiness coverage, and Phase 83 migration guidance are complete.
 
-Future work listed in `docs/agent-authoring/roadmap.md` is post-roadmap P2/P3 enhancement work, not a release-closure blocker.
+The recorded post-roadmap P2/P3 enhancement increment is also delivered: optional continuous review/handoff, opt-in strict preview evidence gates, project-local review lifecycle metadata, and read-only structured external-change review. Automatic merging of concurrent author-data edits remains intentionally outside the contract.
 
 ## Required Implementation Order
 

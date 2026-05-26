@@ -490,6 +490,23 @@ ipcMain.handle('check-project-file-state', async () => {
   }
 });
 
+ipcMain.handle('read-project-script-for-conflict', async () => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    const scriptPath = path.join(currentProjectPath, 'script.json');
+    return {
+      success: true,
+      script: ensureGalgameContract(JSON.parse(await fs.readFile(scriptPath, 'utf-8'))),
+      scriptFileState: await getProjectScriptFileState(),
+    };
+  } catch (e) {
+    console.error('Failed to read external script for conflict review:', e);
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('read-agent-handoff', async () => {
   try {
     if (!currentProjectPath) {
@@ -505,6 +522,67 @@ ipcMain.handle('read-agent-handoff', async () => {
     return { success: true, handoff, path: handoffPath };
   } catch (e) {
     console.error('Failed to read agent handoff:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+function normalizeAgentReviewState(payload = {}) {
+  const items = {};
+  for (const [key, value] of Object.entries(payload.items ?? {})) {
+    if (
+      typeof key === 'string'
+      && value
+      && ['acknowledged', 'resolved'].includes(value.status)
+    ) {
+      items[key] = {
+        status: value.status,
+        updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : new Date().toISOString(),
+      };
+    }
+  }
+  return {
+    kind: 'agent-handoff-review-state',
+    version: 1,
+    handoffCreatedAt: typeof payload.handoffCreatedAt === 'string' ? payload.handoffCreatedAt : null,
+    updatedAt: new Date().toISOString(),
+    items,
+  };
+}
+
+ipcMain.handle('read-agent-review-state', async (event, { handoffCreatedAt } = {}) => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    const statePath = path.join(currentProjectPath, 'agent-review-state.json');
+    if (!isInsideProject(statePath) || !existsSync(statePath)) {
+      return { success: true, state: null, path: statePath };
+    }
+    const state = normalizeAgentReviewState(JSON.parse(await fs.readFile(statePath, 'utf-8')));
+    if (state.handoffCreatedAt !== (handoffCreatedAt ?? null)) {
+      return { success: true, state: null, path: statePath };
+    }
+    return { success: true, state, path: statePath };
+  } catch (e) {
+    console.error('Failed to read agent review state:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('write-agent-review-state', async (event, payload = {}) => {
+  try {
+    if (!currentProjectPath) {
+      return { success: false, error: 'No project loaded' };
+    }
+    const statePath = path.join(currentProjectPath, 'agent-review-state.json');
+    if (!isInsideProject(statePath)) {
+      return { success: false, error: 'Invalid agent review state path' };
+    }
+    const state = normalizeAgentReviewState(payload);
+    await atomicWrite(statePath, `${JSON.stringify(state, null, 2)}\n`);
+    return { success: true, state, path: statePath };
+  } catch (e) {
+    console.error('Failed to write agent review state:', e);
     return { success: false, error: e.message };
   }
 });

@@ -5,8 +5,8 @@ This example shows the intended external-agent flow:
 1. Turn prose into a structured plan.
 2. Dry-run the plan.
 3. Apply it with checkpoint and result capture.
-4. Run author-check.
-5. Generate `agent-handoff.json` for the no-code editor.
+4. Run the continuous review/handoff gate.
+5. Open the generated `agent-handoff.json` in the no-code editor.
 
 For the release-hardening example that exercises affection, two endings, one CG unlock, condition routing, and transitions together, use [example-plan.json](./example-plan.json). The human review steps are in [human-review-tutorial.md](./human-review-tutorial.md).
 
@@ -46,7 +46,7 @@ The honest choice also unlocks `cg_confession`; supported transition operations 
 An external agent can either write the plan directly or first convert a structured draft. The draft path is useful when the user starts with prose and the agent wants a visible intermediate artifact:
 
 ```bash
-npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --json
+npm run vn:draft-plan -- docs/agent-authoring/example-draft.json --out .tmp/example-draft-plan.json --require-adaptation-preview --json
 ```
 
 Review the generated plan before applying it:
@@ -79,19 +79,13 @@ npm run vn:apply-plan -- .tmp/example-draft-plan.json --script public/game/scrip
 
 The result file is useful because `handoff-report` can attach the transaction summary later.
 
-## Check
+## Review And Handoff
 
 ```bash
-npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
+npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --note "Review Sakura opening branch and placeholder assets." --json
 ```
 
-With `--transaction`, author-check reads `changeSummary.changedPaths`, focuses layout/readiness review on changed scenes/pages, and writes preview targets for all changed scene pages unless `--scene` and `--page` are provided. The JSON still includes `previewTarget` and the first `preview` as the primary compatibility target. If this returns issues or suggestions, repair with another small plan or direct CLI mutation.
-
-## Handoff
-
-```bash
-npm run vn:handoff-report -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review Sakura opening branch and placeholder assets." --json
-```
+With `--transaction`, the continuous gate reads `changeSummary.changedPaths`, focuses layout/readiness review on changed scenes/pages, writes preview targets, and generates the editor handoff in one run. Add `--require-preview-screenshot` for delivery that must include captured quality-checked preview images.
 
 Open the project in the desktop editor. Project Settings will show the external-agent handoff panel when `agent-handoff.json` exists at the project root.
 

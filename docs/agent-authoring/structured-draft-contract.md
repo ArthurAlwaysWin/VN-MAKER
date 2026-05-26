@@ -7,7 +7,7 @@ Use it when a user describes story content in natural language and an external a
 Supported commands:
 
 ```bash
-npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json
+npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json --dry-run --json
 ```
 
@@ -21,6 +21,13 @@ npm run vn:apply-plan -- .tmp/draft-plan.json --script public/game/script.json -
   "title": "Spring Promise",
   "version": "0.1.0",
   "author": "External Agent",
+  "adaptationPreview": {
+    "approved": true,
+    "assetsReviewed": true,
+    "pageBeatCount": 2,
+    "choiceCount": 1,
+    "missingAssets": ["characters/sakura_smile.svg"]
+  },
   "characters": [],
   "variables": [],
   "locations": [],
@@ -39,6 +46,9 @@ Optional but recommended:
 - `characters`: character definitions used by dialogue and staged character ids.
 - `variables`: variable registry entries used by choice effects.
 - `locations`: reusable background hints for beats.
+- `adaptationPreview`: non-canonical review metadata proving a human-readable prose breakdown was approved and assets were inspected before conversion.
+
+For prose-derived delivery, pass `--require-adaptation-preview`. The gate requires `adaptationPreview.approved: true`, `assetsReviewed: true`, `pageBeatCount >= 1`, `choiceCount >= 0`, and an array-valued `missingAssets`. This metadata is carried into plan source provenance only; it is not written into `script.json`.
 
 Unknown fields are preserved only when the lower-level operation accepts them. Do not rely on arbitrary draft metadata surviving into the final project.
 
@@ -290,6 +300,6 @@ Before handing off a draft:
 - Define variables before referencing them in choice effects.
 - Prefer `location` plus `locations[]` for repeated backgrounds.
 - Keep dialogue and choice text concise enough for layout lint.
-- Run `draft-plan`, then `apply-plan --dry-run`, before writing.
+- Run `draft-plan --require-adaptation-preview`, then `apply-plan --dry-run`, before writing prose-derived work.
 
 See `docs/agent-authoring/example-draft.json` for a complete small draft.

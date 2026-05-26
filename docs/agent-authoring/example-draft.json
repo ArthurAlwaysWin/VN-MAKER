@@ -1,6 +1,17 @@
 {
   "projectId": "gm_example_agent_draft",
   "title": "Spring Promise",
+  "adaptationPreview": {
+    "approved": true,
+    "assetsReviewed": true,
+    "pageBeatCount": 1,
+    "choiceCount": 1,
+    "missingAssets": [
+      "characters/sakura_smile.svg",
+      "characters/haruki_normal.svg",
+      "backgrounds/school_gate.svg"
+    ]
+  },
   "characters": [
     {
       "id": "sakura",

@@ -106,15 +106,15 @@ After the human accepts the adaptation preview, convert it into structured draft
 - `dialogues[]` from narration and spoken lines.
 - `choices[]` from decision points.
 - `effects[]` from affection/flag changes.
+- `adaptationPreview` metadata recording approval, reviewed assets, beat/choice counts, and explicitly missing assets.
 
 Then run:
 
 ```bash
-npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --json
+npm run vn:draft-plan -- draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script path/to/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/draft-plan.json --script path/to/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
-npm run vn:author-check -- --script path/to/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
-npm run vn:handoff-report -- --script path/to/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --json
+npm run vn:review-handoff -- --script path/to/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
 ```
 
 ## Handoff Notes

@@ -2,6 +2,7 @@
 
 **Status:** Complete for the current roadmap
 **Closure Date:** 2026-05-26
+**Post-Roadmap Enhancement Delivery:** 2026-05-26
 
 This roadmap tracks the external AI agent authoring layer. For the active product/system roadmap covering variables, affection, endings, CG gallery, branch graph analysis, and transition expansion, see `docs/agent-first-vn-systems-plan.md`.
 
@@ -28,10 +29,7 @@ Current:
 - Generated plan operations include provenance metadata for source characters, variables, scenes, beats, choices, source ids, and prose spans when present.
 - A novel adaptation skill documents the required human-readable breakdown before turning raw prose into structured draft operations.
 - A concrete adaptation preview example documents resource matching, choices, variables, and missing assets before draft creation.
-
-Post-roadmap / non-blocking:
-
-- P3: Prose-to-draft guidance is linked across workflow, skill docs, and an example preview; optional future enforcement or automation remains external-agent workflow enhancement rather than an M6 requirement.
+- Prose-to-draft conversion has an opt-in `--require-adaptation-preview` gate that requires approved, asset-reviewed adaptation preview metadata before a plan is emitted.
 
 ### 2. Transaction Execution
 
@@ -54,11 +52,8 @@ Current:
 - `author-check --transaction result.json` reads changed paths from an apply result, focuses changed scene/page diagnostics, and plans preview targets for all changed scene pages while preserving a primary preview target for compatibility.
 - `author-check --transaction result.json` also plans screen preview targets for changed title/settings/menu/save-load/backlog `ui.*` paths.
 - CG registry changes produce gallery preview targets and review items for Story Systems and runtime gallery review.
-
-Post-roadmap / non-blocking:
-
-- P2: Combine handoff and author-check behind an optional continuous command; the current verified command chain already consumes apply results and produces review artifacts.
-- P3: Require captured preview screenshots in more workflows; current dry-run preview planning plus human editor review satisfies the present handoff contract.
+- `review-handoff` provides one optional continuous command that runs `author-check` and emits the editor handoff artifact from the same transaction.
+- Continuous review supports opt-in screenshot enforcement with `--require-preview-screenshot`; default review remains compatible with preview planning and human inspection.
 
 ### 4. Human Handoff
 
@@ -79,10 +74,7 @@ Current:
 - Story Systems exposes editable CG registry entries with project asset selection for images/thumbnails and read-only, refreshable player-profile progress; choice effects can select registered `unlock:cg` targets, and the runtime gallery browses multi-image unlocked entries.
 - Transition authoring exposes the completed M5 shared catalog in page-inspector controls: directional wipe, zoom, flash, iris, and crossfade-pan background rendering/preview; character fade/slide/pop/scale/blur motion; camera vignette/letterbox overlays; and bounded bulk background operations through `set-page-transitions`.
 - Story Systems flow review exposes repair-ready broken scene links, unreachable ending/CG unlocks, asset handoff findings, per-scene review badges, and exact page/system navigation; CLI repair commands can retarget or clear references to missing target ids.
-
-Post-roadmap / non-blocking:
-
-- P2: Persist review lifecycle state outside editor-local storage if cross-machine review synchronization becomes necessary; it is not gameplay or author-data truth.
+- Handoff item acknowledgement/resolution state is persisted in project-local `agent-review-state.json`, scoped to the current generated handoff; it remains review metadata rather than gameplay or author-data truth.
 
 ### 4.5. External File Change Safety
 
@@ -90,11 +82,8 @@ Current:
 
 - The editor records the loaded `script.json` file state.
 - Saves are blocked when `script.json` changed on disk after load/save, preventing stale editor state from overwriting external agent edits.
-- The editor polls for external `script.json` changes and shows a reload warning.
-
-Post-roadmap / non-blocking:
-
-- P2: Add a structured diff/merge view; stale writes are already prevented and reload guidance already protects agent changes.
+- The editor polls for external `script.json` changes and shows a read-only structured path diff before the reviewer reloads the external version.
+- Automatic merge is intentionally excluded: accepting or overwriting externally changed canonical author data must remain an explicit author decision.
 
 ### 5. Agent Documentation And Examples
 
@@ -123,15 +112,14 @@ Current:
 
 - Focused tests cover authoring API, CLI, draft import, draft-plan, plan examples, handoff, editor handoff display, and scene graph helpers.
 - A full-chain CLI artifact test covers `draft-plan -> apply-plan --result-out -> author-check -> handoff-report --write-editor-handoff`.
+- Regression tests cover `review-handoff`, opt-in draft-preview enforcement, project-persisted handoff lifecycle state, the external conflict diff helper, and the mounted conflict review panel.
 - `npm run test:focused` and `npm run build` are the current closure gates for this branch.
-
-Post-roadmap / non-blocking:
-
-- P2: Add broader component-level Project Settings handoff lifecycle tests when test harness support is ready; current tests already cover Story Systems flow navigation, handoff loading/state, navigation routing, and external-change save blocking.
 
 ## Roadmap Closure Audit
 
 M6 has no remaining blocker: the executable plan and verifier cover the two-ending affection/CG route, human review is documented for the editor, export readiness accounts for system assets and graph findings, and Phase 83 migration guidance is present.
+
+The previously deferred optional P2/P3 enhancements are now delivered without changing M1-M6 gameplay contracts: continuous review/handoff, strict optional preview gates, persisted review metadata, and safe external-change structural comparison are available. Intentional non-scope remains automatic external-file merge and mandatory visual acceptance without human review.
 
 Release closure verification requires:
 

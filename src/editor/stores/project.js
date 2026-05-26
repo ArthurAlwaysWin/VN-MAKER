@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { createHandoffReviewItemKey, parseAgentPathTarget, parseScenePath } from '../utils/agentHandoff.js';
+import { createScriptDiffSummary } from '../utils/scriptDiff.js';
 
 export const useProjectStore = defineStore('project', () => {
   const projectPath = ref(null);
@@ -18,6 +19,7 @@ export const useProjectStore = defineStore('project', () => {
   const isDirty = ref(false);
   const scriptFileState = ref(null);
   const externalScriptChange = ref(null);
+  const externalScriptDiff = ref(null);
   const _saving = ref(false);
   let sceneNavigationRequestCounter = 0;
   let agentPathNavigationRequestCounter = 0;
@@ -54,6 +56,7 @@ export const useProjectStore = defineStore('project', () => {
       projectData.value = result.project;
       scriptFileState.value = result.scriptFileState || null;
       externalScriptChange.value = null;
+      externalScriptDiff.value = null;
       await loadAgentHandoff();
       isDirty.value = false;
     }
@@ -103,7 +106,7 @@ export const useProjectStore = defineStore('project', () => {
     if (result?.success) {
       agentHandoff.value = result.handoff || null;
       agentHandoffPath.value = result.path || null;
-      loadAgentReviewState();
+      await loadAgentReviewState();
     }
     return result;
   }
@@ -117,9 +120,24 @@ export const useProjectStore = defineStore('project', () => {
     return `galgame-maker:agent-review-state:${projectPath.value}:${handoffId}`;
   }
 
-  function loadAgentReviewState() {
+  async function loadAgentReviewState() {
     const storageKey = getAgentReviewStateStorageKey();
-    if (!storageKey || typeof window === 'undefined' || !window.localStorage) {
+    if (!storageKey) {
+      agentReviewState.value = {};
+      return {};
+    }
+
+    if (window.ipcRenderer && agentHandoff.value) {
+      const result = await window.ipcRenderer.invoke('read-agent-review-state', {
+        handoffCreatedAt: agentHandoff.value.createdAt ?? null,
+      });
+      if (result?.success && result.state?.items) {
+        agentReviewState.value = result.state.items;
+        return agentReviewState.value;
+      }
+    }
+
+    if (typeof window === 'undefined' || !window.localStorage) {
       agentReviewState.value = {};
       return {};
     }
@@ -132,13 +150,22 @@ export const useProjectStore = defineStore('project', () => {
     return agentReviewState.value;
   }
 
-  function saveAgentReviewState() {
+  async function saveAgentReviewState() {
     const storageKey = getAgentReviewStateStorageKey();
-    if (!storageKey || typeof window === 'undefined' || !window.localStorage) {
+    if (!storageKey) {
       return;
     }
 
-    window.localStorage.setItem(storageKey, JSON.stringify(agentReviewState.value));
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(storageKey, JSON.stringify(agentReviewState.value));
+    }
+
+    if (window.ipcRenderer && agentHandoff.value) {
+      await window.ipcRenderer.invoke('write-agent-review-state', {
+        handoffCreatedAt: agentHandoff.value.createdAt ?? null,
+        items: agentReviewState.value,
+      });
+    }
   }
 
   async function saveProject(scriptData) {
@@ -157,11 +184,13 @@ export const useProjectStore = defineStore('project', () => {
           expectedScriptFileState: result.expectedScriptFileState || scriptFileState.value,
           source: 'save-project',
         };
+        await loadExternalScriptDiff(scriptData);
         return false;
       }
       if (result.success) {
         scriptFileState.value = result.scriptFileState || scriptFileState.value;
         externalScriptChange.value = null;
+        externalScriptDiff.value = null;
         isDirty.value = false;
       }
       return result.success;
@@ -181,6 +210,7 @@ export const useProjectStore = defineStore('project', () => {
     agentPathNavigationRequest.value = null;
     scriptFileState.value = null;
     externalScriptChange.value = null;
+    externalScriptDiff.value = null;
     isDirty.value = false;
     if (window.ipcRenderer) window.ipcRenderer.invoke('close-project');
   }
@@ -193,7 +223,23 @@ export const useProjectStore = defineStore('project', () => {
     return Boolean(left && right && left.mtimeMs === right.mtimeMs && left.size === right.size);
   }
 
-  async function checkExternalScriptChange() {
+  async function loadExternalScriptDiff(localScript = {}) {
+    if (!window.ipcRenderer || !projectPath.value) {
+      externalScriptDiff.value = null;
+      return null;
+    }
+
+    const result = await window.ipcRenderer.invoke('read-project-script-for-conflict');
+    if (!result?.success || !result.script) {
+      externalScriptDiff.value = null;
+      return null;
+    }
+
+    externalScriptDiff.value = createScriptDiffSummary(localScript ?? {}, result.script);
+    return externalScriptDiff.value;
+  }
+
+  async function checkExternalScriptChange(localScript = {}) {
     if (!window.ipcRenderer || !projectPath.value || !scriptFileState.value) {
       return false;
     }
@@ -210,6 +256,7 @@ export const useProjectStore = defineStore('project', () => {
         expectedScriptFileState: scriptFileState.value,
         source: 'poll',
       };
+      await loadExternalScriptDiff(localScript);
       return true;
     }
 
@@ -218,6 +265,7 @@ export const useProjectStore = defineStore('project', () => {
 
   function clearExternalScriptChange() {
     externalScriptChange.value = null;
+    externalScriptDiff.value = null;
   }
 
   function requestSceneNavigation(pathString) {
@@ -267,7 +315,7 @@ export const useProjectStore = defineStore('project', () => {
         updatedAt: new Date().toISOString(),
       },
     };
-    saveAgentReviewState();
+    void saveAgentReviewState();
     return true;
   }
 
@@ -280,14 +328,14 @@ export const useProjectStore = defineStore('project', () => {
     const nextState = { ...agentReviewState.value };
     delete nextState[key];
     agentReviewState.value = nextState;
-    saveAgentReviewState();
+    void saveAgentReviewState();
     return true;
   }
 
   return {
-    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, playerProfile, playerProfileStatus, playerProfileError, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty, scriptFileState, externalScriptChange,
+    projectPath, projectData, recentProjects, agentHandoff, agentHandoffPath, agentReviewState, playerProfile, playerProfileStatus, playerProfileError, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty, scriptFileState, externalScriptChange, externalScriptDiff,
     projectName,
     loadRecentProjects, createProject, openProjectDialog, loadProject, saveProject,
-    loadAgentHandoff, loadAgentReviewState, loadPlayerProfile, closeProject, markDirty, checkExternalScriptChange, clearExternalScriptChange, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
+    loadAgentHandoff, loadAgentReviewState, loadPlayerProfile, closeProject, markDirty, loadExternalScriptDiff, checkExternalScriptChange, clearExternalScriptChange, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
   };
 });

@@ -30,7 +30,19 @@ Run the plan through the normal gate:
 npm run vn:apply-plan -- plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- plan.json --script public/game/script.json --dry-run --json
 npm run vn:apply-plan -- plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
+npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
 ```
+
+## Workflow Gate Commands
+
+These commands run outside an apply-plan manifest:
+
+| Command | Purpose | Strict options |
+| --- | --- | --- |
+| `review-handoff` | Runs `author-check` and `handoff-report` as one continuous gate, optionally writes the combined result with `--review-out`, and supports `--write-editor-handoff`. | `--capture-preview` captures screenshots; `--require-preview-screenshot` requires captured preview targets to pass quality checks. |
+| `draft-plan` | Converts a structured prose-derived draft into deterministic operations. | `--require-adaptation-preview` requires approved adaptation-preview metadata before conversion. |
+
+`review-handoff` preserves the existing individual `author-check` and `handoff-report` commands for scripts that need separate artifacts.
 
 ## Read-Only Project Commands
 

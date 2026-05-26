@@ -217,7 +217,7 @@ Agents may author runtime-supported cinematic fields before every editor surface
 ```json
 {
   "camera": { "effect": "shake", "direction": "both", "intensity": "high", "durationMs": 450 },
-  "transition": { "type": "dissolve", "duration": 500 },
+  "transition": { "type": "wipe-right", "duration": 500 },
   "characters": [
     { "id": "sakura", "expression": "normal", "position": "center", "animation": "breathe" }
   ]
@@ -228,11 +228,11 @@ Prefer the authoring API or CLI:
 
 ```bash
 npm run vn -- set-page-camera --scene start --page 0 --effect shake --direction both --intensity high --duration-ms 450 --force --json
-npm run vn -- set-page-transition --scene start --page 0 --type dissolve --duration 500 --force --json
+npm run vn -- set-page-transition --scene start --page 0 --type wipe-right --duration 500 --force --json
 npm run vn -- set-character-animation --scene start --page 0 --character sakura --animation breathe --force --json
 npm run vn -- list-transitions --target background --supported-only --json
 npm run vn -- set-camera-effect --scene start --page 0 --effect shake --direction both --duration-ms 450 --force --json
 npm run vn -- set-character-transition --scene start --page 0 --character sakura --transition breathe --force --json
 ```
 
-The shared transition catalog marks supported and fallback-only ids. `set-character-transition` is a compatibility operation and writes `characters[].animation`; it does not add a second schema field. Background transition durations clamp to `0..5000` ms and camera durations clamp to `0..2000` ms. Unknown camera effects are ignored at runtime, unknown transitions fall back to `fade`, and unknown character animations are preserved but not played. `validate --json` reports these as warnings so agents can keep future-compatible data without breaking export.
+The shared transition catalog marks supported and fallback-only ids. Background support includes the directional `wipe-left`, `wipe-right`, `wipe-up`, and `wipe-down` variants, which render and preview through the same page transition field. `set-character-transition` is a compatibility operation and writes `characters[].animation`; it does not add a second schema field. Background transition durations clamp to `0..5000` ms and camera durations clamp to `0..2000` ms. Unknown camera effects are ignored at runtime; catalog background candidates use their declared fallback (for example `zoom-in` uses `scale`), otherwise unknown transitions fall back to `fade`; unknown character animations are preserved but not played. `validate --json` reports these as warnings so agents can keep future-compatible data without breaking export.

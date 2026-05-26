@@ -491,6 +491,56 @@ describe('unknown cinematic compatibility', () => {
     strictEqual(bgEvents[0].transition, 'scale');
     strictEqual(bgEvents[0].duration, 480);
   });
+
+  it('passes a catalog-supported directional wipe through to runtime consumers', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [
+          {
+            type: 'normal',
+            background: 'bg.png',
+            transition: { type: 'wipe-right', duration: 640 },
+            characters: [],
+            dialogues: [{ speaker: null, text: 'Revealed', expression: null, voice: null }],
+          },
+        ],
+      },
+    });
+
+    const bgEvents = [];
+    engine.on('set_background', data => bgEvents.push(data));
+
+    engine.startGame('start');
+
+    strictEqual(bgEvents[0].transition, 'wipe-right');
+    strictEqual(bgEvents[0].duration, 640);
+  });
+
+  it('resolves a catalog-declared fallback before dispatching background playback', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [
+          {
+            type: 'normal',
+            background: 'bg.png',
+            transition: { type: 'zoom-in', duration: 420 },
+            characters: [],
+            dialogues: [{ speaker: null, text: 'Approaching', expression: null, voice: null }],
+          },
+        ],
+      },
+    });
+
+    const bgEvents = [];
+    engine.on('set_background', data => bgEvents.push(data));
+
+    engine.startGame('start');
+
+    strictEqual(bgEvents[0].transition, 'scale');
+    strictEqual(bgEvents[0].duration, 420);
+  });
 });
 
 // ─── getState / restoreState ────────────────────────────────

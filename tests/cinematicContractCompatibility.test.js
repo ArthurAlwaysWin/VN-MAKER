@@ -170,6 +170,10 @@ describe('cinematic contract compatibility', () => {
       'wipe',
       'scale',
       'blur',
+      'wipe-left',
+      'wipe-right',
+      'wipe-up',
+      'wipe-down',
     ]);
     expect(getCharacterAnimationUiOptions('legacy-bounce').at(-1)).toMatchObject({
       value: 'legacy-bounce',
@@ -183,6 +187,8 @@ describe('cinematic contract compatibility', () => {
 
   it('falls back unknown transitions to fade only at runtime consumption, not in editor helpers', () => {
     expect(getRuntimeTransitionType('scale')).toBe('scale');
+    expect(getRuntimeTransitionType('wipe-left')).toBe('wipe-left');
+    expect(getRuntimeTransitionType('zoom-in')).toBe('scale');
     expect(getRuntimeTransitionType('legacy-wipe')).toBe('fade');
     expect(getCharacterAnimationUiOptions('legacy-bounce').some(option => option.value === 'legacy-bounce')).toBe(true);
     expect(getCameraEffectUiOptions('legacy-zoom').some(option => option.value === 'legacy-zoom')).toBe(true);

@@ -412,7 +412,7 @@ Required diagnostics:
 
 ### Transition Catalog
 
-The first M5 slice is implemented as a shared, discoverable catalog over the existing cinematic fields. For compatibility, character transition commands currently write the established `animation` field rather than introducing a second character staging field. Catalog entries marked `runtimeSupported: false` are discoverable candidates only and declare their safe fallback.
+M5 is implemented as a shared, discoverable catalog over the existing cinematic fields. Directional background wipes (`wipe-left`, `wipe-right`, `wipe-up`, `wipe-down`) are runtime/editor-supported alongside the earlier background set. For compatibility, character transition commands currently write the established `animation` field rather than introducing a second character staging field. Background catalog entries marked `runtimeSupported: false` are discoverable candidates only; runtime playback and validator diagnostics use their declared safe fallback.
 
 Paths:
 

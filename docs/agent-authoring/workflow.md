@@ -124,11 +124,11 @@ npm run vn -- set-theme --script public/game/script.json --config .tmp/theme.jso
 npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
 ```
 
-For cinematic staging, inspect the shared catalog before authoring transitions. Supported ids are safe runtime/editor selections; candidate ids remain discoverable with explicit fallback metadata:
+For cinematic staging, inspect the shared catalog before authoring transitions. Supported ids are safe runtime/editor selections; candidate background ids remain discoverable and play through their reported fallback:
 
 ```bash
 npm run vn -- list-transitions --target background --supported-only --json
-npm run vn -- set-page-transition --scene chapter_1 --page 0 --type dissolve --duration 500 --script public/game/script.json --force --json
+npm run vn -- set-page-transition --scene chapter_1 --page 0 --type wipe-right --duration 500 --script public/game/script.json --force --json
 npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect pan --direction left --duration-ms 450 --script public/game/script.json --force --json
 npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition breathe --script public/game/script.json --force --json
 ```
@@ -188,7 +188,7 @@ npm run vn -- set-condition-page --scene chapter_1 --page 2 --condition-mode any
 npm run vn -- set-scene-next --scene chapter_1 --next chapter_2 --script public/game/script.json --force --backup --json
 npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset duo-left-right --character sakura:smile --character haruki:normal --script public/game/script.json --force --backup --json
 npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
-npm run vn -- set-page-transitions --scene chapter_1 --from-page 0 --to-page 8 --page-type normal --has-background --type dissolve --duration 700 --script public/game/script.json --force --checkpoint --json
+npm run vn -- set-page-transitions --scene chapter_1 --from-page 0 --to-page 8 --page-type normal --has-background --type wipe-right --duration 700 --script public/game/script.json --force --checkpoint --json
 npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id affection --value 1 --script public/game/script.json --force --backup --json
 npm run vn -- add-cg --id cg_confession --title "Confession" --images '["backgrounds/cg/confession.png"]' --thumbnail backgrounds/cg/confession_thumb.png --script public/game/script.json --force --backup --json
 npm run vn -- add-cg-unlock --scene chapter_1 --page 1 --option 0 --id cg_confession --script public/game/script.json --force --backup --json

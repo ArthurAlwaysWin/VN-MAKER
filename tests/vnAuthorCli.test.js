@@ -548,6 +548,10 @@ describe('vn-author CLI', () => {
       expect(builtScript.scenes.quiet_ending.pages[0].effects).toEqual([
         { type: 'unlock:ending', id: 'quiet_end' },
       ]);
+      expect(builtScript.scenes.start.pages[0].transition).toEqual({
+        type: 'wipe-right',
+        duration: 650,
+      });
 
       const assetPaths = [
         'characters/sakura_smile.svg',
@@ -616,6 +620,10 @@ describe('vn-author CLI', () => {
       expect(script.systems.gallery.cg.cg_confession.images).toEqual([
         'backgrounds/cg/sakura_confession.svg',
       ]);
+      expect(script.scenes.start.pages[0].transition).toEqual({
+        type: 'wipe-right',
+        duration: 650,
+      });
       expect(handoff.previewTargets).toEqual(expect.arrayContaining([
         expect.objectContaining({ kind: 'branch-graph' }),
         expect.objectContaining({ kind: 'ending-list' }),
@@ -3600,6 +3608,10 @@ describe('vn-author CLI', () => {
         'wipe',
         'scale',
         'blur',
+        'wipe-left',
+        'wipe-right',
+        'wipe-up',
+        'wipe-down',
       ]);
 
       const directCamera = JSON.parse((await execFileAsync('node', [

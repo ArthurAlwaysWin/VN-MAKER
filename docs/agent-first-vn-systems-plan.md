@@ -406,7 +406,7 @@ Definition of done:
 
 **Goal:** Add more visual polish while keeping transitions contract-safe.
 
-**Current implemented coverage:** A shared transition catalog exposes supported background, character-motion, and camera entries plus planned fallback-only candidates. Agents can inspect it with `list-transitions`, apply page transitions singly or in bounded structural batches with `set-page-transition` / `set-page-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without changing existing `animation` author data. The editor page inspector consumes shared transition/camera options and offers per-page previews.
+**Current implemented coverage:** A shared transition catalog exposes supported background, character-motion, and camera entries plus planned fallback-only candidates. Agents can inspect it with `list-transitions`, apply page transitions singly or in bounded structural batches with `set-page-transition` / `set-page-transitions`, use compatibility operations `set-camera-effect` and `set-character-transition`, and receive bounded-duration validation/runtime behavior without changing existing `animation` author data. The editor page inspector consumes shared transition/camera options and offers per-page previews. Directional background wipes (`wipe-left`, `wipe-right`, `wipe-up`, `wipe-down`) now have runtime CSS playback, editor selection/preview, CLI discovery, and example-workflow coverage; fallback-only background candidates now execute and report their declared catalog fallback.
 
 Contract:
 

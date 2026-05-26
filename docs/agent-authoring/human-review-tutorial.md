@@ -42,7 +42,7 @@ The player-profile ending and CG progress panels are runtime data. They can conf
 
 Use changed-page and branch-graph navigation from the handoff panel:
 
-1. Preview `start` page 0 and verify the character staging, background, and dissolve transition.
+1. Preview `start` page 0 and verify the character staging, background, and rightward wipe transition.
 2. Preview `start` page 1 and check that its honest option grants affection and the CG unlock.
 3. Select `route_check` and verify the condition routes affection `>= 1` to `good_ending` and otherwise to `quiet_ending`.
 4. Open each terminal normal page and verify its ending arrival-unlock picker points at the matching registered ending.

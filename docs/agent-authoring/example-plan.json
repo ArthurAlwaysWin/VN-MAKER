@@ -252,7 +252,7 @@
           "pageType": "normal",
           "hasBackground": true
         },
-        "type": "dissolve",
+        "type": "wipe-right",
         "duration": 650
       }
     },

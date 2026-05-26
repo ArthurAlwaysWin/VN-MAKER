@@ -88,7 +88,7 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `ending-unlock-unreachable` | An ending has unlock effects, but all of them are on unreachable scenes. |
 | `cg-unlock-unreachable` | A CG has unlock effects, but all of them are on unreachable scenes. |
 | `unknown-camera-effect` | Page camera effect is preserved but ignored at runtime. |
-| `unknown-transition-type` | Page transition type is preserved but falls back to `fade` at runtime. |
+| `unknown-transition-type` | Page transition type is preserved but falls back to its catalog-declared background fallback, or `fade` for unknown ids. |
 | `unknown-character-animation` | Character animation is preserved but ignored at runtime. |
 | `invalid-transition-param` | Cinematic duration, intensity, or direction is outside the shared catalog contract and will be clamped or safely defaulted at runtime. |
 

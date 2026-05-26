@@ -10,6 +10,7 @@ import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   CAMERA_EFFECT_DURATION_SCHEMA,
   clampNumericTransitionParam,
+  getTransitionCatalogEntry,
   listTransitionCatalog,
 } from './transitionCatalog.js';
 
@@ -178,7 +179,12 @@ export function getTransitionUiOptions(currentType) {
 }
 
 export function getRuntimeTransitionType(type) {
-  return isKnownTransitionType(type) ? type : 'fade';
+  if (isKnownTransitionType(type)) {
+    return type;
+  }
+
+  const fallbackId = getTransitionCatalogEntry('background', type)?.fallbackId;
+  return isKnownTransitionType(fallbackId) ? fallbackId : 'fade';
 }
 
 export function getCharacterAnimationValue(animation) {

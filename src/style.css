@@ -217,6 +217,38 @@ body {
   animation: bg-transition-wipe-out var(--bg-transition-duration, 800ms) ease-out;
 }
 
+.bg-image-layer.bg-transition-wipe-left {
+  animation: bg-transition-wipe-left-in var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-left-out {
+  animation: bg-transition-wipe-left-out var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-right {
+  animation: bg-transition-wipe-right-in var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-right-out {
+  animation: bg-transition-wipe-right-out var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-up {
+  animation: bg-transition-wipe-up-in var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-up-out {
+  animation: bg-transition-wipe-up-out var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-down {
+  animation: bg-transition-wipe-down-in var(--bg-transition-duration, 800ms) ease-out;
+}
+
+.bg-image-layer.bg-transition-wipe-down-out {
+  animation: bg-transition-wipe-down-out var(--bg-transition-duration, 800ms) ease-out;
+}
+
 .bg-image-layer.bg-transition-scale {
   animation: bg-transition-scale-in var(--bg-transition-duration, 800ms) ease-out;
 }
@@ -298,6 +330,94 @@ body {
   to {
     opacity: 1;
     clip-path: inset(0 0 0 100%);
+  }
+}
+
+@keyframes bg-transition-wipe-left-in {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes bg-transition-wipe-left-out {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes bg-transition-wipe-right-in {
+  from {
+    opacity: 1;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes bg-transition-wipe-right-out {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+@keyframes bg-transition-wipe-up-in {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes bg-transition-wipe-up-out {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(100% 0 0 0);
+  }
+}
+
+@keyframes bg-transition-wipe-down-in {
+  from {
+    opacity: 1;
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes bg-transition-wipe-down-out {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 100% 0);
   }
 }
 

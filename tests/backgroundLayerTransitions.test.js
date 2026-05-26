@@ -2,6 +2,8 @@
  * @vitest-environment jsdom
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackgroundLayer } from '../src/ui/BackgroundLayer.js';
 
@@ -40,9 +42,22 @@ describe('background layer transitions', () => {
     expect(background.layerA.classList.contains('active')).toBe(false);
   });
 
-  it('supports dissolve, wipe, blur, slide, none, and cut without a second controller', async () => {
+  it('supports directional wipes and existing background transitions without a second controller', async () => {
     const background = makeLayer();
-    const transitions = ['fade', 'dissolve', 'wipe', 'blur', 'slide-left', 'slide-right', 'none', 'cut'];
+    const transitions = [
+      'fade',
+      'dissolve',
+      'wipe',
+      'wipe-left',
+      'wipe-right',
+      'wipe-up',
+      'wipe-down',
+      'blur',
+      'slide-left',
+      'slide-right',
+      'none',
+      'cut',
+    ];
 
     for (const transition of transitions) {
       const completion = background.setBackground({
@@ -61,6 +76,17 @@ describe('background layer transitions', () => {
 
     expect(background.container.querySelectorAll('.bg-image-layer').length).toBe(2);
     expect(background.container.querySelector('.bg-transition-wipe')).toBeNull();
+    expect(background.container.querySelector('.bg-transition-wipe-down')).toBeNull();
+  });
+
+  it('defines concrete directional wipe keyframes for runtime rendering', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/style.css'), 'utf8');
+
+    for (const direction of ['left', 'right', 'up', 'down']) {
+      expect(css).toContain(`.bg-image-layer.bg-transition-wipe-${direction}`);
+      expect(css).toContain(`@keyframes bg-transition-wipe-${direction}-in`);
+      expect(css).toContain(`@keyframes bg-transition-wipe-${direction}-out`);
+    }
   });
 
   it('cleans temporary classes, styles, and stale outgoing imagery on replacement and clear', async () => {
@@ -101,6 +127,22 @@ describe('background layer transitions', () => {
     expect(background.layerB.style.transitionDuration).toBe('5000ms');
 
     vi.advanceTimersByTime(5001);
+    await completion;
+  });
+
+  it('plays declared catalog fallbacks for discoverable future transitions', async () => {
+    const background = makeLayer();
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'zoom-in',
+      duration: 400,
+    });
+
+    expect(background.layerB.classList.contains('bg-transition-scale')).toBe(true);
+    expect(background.layerB.classList.contains('bg-transition-zoom-in')).toBe(false);
+
+    vi.advanceTimersByTime(401);
     await completion;
   });
 });

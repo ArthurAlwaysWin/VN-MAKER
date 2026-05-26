@@ -72,7 +72,7 @@ describe('background transition preview', () => {
     });
     const second = background.setBackground({
       image: 'backgrounds/scene-a.png',
-      transition: 'wipe',
+      transition: 'wipe-up',
       duration: 250,
       previewVariant: 'same-page',
     });

@@ -14,6 +14,7 @@ import {
 } from './endingRegistry.js';
 import {
   CAMERA_EFFECT_DIRECTION_OPTIONS,
+  getRuntimeTransitionType,
   isKnownCameraEffect,
   isKnownCharacterAnimation,
   isKnownTransitionType,
@@ -743,8 +744,10 @@ function validatePageCinematics(page, context, report) {
   }
 
   if (page.transition?.type && !isKnownTransitionType(page.transition.type)) {
-    addWarning(report, 'unknown-transition-type', `Transition "${page.transition.type}" is not runtime-supported and will fall back to fade.`, [...pagePath, 'transition', 'type'], {
+    const fallbackId = getRuntimeTransitionType(page.transition.type);
+    addWarning(report, 'unknown-transition-type', `Transition "${page.transition.type}" is not runtime-supported and will fall back to ${fallbackId}.`, [...pagePath, 'transition', 'type'], {
       transitionType: page.transition.type,
+      fallbackId,
     });
   }
 

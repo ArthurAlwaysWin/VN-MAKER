@@ -26,6 +26,7 @@ export class TitleScreen {
 
     /** @type {boolean} */ this.hasSave = false;
     /** @type {boolean} */ this.hasGallery = false;
+    /** @type {ReturnType<typeof setTimeout>|null} */ this._hideTimer = null;
   }
 
   /**
@@ -43,6 +44,10 @@ export class TitleScreen {
   }
 
   show(hasSave = false, hasGallery = false) {
+    if (this._hideTimer) {
+      clearTimeout(this._hideTimer);
+      this._hideTimer = null;
+    }
     this.hasSave = hasSave;
     this.hasGallery = hasGallery;
     if (this.layout && this.layout.elements) {
@@ -56,7 +61,11 @@ export class TitleScreen {
 
   hide() {
     this.el.classList.remove('visible');
-    setTimeout(() => this.el.classList.add('hidden'), 800);
+    if (this._hideTimer) clearTimeout(this._hideTimer);
+    this._hideTimer = setTimeout(() => {
+      this.el.classList.add('hidden');
+      this._hideTimer = null;
+    }, 800);
   }
 
   _renderDefault() {

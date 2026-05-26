@@ -60,7 +60,9 @@ function normalizeVariableId(variableId) {
 }
 
 function inferConditionValueType(row = {}, registry = {}) {
-  const registryType = registry?.[row.variableId]?.type;
+  const registryType = Object.hasOwn(registry ?? {}, row.variableId)
+    ? registry[row.variableId]?.type
+    : null;
   if (registryType === 'bool' || registryType === 'number') {
     return registryType;
   }

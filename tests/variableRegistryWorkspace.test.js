@@ -574,6 +574,43 @@ describe('variable registry workspace', () => {
     expect(harness.script.data.scenes.ending.pages[0].effects).toBeUndefined();
   });
 
+  it('rewrites and removes normal page CG unlock references from CG editor actions', async () => {
+    harness = await mountStorySystems(makeScriptData({
+      systems: {
+        variables: {},
+        gallery: {
+          cg: {
+            memory: { title: 'Memory', images: ['backgrounds/cg/memory.png'] },
+          },
+        },
+      },
+      scenes: {
+        memory: {
+          name: 'Memory',
+          pages: [{
+            type: 'normal',
+            dialogues: [{ speaker: null, text: 'Unlock' }],
+            effects: [{ type: 'unlock:cg', id: 'memory' }],
+          }],
+        },
+      },
+    }));
+
+    expect(harness.script.findCgReferences('memory')[0].locationText).toContain('进入页效果 1');
+
+    expect(harness.script.renameCg('memory', 'secret_memory')).toMatchObject({
+      success: true,
+      rewriteCount: 1,
+    });
+    expect(harness.script.data.scenes.memory.pages[0].effects[0].id).toBe('secret_memory');
+
+    expect(harness.script.deleteCg('secret_memory')).toMatchObject({
+      success: true,
+      deletedReferenceCount: 1,
+    });
+    expect(harness.script.data.scenes.memory.pages[0].effects).toBeUndefined();
+  });
+
   it('selects CG images and thumbnails through the project asset picker', async () => {
     harness = await mountStorySystems(makeScriptData({
       systems: {

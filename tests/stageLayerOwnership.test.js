@@ -65,4 +65,20 @@ describe('stage ownership contract', () => {
     expect(images[0]?.classList.contains('char-img-a')).toBe(true);
     expect(images[1]?.classList.contains('char-img-b')).toBe(true);
   });
+
+  it('escapes fragment and query delimiters in character image filenames', () => {
+    document.body.innerHTML = '<div id="character-layer"></div>';
+    globalThis.requestAnimationFrame = vi.fn((cb) => cb());
+
+    const layer = new CharacterLayer(document.getElementById('character-layer'), '/game/');
+    layer.show({
+      id: 'hero',
+      image: 'characters/hero#alt?.png',
+      position: 'center',
+      transition: 'none',
+      duration: 0,
+    });
+
+    expect(document.querySelector('.char-img-a')?.getAttribute('src')).toBe('/game/characters/hero%23alt%3F.png');
+  });
 });

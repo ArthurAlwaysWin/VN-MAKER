@@ -1,4 +1,5 @@
 export const CG_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -42,7 +43,11 @@ export function normalizeCgId(cgId) {
 
 export function isValidCgId(cgId) {
   const normalized = normalizeCgId(cgId);
-  return Boolean(normalized && CG_ID_PATTERN.test(normalized));
+  return Boolean(
+    normalized
+    && CG_ID_PATTERN.test(normalized)
+    && !UNSAFE_OBJECT_MAP_KEYS.has(normalized),
+  );
 }
 
 export function normalizeCgEntry(entry = {}, fallbackId = null) {
@@ -85,7 +90,7 @@ export function normalizeCgRegistry(registry = {}) {
   const normalized = {};
   for (const [rawId, entry] of Object.entries(registry)) {
     const id = normalizeCgId(rawId);
-    if (!id) {
+    if (!id || UNSAFE_OBJECT_MAP_KEYS.has(id)) {
       continue;
     }
     normalized[id] = normalizeCgEntry(entry, id);
@@ -99,6 +104,28 @@ export function collectCgUnlockReferences(scriptData = {}) {
   for (const [sceneId, scene] of Object.entries(scriptData?.scenes ?? {})) {
     const pages = Array.isArray(scene?.pages) ? scene.pages : [];
     for (const [pageIndex, page] of pages.entries()) {
+      if (page?.type === 'normal') {
+        const effects = Array.isArray(page.effects) ? page.effects : [];
+        for (const [effectIndex, effect] of effects.entries()) {
+          if (effect?.type !== 'unlock:cg') {
+            continue;
+          }
+
+          references.push({
+            kind: 'cg-unlock',
+            source: 'page-enter-effect',
+            cgId: effect.id,
+            sceneId,
+            sceneName: scene.name || sceneId,
+            pageIndex,
+            optionIndex: null,
+            effectIndex,
+            path: ['scenes', sceneId, 'pages', pageIndex, 'effects', effectIndex],
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.effects.${effectIndex}`,
+          });
+        }
+      }
+
       if (page?.type !== 'choice') {
         continue;
       }
@@ -113,6 +140,7 @@ export function collectCgUnlockReferences(scriptData = {}) {
 
           references.push({
             kind: 'cg-unlock',
+            source: 'choice-effect',
             cgId: effect.id,
             sceneId,
             sceneName: scene.name || sceneId,

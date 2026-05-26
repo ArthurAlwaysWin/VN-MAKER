@@ -150,6 +150,14 @@ describe('computeSnap', () => {
     expect(result.matches.some(m => m.targetId === 'p1')).toBe(true);
   });
 
+  it('snaps to peer bounds supplied by canvas callers', () => {
+    const active = { left: 205, top: 100, right: 305, bottom: 200, centerX: 255, centerY: 150, width: 100, height: 100 };
+    const peers = [getElementBounds({ id: 'p1', x: 200, y: 0, width: 100, height: 50, scale: 1 })];
+    const result = computeSnap({ activeBounds: active, canvasBounds, peerBounds: peers, threshold: 6, zoom: 1, enableCanvas: false });
+    expect(result.deltaX).toBe(-5);
+    expect(result.matches.some(m => m.targetId === 'p1')).toBe(true);
+  });
+
   it('snaps to peer element center', () => {
     const active = { left: 245, top: 100, right: 345, bottom: 200, centerX: 295, centerY: 150, width: 100, height: 100 };
     const peers = [{ id: 'p2', x: 200, y: 0, width: 100, height: 50, scale: 1 }]; // centerX=250

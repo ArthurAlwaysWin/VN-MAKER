@@ -58,6 +58,18 @@ function capture(engine, event, fn) {
 // ─── startGame ─────────────────────────────────────────────
 
 describe('startGame', () => {
+  it('fails cleanly when called before a script has been loaded', () => {
+    const engine = new ScriptEngine();
+    const error = console.error;
+    console.error = () => {};
+    try {
+      strictEqual(engine.startGame('start'), false);
+      strictEqual(engine.ended, true);
+    } finally {
+      console.error = error;
+    }
+  });
+
   it('resets variables and drops previous history entries', () => {
     const engine = makeEngine();
     engine.variables.set('affection', 10);
@@ -162,6 +174,15 @@ describe('next() dialogue advancement', () => {
 // ─── Choice pages ──────────────────────────────────────────
 
 describe('selectChoice', () => {
+  it('emits an empty option list for a malformed choice page without throwing', () => {
+    const engine = makeEngine();
+    engine.script.scenes.start.pages = [{ type: 'choice', prompt: 'Broken' }];
+
+    const events = capture(engine, 'choice', () => engine.startGame('start'));
+
+    deepStrictEqual(events[0].options, []);
+  });
+
   function makeChoiceEngine() {
     const engine = new ScriptEngine();
     engine.script = {
@@ -594,6 +615,15 @@ describe('getState / restoreState', () => {
     strictEqual(engine.pageIndex, 0);
     strictEqual(engine.dialogueIndex, 0);
     strictEqual(engine.variables.size, 0);
+  });
+
+  it('rejects corrupt saved state without modifying current state', () => {
+    const engine = makeEngine();
+    engine.startGame('start');
+    const original = engine.getState();
+
+    strictEqual(engine.restoreState(null), false);
+    deepStrictEqual(engine.getState(), original);
   });
 
   it('keeps restore and state snapshots tolerant when a player data repository is configured', () => {

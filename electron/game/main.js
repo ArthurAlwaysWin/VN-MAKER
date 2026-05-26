@@ -22,12 +22,12 @@ const GAME_HEIGHT = 720;
 
 /**
  * Sanitize game title for filesystem use (D-05).
- * Replaces characters illegal on Windows: < > : " | ? *
+ * Replaces path separators and characters illegal on Windows.
  * @param {string} title
  * @returns {string}
  */
 function sanitizeTitle(title) {
-  return title.replace(/[<>:"|?*]/g, '_').trim() || 'Untitled';
+  return title.replace(/[<>:"|?*\\/]/g, '_').trim() || 'Untitled';
 }
 
 const userDataDir = path.join(
@@ -64,15 +64,26 @@ async function atomicWrite(filePath, content) {
   const bak = filePath + '.bak';
   await fs.writeFile(tmp, content, 'utf-8');
   try { await fs.rename(filePath, bak); } catch {}
-  await fs.rename(tmp, filePath);
+  try {
+    await fs.rename(tmp, filePath);
+  } catch (err) {
+    try { await fs.rename(bak, filePath); } catch {}
+    try { await fs.unlink(tmp); } catch {}
+    throw err;
+  }
   try { await fs.unlink(bak); } catch {}
+}
+
+function isValidSlot(slot) {
+  return Number.isInteger(slot) && slot >= 1 && slot <= 108;
 }
 
 // ─── Crash Handler (D-08) ───────────────────────────────────
 
 process.on('uncaughtException', (err) => {
   const timestamp = new Date().toISOString();
-  const entry = `[${timestamp}] ${err.stack || err.message}\n`;
+  const detail = err?.stack || err?.message || String(err ?? 'Unknown error');
+  const entry = `[${timestamp}] ${detail}\n`;
   try {
     mkdirSync(path.dirname(crashLogPath), { recursive: true });
     let existing = '';
@@ -197,6 +208,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('save-slot', async (event, { slot, state, previewText, thumbnail }) => {
     try {
+      if (!isValidSlot(slot)) return { success: false, error: 'Invalid slot number' };
       await fs.mkdir(savesDir, { recursive: true });
       const padded = String(slot).padStart(3, '0');
       const jsonPath = path.join(savesDir, `slot_${padded}.json`);
@@ -224,6 +236,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('load-slot', async (event, { slot }) => {
     try {
+      if (!isValidSlot(slot)) return { success: false, error: 'Invalid slot number' };
       const padded = String(slot).padStart(3, '0');
       const jsonPath = path.join(savesDir, `slot_${padded}.json`);
       if (!isInsideSaves(jsonPath)) return { success: false, error: 'Invalid path' };
@@ -238,6 +251,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('delete-slot', async (event, { slot }) => {
     try {
+      if (!isValidSlot(slot)) return { success: false, error: 'Invalid slot number' };
       const padded = String(slot).padStart(3, '0');
       const jsonPath = path.join(savesDir, `slot_${padded}.json`);
       const jpgPath = path.join(savesDir, `slot_${padded}.jpg`);

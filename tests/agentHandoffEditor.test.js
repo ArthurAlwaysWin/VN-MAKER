@@ -242,6 +242,18 @@ describe('agent handoff editor integration', () => {
     expect(main).toContain("'agent-handoff.json'");
   });
 
+  it('grants project load paths only from main-process project discovery', () => {
+    const preload = readFileSync(resolve(process.cwd(), 'electron', 'preload.js'), 'utf8');
+    const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
+
+    expect(preload).not.toContain("'update-recent-projects'");
+    expect(main).not.toContain("ipcMain.handle('update-recent-projects'");
+    expect(main).toContain('const grantedProjectPaths = new Set();');
+    expect(main).toContain('rememberProjectPath(projectDir);');
+    expect(main).toContain('rememberProjectPath(dir);');
+    expect(main).toMatch(/ipcMain\.handle\('load-project'[\s\S]*if \(!hasProjectGrant\(projectPath\)\)/);
+  });
+
   it('tracks external script changes and blocks stale saves in the project store', async () => {
     setActivePinia(createPinia());
     const loadedState = { path: 'E:/demo-project/script.json', mtimeMs: 1000, size: 10 };

@@ -526,6 +526,43 @@ describe('SaveLoadScreen.setLayout', () => {
           expect(screen._currentPage).toBe(2);
         });
       });
+
+      it('discards stale asynchronous grid renders after navigation', async () => {
+        let resolveSlots;
+        const slotsPromise = new Promise((resolve) => { resolveSlots = resolve; });
+        sm.getAllSlots.mockReturnValue(slotsPromise);
+        screen.setLayout(fullConfig());
+        screen.show('save');
+
+        screen.el.querySelectorAll('.page-dot')[1].click();
+        resolveSlots([]);
+
+        await vi.waitFor(() => {
+          const grid = screen.el.querySelector('.save-load-grid');
+          expect(screen._currentPage).toBe(2);
+          expect(grid.children.length).toBe(8);
+        });
+      });
+
+      it('does not let a stale grid request overwrite the current slot cache', async () => {
+        let resolveFirst;
+        let resolveSecond;
+        sm.getAllSlots
+          .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }))
+          .mockReturnValueOnce(new Promise((resolve) => { resolveSecond = resolve; }));
+        screen.setLayout(fullConfig());
+        screen.show('load');
+        screen.el.querySelectorAll('.page-dot')[1].click();
+
+        resolveSecond([{ slot: 9, previewText: 'Current save' }]);
+        await vi.waitFor(() => {
+          expect(screen._cachedSlots.get(9)?.previewText).toBe('Current save');
+        });
+
+        resolveFirst([{ slot: 9, previewText: 'Stale save' }]);
+        await Promise.resolve();
+        expect(screen._cachedSlots.get(9)?.previewText).toBe('Current save');
+      });
     });
 
     describe('partial config', () => {

@@ -76,6 +76,8 @@ export async function exportDesktop(options, sendProgress) {
   const distWeb = path.join(appRoot, 'dist-web');
   const warnings = [];
   const sanitized = sanitizeTitle(gameTitle);
+  let savedNoAsar;
+  let noAsarChanged = false;
 
   console.log('[ExportDesktop] Starting:', sanitized);
 
@@ -191,8 +193,9 @@ export async function exportDesktop(options, sendProgress) {
 
       // Electron patches fs to intercept .asar files as virtual directories.
       // We need raw filesystem access to copy/delete .asar files as plain files.
-      const savedNoAsar = process.noAsar;
+      savedNoAsar = process.noAsar;
       process.noAsar = true;
+      noAsarChanged = true;
 
       finalOutputDir = path.join(outputDir, `${sanitized}-win32-x64`);
       await fs.rm(finalOutputDir, { recursive: true, force: true }).catch(() => {});
@@ -216,9 +219,6 @@ export async function exportDesktop(options, sendProgress) {
       await fs.rm(defaultAsar, { force: true }).catch(() => {});
       await fs.mkdir(resourcesApp, { recursive: true });
       await fs.cp(stagingDir, resourcesApp, { recursive: true });
-
-      // Restore asar patching
-      process.noAsar = savedNoAsar;
 
       // 8d — Set custom icon on the exe via resedit (pure JS, no subprocess)
       sendProgress({ step: '写入图标', percent: 86 });
@@ -263,6 +263,9 @@ export async function exportDesktop(options, sendProgress) {
     console.log('[ExportDesktop] Complete:', finalOutputDir);
     return { success: true, outputPath: finalOutputDir, zipPath, warnings };
   } finally {
+    if (noAsarChanged) {
+      process.noAsar = savedNoAsar;
+    }
     // D-04: Clean staging on completion or failure; preserve final output
     if (!_skipPackager) {
       await fs.rm(stagingDir, { recursive: true, force: true }).catch(() => {});

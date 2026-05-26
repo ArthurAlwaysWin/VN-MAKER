@@ -74,4 +74,18 @@ describe('runtime CG gallery', () => {
     screen.el.querySelector('.title-custom-button').click();
     expect(screen.onGallery).toHaveBeenCalledTimes(2);
   });
+
+  it('does not let an earlier hide transition hide a newly shown title screen', () => {
+    vi.useFakeTimers();
+    try {
+      const screen = new TitleScreen(document.getElementById('game'), 'Story');
+      screen.show();
+      screen.hide();
+      screen.show();
+      vi.advanceTimersByTime(800);
+      expect(screen.el.classList.contains('hidden')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

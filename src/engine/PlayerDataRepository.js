@@ -5,6 +5,8 @@
  * stay a separate authority owned by the save managers.
  */
 import { GALGAME_RESET_SCOPES } from '../shared/galgameContract.js';
+import { isValidCgId } from '../shared/cgRegistry.js';
+import { isValidEndingId } from '../shared/endingRegistry.js';
 
 export const PLAYER_PROFILE_VERSION = 1;
 export const PLAYER_PROFILE_STORAGE_PREFIX = 'playerProfile:';
@@ -33,12 +35,18 @@ function normalizePages(pages) {
   return normalized;
 }
 
-function normalizeUnlockBucket(bucket) {
+function normalizeUnlockBucket(bucket, isValidId) {
   if (!bucket || typeof bucket !== 'object' || Array.isArray(bucket)) {
     return {};
   }
 
-  return cloneJsonValue(bucket);
+  const normalized = {};
+  for (const [id, record] of Object.entries(bucket)) {
+    if (isValidId(id)) {
+      normalized[id] = cloneJsonValue(record);
+    }
+  }
+  return normalized;
 }
 
 function normalizeUnlockRecord(record, unlockedAt) {
@@ -85,8 +93,8 @@ export function normalizePlayerProfile(projectId, profile = {}) {
   normalized.version = PLAYER_PROFILE_VERSION;
   normalized.projectId = projectId;
   normalized.readHistory.pages = normalizePages(source.readHistory?.pages);
-  normalized.unlocks.endings = normalizeUnlockBucket(source.unlocks?.endings);
-  normalized.unlocks.cg = normalizeUnlockBucket(source.unlocks?.cg);
+  normalized.unlocks.endings = normalizeUnlockBucket(source.unlocks?.endings, isValidEndingId);
+  normalized.unlocks.cg = normalizeUnlockBucket(source.unlocks?.cg, isValidCgId);
   return normalized;
 }
 
@@ -167,7 +175,13 @@ export function createBrowserPlayerDataStorage({
   return {
     async loadProfile(projectId) {
       const raw = localStorage?.getItem?.(getProfileStorageKey(projectId));
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (error) {
+        console.warn('[PlayerDataRepository] Ignoring corrupt browser profile:', error);
+        return null;
+      }
     },
     async saveProfile(projectId, profile) {
       localStorage?.setItem?.(getProfileStorageKey(projectId), JSON.stringify(profile, null, 2));
@@ -282,7 +296,8 @@ export class PlayerDataRepository {
   }
 
   async _unlock(bucketName, entryId, unlockedAt = Date.now()) {
-    if (typeof entryId !== 'string' || !entryId.trim()) {
+    const isValidId = bucketName === 'endings' ? isValidEndingId : isValidCgId;
+    if (!isValidId(entryId)) {
       return this.getProfile();
     }
 

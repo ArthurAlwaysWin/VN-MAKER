@@ -363,6 +363,25 @@ function removeCgUnlockReferences(script, cgId) {
 
   for (const scene of Object.values(script.scenes ?? {})) {
     for (const page of scene?.pages ?? []) {
+      if (page?.type === 'normal') {
+        const normalizedPage = normalizeEffectContainer(page);
+        const effects = (normalizedPage.effects ?? []).filter((effect) => {
+          const shouldKeep = !isCgUnlockEffect(effect) || effect.id !== cgId;
+          if (!shouldKeep) {
+            deletedReferenceCount += 1;
+          }
+          return shouldKeep;
+        });
+
+        if (effects.length > 0) {
+          normalizedPage.effects = effects;
+        } else {
+          delete normalizedPage.effects;
+        }
+        delete page.effects;
+        Object.assign(page, normalizedPage);
+      }
+
       if (page?.type !== 'choice') {
         continue;
       }

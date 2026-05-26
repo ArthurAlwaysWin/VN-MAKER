@@ -472,7 +472,7 @@ function validateEffects(container, context, report) {
         });
       }
 
-      const variableEntry = registry[effect.id];
+      const variableEntry = Object.hasOwn(registry, effect.id) ? registry[effect.id] : null;
       if (!variableEntry) {
         addWarning(report, 'unregistered-variable-effect', `Variable effect references unregistered variable "${effect.id}".`, [...effectPath, 'id'], {
           variableId: effect.id,
@@ -498,16 +498,30 @@ function validateEffects(container, context, report) {
       }
     }
 
-    if (effect.type === 'unlock:ending' && !endings[effect.id]) {
-      addWarning(report, 'unregistered-ending-unlock', `Ending unlock references unregistered ending "${effect.id}".`, [...effectPath, 'id'], {
-        endingId: effect.id,
-      });
+    if (effect.type === 'unlock:ending') {
+      if (!isValidEndingId(effect.id)) {
+        addError(report, 'invalid-ending-id', `Ending unlock references invalid ending id "${effect.id}".`, [...effectPath, 'id'], {
+          endingId: effect.id,
+        });
+      }
+      if (!Object.hasOwn(endings, effect.id)) {
+        addWarning(report, 'unregistered-ending-unlock', `Ending unlock references unregistered ending "${effect.id}".`, [...effectPath, 'id'], {
+          endingId: effect.id,
+        });
+      }
     }
 
-    if (effect.type === 'unlock:cg' && !cgs[effect.id]) {
-      addWarning(report, 'unregistered-cg-unlock', `CG unlock references unregistered CG "${effect.id}".`, [...effectPath, 'id'], {
-        cgId: effect.id,
-      });
+    if (effect.type === 'unlock:cg') {
+      if (!isValidCgId(effect.id)) {
+        addError(report, 'invalid-cg-id', `CG unlock references invalid CG id "${effect.id}".`, [...effectPath, 'id'], {
+          cgId: effect.id,
+        });
+      }
+      if (!Object.hasOwn(cgs, effect.id)) {
+        addWarning(report, 'unregistered-cg-unlock', `CG unlock references unregistered CG "${effect.id}".`, [...effectPath, 'id'], {
+          cgId: effect.id,
+        });
+      }
     }
 
     if (!VARIABLE_EFFECT_TYPES.has(effect.type) && !UNLOCK_EFFECT_TYPES.has(effect.type)) {
@@ -647,7 +661,7 @@ function validateConditionPage(page, context, report, options) {
       return;
     }
 
-    if (!registry[condition.variableId]) {
+    if (!Object.hasOwn(registry, condition.variableId)) {
       addWarning(report, 'unregistered-condition-variable', `Condition references unregistered variable "${condition.variableId}".`, [...conditionPath, 'variableId'], {
         variableId: condition.variableId,
       });

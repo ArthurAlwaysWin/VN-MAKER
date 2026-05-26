@@ -9,9 +9,12 @@
  * Per D-02: No thumbnails — text-only preview info (scene, dialogue, timestamp).
  */
 export class WebSaveManager {
-  constructor() {
+  constructor(projectId = null) {
     /** @type {number} Maximum save slots */
     this.slotCount = 108;
+
+    /** @type {string|null} Stable project namespace for browser saves */
+    this._projectId = null;
 
     /** @type {IDBDatabase|null} */
     this._db = null;
@@ -27,6 +30,10 @@ export class WebSaveManager {
 
     /** @type {import('./PlayerDataRepository.js').PlayerDataRepository|null} */
     this._playerDataRepository = null;
+
+    if (projectId) {
+      this.setProjectId(projectId);
+    }
   }
 
   // ─── Public API (all async) ────────────────────────────────
@@ -265,6 +272,23 @@ export class WebSaveManager {
     this._playerDataRepository = repository;
   }
 
+  setProjectId(projectId) {
+    if (typeof projectId !== 'string' || !projectId.trim()) {
+      throw new Error('WebSaveManager requires a stable projectId');
+    }
+
+    const normalizedProjectId = projectId.trim();
+    if (this._projectId === normalizedProjectId) {
+      return;
+    }
+
+    this._db?.close?.();
+    this._db = null;
+    this._cache.clear();
+    this._hasQuickSave = undefined;
+    this._projectId = normalizedProjectId;
+  }
+
   async resetPlayerData(scope) {
     if (!this._playerDataRepository) {
       return { success: false, error: 'No player data repository configured' };
@@ -303,9 +327,12 @@ export class WebSaveManager {
    */
   async _getDb() {
     if (this._db) return this._db;
+    if (!this._projectId) {
+      throw new Error('WebSaveManager projectId has not been configured');
+    }
 
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('galgame-saves', 1);
+      const request = indexedDB.open(`galgame-saves:${this._projectId}`, 1);
 
       request.onupgradeneeded = (e) => {
         const db = e.target.result;

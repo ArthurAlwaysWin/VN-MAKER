@@ -52,4 +52,40 @@ describe('CG registry contract', () => {
       }),
     ]);
   });
+
+  it('collects unlock references from normal page-enter effects', () => {
+    expect(collectCgUnlockReferences({
+      scenes: {
+        ending: {
+          name: 'Ending',
+          pages: [{
+            type: 'normal',
+            effects: [{ type: 'unlock:cg', id: 'cg_memory' }],
+          }],
+        },
+      },
+    })).toEqual([
+      expect.objectContaining({
+        source: 'page-enter-effect',
+        cgId: 'cg_memory',
+        sceneId: 'ending',
+        pageIndex: 0,
+        optionIndex: null,
+        effectIndex: 0,
+        pathString: 'scenes.ending.pages.0.effects.0',
+      }),
+    ]);
+  });
+
+  it('rejects prototype keys from the CG registry', () => {
+    const normalized = normalizeCgRegistry(JSON.parse(
+      '{"__proto__":{"image":"bad.png"},"constructor":{"image":"bad2.png"},"cg_safe":{"image":"safe.png"}}',
+    ));
+
+    expect(isValidCgId('__proto__')).toBe(false);
+    expect(isValidCgId('constructor')).toBe(false);
+    expect(Object.hasOwn(normalized, '__proto__')).toBe(false);
+    expect(Object.hasOwn(normalized, 'constructor')).toBe(false);
+    expect(normalized.cg_safe.images).toEqual(['safe.png']);
+  });
 });

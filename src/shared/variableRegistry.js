@@ -20,6 +20,7 @@ export const VARIABLE_KINDS = Object.freeze([
 ]);
 
 export const VARIABLE_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -44,7 +45,11 @@ export function normalizeVariableId(variableId) {
 
 export function isValidVariableId(variableId) {
   const normalized = normalizeVariableId(variableId);
-  return Boolean(normalized && VARIABLE_ID_PATTERN.test(normalized));
+  return Boolean(
+    normalized
+    && VARIABLE_ID_PATTERN.test(normalized)
+    && !UNSAFE_OBJECT_MAP_KEYS.has(normalized),
+  );
 }
 
 function normalizeVariableType(type) {
@@ -209,7 +214,7 @@ export function normalizeVariableRegistry(registry = {}) {
   const normalized = {};
   for (const [rawId, entry] of Object.entries(registry)) {
     const variableId = normalizeVariableId(rawId);
-    if (!variableId) {
+    if (!variableId || UNSAFE_OBJECT_MAP_KEYS.has(variableId)) {
       continue;
     }
 

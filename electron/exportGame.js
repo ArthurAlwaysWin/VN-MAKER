@@ -175,8 +175,6 @@ export async function exportGame(options, sendProgress) {
   const distWeb = path.join(appRoot, 'dist-web');
   const warnings = [];
 
-  await fs.mkdir(outputDir, { recursive: true });
-
   // Step 1 — 构建引擎 (0%)
   sendProgress({ step: '构建引擎', percent: 0 });
   if (!_skipBuild) {
@@ -192,6 +190,14 @@ export async function exportGame(options, sendProgress) {
 
   // Step 3 — 复制引擎产物 (33%)
   sendProgress({ step: '复制引擎产物', percent: 33 });
+  await fs.mkdir(outputDir, { recursive: true });
+  await Promise.all([
+    fs.rm(path.join(outputDir, 'assets'), { recursive: true, force: true }),
+    fs.rm(path.join(outputDir, 'engine.js'), { force: true }),
+    fs.rm(path.join(outputDir, 'engine.css'), { force: true }),
+    fs.rm(path.join(outputDir, 'script.json'), { force: true }),
+    fs.rm(path.join(outputDir, 'index.html'), { force: true }),
+  ]);
   await fs.copyFile(path.join(distWeb, 'engine.js'), path.join(outputDir, 'engine.js'));
   await fs.copyFile(path.join(distWeb, 'engine.css'), path.join(outputDir, 'engine.css'));
   await fs.copyFile(scriptPath, path.join(outputDir, 'script.json'));

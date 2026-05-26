@@ -56,6 +56,11 @@ export function isCanonicalUiImagePath(value) {
     return false;
   }
 
+  const segments = candidate.split('/');
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+    return false;
+  }
+
   return candidate.length > CANONICAL_UI_PREFIX.length;
 }
 

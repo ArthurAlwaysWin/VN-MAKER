@@ -68,7 +68,9 @@ export function getElementSnapTargets(elements, activeIds = new Set()) {
   for (const el of elements) {
     const id = el.id;
     if (activeIds.has(id)) continue;
-    const b = getElementBounds(el);
+    const b = Number.isFinite(el.left) && Number.isFinite(el.top)
+      ? el
+      : getElementBounds(el);
     targets.push(
       { axis: 'x', at: b.left, kind: 'peer-edge', peerId: id },
       { axis: 'x', at: b.right, kind: 'peer-edge', peerId: id },

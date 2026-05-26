@@ -24,14 +24,15 @@ export class ChoiceMenu {
    * @param {Object} data — { prompt, options: [{ text, ... }] }
    */
   show(data) {
+    const choiceData = data && typeof data === 'object' ? data : {};
     this.el.innerHTML = '';
     this.el.style.cssText = '';
 
     // Custom layout mode
-    const isCustom = data.layout === 'custom' && data.style;
+    const isCustom = choiceData.layout === 'custom' && choiceData.style;
     if (isCustom) {
       this.el.classList.add('layout-custom');
-      const s = data.style;
+      const s = choiceData.style;
       if (s.x !== undefined) this.el.style.left = `${clampField('x', s.x)}px`;
       if (s.y !== undefined) this.el.style.top = `${clampField('y', s.y)}px`;
       if (s.width) this.el.style.width = `${clampField('width', s.width)}px`;
@@ -41,17 +42,17 @@ export class ChoiceMenu {
       this.el.classList.remove('layout-custom');
     }
 
-    if (data.prompt) {
+    if (choiceData.prompt) {
       const promptEl = document.createElement('div');
       promptEl.className = 'choice-prompt';
-      promptEl.textContent = data.prompt;
+      promptEl.textContent = choiceData.prompt;
       this.el.appendChild(promptEl);
     }
 
     const list = document.createElement('div');
     list.className = 'choice-list';
 
-    data.options.forEach((option, index) => {
+    (Array.isArray(choiceData.options) ? choiceData.options : []).forEach((option, index) => {
       const btn = document.createElement('button');
       btn.className = 'choice-button';
       btn.textContent = option.text;

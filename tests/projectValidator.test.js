@@ -144,6 +144,32 @@ describe('project validator', () => {
     ]));
   });
 
+  it('does not resolve object prototype keys as registered effect targets', () => {
+    const script = createValidScript();
+    script.systems.variables = JSON.parse('{"constructor":{"type":"number","initial":0}}');
+    script.systems.endings = JSON.parse('{"__proto__":{"title":"Bad End"}}');
+    script.systems.gallery.cg = JSON.parse('{"constructor":{"title":"Bad CG","image":"bad.png"}}');
+    script.scenes.start.pages[1].options[0].effects = [
+      { type: 'var:add', id: 'constructor', value: 1 },
+      { type: 'unlock:ending', id: '__proto__' },
+      { type: 'unlock:cg', id: 'constructor' },
+    ];
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(report.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'invalid-variable-id' }),
+      expect.objectContaining({ code: 'invalid-ending-id' }),
+      expect.objectContaining({ code: 'invalid-cg-id' }),
+    ]));
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'unregistered-variable-effect' }),
+      expect.objectContaining({ code: 'unregistered-ending-unlock' }),
+      expect.objectContaining({ code: 'unregistered-cg-unlock' }),
+    ]));
+  });
+
   it('keeps branch analysis safe while reporting malformed choice containers', () => {
     const script = createValidScript();
     script.scenes.start.pages[1].options = { broken: true };

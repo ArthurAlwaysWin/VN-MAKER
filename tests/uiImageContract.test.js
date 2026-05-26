@@ -27,6 +27,9 @@ describe('uiImageContract canonical path rules', () => {
     assert.equal(isCanonicalUiImagePath('assets/ui/dialogue/frame.png'), false);
     assert.equal(isCanonicalUiImagePath('/ui/dialogue/frame.png'), false);
     assert.equal(isCanonicalUiImagePath('C:\\project\\assets\\ui\\frame.png'), false);
+    assert.equal(isCanonicalUiImagePath('ui/../secrets/frame.png'), false);
+    assert.equal(isCanonicalUiImagePath('ui/./dialogue/frame.png'), false);
+    assert.equal(isCanonicalUiImagePath('ui//dialogue/frame.png'), false);
     assert.equal(isCanonicalUiImagePath('data:image/png;base64,abc123'), false);
     assert.equal(isCanonicalUiImagePath('https://example.com/frame.png'), false);
     assert.equal(isCanonicalUiImagePath(''), false);

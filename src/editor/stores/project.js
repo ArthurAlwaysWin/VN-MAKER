@@ -245,7 +245,7 @@ export const useProjectStore = defineStore('project', () => {
     }
 
     const result = await window.ipcRenderer.invoke('check-project-file-state');
-    if (!result?.success || !result.scriptFileState) {
+    if (!result?.success) {
       return false;
     }
 

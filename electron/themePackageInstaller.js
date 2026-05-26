@@ -97,8 +97,12 @@ function createBuiltInThemeUi(theme) {
 }
 
 async function writeThemeAsset(projectPath, relativeUiPath, bytes) {
+  const assetRoot = path.resolve(projectPath, 'assets');
   const relativeParts = relativeUiPath.split('/');
-  const destination = path.join(projectPath, 'assets', ...relativeParts);
+  const destination = path.resolve(assetRoot, ...relativeParts);
+  if (destination !== assetRoot && !destination.startsWith(assetRoot + path.sep)) {
+    throw new Error(`Theme package asset path escapes project assets: ${relativeUiPath}`);
+  }
   await fs.mkdir(path.dirname(destination), { recursive: true });
   await fs.writeFile(destination, bytes);
 }

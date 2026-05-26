@@ -66,6 +66,7 @@ async function addToRecent(projectPath, name) {
 const ASSET_CATEGORIES = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui']);
 const dialogGrantedFilePaths = new Set();
 const dialogGrantedDirectoryPaths = new Set();
+const grantedProjectPaths = new Set();
 
 function isInsidePath(fullPath, basePath) {
   const resolved = path.resolve(fullPath);
@@ -142,6 +143,22 @@ function rememberDialogDirectoryPath(dirPath) {
 function hasDialogDirectoryGrant(dirPath) {
   if (!dirPath) return false;
   return dialogGrantedDirectoryPaths.has(path.resolve(dirPath));
+}
+
+function isInsideDialogGrantedDirectory(targetPath) {
+  if (!targetPath) return false;
+  return [...dialogGrantedDirectoryPaths].some((grantedPath) => isInsidePath(targetPath, grantedPath));
+}
+
+function rememberProjectPath(projectPath) {
+  if (projectPath) {
+    grantedProjectPaths.add(path.resolve(projectPath));
+  }
+}
+
+function hasProjectGrant(projectPath) {
+  if (!projectPath) return false;
+  return grantedProjectPaths.has(path.resolve(projectPath));
 }
 
 function sanitizeProjectName(name) {
@@ -289,8 +306,14 @@ async function rebuildPlayerData(projectId, projectPath = currentProjectPath) {
 
 ipcMain.handle('create-project', async (event, { name, author, location, resolution, template }) => {
   try {
+    if (!hasDialogDirectoryGrant(location)) {
+      return { success: false, error: 'Invalid project location' };
+    }
     const safeName = sanitizeProjectName(name);
     const projectDir = path.join(location, safeName);
+    if (existsSync(projectDir)) {
+      return { success: false, error: 'Project directory already exists' };
+    }
     await fs.mkdir(projectDir, { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'backgrounds'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'characters'), { recursive: true });
@@ -332,6 +355,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
     scriptData = ensureGalgameContract(scriptData);
     await fs.writeFile(path.join(projectDir, 'script.json'), JSON.stringify(scriptData, null, 2), 'utf-8');
 
+    rememberProjectPath(projectDir);
     await addToRecent(projectDir, name);
     return { success: true, path: projectDir };
   } catch (e) {
@@ -355,11 +379,16 @@ ipcMain.handle('open-project', async () => {
     return { success: false, error: '不是有效的项目文件夹：找不到 project.json 或 script.json' };
   }
 
+  rememberProjectPath(dir);
   return { success: true, path: dir, needsMigration: !hasProject && hasScript };
 });
 
 ipcMain.handle('load-project', async (event, projectPath) => {
   try {
+    if (!hasProjectGrant(projectPath)) {
+      return { success: false, error: 'Invalid project path' };
+    }
+    projectPath = path.resolve(projectPath);
     let projectData;
     let scriptData;
     let scriptChanged = false;
@@ -450,11 +479,7 @@ ipcMain.handle('save-project', async (event, { project, script, expectedScriptFi
   if (!currentProjectPath) return { success: false, error: 'No project loaded' };
   try {
     const currentScriptFileState = await getProjectScriptFileState();
-    if (
-      expectedScriptFileState
-      && currentScriptFileState
-      && !isSameFileState(expectedScriptFileState, currentScriptFileState)
-    ) {
+    if (expectedScriptFileState && !isSameFileState(expectedScriptFileState, currentScriptFileState)) {
       return {
         success: false,
         conflict: true,
@@ -826,12 +851,11 @@ ipcMain.handle('list-assets', async (event, { category }) => {
 });
 
 ipcMain.handle('get-recent-projects', async () => {
-  return await readRecentProjects();
-});
-
-ipcMain.handle('update-recent-projects', async (event, data) => {
-  await writeRecentProjects(data);
-  return true;
+  const recent = await readRecentProjects();
+  for (const project of Array.isArray(recent.projects) ? recent.projects : []) {
+    rememberProjectPath(project?.path);
+  }
+  return recent;
 });
 
 ipcMain.handle('close-project', () => {
@@ -905,6 +929,9 @@ ipcMain.handle('save-slot', async (event, { slot, state, previewText, thumbnail 
 ipcMain.handle('load-slot', async (event, { slot }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    if (!Number.isInteger(slot) || slot < 1 || slot > 108) {
+      return { success: false, error: 'Invalid slot number' };
+    }
     const padded = String(slot).padStart(3, '0');
     const jsonPath = path.join(currentProjectPath, 'saves', `slot_${padded}.json`);
     if (!isInsideProject(jsonPath)) return { success: false, error: 'Invalid path' };
@@ -920,6 +947,9 @@ ipcMain.handle('load-slot', async (event, { slot }) => {
 ipcMain.handle('delete-slot', async (event, { slot }) => {
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+    if (!Number.isInteger(slot) || slot < 1 || slot > 108) {
+      return { success: false, error: 'Invalid slot number' };
+    }
     const padded = String(slot).padStart(3, '0');
     const jsonPath = path.join(currentProjectPath, 'saves', `slot_${padded}.json`);
     const jpgPath = path.join(currentProjectPath, 'saves', `slot_${padded}.jpg`);
@@ -1211,7 +1241,9 @@ ipcMain.handle('import-theme', async () => {
       properties: ['openFile'],
     });
     if (result.canceled) return { success: false, canceled: true };
-    return { success: true, filePath: result.filePaths[0] };
+    const selectedPath = result.filePaths[0];
+    rememberDialogFilePath(selectedPath);
+    return { success: true, filePath: selectedPath };
   } catch (e) {
     console.error('[import-theme] Failed:', e);
     return { success: false, error: e.message };
@@ -1222,6 +1254,9 @@ ipcMain.handle('preflight-theme-package', async (event, { filePath }) => {
   try {
     if (!currentProjectPath) {
       return { success: false, error: 'No project loaded' };
+    }
+    if (!hasDialogFileGrant(filePath)) {
+      return { success: false, error: 'Invalid theme package path' };
     }
     return await preflightThemePackage({
       filePath,
@@ -1237,6 +1272,9 @@ ipcMain.handle('install-theme-package', async (event, payload) => {
   try {
     if (!currentProjectPath) {
       return { success: false, error: 'No project loaded' };
+    }
+    if (payload?.source === 'file' && !hasDialogFileGrant(payload.filePath)) {
+      return { success: false, error: 'Invalid theme package path' };
     }
     return await installThemePackage({
       ...payload,
@@ -1308,6 +1346,9 @@ ipcMain.handle('export-game-desktop', async (event, options) => {
 
 ipcMain.handle('open-folder', async (event, folderPath) => {
   try {
+    if (!isInsideDialogGrantedDirectory(folderPath)) {
+      return { success: false, error: 'Invalid folder path' };
+    }
     await shell.openPath(folderPath);
     return { success: true };
   } catch (e) {
@@ -1360,8 +1401,11 @@ function createWindow() {
     },
   });
 
+  let closeInProgress = false;
   win.on('close', async (e) => {
     e.preventDefault();
+    if (closeInProgress) return;
+    closeInProgress = true;
     try {
       const hasUnsaved = await win.webContents.executeJavaScript(
         'window.__hasDirtyProject ? window.__hasDirtyProject() : false'
@@ -1375,10 +1419,16 @@ function createWindow() {
           title: '未保存的修改',
           message: '项目有未保存的修改，是否保存？',
         });
-        if (response === 2) return;
+        if (response === 2) {
+          closeInProgress = false;
+          return;
+        }
         if (response === 0) {
           const saved = await win.webContents.executeJavaScript('window.__saveCurrentProject()');
-          if (!saved) return;
+          if (!saved) {
+            closeInProgress = false;
+            return;
+          }
         }
       }
     } catch { /* renderer already destroyed */ }
@@ -1434,10 +1484,17 @@ app.whenReady().then(() => {
         return new Response('Not Found', { status: 404 });
       }
       const total = stat.size;
-      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      const match = rangeHeader.match(/^bytes=(\d+)-(\d*)$/);
       if (match) {
         const start = parseInt(match[1], 10);
-        const end = match[2] ? parseInt(match[2], 10) : total - 1;
+        const requestedEnd = match[2] ? parseInt(match[2], 10) : total - 1;
+        if (total === 0 || start >= total || requestedEnd < start) {
+          return new Response('Range Not Satisfiable', {
+            status: 416,
+            headers: { 'Content-Range': `bytes */${total}` },
+          });
+        }
+        const end = Math.min(requestedEnd, total - 1);
         const chunkSize = end - start + 1;
         const { createReadStream } = await import('node:fs');
         const stream = createReadStream(fullPath, { start, end });

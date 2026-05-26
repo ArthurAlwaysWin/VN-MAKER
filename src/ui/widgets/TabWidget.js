@@ -6,6 +6,7 @@
 
 import { sanitizeCssValue } from '../sanitize.js';
 import { resolvePath } from '../../engine/assetPath.js';
+import { normalizeNineSliceInsets } from '../../engine/nineSlice.js';
 
 // ─── Tab Shape Constants ─────────────────────────────────
 
@@ -268,13 +269,14 @@ function _shapeRibbon(btn, isActive, activeColor, inactiveColor, activeText, ina
 
     if (isActive) {
       const slice = document.createElement('div');
+      const sliceInsets = normalizeNineSliceInsets(config.nineSlice.slice, [12, 12, 12, 12]);
       slice.className = 'gm-tab-nineslice';
       Object.assign(slice.style, {
         position: 'absolute',
         inset: '0',
         zIndex: '-1',
-        borderImage: `url("${resolvePath(config.nineSlice.src)}") ${config.nineSlice.slice || '12'} fill stretch`,
-        borderWidth: `${config.nineSlice.slice || 12}px`,
+        borderImage: `url("${resolvePath(config.nineSlice.src)}") ${sliceInsets.join(' ')} fill stretch`,
+        borderWidth: `${sliceInsets.map(value => `${value}px`).join(' ')}`,
         borderStyle: 'solid',
       });
       btn.appendChild(slice);

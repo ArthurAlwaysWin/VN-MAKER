@@ -589,7 +589,9 @@ export const useScriptStore = defineStore('script', () => {
       .filter((reference) => reference.cgId === cgId)
       .map((reference) => ({
         ...reference,
-        locationText: `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`,
+        locationText: reference.optionIndex == null
+          ? `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 进入页效果 ${reference.effectIndex + 1}`
+          : `${reference.sceneName || reference.sceneId || '未命名场景'} > 第 ${reference.pageIndex + 1} 页 > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`,
       }));
   }
 
@@ -618,6 +620,18 @@ export const useScriptStore = defineStore('script', () => {
     let rewriteCount = 0;
     for (const scene of Object.values(data.value?.scenes ?? {})) {
       for (const page of scene.pages || []) {
+        if (page?.type === 'normal') {
+          const normalizedPage = normalizeEffectContainer(page);
+          normalizedPage.effects = (normalizedPage.effects || []).map((effect) => {
+            if (effect?.type !== 'unlock:cg' || effect.id !== cgId) return effect;
+            rewriteCount++;
+            return { ...effect, id: normalizedId };
+          });
+          if (normalizedPage.effects.length === 0) delete normalizedPage.effects;
+          delete page.effects;
+          Object.assign(page, normalizedPage);
+        }
+
         if (page?.type !== 'choice') continue;
         page.options = (page.options || []).map((option) => {
           const normalizedOption = normalizeEffectContainer(option);
@@ -653,6 +667,19 @@ export const useScriptStore = defineStore('script', () => {
     let deletedReferenceCount = 0;
     for (const scene of Object.values(data.value?.scenes ?? {})) {
       for (const page of scene.pages || []) {
+        if (page?.type === 'normal') {
+          const normalizedPage = normalizeEffectContainer(page);
+          const effects = (normalizedPage.effects || []).filter((effect) => {
+            const keep = effect?.type !== 'unlock:cg' || effect.id !== cgId;
+            if (!keep) deletedReferenceCount++;
+            return keep;
+          });
+          if (effects.length > 0) normalizedPage.effects = effects;
+          else delete normalizedPage.effects;
+          delete page.effects;
+          Object.assign(page, normalizedPage);
+        }
+
         if (page?.type !== 'choice') continue;
         page.options = (page.options || []).map((option) => {
           const normalizedOption = normalizeEffectContainer(option);

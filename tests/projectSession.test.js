@@ -507,6 +507,40 @@ describe('project authoring session', () => {
     expect(session.toJSON().scenes.start.pages[0].options[0].effects).toBeUndefined();
   });
 
+  it('finds and removes normal page CG unlock effects when forced', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_cg_page_effect',
+        systems: {
+          gallery: {
+            cg: {
+              memory: { title: 'Memory', images: ['backgrounds/cg/memory.png'] },
+            },
+          },
+        },
+        scenes: {
+          memory: {
+            pages: [{
+              type: 'normal',
+              dialogues: [{ speaker: null, text: 'Remember' }],
+              effects: [{ type: 'unlock:cg', id: 'memory' }],
+            }],
+          },
+        },
+      },
+    });
+
+    expect(() => session.removeCg({ cgId: 'memory' })).toThrow(/still referenced/);
+    expect(session.removeCg({ cgId: 'memory', forceReferences: true })).toMatchObject({
+      deletedReferenceCount: 1,
+      changedPaths: [
+        'systems.gallery.cg.memory',
+        'scenes.memory.pages.0.effects.0',
+      ],
+    });
+    expect(session.toJSON().scenes.memory.pages[0].effects).toBeUndefined();
+  });
+
   it('edits choice page data and page media through unified authoring methods', () => {
     const session = createProjectSession({
       script: {

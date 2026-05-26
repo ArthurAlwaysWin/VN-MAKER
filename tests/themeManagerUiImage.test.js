@@ -124,6 +124,22 @@ describe('ThemeManager UI image handling', () => {
     expect(getNineSliceCss()).toBe('');
   });
 
+  it('normalizes scalar nine-slice insets from imported themes', () => {
+    expect(() => applyNineSlice({
+      nineSlice: {
+        titleButton: {
+          src: 'ui/buttons/title.webp',
+          slice: 12,
+          width: 14,
+        },
+      },
+    })).not.toThrow();
+
+    const css = getNineSliceCss();
+    expect(css).toContain('12 12 12 12 fill');
+    expect(css).toContain('/ 14px 14px 14px 14px /');
+  });
+
   it('keeps dialogueBox nine-slice overflow visible so floating nameplates are not clipped above the frame', () => {
     applyNineSlice({
       nineSlice: {

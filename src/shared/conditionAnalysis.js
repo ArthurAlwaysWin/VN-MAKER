@@ -16,7 +16,7 @@ function isBooleanLike(value) {
 }
 
 function isNumberLike(value) {
-  return value !== '' && Number.isFinite(Number(value));
+  return typeof value !== 'boolean' && value !== '' && Number.isFinite(Number(value));
 }
 
 function getRawConditionRows(page = {}) {
@@ -84,7 +84,9 @@ export function analyzeConditionPage(page = {}, { registry = {} } = {}) {
   const analyzable = normalized.conditions
     .map((condition, conditionIndex) => {
       const rawCondition = isPlainObject(rawRows[conditionIndex]) ? rawRows[conditionIndex] : {};
-      const entry = registry[condition.variableId];
+      const entry = Object.hasOwn(registry, condition.variableId)
+        ? registry[condition.variableId]
+        : null;
       if (!entry) {
         return null;
       }

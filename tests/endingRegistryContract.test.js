@@ -74,4 +74,16 @@ describe('ending registry contract', () => {
       }),
     ]);
   });
+
+  it('rejects prototype keys from the ending registry', () => {
+    const normalized = normalizeEndingRegistry(JSON.parse(
+      '{"__proto__":{"title":"Hidden"},"constructor":{"title":"Fake"},"good_end":{"title":"Good"}}',
+    ));
+
+    expect(isValidEndingId('__proto__')).toBe(false);
+    expect(isValidEndingId('constructor')).toBe(false);
+    expect(Object.hasOwn(normalized, '__proto__')).toBe(false);
+    expect(Object.hasOwn(normalized, 'constructor')).toBe(false);
+    expect(normalized.good_end.title).toBe('Good');
+  });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collectVariableReferences,
   getVariableInitialValue,
+  isValidVariableId,
   mergeRuntimeVariables,
   normalizeVariableRegistry,
   seedRuntimeVariablesFromRegistry,
@@ -164,5 +165,17 @@ describe('variableRegistry contract', () => {
       ['route_locked', false],
       ['route_open', false],
     ]));
+  });
+
+  it('rejects object prototype keys instead of treating them as registered variables', () => {
+    const normalized = normalizeVariableRegistry(JSON.parse(
+      '{"__proto__":{"type":"number","initial":7},"constructor":{"type":"bool","initial":true},"safe":{"type":"number","initial":1}}',
+    ));
+
+    expect(isValidVariableId('__proto__')).toBe(false);
+    expect(isValidVariableId('constructor')).toBe(false);
+    expect(Object.hasOwn(normalized, '__proto__')).toBe(false);
+    expect(Object.hasOwn(normalized, 'constructor')).toBe(false);
+    expect(normalized.safe.initial).toBe(1);
   });
 });

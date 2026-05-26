@@ -94,7 +94,8 @@ export function createSlider(config, value, min, max, step, onChange) {
 
   // ─── Fill Gradient (Webkit) ────────────────────────
   function _updateFillGradient() {
-    const pct = ((input.value - min) / (max - min)) * 100;
+    const range = max - min;
+    const pct = range === 0 ? 0 : ((input.value - min) / range) * 100;
     input.style.setProperty('--gm-fill-pct', `${pct}%`);
   }
   _updateFillGradient();

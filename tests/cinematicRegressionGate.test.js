@@ -37,20 +37,20 @@ describe('PREV-05 cinematic regression gate', () => {
     expect(src).toMatch(/function replayCurrentPage\(\) \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*camera\.clear\(\);[\s\S]*characters\.clear\(\);[\s\S]*background\.clear\(\);[\s\S]*engine\.resetRenderState\(\);[\s\S]*engine\.renderCurrentPage\(\);/);
 
     expectOrdered(quickLoad, [
+      'if (!engine.restoreState(data.state)) {',
       'stopAuto();',
       'stopSkip();',
       'titleScreen.hide();',
       'audio.stopVoice();',
-      'engine.restoreState(data.state);',
       'isPlaying = true;',
       'replayCurrentPage();',
     ]);
     expectOrdered(normalLoad, [
+      'if (!engine.restoreState(data.state)) {',
       'stopAuto();',
       'stopSkip();',
       'titleScreen.hide();',
       'audio.stopVoice();',
-      'engine.restoreState(data.state);',
       'isPlaying = true;',
       'replayCurrentPage();',
     ]);

@@ -17,6 +17,7 @@ const isPlaying = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
 const progress = computed(() => duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0);
+let playAttempt = 0;
 
 // ─── Format Helpers ─────────────────────────────────────────────────
 
@@ -36,14 +37,20 @@ function formatTime(seconds) {
 
 function togglePlay() {
   if (isPlaying.value) {
+    playAttempt += 1;
     audio.pause();
     isPlaying.value = false;
     emit('stop');
   } else {
+    const attempt = ++playAttempt;
     audio.src = props.src;
-    audio.play();
     isPlaying.value = true;
     emit('play');
+    audio.play().catch(() => {
+      if (attempt !== playAttempt) return;
+      isPlaying.value = false;
+      emit('stop');
+    });
   }
 }
 
@@ -107,6 +114,7 @@ audio.addEventListener('ended', () => {
 
 watch(() => props.active, (val) => {
   if (!val && isPlaying.value) {
+    playAttempt += 1;
     audio.pause();
     isPlaying.value = false;
   }
@@ -115,6 +123,7 @@ watch(() => props.active, (val) => {
 // ─── Cleanup (Pitfall #3: Audio Memory Leak) ────────────────────────
 
 onBeforeUnmount(() => {
+  playAttempt += 1;
   audio.pause();
   audio.removeAttribute('src');
   audio.load(); // releases the media resource

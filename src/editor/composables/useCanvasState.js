@@ -96,6 +96,7 @@ export function useCanvasState(selectedScene, selectedCmdIndex) {
     const cmds = scene.commands || [];
     for (let i = fromIndex; i >= 0; i--) {
       const cmd = cmds[i];
+      if (!cmd) continue;
       if (type === 'character' && cmd.type === 'show_character' && cmd.id === elementId) return i;
       if (type === 'dialogue' && cmd.type === 'dialogue') return i;
       if (type === 'choice' && cmd.type === 'choice') return i;

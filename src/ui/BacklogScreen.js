@@ -295,11 +295,18 @@ export class BacklogScreen {
     }
     entryEl.classList.add('backlog-playing');
 
-    this.audio.playVoice(voiceFile).then(() => {
-      if (this._playingEntry === entryEl) {
-        this._restoreEntry(entryEl, btn);
-      }
-    });
+    this.audio.playVoice(voiceFile)
+      .then(() => {
+        if (this._playingEntry === entryEl) {
+          this._restoreEntry(entryEl, btn);
+        }
+      })
+      .catch((error) => {
+        console.warn('[BacklogScreen] Failed to play voice:', error);
+        if (this._playingEntry === entryEl) {
+          this._restoreEntry(entryEl, btn);
+        }
+      });
   }
 
   /** @private */

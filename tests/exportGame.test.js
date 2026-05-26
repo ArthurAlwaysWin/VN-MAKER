@@ -230,6 +230,29 @@ describe('exportGame — asset filtering', () => {
   it('copies referenced ending thumbnails', () => {
     expect(existsSync(path.join(outputDir, 'assets', 'ui', 'endings', 'good.png'))).toBe(true);
   });
+
+  it('removes assets left by a prior export while preserving unrelated files in the chosen directory', async () => {
+    const outputDir = path.join(tempRoot, 'output-reexport');
+    const staleAsset = path.join(outputDir, 'assets', 'audio', 'old-track.mp3');
+    const userFile = path.join(outputDir, 'notes.txt');
+    await fs.mkdir(path.dirname(staleAsset), { recursive: true });
+    await fs.writeFile(staleAsset, Buffer.from('STALE'));
+    await fs.writeFile(userFile, 'keep me', 'utf-8');
+
+    await exportGame({
+      projectPath: mockProjectDir,
+      outputDir,
+      gameTitle: 'Clean Re-export',
+      faviconPath: null,
+      zip: false,
+      _skipBuild: true,
+      _appRoot: mockAppRoot,
+    }, () => {});
+
+    expect(existsSync(staleAsset)).toBe(false);
+    expect(await fs.readFile(userFile, 'utf-8')).toBe('keep me');
+    expect(existsSync(path.join(outputDir, 'assets', 'backgrounds', 'city.png'))).toBe(true);
+  });
 });
 
 // ─── exportGame — Path Safety ───────────────────────────

@@ -530,5 +530,28 @@ describe('BacklogScreen.setLayout', () => {
       btn.click();
       expect(btn.textContent).toBe('▶');
     });
+
+    it('restores the replay button after voice playback rejects', async () => {
+      const error = new Error('missing voice');
+      const audio = makeAudio();
+      audio.playVoice.mockRejectedValue(error);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      screen = new BacklogScreen(container, audio);
+      screen.show([
+        { speaker: 'alice', speakerName: 'Alice', text: 'Hello', voice: 'voice/missing.ogg' },
+      ], CHARACTERS);
+
+      const btn = screen.el.querySelector('.backlog-voice-btn');
+      btn.click();
+      expect(btn.textContent).toBe('■');
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(btn.textContent).toBe('▶');
+      expect(screen.el.querySelector('.backlog-entry').classList.contains('backlog-playing')).toBe(false);
+      expect(warn).toHaveBeenCalledWith('[BacklogScreen] Failed to play voice:', error);
+      warn.mockRestore();
+    });
   });
 });

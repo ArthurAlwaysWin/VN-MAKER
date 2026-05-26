@@ -8,6 +8,7 @@
 
 import { sanitizeCssValue } from '../sanitize.js';
 import { resolvePath } from '../../engine/assetPath.js';
+import { normalizeNineSliceInsets } from '../../engine/nineSlice.js';
 
 // ─── Panel Style Application ─────────────────────────────
 
@@ -72,10 +73,11 @@ export function applyPanelStyle(el, config) {
     nineEl.style.pointerEvents = 'none';
 
     // Build border-image following ThemeManager pattern
-    const slice = (config.nineSlice.slice || [0, 0, 0, 0]).join(' ') + ' fill';
-    const width = (config.nineSlice.width || config.nineSlice.slice || [0, 0, 0, 0])
+    const sliceInsets = normalizeNineSliceInsets(config.nineSlice.slice);
+    const slice = sliceInsets.join(' ') + ' fill';
+    const width = normalizeNineSliceInsets(config.nineSlice.width, sliceInsets)
       .map(v => v + 'px').join(' ');
-    const outset = (config.nineSlice.outset || [0, 0, 0, 0])
+    const outset = normalizeNineSliceInsets(config.nineSlice.outset)
       .map(v => v + 'px').join(' ');
     const repeat = config.nineSlice.repeat || 'stretch';
 

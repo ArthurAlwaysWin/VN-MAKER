@@ -40,6 +40,12 @@ function rewritePathToThemeNamespace(assetPath, themeId) {
   return `${assetRoot}${assetPath.slice(3)}`;
 }
 
+function isInsidePath(fullPath, basePath) {
+  const resolved = path.resolve(fullPath);
+  const baseResolved = path.resolve(basePath);
+  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
+}
+
 function replaceThemeUiRefs(node, rewrite) {
   if (!node || typeof node !== 'object') return;
 
@@ -112,13 +118,18 @@ export async function exportThemePackage({
 
   const rewrittenAssets = [];
   const seenTargetPaths = new Set();
+  const assetRoot = path.join(projectPath, 'assets');
   for (const originalPath of [...new Set(originalUiPaths)]) {
     const targetPath = rewritePathToThemeNamespace(originalPath, themeId);
     if (seenTargetPaths.has(targetPath)) {
       continue;
     }
     seenTargetPaths.add(targetPath);
-    const assetBytes = await fs.readFile(path.join(projectPath, 'assets', ...originalPath.split('/')));
+    const sourcePath = path.join(assetRoot, ...originalPath.split('/'));
+    if (!isInsidePath(sourcePath, assetRoot)) {
+      throw new Error(`Theme asset path escapes project assets: ${originalPath}`);
+    }
+    const assetBytes = await fs.readFile(sourcePath);
     rewrittenAssets.push({
       path: targetPath,
       bytes: assetBytes,

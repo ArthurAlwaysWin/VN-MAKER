@@ -9,6 +9,7 @@
  */
 import { DEFAULT_TOKENS } from './tokens.js';
 import { resolvePath } from './assetPath.js';
+import { normalizeNineSliceInsets } from './nineSlice.js';
 
 /**
  * Apply theme token overrides onto a container element.
@@ -109,10 +110,11 @@ function buildNineSliceCSS(nineSlice) {
     rules.push(`${selector} { ${parentProps.join('; ')}; }`);
 
     // ::before — normal state (D-01, D-03, D-04)
-    const slice = (config.slice || [0, 0, 0, 0]).join(' ') + ' fill';
-    const width = (config.width || config.slice || [0, 0, 0, 0])
+    const sliceInsets = normalizeNineSliceInsets(config.slice);
+    const slice = sliceInsets.join(' ') + ' fill';
+    const width = normalizeNineSliceInsets(config.width, sliceInsets)
       .map(v => v + 'px').join(' ');
-    const outset = (config.outset || [0, 0, 0, 0])
+    const outset = normalizeNineSliceInsets(config.outset)
       .map(v => v + 'px').join(' ');
     const repeat = config.repeat || 'stretch';
 

@@ -79,18 +79,24 @@ export class AudioManager {
     if (!this._bgm) return;
 
     const fadeOut = data?.fadeOut || 0;
+    const bgm = this._bgm;
     if (fadeOut > 0) {
-      const bgm = this._bgm;
       this._fadeVolume(bgm, bgm.volume, 0, fadeOut, () => {
         bgm.pause();
         bgm.currentTime = 0;
+        if (this._bgm === bgm) {
+          this._bgm = null;
+          this._currentBgmTrackVolume = 1;
+        }
       });
     } else {
-      this._bgm.pause();
-      this._bgm.currentTime = 0;
+      bgm.pause();
+      bgm.currentTime = 0;
+      if (this._bgm === bgm) {
+        this._bgm = null;
+        this._currentBgmTrackVolume = 1;
+      }
     }
-    this._bgm = null;
-    this._currentBgmTrackVolume = 1; // reset track volume on stop
   }
 
   /**

@@ -110,6 +110,13 @@ export class ScriptEngine extends EventEmitter {
    * @param {string} [sceneId='start']
    */
   startGame(sceneId = 'start') {
+    const scenes = this.script?.scenes;
+    if (!scenes || typeof scenes !== 'object') {
+      console.error('[ScriptEngine] Cannot start game without loaded scenes');
+      this.ended = true;
+      return false;
+    }
+
     this.variables = seedRuntimeVariablesFromRegistry(this.script?.systems?.variables);
     this.history = [];
     this.ended = false;
@@ -117,14 +124,15 @@ export class ScriptEngine extends EventEmitter {
 
     // Resolve start scene: explicit ID → 'start' → first scene in object
     let resolvedId = sceneId;
-    if (!this.script.scenes[resolvedId]) {
-      const firstId = Object.keys(this.script.scenes)[0];
+    if (!scenes[resolvedId]) {
+      const firstId = Object.keys(scenes)[0];
       if (firstId) {
         console.warn(`[ScriptEngine] Scene "${resolvedId}" not found, falling back to first scene: "${firstId}"`);
         resolvedId = firstId;
       }
     }
     this._enterScene(resolvedId);
+    return true;
   }
 
   /**
@@ -198,6 +206,10 @@ export class ScriptEngine extends EventEmitter {
    * @param {Object} state
    */
   restoreState(state) {
+    if (!state || typeof state !== 'object' || Array.isArray(state) || typeof state.currentScene !== 'string') {
+      return false;
+    }
+
     this.currentScene = state.currentScene;
     this.pageIndex = state.pageIndex ?? 0;
     this.dialogueIndex = state.dialogueIndex ?? 0;
@@ -206,6 +218,7 @@ export class ScriptEngine extends EventEmitter {
     this._expressionState = new Map(Object.entries(state.expressionState || {}));
     this.ended = false;
     this.waiting = false;
+    return true;
   }
 
   /**
@@ -271,7 +284,7 @@ export class ScriptEngine extends EventEmitter {
    * @private
    */
   _currentPage() {
-    const scene = this.script.scenes[this.currentScene];
+    const scene = this.script?.scenes?.[this.currentScene];
     if (!scene || !scene.pages) return null;
     return scene.pages[this.pageIndex] || null;
   }
@@ -284,7 +297,7 @@ export class ScriptEngine extends EventEmitter {
     const page = this._currentPage();
     if (!page) {
       // No more pages in this scene
-      const scene = this.script.scenes[this.currentScene];
+      const scene = this.script?.scenes?.[this.currentScene];
       if (scene?.next) {
         this._enterScene(scene.next);
       } else {
@@ -491,7 +504,7 @@ export class ScriptEngine extends EventEmitter {
     this.waiting = true;
     this.emit('choice', {
       prompt: page.prompt,
-      options: page.options,
+      options: Array.isArray(page.options) ? page.options : [],
     });
   }
 

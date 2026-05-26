@@ -88,12 +88,20 @@ let skipMode = false;
 let autoTimerInterval = null;
 let autoTimerTimeout = null;
 let skipTimer = null;
+let endReturnTimer = null;
 let pendingBgm = undefined; // undefined=no change, null=stopped, {file,volume,...}=new BGM
 let readHistory = null;
 let currentVoicePromise = null;
 const VOICE_END_DELAY = 300;
 let isPlaying = false; // whether the game is actively playing (not on title)
 let _autoCallbackId = 0; // incremented on every startAutoTimer/clearAutoTimer to cancel stale callbacks
+
+function cancelEndReturnTimer() {
+  if (endReturnTimer) {
+    clearTimeout(endReturnTimer);
+    endReturnTimer = null;
+  }
+}
 let pendingPageEnter = null;
 let pendingCharacterEvents = [];
 let pendingUiEvent = null;
@@ -461,7 +469,7 @@ function showDialogueEvent(data) {
   choiceMenu.hide();
 
   // Inject per-page font override into dialogue data
-  const currentPage = engine.script.scenes[engine.currentScene]?.pages[engine.pageIndex];
+  const currentPage = engine.script?.scenes?.[engine.currentScene]?.pages?.[engine.pageIndex];
   data.fontOverride = currentPage?.fontOverride || null;
 
   // During skip — show text instantly, suppress voice, no auto timer (D-07)
@@ -683,7 +691,9 @@ engine.on('end', () => {
   audio.stopVoice();
 
   // Show ending for a moment, then return to title
-  setTimeout(() => {
+  cancelEndReturnTimer();
+  endReturnTimer = setTimeout(() => {
+    endReturnTimer = null;
     cancelPageTransitionGate();
     camera.clear();
     engine.resetRenderState();
@@ -739,6 +749,11 @@ saveLoadScreen.onSave = async (slot) => {
 saveLoadScreen.onLoad = async (slot) => {
   const data = await saveManager.load(slot);
   if (!data) return;
+  if (!engine.restoreState(data.state)) {
+    showToast('存档数据损坏，无法读取');
+    return;
+  }
+  cancelEndReturnTimer();
 
   stopAuto();
   stopSkip();
@@ -747,7 +762,6 @@ saveLoadScreen.onLoad = async (slot) => {
   titleScreen.hide();
 
   audio.stopVoice(); // Stop lingering voice from previous state
-  engine.restoreState(data.state);
   isPlaying = true;
 
   // Re-render the current page's visual state
@@ -853,11 +867,15 @@ quickBar.onQuickLoad = async () => {
   if (!quickBar.isQuickLoadEnabled) return;
   const data = await saveManager.quickLoad();
   if (!data) return;
+  if (!engine.restoreState(data.state)) {
+    showToast('快速存档数据损坏，无法读取');
+    return;
+  }
+  cancelEndReturnTimer();
   stopAuto();
   stopSkip();
   titleScreen.hide();
   audio.stopVoice();
-  engine.restoreState(data.state);
   isPlaying = true;
   replayCurrentPage();
   showToast('快速读档完成');
@@ -1143,6 +1161,7 @@ function updateQuickBtnStates() {
 
 // ─── Title screen ───────────────────────────────────────
 async function showTitle() {
+  cancelEndReturnTimer();
   galleryScreen.hide();
   const titleLayout = engine.script?.ui?.titleScreen;
   if (titleLayout?.bgm) {
@@ -1159,6 +1178,7 @@ async function showTitle() {
 }
 
 titleScreen.onStart = () => {
+  cancelEndReturnTimer();
   titleScreen.hide();
   audio.stopBgm();
   isPlaying = true;
@@ -1225,6 +1245,7 @@ async function init(env) {
     playerDataRepository = createPlayerDataRepositoryFromScript(engine.script, playerDataStorage);
     await playerDataRepository.load();
     engine.setPlayerDataRepository(playerDataRepository);
+    saveManager?.setProjectId?.(engine.script.projectId);
     saveManager?.setPlayerDataRepository?.(playerDataRepository);
     readHistory = new ReadHistory(playerDataRepository);
 

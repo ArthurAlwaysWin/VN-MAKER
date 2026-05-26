@@ -11,7 +11,7 @@
  */
 
 import { describe, it, before, after } from 'node:test';
-import { strictEqual, deepStrictEqual, ok, match } from 'node:assert/strict';
+import { strictEqual, deepStrictEqual, ok, match, rejects } from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -455,5 +455,28 @@ describe('exportDesktop — progress', () => {
     strictEqual(result.success, true);
     ok(typeof result.outputPath === 'string');
     ok(Array.isArray(result.warnings));
+  });
+});
+
+describe('exportDesktop — process state recovery', () => {
+  it('restores process.noAsar when final desktop assembly fails', async () => {
+    const electronDist = path.join(mockAppRoot, 'node_modules', 'electron', 'dist');
+    await fs.mkdir(electronDist, { recursive: true });
+    await fs.writeFile(path.join(electronDist, 'electron.exe'), 'not-an-exe', 'utf-8');
+    const blockedOutputDir = path.join(tempRoot, 'blocked-output-file');
+    await fs.writeFile(blockedOutputDir, 'not a directory', 'utf-8');
+
+    const previousNoAsar = process.noAsar;
+    process.noAsar = false;
+    try {
+      await rejects(exportDesktop({
+        ...baseOpts(),
+        outputDir: blockedOutputDir,
+        _skipPackager: false,
+      }, () => {}));
+      strictEqual(process.noAsar, false);
+    } finally {
+      process.noAsar = previousNoAsar;
+    }
   });
 });

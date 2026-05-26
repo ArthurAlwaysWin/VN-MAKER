@@ -53,6 +53,8 @@ export class SaveLoadScreen {
     this._activeConfirmation = null;
     /** @type {Array|null} Cached slot data to avoid re-fetching on pagination */
     this._cachedSlots = null;
+    /** @type {number} Discards asynchronous grid renders superseded by navigation. */
+    this._gridRenderRequest = 0;
     /** @type {Object|null} Custom layout configuration from setLayout() */
     this._layoutConfig = null;
   }
@@ -235,26 +237,38 @@ export class SaveLoadScreen {
   async _renderGrid() {
     const grid = this.el.querySelector('.save-load-grid');
     if (!grid) return;
+    const requestId = ++this._gridRenderRequest;
     grid.innerHTML = '';
 
-    // Use cached data for pagination; fetch only on first load or after invalidation
-    if (!this._cachedSlots) {
-      if (this.saveManager) {
-        const allSlots = await this.saveManager.getAllSlots();
-        this._cachedSlots = new Map();
-        for (const s of allSlots) this._cachedSlots.set(s.slot, s);
-      } else {
-        // Preview mode — no saveManager, show empty placeholder slots
-        this._cachedSlots = new Map();
+    // Use cached data for pagination; fetch only on first load or after invalidation.
+    // Keep newly fetched data local until this render is still the active request.
+    let slots = this._cachedSlots;
+    try {
+      if (!slots) {
+        if (this.saveManager) {
+          const allSlots = await this.saveManager.getAllSlots();
+          slots = new Map();
+          for (const s of allSlots) slots.set(s.slot, s);
+        } else {
+          // Preview mode — no saveManager, show empty placeholder slots
+          slots = new Map();
+        }
       }
+    } catch (error) {
+      if (requestId !== this._gridRenderRequest) return;
+      console.error('[SaveLoadScreen] Failed to load slots:', error);
+      slots = new Map();
     }
 
+    if (requestId !== this._gridRenderRequest || grid !== this.el.querySelector('.save-load-grid')) return;
+    this._cachedSlots = slots;
+    grid.innerHTML = '';
     const slotsPerPage = this._getSlotsPerPage();
     const startSlot = (this._currentPage - 1) * slotsPerPage + 1;
     const endSlot = this._currentPage * slotsPerPage;
 
     for (let i = startSlot; i <= endSlot; i++) {
-      grid.appendChild(this._createSlotCard(i, this._cachedSlots.get(i) || null));
+      grid.appendChild(this._createSlotCard(i, slots.get(i) || null));
     }
   }
 
@@ -476,6 +490,7 @@ export class SaveLoadScreen {
 
   /** @private Attach arrow-key page navigation */
   _attachKeyboard() {
+    this._detachKeyboard();
     this._keyHandler = (e) => {
       const totalPages = this._getTotalPages();
       if (e.key === 'ArrowLeft' && this._currentPage > 1) {

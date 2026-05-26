@@ -4,6 +4,7 @@ import { GALGAME_RESET_SCOPES } from '../src/shared/galgameContract.js';
 import {
   PLAYER_PROFILE_VERSION,
   PlayerDataRepository,
+  createBrowserPlayerDataStorage,
   createIpcPlayerDataStorage,
   createPlayerDataRepositoryFromScript,
 } from '../src/engine/PlayerDataRepository.js';
@@ -375,6 +376,46 @@ describe('player data runtime wiring', () => {
         },
       },
     });
+  });
+
+  it('discards prototype-shaped unlock ids from loaded and newly applied profile data', async () => {
+    const storage = createMemoryStorage({
+      profiles: {
+        gm_safe_unlocks: JSON.parse(
+          '{"unlocks":{"endings":{"__proto__":{"count":1},"good_end":{"count":1}},"cg":{"constructor":{"count":1}}}}',
+        ),
+      },
+    });
+    const repository = new PlayerDataRepository('gm_safe_unlocks', storage);
+
+    await repository.load();
+    await repository.unlockEnding('good_end', 1000);
+    await repository.unlockEnding('__proto__');
+    await repository.unlockCg('constructor');
+
+    const profile = repository.getProfile();
+    expect(Object.hasOwn(profile.unlocks.endings, '__proto__')).toBe(false);
+    expect(Object.hasOwn(profile.unlocks.cg, 'constructor')).toBe(false);
+    expect(profile.unlocks.endings.good_end).toEqual({
+      firstUnlockedAt: 1000,
+      lastUnlockedAt: 1000,
+      count: 2,
+    });
+  });
+
+  it('treats corrupt browser profile JSON as absent data instead of aborting startup', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const storage = createBrowserPlayerDataStorage({
+      localStorage: {
+        getItem: () => '{truncated',
+      },
+    });
+
+    await expect(storage.loadProfile('gm_runtime_story')).resolves.toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[PlayerDataRepository] Ignoring corrupt browser profile:',
+      expect.any(SyntaxError),
+    );
   });
 
   it('unlocks an ending on normal page entry without replaying it when a save render is restored', async () => {

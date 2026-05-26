@@ -25,6 +25,10 @@ const CHARACTER_MOTION_PRESETS = {
   'blur-in': { className: 'motion-blur-in', loop: false, duration: 420 },
 };
 
+function resolveCharacterImageUrl(basePath, imagePath) {
+  return `${basePath}${String(imagePath).replace(/#/g, '%23').replace(/\?/g, '%3F')}`;
+}
+
 export class CharacterLayer {
   /**
    * @param {HTMLElement} container — the #character-layer element
@@ -89,13 +93,13 @@ export class CharacterLayer {
     if (data.image) {
       if (isNew) {
         const activeEl = entry.imgA;
-        activeEl.src = this.basePath + data.image;
+        activeEl.src = resolveCharacterImageUrl(this.basePath, data.image);
         entry.currentImage = data.image;
         this._updateContainerSize(entry, activeEl);
       } else if (entry.currentImage !== data.image) {
         // Existing character with changed expression — crossfade (D-02)
         entry.currentImage = data.image;
-        this._crossfade(entry, this.basePath + data.image, { skip: !!data.skip });
+        this._crossfade(entry, resolveCharacterImageUrl(this.basePath, data.image), { skip: !!data.skip });
       }
     }
 
@@ -191,7 +195,7 @@ export class CharacterLayer {
     if (entry.currentImage === data.image) return;
 
     entry.currentImage = data.image;
-    this._crossfade(entry, this.basePath + data.image, { skip: !!data.skip });
+    this._crossfade(entry, resolveCharacterImageUrl(this.basePath, data.image), { skip: !!data.skip });
   }
 
   /**
@@ -282,6 +286,10 @@ export class CharacterLayer {
       apply();
     } else {
       imgEl.onload = apply;
+      imgEl.onerror = () => {
+        imgEl.onload = null;
+        imgEl.onerror = null;
+      };
     }
   }
 

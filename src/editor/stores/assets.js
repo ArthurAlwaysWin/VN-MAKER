@@ -47,10 +47,13 @@ export const useAssetStore = defineStore('assets', () => {
    */
   async function loadAll() {
     isLoading.value = true;
-    await Promise.all(
-      ['backgrounds', 'characters', 'audio', 'fonts', 'ui'].map(c => loadCategory(c))
-    );
-    isLoading.value = false;
+    try {
+      await Promise.all(
+        ['backgrounds', 'characters', 'audio', 'fonts', 'ui'].map(c => loadCategory(c))
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   /**

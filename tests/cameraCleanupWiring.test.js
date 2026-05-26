@@ -73,8 +73,8 @@ describe('camera cleanup wiring', () => {
   it('preserves load and quick-load reset ordering around replayCurrentPage', () => {
     const src = readProjectFile('src/main.js');
 
-    expect(src).toMatch(/saveLoadScreen\.onLoad = async \(slot\) => \{[\s\S]*engine\.restoreState\(data\.state\);[\s\S]*isPlaying = true;[\s\S]*replayCurrentPage\(\);/);
-    expect(src).toMatch(/quickBar\.onQuickLoad = async \(\) => \{[\s\S]*engine\.restoreState\(data\.state\);[\s\S]*isPlaying = true;[\s\S]*replayCurrentPage\(\);/);
+    expect(src).toMatch(/saveLoadScreen\.onLoad = async \(slot\) => \{[\s\S]*if \(!engine\.restoreState\(data\.state\)\)[\s\S]*isPlaying = true;[\s\S]*replayCurrentPage\(\);/);
+    expect(src).toMatch(/quickBar\.onQuickLoad = async \(\) => \{[\s\S]*if \(!engine\.restoreState\(data\.state\)\)[\s\S]*isPlaying = true;[\s\S]*replayCurrentPage\(\);/);
   });
 
   it('requires normal load to stop auto and skip just like quick-load before camera replay cleanup starts', () => {

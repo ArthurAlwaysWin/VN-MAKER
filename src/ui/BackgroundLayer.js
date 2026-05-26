@@ -39,7 +39,8 @@ export class BackgroundLayer {
   setBackground(data) {
     this._cancelActiveTransition();
 
-    const imageUrl = `url(${this.basePath}${data.image})`;
+    const safeImagePath = String(data.image).replace(/#/g, '%23').replace(/\?/g, '%3F');
+    const imageUrl = `url(${this.basePath}${safeImagePath})`;
     const duration = clampNumericTransitionParam(data.duration, BACKGROUND_TRANSITION_DURATION_SCHEMA);
     const transition = this._normalizeTransition(data.transition);
     const previewVariant = data.previewVariant === 'same-page' ? 'same-page' : null;

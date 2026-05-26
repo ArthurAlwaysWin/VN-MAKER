@@ -77,6 +77,7 @@ Current:
 - Story Systems supports registered endings, terminal normal-page arrival unlocks and choice unlocks, plus a read-only, refreshable player-profile status so creators can distinguish authored unlock points from runtime unlock progress.
 - Story Systems exposes editable CG registry entries with project asset selection for images/thumbnails and read-only, refreshable player-profile progress; choice effects can select registered `unlock:cg` targets, and the runtime gallery browses multi-image unlocked entries.
 - Transition authoring exposes the shared catalog in page-inspector controls and allows agents to apply background transitions to a scene, an inclusive page range, or bounded page-type/background predicates through `set-page-transitions`.
+- Story Systems flow review exposes repair-ready broken scene links, unreachable ending/CG unlocks, asset handoff findings, per-scene review badges, and exact page/system navigation; CLI repair commands can retarget or clear references to missing target ids.
 
 Gaps:
 
@@ -127,7 +128,7 @@ Current:
 
 Gaps:
 
-- Editor tests are mostly static/source-level for handoff UX rather than mounted component tests.
+- Mounted editor tests cover Story Systems flow navigation for broken targets and unreachable unlock entries; broader Project Settings handoff lifecycle interactions remain primarily source-level.
 
 Priority:
 

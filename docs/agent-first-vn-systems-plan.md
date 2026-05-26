@@ -340,7 +340,7 @@ Definition of done:
 
 **Goal:** Make long projects analyzable by humans and agents.
 
-**Current minimal slice:** Shared branch-flow reports now expose attributed edges, reachability, terminal/dead-end routes, closed cycles, per-registry unlock reachability, and Mermaid output. Validator/readiness diagnostics include deterministic or ineffective condition-route findings; agent CLI analysis/repair commands, handoff `branch-graph` preview routing, and a Story Systems flow review panel with condition-page navigation are implemented together.
+**Current implemented coverage:** M4 is complete. Shared branch-flow reports expose attributed page-level edges, repair-ready missing-target edges, reachability, terminal/dead-end routes, closed cycles, per-registry unlock reachability, and Mermaid output. Validator/readiness and handoff artifacts carry deterministic condition, route, unlock, and asset review information with actionable repair commands. `repair-scene-target` and `clear-scene-references` can resolve references to missing target ids. Story Systems now surfaces broken links, unreachable ending/CG unlocks, asset review items, scene review badges, and precise scene/page/system navigation.
 
 Shared analysis:
 
@@ -400,6 +400,7 @@ Definition of done:
 - A project with an unreachable route is flagged before handoff.
 - A human can open the graph and jump to the problem scene.
 - An agent receives exact repair commands or repair hints.
+- Broken references, unreachable unlocks, and asset review findings can be inspected in the same flow review surface without adding canonical author data.
 
 ### M5 — Transition Catalog Expansion
 

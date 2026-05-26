@@ -82,6 +82,7 @@
       <BranchGraphPanel
         v-else-if="script.storySystemsPanel === 'graph'"
         :script-data="script.data"
+        :review-items="project.agentHandoff?.reviewItems || []"
         @navigate-scene="openGraphScene"
         @navigate-path="openGraphPath"
       />
@@ -370,7 +371,7 @@ function openGraphScene(sceneId) {
 }
 
 function openGraphPath(pathString) {
-  project.requestSceneNavigation(pathString);
+  project.requestAgentPathNavigation(pathString);
 }
 
 function openRenameImpact(payload) {

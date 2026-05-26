@@ -317,6 +317,19 @@ export function createBranchGraphReport(script = {}, options = {}) {
   const trace = traceReachableScenes(script, options);
   const reachableIds = new Set(trace.reachableSceneIds);
   const edges = collectSceneEdges(script);
+  const missingTargetEdges = edges
+    .filter((edge) => !edge.targetExists)
+    .map((edge) => ({
+      ...edge,
+      sourceSceneReachable: reachableIds.has(edge.fromSceneId),
+      suggestedAction: {
+        command: 'repair-scene-target',
+        params: {
+          from: edge.toSceneId,
+          to: '<existing-scene-id>',
+        },
+      },
+    }));
   const endingUnlockReferences = collectUnlockReferences(script, 'unlock:ending');
   const cgUnlockReferences = collectUnlockReferences(script, 'unlock:cg');
   const endingUnlockSceneIds = new Set(endingUnlockReferences.map((reference) => reference.sceneId));
@@ -374,8 +387,10 @@ export function createBranchGraphReport(script = {}, options = {}) {
     graph: trace.graph,
     nodeCount: nodes.length,
     edgeCount: edges.length,
+    missingTargetCount: missingTargetEdges.length,
     nodes,
     edges,
+    missingTargetEdges,
     reachableSceneIds: trace.reachableSceneIds,
     unreachableSceneIds: trace.unreachableSceneIds,
     terminalSceneIds,

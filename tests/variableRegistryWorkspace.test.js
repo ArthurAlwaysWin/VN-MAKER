@@ -659,4 +659,73 @@ describe('variable registry workspace', () => {
     expect(harness.container.querySelector('[data-test="cg-profile-status"]').textContent).toContain('玩家进度调试');
     expect(harness.container.querySelector('[data-test="cg-profile-status"]').textContent).toContain('3 次解锁');
   });
+
+  it('surfaces M4 flow review items and navigates exact scene and system paths', async () => {
+    harness = await mountStorySystems(makeScriptData({
+      systems: {
+        variables: {},
+        endings: { secret: { title: 'Secret End' } },
+        gallery: { cg: { hidden: { title: 'Hidden CG', images: ['backgrounds/cg/hidden.png'] } } },
+      },
+      scenes: {
+        start: {
+          name: 'Start',
+          pages: [{
+            type: 'choice',
+            options: [{ text: 'Broken', target: 'missing_route' }],
+          }],
+        },
+        orphan: {
+          name: 'Orphan',
+          pages: [{
+            type: 'choice',
+            options: [{
+              text: 'Unlock',
+              effects: [
+                { type: 'unlock:ending', id: 'secret' },
+                { type: 'unlock:cg', id: 'hidden' },
+              ],
+            }],
+          }],
+        },
+      },
+    }));
+    harness.project.agentHandoff = {
+      reviewItems: [{
+        code: 'missing-asset-reference',
+        pathString: 'scenes.start.pages.0.background',
+        assetPath: 'backgrounds/missing.png',
+        message: 'Missing background.',
+      }],
+    };
+    harness.script.selectStorySystemsPanel('graph');
+    await flushUi();
+
+    expect(harness.container.textContent).toContain('缺失目标');
+    expect(harness.container.textContent).toContain('结局解锁不可达');
+    expect(harness.container.textContent).toContain('CG 解锁不可达');
+    expect(harness.container.textContent).toContain('资产审查');
+    expect(harness.container.textContent).toContain('审查');
+    expect(harness.container.querySelector('[data-test="graph-edges"]').textContent).toContain('missing_route');
+
+    const missingTarget = [...harness.container.querySelectorAll('.issue')]
+      .find((item) => item.textContent.includes('缺失目标'));
+    missingTarget.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+    expect(harness.project.sceneNavigationRequest).toMatchObject({
+      sceneId: 'start',
+      pageIndex: 0,
+    });
+
+    harness.script.selectStorySystemsPanel('graph');
+    await flushUi();
+    const endingUnlock = [...harness.container.querySelectorAll('.issue')]
+      .find((item) => item.textContent.includes('结局解锁不可达'));
+    endingUnlock.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+    expect(harness.project.agentPathNavigationRequest).toMatchObject({
+      kind: 'ending',
+      id: 'secret',
+    });
+  });
 });

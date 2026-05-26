@@ -302,6 +302,53 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('provides repair guidance for broken and unresolved branch flow routes', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_branch_flow',
+      systems: {
+        endings: { good: { title: 'Good End' } },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [
+              { text: 'Broken', target: 'missing_route' },
+              { text: 'Stranded', target: 'dead' },
+            ],
+          }],
+        },
+        dead: { pages: [{ type: 'normal', dialogues: [{ text: 'Lost.' }] }] },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+    });
+
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'validation',
+        code: 'missing-scene-target',
+        target: 'missing_route',
+        pathString: 'scenes.start.pages.0.options.0.target',
+        suggestedAction: expect.objectContaining({
+          commands: expect.arrayContaining([
+            expect.objectContaining({ command: 'repair-scene-target' }),
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        source: 'validation',
+        code: 'dead-end-scene',
+        sceneId: 'dead',
+        suggestedAction: expect.objectContaining({
+          commands: expect.arrayContaining([
+            expect.objectContaining({ command: 'add-ending-unlock' }),
+          ]),
+        }),
+      }),
+    ]));
+  });
+
   it('turns transaction reference screenshot notes into screen fidelity review items', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_reference_fidelity',

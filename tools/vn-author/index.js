@@ -1148,12 +1148,14 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     return session.retargetSceneReferences({
       fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
       toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
+      allowMissingSource: true,
     });
   }
 
   if (command === 'clear-scene-references') {
     return session.clearSceneReferences({
       sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      allowMissingTarget: true,
     });
   }
 
@@ -3287,6 +3289,7 @@ async function repairSceneTarget(args) {
   const output = await mutateScript(args, (session) => session.retargetSceneReferences({
     fromSceneId,
     toSceneId,
+    allowMissingSource: true,
   }));
 
   if (hasFlag(args, '--json')) {
@@ -3310,6 +3313,7 @@ async function clearSceneReferencesCommand(args) {
 
   const output = await mutateScript(args, (session) => session.clearSceneReferences({
     sceneId,
+    allowMissingTarget: true,
   }));
 
   if (hasFlag(args, '--json')) {

@@ -3226,6 +3226,7 @@ describe('vn-author CLI', () => {
                 { text: 'Good', target: 'final', effects: [{ type: 'unlock:ending', id: 'good' }] },
                 { text: 'Lost', target: 'dead' },
                 { text: 'Loop', target: 'loop' },
+                { text: 'Broken', target: 'missing_route' },
               ],
             }],
           },
@@ -3239,15 +3240,39 @@ describe('vn-author CLI', () => {
         cliPath, 'graph-report', '--script', scriptPath, '--json',
       ])).stdout);
       expect(graph).toMatchObject({
+        missingTargetCount: 1,
         deadEndSceneIds: ['dead'],
         cyclesWithoutExit: [{ sceneIds: ['loop'] }],
       });
+      expect(graph.missingTargetEdges).toEqual([
+        expect.objectContaining({
+          toSceneId: 'missing_route',
+          pathString: 'scenes.start.pages.0.options.3.target',
+        }),
+      ]);
       expect(graph.mermaid).toContain('flowchart TD');
 
       const deadEnds = JSON.parse((await execFileAsync('node', [
         cliPath, 'find-dead-ends', '--script', scriptPath, '--json',
       ])).stdout);
       expect(deadEnds.deadEndSceneIds).toEqual(['dead']);
+      expect(deadEnds.missingTargetEdges).toEqual([
+        expect.objectContaining({ toSceneId: 'missing_route' }),
+      ]);
+      const clearBroken = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'clear-scene-references',
+        '--script',
+        scriptPath,
+        '--scene',
+        'missing_route',
+        '--dry-run',
+        '--json',
+      ])).stdout);
+      expect(clearBroken.result).toMatchObject({
+        sceneId: 'missing_route',
+        clearedReferenceCount: 1,
+      });
 
       const missing = JSON.parse((await execFileAsync('node', [
         cliPath, 'find-missing-assets', '--script', scriptPath, '--json',
@@ -3262,10 +3287,16 @@ describe('vn-author CLI', () => {
 
       const planPath = path.join(dir, 'repair-plan.json');
       await writeFile(planPath, JSON.stringify({
-        operations: [{
-          command: 'repair-scene-target',
-          params: { from: 'dead', to: 'final' },
-        }],
+        operations: [
+          {
+            command: 'repair-scene-target',
+            params: { from: 'missing_route', to: 'final' },
+          },
+          {
+            command: 'repair-scene-target',
+            params: { from: 'dead', to: 'final' },
+          },
+        ],
       }), 'utf8');
       const planRepair = JSON.parse((await execFileAsync('node', [
         cliPath,
@@ -3279,7 +3310,30 @@ describe('vn-author CLI', () => {
       expect(planRepair.operations[0]).toMatchObject({
         command: 'repair-scene-target',
         status: 'applied',
+        changedPaths: ['scenes.start.pages.0.options.3.target'],
+      });
+      expect(planRepair.operations[1]).toMatchObject({
+        command: 'repair-scene-target',
+        status: 'applied',
         changedPaths: ['scenes.start.pages.0.options.1.target'],
+      });
+
+      const brokenRepair = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'repair-scene-target',
+        '--script',
+        scriptPath,
+        '--from',
+        'missing_route',
+        '--to',
+        'final',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(brokenRepair.result).toMatchObject({
+        fromSceneId: 'missing_route',
+        toSceneId: 'final',
+        updatedReferenceCount: 1,
       });
 
       const repair = JSON.parse((await execFileAsync('node', [

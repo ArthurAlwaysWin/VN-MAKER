@@ -214,6 +214,36 @@ describe('scene graph helpers', () => {
     });
   });
 
+  it('reports broken route edges with repair-ready source paths', () => {
+    const report = createBranchGraphReport({
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [{ text: 'Missing', target: 'missing_route' }],
+          }],
+        },
+      },
+    });
+
+    expect(report.missingTargetCount).toBe(1);
+    expect(report.missingTargetEdges).toEqual([
+      expect.objectContaining({
+        fromSceneId: 'start',
+        toSceneId: 'missing_route',
+        pathString: 'scenes.start.pages.0.options.0.target',
+        sourceSceneReachable: true,
+        suggestedAction: {
+          command: 'repair-scene-target',
+          params: {
+            from: 'missing_route',
+            to: '<existing-scene-id>',
+          },
+        },
+      }),
+    ]);
+  });
+
   it('keeps colliding sanitized scene ids distinct in Mermaid output', () => {
     const report = createBranchGraphReport({
       scenes: {

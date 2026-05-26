@@ -275,5 +275,5 @@ Common warnings:
 - Advanced agent-only effects should not be invented until a shared contract exists.
 - Importing prose directly is the external agent's responsibility; this repo currently imports structured draft JSON.
 - CG gallery registry authoring is supported through `add-cg`, `update-cg`, `remove-cg`, `add-cg-unlock`, and `list-cg`; do not invent gallery fields or flows outside the shared contract.
-- Branch flow analysis is supported through `graph-report`, `find-dead-ends`, `find-missing-assets`, and `find-unused-assets`; flow reports are derived review data, not fields to write into `script.json`.
+- Branch flow analysis is supported through `graph-report`, `find-dead-ends`, `find-missing-assets`, and `find-unused-assets`; reports include repair-ready broken targets and unreachable unlock review, while Story Systems exposes exact route/asset navigation. Flow reports are derived review data, not fields to write into `script.json`.
 - Cinematic catalog discovery is supported through `list-transitions`; write only runtime-supported ids unless an explicit fallback is acceptable, and treat `set-character-transition` as the `characters[].animation` compatibility surface.

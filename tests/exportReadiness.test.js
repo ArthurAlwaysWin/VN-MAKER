@@ -178,6 +178,47 @@ describe('export readiness', () => {
     ]));
   });
 
+  it('preserves repair-ready graph and unlock reachability details for export review', () => {
+    const report = createExportReadiness(createReadyScript({
+      systems: {
+        variables: {},
+        endings: { secret: { title: 'Secret End' } },
+        gallery: { cg: { hidden: { title: 'Hidden CG' } } },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'choice',
+            options: [{ text: 'Broken', target: 'missing_route' }],
+          }],
+        },
+        orphan: {
+          pages: [{
+            type: 'choice',
+            options: [{
+              text: 'Hidden',
+              effects: [
+                { type: 'unlock:ending', id: 'secret' },
+                { type: 'unlock:cg', id: 'hidden' },
+              ],
+            }],
+          }],
+        },
+      },
+    }), {
+      knownAssets: [],
+    });
+
+    expect(report.sceneGraph.missingTargetEdges).toEqual([
+      expect.objectContaining({
+        toSceneId: 'missing_route',
+        pathString: 'scenes.start.pages.0.options.0.target',
+      }),
+    ]);
+    expect(report.sceneGraph.endings.unreachableUnlockIds).toEqual(['secret']);
+    expect(report.sceneGraph.cgs.unreachableUnlockIds).toEqual(['hidden']);
+  });
+
   it('reports partial theme slot coverage without blocking export', () => {
     const report = createExportReadiness(createReadyScript({
       ui: {

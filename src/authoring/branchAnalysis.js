@@ -13,6 +13,7 @@ export function findDeadEnds(script = {}, options = {}) {
   const graph = createGraphAnalysis(script, options);
   return {
     entrySceneId: graph.entrySceneId,
+    missingTargetEdges: graph.missingTargetEdges,
     deadEndSceneIds: graph.deadEndSceneIds,
     cyclesWithoutExit: graph.cyclesWithoutExit,
     terminalSceneIds: graph.terminalSceneIds,

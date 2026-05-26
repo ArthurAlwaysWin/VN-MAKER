@@ -207,7 +207,7 @@ npm run vn -- repair-scene-target --from missing_route --to chapter_1_new_route 
 npm run vn -- clear-scene-references --scene unused_branch --script public/game/script.json --force --checkpoint --json
 ```
 
-`scene-references` reports exact `pathString` values for scene `next`, choice targets, and condition targets, plus suggested repair commands. Use `retarget-scene` when preserving branch flow; use `clear-scene-references` only when those jumps should become terminal or intentionally unset.
+`scene-references` reports exact `pathString` values for scene `next`, choice targets, and condition targets, plus suggested repair commands. Use `retarget-scene` when preserving an existing route, `repair-scene-target` when references point to a missing target id, and `clear-scene-references` when those jumps should become terminal or intentionally unset; repair and clear both accept missing target ids.
 
 Inspect route and asset analysis before handoff:
 
@@ -219,7 +219,7 @@ npm run vn -- find-missing-assets --script public/game/script.json --json
 npm run vn -- find-unused-assets --script public/game/script.json --json
 ```
 
-The desktop editor exposes the same derived report under Story Systems > Flow. A `branch-graph` handoff target navigates there without writing analysis data into `script.json`.
+The desktop editor exposes the same derived report under Story Systems > Flow, including broken links, unreachable ending/CG unlocks, asset handoff findings, review badges, and exact route/system navigation. A `branch-graph` handoff target navigates there without writing analysis data into `script.json`.
 
 ## 5. Validate Again
 

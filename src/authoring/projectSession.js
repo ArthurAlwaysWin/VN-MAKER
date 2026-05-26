@@ -1004,10 +1004,12 @@ export function createProjectSession(input = {}) {
       };
     },
 
-    retargetSceneReferences({ fromSceneId, toSceneId }) {
+    retargetSceneReferences({ fromSceneId, toSceneId, allowMissingSource = false }) {
       const fromId = assertNonEmptyString(fromSceneId, 'fromSceneId');
       const toId = assertNonEmptyString(toSceneId, 'toSceneId');
-      getScene(script, fromId);
+      if (!allowMissingSource) {
+        getScene(script, fromId);
+      }
       getScene(script, toId);
       const references = collectSceneReferences(script, fromId);
       const updatedReferenceCount = replaceSceneReferences(script, fromId, toId);
@@ -1020,9 +1022,11 @@ export function createProjectSession(input = {}) {
       };
     },
 
-    clearSceneReferences({ sceneId }) {
+    clearSceneReferences({ sceneId, allowMissingTarget = false }) {
       const id = assertNonEmptyString(sceneId, 'sceneId');
-      getScene(script, id);
+      if (!allowMissingTarget) {
+        getScene(script, id);
+      }
       const references = collectSceneReferences(script, id);
       const clearedReferenceCount = clearSceneReferenceTargets(script, id);
       return {

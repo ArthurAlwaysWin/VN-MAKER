@@ -193,6 +193,74 @@ function createConditionSuggestedAction(issue = {}) {
   };
 }
 
+function createBranchFlowSuggestedAction(issue = {}) {
+  if (issue.code === 'missing-scene-target') {
+    return {
+      summary: 'Retarget this broken route to an existing scene or clear the obsolete reference.',
+      commands: [
+        {
+          command: 'repair-scene-target',
+          args: ['--from', issue.target ?? '<missing-scene-id>', '--to', '<existing-scene-id>'],
+        },
+        {
+          command: 'clear-scene-references',
+          args: ['--scene', issue.target ?? '<missing-scene-id>'],
+        },
+      ],
+    };
+  }
+
+  if (issue.code === 'dead-end-scene') {
+    return {
+      summary: 'Resolve this terminal route by adding an ending unlock or connecting it to an intended continuation.',
+      commands: [
+        {
+          command: 'add-ending-unlock',
+          args: ['--scene', issue.sceneId ?? '<scene-id>', '--page', '<terminal-page-index>', '--id', '<ending-id>'],
+        },
+        {
+          command: 'set-scene-next',
+          args: ['--scene', issue.sceneId ?? '<scene-id>', '--next', '<target-scene-id>'],
+        },
+      ],
+    };
+  }
+
+  if (issue.code === 'cycle-without-exit') {
+    return {
+      summary: 'Add an exit route or explicit ending resolution for this closed cycle.',
+      commands: [
+        {
+          command: 'set-scene-next',
+          args: ['--scene', issue.sceneId ?? '<scene-id>', '--next', '<exit-scene-id>'],
+        },
+        {
+          command: 'graph-report',
+          args: ['--script', '<script.json>', '--json'],
+        },
+      ],
+    };
+  }
+
+  if (issue.code === 'ending-unlock-unreachable' || issue.code === 'cg-unlock-unreachable') {
+    return {
+      summary: 'Connect the unlock route from a reachable scene or move the unlock effect to an intended reachable route.',
+      commands: [
+        {
+          command: 'graph-report',
+          args: ['--script', '<script.json>', '--json'],
+        },
+        {
+          command: 'repair-scene-target',
+          args: ['--from', '<unreachable-route-id>', '--to', '<reachable-route-id>'],
+        },
+      ],
+    };
+  }
+
+  return undefined;
+}
+
 function getReviewCategory(source, issue = {}) {
   if (issue.code === 'missing-asset-reference') return 'missing-asset';
   if (issue.code === 'unused-asset') return 'unused-asset';
@@ -206,7 +274,8 @@ function getReviewCategory(source, issue = {}) {
 function createReviewItem(source, severity, issue = {}) {
   const suggestedAction = issue.suggestedAction
     ?? createAssetSuggestedAction(issue)
-    ?? createConditionSuggestedAction(issue);
+    ?? createConditionSuggestedAction(issue)
+    ?? createBranchFlowSuggestedAction(issue);
   return {
     source,
     severity,
@@ -217,6 +286,9 @@ function createReviewItem(source, severity, issue = {}) {
     ...('assetPath' in issue ? { assetPath: issue.assetPath } : {}),
     ...('assetKind' in issue ? { assetKind: issue.assetKind } : {}),
     ...('sceneId' in issue ? { sceneId: issue.sceneId } : {}),
+    ...('target' in issue ? { target: issue.target } : {}),
+    ...('endingId' in issue ? { endingId: issue.endingId } : {}),
+    ...('cgId' in issue ? { cgId: issue.cgId } : {}),
     ...('variableId' in issue ? { variableId: issue.variableId } : {}),
     ...('outcome' in issue ? { outcome: issue.outcome } : {}),
     ...('missingSlots' in issue ? { missingSlots: issue.missingSlots } : {}),

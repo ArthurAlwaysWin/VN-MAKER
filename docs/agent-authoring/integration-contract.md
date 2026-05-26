@@ -379,7 +379,7 @@ Required diagnostics:
 
 ### Branch Graph And Asset Analysis
 
-The first M4 slice is implemented. `analysis.sceneGraph` is a review/navigation target rather than canonical author data; it is derived from scenes and effects each time a report is requested.
+M4 is implemented end to end. `analysis.sceneGraph` is a review/navigation target rather than canonical author data; it is derived from scenes and effects each time a report is requested. Reports and export readiness expose repair-ready missing-target edges and unlock reachability; handoff review items carry repair guidance; Story Systems routes route, unlock, and asset findings back to exact authoring locations.
 
 Paths:
 
@@ -393,6 +393,8 @@ Required commands:
 - `find-dead-ends`
 - `find-unused-assets`
 - `find-missing-assets`
+- `repair-scene-target`
+- `clear-scene-references`
 
 Required diagnostics:
 

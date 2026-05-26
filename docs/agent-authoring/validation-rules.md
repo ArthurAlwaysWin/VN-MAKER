@@ -177,10 +177,13 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
     },
     "reachableSceneIds": ["start", "route_a", "route_b"],
     "unreachableSceneIds": [],
+    "missingTargetEdges": [],
     "deadEndSceneIds": [],
-    "cyclesWithoutExit": []
+    "cyclesWithoutExit": [],
+    "endings": { "unreachableUnlockIds": [] },
+    "cgs": { "unreachableUnlockIds": [] }
   }
 }
 ```
 
-By default, validation starts graph traversal from `start` when it exists, otherwise the first scene in the script. Dead-end and closed-cycle validation warnings apply once the project has explicit registered endings; basic drafts can still inspect those graph findings without making validation noisy. Partial drafts can suppress reachability warnings through the authoring API with `checkReachability: false`, but handoff-ready projects should have no unresolved graph findings.
+By default, validation starts graph traversal from `start` when it exists, otherwise the first scene in the script. `missingTargetEdges` retain exact author paths and `repair-scene-target` hints; the repair and clear commands also accept references to an absent target id. Dead-end and closed-cycle validation warnings apply once the project has explicit registered endings; basic drafts can still inspect those graph findings without making validation noisy. Partial drafts can suppress reachability warnings through the authoring API with `checkReachability: false`, but handoff-ready projects should have no unresolved graph findings. Story Systems > Flow presents these route findings together with unreachable unlock and asset handoff review navigation.

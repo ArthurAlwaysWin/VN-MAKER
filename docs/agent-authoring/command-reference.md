@@ -39,8 +39,8 @@ These commands are not plan operations. Use them to inspect the project before d
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
 | `list-assets` | | `project`, `script`, `json` | Lists files under `assets/backgrounds`, `assets/characters`, `assets/audio`, `assets/voices`, `assets/ui`, and `assets/fonts`. Each entry includes `path`, `name`, `tokens`, `extension`, and `size`. `--script` derives the project path from the script parent folder. |
-| `graph-report` | | `script`, `entry`, `mermaid`, `json` | Reports attributed scene edges, reachability, terminal/dead-end routes, closed cycles, unlock reachability, and Mermaid flowchart text. |
-| `find-dead-ends` | | `script`, `entry`, `json` | Returns terminal routes without an ending resolution plus closed cycles without an exit. |
+| `graph-report` | | `script`, `entry`, `mermaid`, `json` | Reports attributed scene edges, repair-ready missing targets, reachability, terminal/dead-end routes, closed cycles, unlock reachability, and Mermaid flowchart text. |
+| `find-dead-ends` | | `script`, `entry`, `json` | Returns missing target edges, terminal routes without an ending resolution, and closed cycles without an exit. |
 | `find-missing-assets` | | `script`, `asset-root`, `json` | Returns referenced assets absent from the checked asset root. |
 | `find-unused-assets` | | `script`, `asset-root`, `json` | Returns files in the checked asset root that are not referenced by the script. |
 | `list-transitions` | | `target`, `supported-only`, `json` | Lists shared cinematic catalog entries with target, parameter schema, support flags, defaults, and fallback id. `target` is `background`, `character`, or `camera`. |

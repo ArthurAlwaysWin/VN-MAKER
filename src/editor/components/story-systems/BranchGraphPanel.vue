@@ -4,13 +4,14 @@
       <div>
         <p class="eyebrow">Branch Flow</p>
         <h1>剧情流程审查</h1>
-        <p class="copy">检查可达性、终点结局解锁、封闭循环、CG 解锁和确定性条件路线。</p>
+        <p class="copy">检查可达性、断裂连接、终点结局解锁、封闭循环、CG 解锁和确定性条件路线。</p>
       </div>
       <div class="stats">
         <span>{{ report.nodeCount }} 场景</span>
         <span>{{ report.edgeCount }} 连接</span>
         <span :class="{ warn: report.deadEndSceneIds.length }">{{ report.deadEndSceneIds.length }} 死路</span>
         <span :class="{ warn: report.cyclesWithoutExit.length }">{{ report.cyclesWithoutExit.length }} 封闭循环</span>
+        <span :class="{ warn: report.missingTargetCount }">{{ report.missingTargetCount }} 断链</span>
         <span :class="{ warn: conditionDiagnostics.length }">{{ conditionDiagnostics.length }} 条件问题</span>
       </div>
     </header>
@@ -29,7 +30,22 @@
       </button>
     </section>
     <section v-else class="clean">
-      当前流程没有不可达场景、未收束终点、无出口循环或确定性条件问题。
+      当前流程没有断链、不可达场景、未收束终点、无出口循环、不可达解锁或确定性条件问题。
+    </section>
+
+    <section v-if="assetReviewItems.length" class="issues" data-test="graph-asset-review">
+      <h2>资产审查</h2>
+      <button
+        v-for="item in assetReviewItems"
+        :key="item.key"
+        type="button"
+        class="issue"
+        :disabled="!item.pathString"
+        @click="openReviewItem(item)"
+      >
+        <strong>{{ item.label }}</strong>
+        <span>{{ item.assetPath || item.message }}</span>
+      </button>
     </section>
 
     <section class="nodes">
@@ -43,6 +59,7 @@
       >
         <span class="node-name">{{ node.name }} <small>{{ node.id }}</small></span>
         <span class="badges">
+          <i v-if="reviewCountForScene(node.id)" class="badge review">审查 {{ reviewCountForScene(node.id) }}</i>
           <i v-if="!node.reachable" class="badge muted">不可达</i>
           <i v-if="node.deadEnd" class="badge warn">死路</i>
           <i v-if="node.cycleWithoutExit" class="badge warn">循环</i>
@@ -50,6 +67,23 @@
           <i v-if="node.unlocksCg" class="badge good">CG</i>
         </span>
         <span class="edge-count">{{ node.outgoingEdgeCount }} outgoing</span>
+      </button>
+    </section>
+
+    <section v-if="report.edges.length" class="edges" data-test="graph-edges">
+      <h2>页面与场景连接</h2>
+      <button
+        v-for="edge in report.edges"
+        :key="edge.pathString"
+        type="button"
+        class="edge"
+        :class="{ broken: !edge.targetExists }"
+        @click="$emit('navigate-path', edge.pathString)"
+      >
+        <span>{{ edge.fromSceneId }}</span>
+        <small>{{ edgeLabel(edge) }}</small>
+        <span>{{ edge.toSceneId }}</span>
+        <i v-if="!edge.targetExists">缺失</i>
       </button>
     </section>
 
@@ -70,12 +104,31 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  reviewItems: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(['navigate-scene', 'navigate-path']);
 
 const report = computed(() => createBranchGraphReport(props.scriptData));
 const mermaid = computed(() => createBranchGraphMermaid(report.value));
+const assetReviewItems = computed(() => props.reviewItems
+  .filter((item) => [
+    'missing-asset-reference',
+    'unused-asset',
+    'asset-check-not-run',
+  ].includes(item.code))
+  .map((item, index) => ({
+    ...item,
+    key: `asset:${item.code}:${item.pathString || item.assetPath || index}`,
+    label: {
+      'missing-asset-reference': '缺失资产',
+      'unused-asset': '未使用资产',
+      'asset-check-not-run': '待运行资产检查',
+    }[item.code],
+  })));
 const conditionDiagnostics = computed(() => Object.entries(props.scriptData?.scenes ?? {}).flatMap(([sceneId, scene]) => (
   (scene?.pages ?? []).flatMap((page, pageIndex) => {
     if (page?.type !== 'condition') {
@@ -98,6 +151,13 @@ const conditionDiagnostics = computed(() => Object.entries(props.scriptData?.sce
   })
 )));
 const issues = computed(() => [
+  ...report.value.missingTargetEdges.map((edge) => ({
+    key: `missing-target:${edge.pathString}`,
+    sceneId: edge.fromSceneId,
+    pathString: edge.pathString,
+    label: '缺失目标',
+    text: `${edge.fromSceneId} -> ${edge.toSceneId}`,
+  })),
   ...report.value.unreachableSceneIds.map((sceneId) => ({
     key: `unreachable:${sceneId}`,
     sceneId,
@@ -119,6 +179,18 @@ const issues = computed(() => [
     label: '无出口循环',
     text: cycle.sceneIds.join(' -> '),
   })),
+  ...report.value.endings.unreachableUnlockIds.map((endingId) => ({
+    key: `ending-unlock:${endingId}`,
+    pathString: `systems.endings.${endingId}`,
+    label: '结局解锁不可达',
+    text: endingId,
+  })),
+  ...report.value.cgs.unreachableUnlockIds.map((cgId) => ({
+    key: `cg-unlock:${cgId}`,
+    pathString: `systems.gallery.cg.${cgId}`,
+    label: 'CG 解锁不可达',
+    text: cgId,
+  })),
   ...conditionDiagnostics.value.map((diagnostic) => ({
     key: `${diagnostic.code}:${diagnostic.pathString}`,
     sceneId: diagnostic.path[1],
@@ -132,6 +204,32 @@ const issues = computed(() => [
     text: `${diagnostic.path[1]} / 第 ${Number(diagnostic.path[3] ?? 0) + 1} 页`,
   })),
 ]);
+
+function reviewCountForScene(sceneId) {
+  const paths = new Set();
+  issues.value
+    .filter((issue) => issue.sceneId === sceneId)
+    .forEach((issue) => paths.add(issue.key));
+  props.reviewItems
+    .filter((item) => String(item.pathString || '').startsWith(`scenes.${sceneId}`))
+    .forEach((item, index) => paths.add(`${item.code || 'review'}:${item.pathString || index}`));
+  return paths.size;
+}
+
+function edgeLabel(edge) {
+  return {
+    'scene-next': '下一场景',
+    'choice-option': '选项',
+    'condition-true-target': '条件成立',
+    'condition-false-target': '条件不成立',
+  }[edge.kind] || edge.kind;
+}
+
+function openReviewItem(item) {
+  if (item.pathString) {
+    emit('navigate-path', item.pathString);
+  }
+}
 
 function openIssue(issue) {
   if (issue.pathString) {
@@ -208,6 +306,7 @@ h2 {
 
 .issues,
 .nodes,
+.edges,
 .mermaid,
 .clean {
   background: #252526;
@@ -218,7 +317,8 @@ h2 {
 }
 
 .issue,
-.node {
+.node,
+.edge {
   align-items: center;
   background: #2d2d2d;
   border: 1px solid #383838;
@@ -234,8 +334,14 @@ h2 {
 }
 
 .issue:hover,
-.node:hover {
+.node:hover,
+.edge:hover {
   border-color: #007acc;
+}
+
+.issue:disabled {
+  cursor: default;
+  opacity: 0.8;
 }
 
 .issue strong {
@@ -284,6 +390,29 @@ h2 {
 .badge.muted {
   background: #393939;
   color: #aaa;
+}
+
+.badge.review {
+  background: #20394c;
+  color: #86c7f2;
+}
+
+.edge span:first-child {
+  flex: 1;
+}
+
+.edge small {
+  color: #888;
+}
+
+.edge i {
+  color: #ffca8a;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.edge.broken {
+  border-color: #6a4528;
 }
 
 .edge-count {

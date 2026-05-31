@@ -23,6 +23,7 @@ import { WebSaveManager } from './engine/WebSaveManager.js';
 import { DialogueBox } from './ui/DialogueBox.js';
 import { CharacterLayer } from './ui/CharacterLayer.js';
 import { BackgroundLayer } from './ui/BackgroundLayer.js';
+import { ParticleLayer } from './ui/ParticleLayer.js';
 import { CameraController } from './ui/CameraController.js';
 import { ChoiceMenu } from './ui/ChoiceMenu.js';
 import { SaveLoadScreen } from './ui/SaveLoadScreen.js';
@@ -39,6 +40,7 @@ import {
   isKnownCharacterAnimation,
   isKnownTransitionType,
 } from './shared/cinematicContract.js';
+import { normalizeParticleConfig, resolveEffectivePageParticles } from './shared/particleContract.js';
 
 // ─── DOM references ─────────────────────────────────────
 const gameContainer = document.getElementById('game-container');
@@ -57,6 +59,7 @@ const config = new ConfigManager();
 
 // ─── UI instances ───────────────────────────────────────
 const background = new BackgroundLayer(bgLayer, '');
+const particles = new ParticleLayer(stageLayer);
 const characters = new CharacterLayer(charLayer, '');
 const camera = new CameraController(stageLayer);
 const dialogueBox = new DialogueBox(dialogueLayer);
@@ -206,6 +209,7 @@ function establishPreviewPageBaseline(request) {
   camera.clear();
   characters.clear();
   background.clear();
+  particles.clear();
   engine.resetRenderState();
   engine.renderCurrentPage();
 }
@@ -232,6 +236,7 @@ async function restorePreviewSnapshot(snapshot) {
   audio.stopVoice();
   characters.clear();
   background.clear();
+  particles.clear();
   try {
     engine.restoreState(snapshot);
     engine.resetRenderState();
@@ -345,7 +350,25 @@ async function runEffectPreview(request) {
       });
     }
 
-    if (!['character', 'camera', 'transition'].includes(request.effectKind)) {
+    if (request.effectKind === 'particle') {
+      const particleConfig = normalizeParticleConfig(request.payload?.config);
+      if (!particleConfig) {
+        activeEffectPreview = null;
+        await restorePreviewSnapshot(snapshot);
+        postEffectPreviewResult({
+          requestId: request.requestId,
+          effectKind: request.effectKind,
+          status: 'rejected',
+          reason: 'unsupported-effect',
+        });
+        return;
+      }
+
+      particles.play(particleConfig);
+      await waitForPreviewDuration(request.payload?.durationMs ?? 1200);
+    }
+
+    if (!['character', 'camera', 'transition', 'particle'].includes(request.effectKind)) {
       activeEffectPreview = null;
       await restorePreviewSnapshot(snapshot);
       postEffectPreviewResult({
@@ -582,6 +605,15 @@ function cancelPageTransitionGate() {
   backgroundTransitionPending = false;
 }
 
+function applyCurrentParticles() {
+  const config = resolveEffectivePageParticles(engine.script, engine.currentScene, engine.pageIndex);
+  if (config) {
+    particles.play(config);
+  } else {
+    particles.clear();
+  }
+}
+
 engine.on('dialogue', (data) => {
   if (pageTransitionGateOpen) {
     pendingUiEvent = { type: 'dialogue', data };
@@ -637,6 +669,22 @@ engine.on('set_background', async (data) => {
   flushPageTransitionGate(token);
 });
 
+engine.on('set_particles', ({ config }) => {
+  if (skipMode) {
+    particles.clear();
+    return;
+  }
+  particles.play(config);
+});
+
+engine.on('stop_particles', () => {
+  if (skipMode) {
+    particles.clear();
+    return;
+  }
+  particles.stop();
+});
+
 // ─── Audio events (skip-aware D-07) ──────────────────────
 engine.on('play_bgm', (data) => {
   if (skipMode) {
@@ -678,6 +726,7 @@ engine.on('end', () => {
     cancelPageTransitionGate();
     camera.clear();
     background.clear();
+    particles.clear();
     audio.stopVoice();
     window.parent.postMessage({ type: 'ended' }, '*');
     return;
@@ -699,6 +748,7 @@ engine.on('end', () => {
     engine.resetRenderState();
     characters.clear();
     background.clear();
+    particles.clear();
     showTitle();
   }, 2000);
 });
@@ -788,6 +838,7 @@ function replayCurrentPage() {
   camera.clear();
   characters.clear();
   background.clear();
+  particles.clear();
   engine.resetRenderState();
   engine.renderCurrentPage();
 }
@@ -829,6 +880,7 @@ gameMenu.onTitle = async () => {
   engine.resetRenderState();
   characters.clear();
   background.clear();
+  particles.clear();
   await showTitle();
 };
 
@@ -1090,6 +1142,7 @@ function startSkip() {
   autoMode = false;
   clearAutoTimer();
   audio.stopVoice(); // Stop any playing voice immediately
+  particles.clear();
   updateQuickBtnStates();
   skipIndicator.classList.remove('hidden');
 
@@ -1123,6 +1176,7 @@ function stopSkip() {
   updateQuickBtnStates();
   if (wasSkipping) {
     restoreBgmAfterSkip();
+    applyCurrentParticles();
   }
 }
 
@@ -1175,11 +1229,16 @@ async function showTitle() {
     console.error('[GalgameMaker] Failed to check saves:', e);
     titleScreen.show(false, Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0);
   }
+  const titleParticles = engine.script?.ui?.titleScreen?.particles;
+  if (titleParticles) {
+    particles.play(titleParticles);
+  }
 }
 
 titleScreen.onStart = () => {
   cancelEndReturnTimer();
   titleScreen.hide();
+  particles.clear();
   audio.stopBgm();
   isPlaying = true;
   engine.startGame('start');
@@ -1366,6 +1425,7 @@ function initPreview() {
         engine.resetRenderState();
         characters.clear();
         background.clear();
+        particles.clear();
         break;
       }
       case 'mute': {

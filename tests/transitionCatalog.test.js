@@ -33,6 +33,21 @@ describe('transition catalog', () => {
       'iris-in',
       'iris-out',
       'crossfade-pan',
+      'diagonal-wipe',
+      'cross-wipe',
+      'diamond',
+      'circle-open',
+      'circle-close',
+      'curtain-open',
+      'curtain-close',
+      'blinds-h',
+      'blinds-v',
+      'clock-wipe',
+      'radial-wipe',
+      'fade-white',
+      'fade-black',
+      'glitch-lite',
+      'pixelate-lite',
     ]);
     expect(getTransitionUiOptions().map((entry) => entry.value)).toEqual(
       supportedBackground.map((entry) => entry.id),
@@ -51,6 +66,7 @@ describe('transition catalog', () => {
     });
     expect(getRuntimeTransitionType('zoom-in')).toBe('zoom-in');
     expect(getRuntimeTransitionType('crossfade-pan')).toBe('crossfade-pan');
+    expect(getRuntimeTransitionType('fade-black')).toBe('fade-black');
     expect(getTransitionCatalogEntry('character', 'pop')).toMatchObject({
       runtimeSupported: true,
       editorSupported: true,

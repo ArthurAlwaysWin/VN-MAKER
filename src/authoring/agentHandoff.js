@@ -49,6 +49,19 @@ const PREVIEW_SCREEN_IDS = new Set(PREVIEW_SCREEN_PATHS.values());
 function previewTargetsFromChangedPaths(changedPaths = []) {
   const targets = [];
   for (const changedPath of changedPaths) {
+    const particleMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.particles$/.exec(String(changedPath));
+    if (particleMatch) {
+      targets.push({
+        type: 'scene',
+        kind: 'scene-page',
+        sceneId: particleMatch[1],
+        pageIndex: Number(particleMatch[2]),
+        reason: 'changed-particles',
+        pathString: String(changedPath),
+      });
+      continue;
+    }
+
     const scenePageMatch = /^scenes\.([^.]+)\.pages\.(\d+)/.exec(String(changedPath));
     if (scenePageMatch) {
       targets.push({
@@ -385,7 +398,29 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
-  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems];
+  const particleItems = previewTargets
+    .filter((target) => target?.reason === 'changed-particles')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'particle-preview',
+      code: 'particle-preview-required',
+      pathString: target.pathString ?? `scenes.${target.sceneId}.pages.${target.pageIndex}.particles`,
+      message: `Particle/weather effects changed on scene "${target.sceneId}" page ${target.pageIndex} and need visual review in preview.`,
+      sceneId: target.sceneId,
+      pageIndex: target.pageIndex,
+      suggestedAction: {
+        summary: 'Open the edited page in Page Editor and run the particle preview before marking this resolved.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    }));
+
+  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems, ...particleItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {

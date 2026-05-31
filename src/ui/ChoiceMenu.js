@@ -25,6 +25,7 @@ export class ChoiceMenu {
    */
   show(data) {
     const choiceData = data && typeof data === 'object' ? data : {};
+    this.el.classList.remove('visible');
     this.el.innerHTML = '';
     this.el.style.cssText = '';
 
@@ -55,7 +56,8 @@ export class ChoiceMenu {
     (Array.isArray(choiceData.options) ? choiceData.options : []).forEach((option, index) => {
       const btn = document.createElement('button');
       btn.className = 'choice-button';
-      btn.textContent = option.text;
+      btn.style.setProperty('--choice-index', String(index));
+      btn.textContent = option?.text ?? '';
 
       // Per-button custom style
       if (option.style) {

@@ -645,6 +645,33 @@ describe('project authoring session', () => {
       transition: { type: 'dissolve', duration: 500 },
       changedPaths: ['scenes.start.pages.0.transition'],
     });
+    expect(session.setPageParticles({
+      sceneId: 'start',
+      pageIndex: 0,
+      particles: { preset: 'sakura', density: 0.45, wind: 0.2 },
+    })).toMatchObject({
+      ok: true,
+      sceneId: 'start',
+      pageIndex: 0,
+      pathString: 'scenes.start.pages.0.particles',
+      particles: { preset: 'sakura', density: 0.45, wind: 0.2 },
+      changedPaths: ['scenes.start.pages.0.particles'],
+    });
+    expect(session.clearPageParticles({
+      sceneId: 'start',
+      pageIndex: 0,
+    })).toMatchObject({
+      particles: null,
+      changedPaths: ['scenes.start.pages.0.particles'],
+    });
+    expect(session.inheritPageParticles({
+      sceneId: 'start',
+      pageIndex: 0,
+    })).toMatchObject({
+      sceneId: 'start',
+      pageIndex: 0,
+      changedPaths: ['scenes.start.pages.0.particles'],
+    });
     expect(session.setCharacterAnimation({
       sceneId: 'start',
       pageIndex: 0,
@@ -674,6 +701,7 @@ describe('project authoring session', () => {
         expect.objectContaining({ id: 'sakura', animation: 'breathe' }),
       ],
     });
+    expect(session.toJSON().scenes.start.pages[0]).not.toHaveProperty('particles');
 
     session.addNormalPage({
       sceneId: 'start',

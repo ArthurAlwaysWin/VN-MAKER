@@ -137,6 +137,25 @@
             <HelpTip :text="HELP_SCRIPT.cinematicPreview" />
           </div>
         </div>
+        <ParticlePanel
+          v-if="page.type !== 'condition'"
+          :particles="page.particles"
+          :preview-ui-state="particlePreviewUiState"
+          :disabled-reason="getCurrentPreviewDisabledReason('particle', buildParticlePreviewPayload())"
+          :status-text="previewStatusText(
+            particlePreviewUiState,
+            getCurrentPreviewDisabledReason('particle', buildParticlePreviewPayload()),
+          )"
+          :status-class="previewStatusClass(
+            particlePreviewUiState,
+            getCurrentPreviewDisabledReason('particle', buildParticlePreviewPayload()),
+          )"
+          :help-text="HELP_SCRIPT.pageParticles"
+          :preview-help-text="HELP_SCRIPT.cinematicPreview"
+          @mode-change="setPageParticlesMode"
+          @update-particles="setPageParticles"
+          @preview="previewPageParticles"
+        />
       </div>
     </div>
 
@@ -737,6 +756,7 @@ import { useAssetStore } from '../../stores/assets.js';
 import AudioPicker from './AudioPicker.vue';
 import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
+import ParticlePanel from './ParticlePanel.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
 import {
   CONDITION_OPERATORS,
@@ -750,6 +770,7 @@ import {
   getCharacterAnimationUiOptions,
   getTransitionUiOptions,
 } from '../../../shared/cinematicContract.js';
+import { normalizeParticleConfig } from '../../../shared/particleContract.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -808,6 +829,7 @@ const transitionOptions = computed(() => getTransitionUiOptions(page.value?.tran
 const selectedTransitionType = computed(() => page.value?.transition?.type || 'fade');
 const cameraPreviewUiState = computed(() => editor.getEffectPreviewUiState('camera'));
 const transitionPreviewUiState = computed(() => editor.getEffectPreviewUiState('transition'));
+const particlePreviewUiState = computed(() => editor.getEffectPreviewUiState('particle'));
 
 // Page-scoped character list for speaker combobox
 const pageCharOptions = computed(() => {
@@ -934,6 +956,9 @@ function getCurrentPreviewDisabledReason(effectKind, payload = {}) {
   if (effectKind === 'transition' && !payload.type) {
     return 'missing-transition-config';
   }
+  if (effectKind === 'particle' && !payload.config) {
+    return 'missing-particle-config';
+  }
   return null;
 }
 
@@ -956,6 +981,8 @@ function previewReasonText(reason) {
       return '请选择镜头效果后再预览';
     case 'missing-transition-config':
       return '请选择转场后再预览';
+    case 'missing-particle-config':
+      return '请选择播放粒子后再预览';
     case 'preview-busy':
       return '已有其他效果预览正在进行';
     case 'unsupported-effect':
@@ -1037,6 +1064,46 @@ function buildCameraPreviewPayload() {
     payload.direction = camera?.direction || (payload.effect === 'shake' ? 'both' : 'left');
   }
   return payload;
+}
+
+function buildParticlePreviewPayload() {
+  return {
+    config: normalizeParticleConfig(page.value?.particles),
+    durationMs: 1200,
+  };
+}
+
+function setPageParticlesMode(mode) {
+  if (!page.value) return;
+  if (mode === 'inherit') {
+    delete page.value.particles;
+    script.pushState();
+    return;
+  }
+  if (mode === 'stop') {
+    page.value.particles = null;
+    script.pushState();
+    return;
+  }
+  page.value.particles = normalizeParticleConfig(page.value.particles) || normalizeParticleConfig({ preset: 'dust' });
+  script.pushState();
+}
+
+function setPageParticles(config) {
+  if (!page.value) return;
+  const normalized = normalizeParticleConfig(config);
+  if (!normalized) return;
+  page.value.particles = normalized;
+  script.pushState();
+}
+
+function previewPageParticles(config) {
+  const normalized = normalizeParticleConfig(config);
+  if (!normalized) return;
+  editor.previewParticleEffect({
+    config: normalized,
+    durationMs: 1200,
+  });
 }
 
 // Page property setters

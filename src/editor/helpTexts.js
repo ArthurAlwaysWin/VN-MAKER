@@ -42,6 +42,7 @@ export const HELP_SCRIPT = {
   transition: '页面切换时的过渡动画效果\n时长可自定义（毫秒）',
   charAnimation: '为当前角色选择页面进入时播放的预设动画\n未知旧值会保留显示，直到你主动改掉它',
   pageCamera: '页面镜头属于当前页面本身\n可设置效果、时长、强度，以及 shake/pan 的方向',
+  pageParticles: '页面粒子属于当前页面本身\n可继承上一页、停止，或用预设控件播放粒子天气',
   cinematicPreview: '单项预览会调用 iframe 运行时重播当前效果\n按钮旁会显示忙碌、禁用、失败或完成状态',
   voiceMatch: '根据文件名自动匹配语音\n命名格式：场景名_页码.mp3',
   sceneJump: '场景结束后跳转到\n指定的下一个场景',

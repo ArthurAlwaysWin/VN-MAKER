@@ -48,6 +48,7 @@ export class TitleScreen {
       clearTimeout(this._hideTimer);
       this._hideTimer = null;
     }
+    this.el.classList.remove('visible');
     this.hasSave = hasSave;
     this.hasGallery = hasGallery;
     if (this.layout && this.layout.elements) {
@@ -114,6 +115,7 @@ export class TitleScreen {
   _createTextElement(cfg) {
     const el = document.createElement('div');
     el.className = 'title-custom-element';
+    this._applyMotionIndex(el);
     el.textContent = cfg.content || this.gameTitle;
     this._applyPosition(el, cfg);
     if (cfg.fontSize) el.style.fontSize = `${clampField('fontSize', cfg.fontSize)}px`;
@@ -130,6 +132,7 @@ export class TitleScreen {
   _createButtonElement(cfg) {
     const btn = document.createElement('button');
     btn.className = 'title-custom-element title-custom-button';
+    this._applyMotionIndex(btn);
     btn.textContent = cfg.text || '';
     this._applyPosition(btn, cfg);
     if (cfg.width) btn.style.width = `${clampField('width', cfg.width)}px`;
@@ -171,6 +174,7 @@ export class TitleScreen {
   _createImageElement(cfg) {
     const el = document.createElement('div');
     el.className = 'title-custom-element title-custom-image';
+    this._applyMotionIndex(el);
     this._applyPosition(el, cfg);
     if (cfg.width) el.style.width = `${clampField('width', cfg.width)}px`;
     if (cfg.height) el.style.height = `${clampField('height', cfg.height)}px`;
@@ -200,6 +204,11 @@ export class TitleScreen {
       if (cfg.x !== undefined) el.style.left = `${clampField('x', cfg.x)}px`;
       if (cfg.y !== undefined) el.style.top = `${clampField('y', cfg.y)}px`;
     }
+  }
+
+  _applyMotionIndex(el) {
+    const index = this.el.querySelectorAll('.title-custom-element').length;
+    el.style.setProperty('--title-item-index', String(index));
   }
 
   _bindButtons() {

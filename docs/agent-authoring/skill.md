@@ -34,6 +34,7 @@ See also:
 - `docs/agent-authoring/phase-83-migration.md`
 - `docs/agent-authoring/screen-ui-skill.md`
 - `docs/agent-authoring/validation-rules.md`
+- `docs/agent-authoring/visual-polish-skill.md`
 
 ## First Commands
 
@@ -129,6 +130,10 @@ npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds
 npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset speaker-emphasis --character sakura:smile --script public/game/script.json --force --backup --json
 npm run vn -- set-page-camera --scene chapter_1 --page 0 --effect shake --direction both --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
 npm run vn -- set-page-transition --scene chapter_1 --page 0 --type crossfade-pan --duration 700 --script public/game/script.json --force --backup --json
+npm run vn -- list-particles --json
+npm run vn -- set-page-particles --scene chapter_1 --page 0 --preset sakura --density 0.45 --wind 0.2 --script public/game/script.json --force --backup --json
+npm run vn -- clear-page-particles --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
+npm run vn -- inherit-page-particles --scene chapter_1 --page 4 --script public/game/script.json --force --backup --json
 npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation pop --script public/game/script.json --force --backup --json
 npm run vn -- list-transitions --target background --supported-only --json
 npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect vignette --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json

@@ -22,6 +22,10 @@ import {
 import { normalizeEffects } from './effectDsl.js';
 import { createBranchGraphReport } from './sceneGraph.js';
 import {
+  PARTICLE_FIELD_SCHEMA,
+  isKnownParticlePreset,
+} from './particleContract.js';
+import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   CAMERA_EFFECT_DURATION_SCHEMA,
   isValidNumericTransitionParam,
@@ -904,6 +908,57 @@ function validateCgProgression(script, cgs, report) {
   }
 }
 
+function validatePageParticles(page, context, report) {
+  if (!Object.hasOwn(page, 'particles') || page.particles === undefined) {
+    return;
+  }
+
+  const pagePath = ['scenes', context.sceneId, 'pages', context.pageIndex];
+  const value = page.particles;
+  if (value === null || value === false) {
+    return;
+  }
+
+  if (!isPlainObject(value)) {
+    addWarning(report, 'invalid-particle-config', 'Page particles must be an object, null, false, or omitted; runtime will clear invalid values.', [...pagePath, 'particles'], {
+      valueType: Array.isArray(value) ? 'array' : typeof value,
+    });
+    return;
+  }
+
+  if (!isKnownParticlePreset(value.preset)) {
+    addWarning(report, 'unknown-particle-preset', `Particle preset "${value.preset}" is not runtime-supported and will fall back to dust.`, [...pagePath, 'particles', 'preset'], {
+      preset: value.preset ?? null,
+    });
+  }
+
+  for (const [field, code] of [
+    ['density', 'invalid-particle-density'],
+    ['speed', 'invalid-particle-speed'],
+    ['wind', 'invalid-particle-wind'],
+  ]) {
+    const schema = PARTICLE_FIELD_SCHEMA[field];
+    const raw = value[field];
+    if (raw === undefined) {
+      continue;
+    }
+    const numeric = Number(raw);
+    if (!Number.isFinite(numeric) || numeric < schema.minimum || numeric > schema.maximum) {
+      addWarning(report, code, `Particle ${field} must be a number between ${schema.minimum} and ${schema.maximum}; runtime will clamp it.`, [...pagePath, 'particles', field], {
+        value: raw,
+        minimum: schema.minimum,
+        maximum: schema.maximum,
+      });
+    }
+  }
+
+  if (value.color !== undefined && !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(value.color))) {
+    addWarning(report, 'invalid-particle-color', 'Particle color must be #rgb or #rrggbb; runtime will fall back to the preset color.', [...pagePath, 'particles', 'color'], {
+      value: value.color,
+    });
+  }
+}
+
 function validatePage(page, context, report, options) {
   const { sceneId, pageIndex } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
@@ -922,6 +977,7 @@ function validatePage(page, context, report, options) {
 
   validatePageCharacters(page, context, report);
   validatePageCinematics(page, context, report);
+  validatePageParticles(page, context, report);
 
   if (page.type === 'normal') {
     validateNormalPage(page, context, report, options);

@@ -21,6 +21,12 @@ import { validateProject } from '../../src/shared/projectValidator.js';
 import { collectSceneReferences } from '../../src/shared/sceneGraph.js';
 import { listTransitionCatalog } from '../../src/shared/transitionCatalog.js';
 import {
+  PARTICLE_FIELD_SCHEMA,
+  PARTICLE_PRESET_DEFS,
+  PARTICLE_PRESETS,
+  normalizeParticleConfig,
+} from '../../src/shared/particleContract.js';
+import {
   PREVIEW_BROWSER_UNAVAILABLE,
   PREVIEW_QUALITY_FAILED,
   PREVIEW_RENDERER_UNAVAILABLE,
@@ -210,6 +216,47 @@ function parsePageAudioArgs(args) {
       : { file: getArgValue(args, '--se') };
 
   return { bgm, se };
+}
+
+function buildParticleConfigFromCliArgs(args, commandName = 'set-page-particles') {
+  if (args.includes('--particles')) {
+    return parseJsonArg(args, '--particles');
+  }
+  if (args.includes('--particles-json')) {
+    return parseJsonArg(args, '--particles-json');
+  }
+
+  const preset = getArgValue(args, '--preset', null);
+  if (!preset) {
+    throw new Error(`${commandName} requires --preset`);
+  }
+
+  return dropUndefinedFields({
+    preset,
+    density: parseOptionalScalarValue(getOptionalArgValue(args, '--density')),
+    speed: parseOptionalScalarValue(getOptionalArgValue(args, '--speed')),
+    wind: parseOptionalScalarValue(getOptionalArgValue(args, '--wind')),
+    opacity: parseOptionalScalarValue(getOptionalArgValue(args, '--opacity')),
+    color: getOptionalArgValue(args, '--color'),
+    direction: getOptionalArgValue(args, '--direction'),
+  });
+}
+
+function buildParticleConfigFromPlanParams(command, params) {
+  const explicit = getParam(params, 'particles', 'config');
+  if (explicit !== undefined) {
+    return explicit;
+  }
+
+  return dropUndefinedFields({
+    preset: requireParam(params, command, 'preset'),
+    density: getParam(params, 'density'),
+    speed: getParam(params, 'speed'),
+    wind: getParam(params, 'wind'),
+    opacity: getParam(params, 'opacity'),
+    color: getParam(params, 'color'),
+    direction: getParam(params, 'direction'),
+  });
 }
 
 async function parseTitleScreenArgs(args) {
@@ -592,6 +639,22 @@ async function readTransactionArg(args) {
 function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
   const targets = [];
   for (const changedPath of changedPaths) {
+    const particleMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.particles$/.exec(String(changedPath));
+    if (particleMatch) {
+      const sceneId = particleMatch[1];
+      const pageIndex = Number(particleMatch[2]);
+      if (script.scenes?.[sceneId]?.pages?.[pageIndex]) {
+        targets.push({
+          sceneId,
+          pageIndex,
+          kind: 'scene-page',
+          reason: 'changed-particles',
+          pathString: String(changedPath),
+        });
+      }
+      continue;
+    }
+
     const pageMatch = /^scenes\.([^.]+)\.pages\.(\d+)/.exec(String(changedPath));
     if (pageMatch) {
       const sceneId = pageMatch[1];
@@ -915,6 +978,9 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-camera-effect',
   'set-page-transition',
   'set-page-transitions',
+  'set-page-particles',
+  'clear-page-particles',
+  'inherit-page-particles',
   'set-character-animation',
   'set-character-transition',
   'set-title-screen',
@@ -1556,6 +1622,28 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
+  if (command === 'set-page-particles') {
+    return session.setPageParticles({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      particles: buildParticleConfigFromPlanParams(command, params),
+    });
+  }
+
+  if (command === 'clear-page-particles') {
+    return session.clearPageParticles({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }
+
+  if (command === 'inherit-page-particles') {
+    return session.inheritPageParticles({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }
+
   if (command === 'set-character-animation') {
     return session.setCharacterAnimation({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
@@ -1865,6 +1953,30 @@ function collectBranchGraphPreviewIssues(branchGraphTargets = []) {
   }));
 }
 
+function collectParticlePreviewIssues(pageTargets = []) {
+  return pageTargets
+    .filter((target) => target?.reason === 'changed-particles')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'particle-preview',
+      code: 'particle-preview-required',
+      pathString: target.pathString ?? `scenes.${target.sceneId}.pages.${target.pageIndex}.particles`,
+      message: `Particle/weather effects changed on scene "${target.sceneId}" page ${target.pageIndex} and need visual review in preview.`,
+      sceneId: target.sceneId,
+      pageIndex: target.pageIndex,
+      suggestedAction: {
+        summary: 'Open the edited page in Page Editor and use the particle preview controls before handoff.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    }));
+}
+
 function collectAuthorCheckSuggestions({
   validation,
   layout,
@@ -1876,6 +1988,7 @@ function collectAuthorCheckSuggestions({
   endingPreviewIssues,
   galleryPreviewIssues,
   branchGraphPreviewIssues,
+  particlePreviewIssues,
 }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
@@ -1958,6 +2071,15 @@ function collectAuthorCheckSuggestions({
   }
 
   for (const issue of branchGraphPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of particlePreviewIssues ?? []) {
     suggestions.push({
       source: issue.source,
       code: issue.code,
@@ -3046,6 +3168,7 @@ async function authorCheck(args, { emit = true } = {}) {
   const endingPreviewIssues = collectEndingPreviewIssues(focus.endingTargets);
   const galleryPreviewIssues = collectGalleryPreviewIssues(focus.galleryTargets);
   const branchGraphPreviewIssues = collectBranchGraphPreviewIssues(focus.branchGraphTargets);
+  const particlePreviewIssues = collectParticlePreviewIssues(focus.pageTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
   const requirePreviewScreenshot = hasFlag(args, '--require-preview-screenshot');
   const capturePreview = requirePreviewScreenshot || hasFlag(args, '--capture-preview');
@@ -3168,6 +3291,7 @@ async function authorCheck(args, { emit = true } = {}) {
       endingPreviewReviewItems: endingPreviewIssues.length,
       galleryPreviewReviewItems: galleryPreviewIssues.length,
       branchGraphPreviewReviewItems: branchGraphPreviewIssues.length,
+      particlePreviewReviewItems: particlePreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewQualityBlockers: previewQualityIssues.length,
       previewPlanned: Boolean(preview),
@@ -3193,6 +3317,10 @@ async function authorCheck(args, { emit = true } = {}) {
       issues: branchGraphPreviewIssues,
     },
     branchGraphPreviewIssues,
+    particlePreview: {
+      issues: particlePreviewIssues,
+    },
+    particlePreviewIssues,
     referenceScreenshotIssues,
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
@@ -4720,6 +4848,78 @@ async function setPageTransition(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function listParticles(args) {
+  const presets = PARTICLE_PRESETS.map((preset) => ({
+    ...PARTICLE_PRESET_DEFS[preset],
+  }));
+  const output = {
+    count: presets.length,
+    presets,
+    fields: PARTICLE_FIELD_SCHEMA,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Particle presets: ${presets.length}\n`);
+    for (const preset of presets) {
+      process.stdout.write(`- ${preset.id}: ${preset.label}\n`);
+    }
+  }
+
+  return 0;
+}
+
+async function setPageParticles(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'set-page-particles');
+  const particles = buildParticleConfigFromCliArgs(args, 'set-page-particles');
+  const output = await mutateScript(args, (session) => session.setPageParticles({
+    sceneId,
+    pageIndex,
+    particles,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Set page particles', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function clearPageParticles(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'clear-page-particles');
+  const output = await mutateScript(args, (session) => session.clearPageParticles({
+    sceneId,
+    pageIndex,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Cleared page particles', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function inheritPageParticles(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'inherit-page-particles');
+  const output = await mutateScript(args, (session) => session.inheritPageParticles({
+    sceneId,
+    pageIndex,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Inherited page particles', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function setPageTransitions(args) {
   const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
   if (!sceneId) {
@@ -5145,8 +5345,12 @@ function printHelp() {
   set-page-audio --scene scene_id --page index [--bgm path] [--bgm-volume number] [--se path] [--clear-bgm] [--clear-se] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-camera --scene scene_id --page index [--effect shake|zoom|pan|flash] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--camera json] [--clear-camera] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-camera-effect --scene scene_id --page index [--effect shake|zoom|pan|flash|vignette|letterbox | --camera json | --clear-camera] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  set-page-transition --scene scene_id --page index [--type fade|dissolve|wipe|wipe-left|wipe-right|wipe-up|wipe-down|scale|blur|slide-left|slide-right|zoom-in|zoom-out|flash|iris-in|iris-out|crossfade-pan|none] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|condition] [--has-background|--without-background] [--predicate json] [--type fade|dissolve|wipe|wipe-left|wipe-right|wipe-up|wipe-down|scale|blur|slide-left|slide-right|zoom-in|zoom-out|flash|iris-in|iris-out|crossfade-pan|none] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-page-transition --scene scene_id --page index [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|condition] [--has-background|--without-background] [--predicate json] [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  list-particles [--json]
+  set-page-particles --scene scene_id --page index --preset preset [--density number] [--speed number] [--wind number] [--opacity number] [--color #rrggbb] [--direction down|up|left|right] [--particles json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  clear-page-particles --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  inherit-page-particles --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-animation --scene scene_id --page index --character character_id [--animation none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce|fade|slide-left|slide-right|pop|scale-in|blur-in] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-transition --scene scene_id --page index --character character_id [--transition none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce|fade|slide-left|slide-right|pop|scale-in|blur-in] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-title-screen [--background path] [--bgm path] [--elements json] [--config file] [--config-json json] [--clear-background] [--clear-bgm] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5185,6 +5389,11 @@ async function main() {
 
     if (command === 'list-transitions') {
       process.exitCode = listTransitions(args);
+      return;
+    }
+
+    if (command === 'list-particles') {
+      process.exitCode = await listParticles(args);
       return;
     }
 
@@ -5485,6 +5694,21 @@ async function main() {
 
     if (command === 'set-page-transitions') {
       process.exitCode = await setPageTransitions(args);
+      return;
+    }
+
+    if (command === 'set-page-particles') {
+      process.exitCode = await setPageParticles(args);
+      return;
+    }
+
+    if (command === 'clear-page-particles') {
+      process.exitCode = await clearPageParticles(args);
+      return;
+    }
+
+    if (command === 'inherit-page-particles') {
+      process.exitCode = await inheritPageParticles(args);
       return;
     }
 

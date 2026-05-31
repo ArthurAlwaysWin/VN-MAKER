@@ -55,6 +55,31 @@ describe('background transition preview', () => {
     expect(background.layerB.classList.contains('bg-preview-same-page-out')).toBe(false);
   });
 
+  it('previews Milestone 7 CSS-only transition ids without fallback rejection', async () => {
+    const background = makeLayer();
+
+    await background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'fade',
+      duration: 0,
+    });
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'glitch-lite',
+      duration: 360,
+      previewVariant: 'same-page',
+    });
+
+    const previewIn = [background.layerA, background.layerB]
+      .find(layer => layer.classList.contains('bg-preview-same-page'));
+
+    expect(previewIn?.classList.contains('bg-transition-glitch-lite')).toBe(true);
+
+    vi.advanceTimersByTime(361);
+    await completion;
+  });
+
   it('cleans preview-only classes, css vars, and stale outgoing imagery on interruption and clear', async () => {
     const background = makeLayer();
 

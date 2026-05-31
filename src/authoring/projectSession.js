@@ -4,6 +4,7 @@ import {
   getPageCameraContract,
   getPageTransitionContract,
 } from '../shared/cinematicContract.js';
+import { normalizePageParticles } from '../shared/particleContract.js';
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
 import {
   collectCgUnlockReferences,
@@ -415,6 +416,10 @@ function uniqueChangedPaths(paths = []) {
 
 function normalizePageTransitionInput(transition) {
   return getPageTransitionContract(transition);
+}
+
+function pageParticlesPath(sceneId, pageIndex) {
+  return `scenes.${sceneId}.pages.${pageIndex}.particles`;
 }
 
 function normalizeTitleElement(element, index = 0) {
@@ -1219,6 +1224,52 @@ export function createProjectSession(input = {}) {
         pageIndex,
         transition: cloneJsonValue(page.transition),
         changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.transition`],
+      };
+    },
+
+    setPageParticles({ sceneId, pageIndex, particles }) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (particles === undefined) {
+        throw new Error('particles must be provided');
+      }
+      const normalized = normalizePageParticles(particles);
+      if (normalized === null && particles !== null && particles !== false) {
+        throw new Error('particles must be a particle config object, null, or false');
+      }
+      page.particles = normalized;
+      return {
+        ok: true,
+        sceneId,
+        pageIndex,
+        pathString: pageParticlesPath(sceneId, pageIndex),
+        particles: cloneJsonValue(page.particles),
+        changedPaths: [pageParticlesPath(sceneId, pageIndex)],
+      };
+    },
+
+    clearPageParticles({ sceneId, pageIndex }) {
+      const page = getPage(script, sceneId, pageIndex);
+      page.particles = null;
+      return {
+        ok: true,
+        sceneId,
+        pageIndex,
+        pathString: pageParticlesPath(sceneId, pageIndex),
+        particles: null,
+        changedPaths: [pageParticlesPath(sceneId, pageIndex)],
+      };
+    },
+
+    inheritPageParticles({ sceneId, pageIndex }) {
+      const page = getPage(script, sceneId, pageIndex);
+      delete page.particles;
+      return {
+        ok: true,
+        sceneId,
+        pageIndex,
+        pathString: pageParticlesPath(sceneId, pageIndex),
+        particles: undefined,
+        changedPaths: [pageParticlesPath(sceneId, pageIndex)],
       };
     },
 

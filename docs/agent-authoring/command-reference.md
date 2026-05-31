@@ -56,6 +56,7 @@ These commands are not plan operations. Use them to inspect the project before d
 | `find-missing-assets` | | `script`, `asset-root`, `json` | Returns referenced assets absent from the checked asset root. |
 | `find-unused-assets` | | `script`, `asset-root`, `json` | Returns files in the checked asset root that are not referenced by the script. |
 | `list-transitions` | | `target`, `supported-only`, `json` | Lists shared cinematic catalog entries with target, parameter schema, support flags, defaults, and fallback id. `target` is `background`, `character`, or `camera`. |
+| `list-particles` | | `json` | Lists built-in page particle/weather presets and numeric field ranges. |
 
 ```bash
 npm run vn -- list-assets --script public/game/script.json --json
@@ -66,6 +67,7 @@ npm run vn -- find-dead-ends --script public/game/script.json --json
 npm run vn -- find-missing-assets --script public/game/script.json --json
 npm run vn -- find-unused-assets --script public/game/script.json --json
 npm run vn -- list-transitions --target background --supported-only --json
+npm run vn -- list-particles --json
 ```
 
 ## Scene Commands
@@ -163,10 +165,13 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 | `set-camera-effect` | `sceneId`, `pageIndex` | `effect`, `camera`, `direction`, `intensity`, `durationMs`, `clearCamera` | Catalog-oriented alias for `set-page-camera`; requires `effect`, `camera`, or `clearCamera`, and clamps duration to `0..2000` ms. Aliases: `scene`, `page`, `id`, `duration-ms`, `clear-camera`. |
 | `set-page-transition` | `sceneId`, `pageIndex` | `transition`, `type`, `duration`, `clearTransition` | Aliases: `scene`, `page`, `clear-transition`. |
 | `set-page-transitions` | `sceneId` | `transition`, `type`, `duration`, `clearTransition`, `fromPageIndex`, `toPageIndex`, `pageType`, `hasBackground`, `predicate` | Applies one transition to matching pages in a scene; range endpoints are inclusive. `predicate` is restricted to `pageType` and `hasBackground`, never executable code. Aliases: `scene`, `from-page`, `to-page`, `page-type`, `has-background`, `clear-transition`. |
+| `set-page-particles` | `sceneId`, `pageIndex`, `preset` | `particles`, `density`, `speed`, `wind`, `opacity`, `color`, `direction` | Writes canonical `scenes.<sceneId>.pages.<pageIndex>.particles`. `particles`/`config` may provide a full object in apply-plan; CLI accepts `--particles` JSON. Aliases: `scene`, `page`. |
+| `clear-page-particles` | `sceneId`, `pageIndex` | | Writes `particles: null` to stop the current same-scene particle state on this page. Aliases: `scene`, `page`. |
+| `inherit-page-particles` | `sceneId`, `pageIndex` | | Deletes the page's own `particles` property so it inherits the previous same-scene particle state. Aliases: `scene`, `page`. |
 | `set-character-animation` | `sceneId`, `pageIndex`, `characterId` | `animation` | `animation` defaults to `none`. Aliases: `scene`, `page`, `character`. |
 | `set-character-transition` | `sceneId`, `pageIndex`, `characterId` | `transition` | Catalog-oriented compatibility alias for `set-character-animation`; writes canonical `animation`. Aliases: `scene`, `page`, `character`, `animation`, `id`. |
 
-`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. The completed background catalog includes directional wipes, zoom, flash, iris, and crossfade-pan effects; the character catalog includes `pop`, `scale-in`, and `blur-in`; camera effects include `vignette` and `letterbox`. All are exposed by the same shared catalog and editor controls. Use `list-transitions --supported-only` before writing effects; unknown future ids remain safe through runtime fallback or no-op behavior.
+`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. The background catalog includes fades, slides, directional wipes, zoom, flash, iris, crossfade-pan, CSS-only shape/curtain transitions such as `diamond`, `circle-open`, `blinds-h`, `fade-black`, `fade-white`, `glitch-lite`, and `pixelate-lite`; the character catalog includes `pop`, `scale-in`, and `blur-in`; camera effects include `vignette` and `letterbox`. All are exposed by the same shared catalog and editor controls. Use `list-transitions --supported-only` before writing effects; unknown future ids remain safe through runtime fallback or no-op behavior.
 
 Example bounded bulk operation:
 
@@ -273,6 +278,49 @@ Plan manifest example:
 ## Shared UI Commands
 
 These commands edit shared editor-owned UI sections as structured JSON objects. They do not accept arbitrary HTML/CSS. `merge` defaults to `true`; pass `false` in apply-plan or `--replace` in direct CLI to replace the whole section.
+
+Runtime UI polish baseline motion is engine-owned and has no command. Use the commands below for authored visual config, but do not write or document `ui.motion` until the configurable motion milestone lands with validation and editor controls.
+
+Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
+
+Direct CLI examples:
+
+```bash
+npm run vn -- set-page-particles --scene start --page 0 --preset sakura --density 0.45 --speed 0.6 --wind 0.2 --script public/game/script.json --force --json
+npm run vn -- clear-page-particles --scene start --page 4 --script public/game/script.json --force --json
+npm run vn -- inherit-page-particles --scene start --page 5 --script public/game/script.json --force --json
+```
+
+Plan manifest examples:
+
+```json
+{
+  "command": "set-page-particles",
+  "params": {
+    "scene": "start",
+    "page": 0,
+    "preset": "sakura",
+    "density": 0.45,
+    "wind": 0.2
+  }
+}
+```
+
+```json
+{
+  "command": "clear-page-particles",
+  "params": { "scene": "start", "page": 4 }
+}
+```
+
+Natural-language mapping:
+
+| User says | Agent operation |
+| --- | --- |
+| "Add soft sakura petals to this page." | `set-page-particles` with `preset=sakura`, `density=0.3..0.5`. |
+| "Make it snow heavily here." | `set-page-particles` with `preset=snow`, `density=0.7..0.9`, `speed=0.7`. |
+| "Stop the rain when they go inside." | `clear-page-particles`. |
+| "Keep the same atmosphere on the next page." | `inherit-page-particles` if staying in the same scene, or explicit `set-page-particles` when crossing scenes. |
 
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |

@@ -105,6 +105,37 @@ Use `set-page-media` when background and audio should change together. Use `null
 
 Run `author-check --transaction` after writing so layout/readiness output focuses on the changed page.
 
+## Add Page Atmosphere
+
+Use particle commands for built-in weather/atmosphere. Keep human-facing edits no-code: do not paste raw JSON into the editor.
+
+```json
+{
+  "version": 1,
+  "operations": [
+    {
+      "id": "soft-sakura",
+      "command": "set-page-particles",
+      "params": {
+        "scene": "start",
+        "page": 0,
+        "preset": "sakura",
+        "density": 0.4,
+        "speed": 0.6,
+        "wind": 0.2
+      }
+    },
+    {
+      "id": "stop-inside",
+      "command": "clear-page-particles",
+      "params": { "scene": "start", "page": 4 }
+    }
+  ]
+}
+```
+
+Use `inherit-page-particles` to keep the same particle state later in the same scene. When crossing to another scene, set particles explicitly on the destination scene's first atmospheric page.
+
 ## Add A Branch
 
 Branch edits usually need a choice page, one or more target scenes, and optional variable effects.

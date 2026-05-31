@@ -42,7 +42,7 @@ describe('background layer transitions', () => {
     expect(background.layerA.classList.contains('active')).toBe(false);
   });
 
-  it('supports all M5 background transitions without a second controller', async () => {
+  it('supports all cataloged CSS background transitions without a second controller', async () => {
     const background = makeLayer();
     const transitions = [
       'fade',
@@ -61,6 +61,21 @@ describe('background layer transitions', () => {
       'iris-in',
       'iris-out',
       'crossfade-pan',
+      'diagonal-wipe',
+      'cross-wipe',
+      'diamond',
+      'circle-open',
+      'circle-close',
+      'curtain-open',
+      'curtain-close',
+      'blinds-h',
+      'blinds-v',
+      'clock-wipe',
+      'radial-wipe',
+      'fade-white',
+      'fade-black',
+      'glitch-lite',
+      'pixelate-lite',
       'none',
       'cut',
     ];
@@ -95,6 +110,12 @@ describe('background layer transitions', () => {
     }
 
     for (const type of ['zoom-in', 'zoom-out', 'flash', 'iris-in', 'iris-out', 'crossfade-pan']) {
+      expect(css).toContain(`.bg-image-layer.bg-transition-${type}`);
+      expect(css).toContain(`@keyframes bg-transition-${type}-in`);
+      expect(css).toContain(`@keyframes bg-transition-${type}-out`);
+    }
+
+    for (const type of ['fade-white', 'fade-black', 'glitch-lite', 'pixelate-lite', 'diamond', 'circle-open']) {
       expect(css).toContain(`.bg-image-layer.bg-transition-${type}`);
       expect(css).toContain(`@keyframes bg-transition-${type}-in`);
       expect(css).toContain(`@keyframes bg-transition-${type}-out`);

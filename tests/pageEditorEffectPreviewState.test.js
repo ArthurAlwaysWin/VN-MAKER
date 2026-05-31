@@ -140,6 +140,9 @@ describe('page editor effect preview state', () => {
     const noTransition = editor.previewTransitionEffect({});
     expect(noTransition).toEqual({ ok: false, reason: 'missing-transition-config' });
 
+    const noParticle = editor.previewParticleEffect({});
+    expect(noParticle).toEqual({ ok: false, reason: 'missing-particle-config' });
+
     expect(postMessage).not.toHaveBeenCalled();
   });
 
@@ -181,6 +184,31 @@ describe('page editor effect preview state', () => {
     expect(editor.isEffectPreviewBusy.value).toBe(true);
     expect(editor.activeEffectPreviewRequestId.value).toBe(result.requestId);
     expect(editor.previewDisabledReason.value).toBe(null);
+  });
+
+  it('sends particle previews through the shared preview-effect envelope', () => {
+    const { editor, postMessage } = harness;
+    editor.isEngineReady.value = true;
+
+    const result = editor.previewParticleEffect({
+      config: { preset: 'snow', density: 0.5, speed: 1, wind: 0, opacity: 0.8, color: '#ffffff', direction: 'down' },
+      durationMs: 1200,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'preview-effect',
+      requestId: result.requestId,
+      effectKind: 'particle',
+      sceneId: 'start',
+      pageIndex: 0,
+      script: JSON.parse(JSON.stringify(harness.store.data)),
+      payload: {
+        config: { preset: 'snow', density: 0.5, speed: 1, wind: 0, opacity: 0.8, color: '#ffffff', direction: 'down' },
+        durationMs: 1200,
+      },
+    }, '*');
+    expect(editor.isEffectPreviewBusy.value).toBe(true);
   });
 
   it('tracks accepted and terminal preview-effect-result messages in effect preview state', () => {

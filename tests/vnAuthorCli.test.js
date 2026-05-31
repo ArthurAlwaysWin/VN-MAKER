@@ -3768,7 +3768,42 @@ describe('vn-author CLI', () => {
         'iris-in',
         'iris-out',
         'crossfade-pan',
+        'diagonal-wipe',
+        'cross-wipe',
+        'diamond',
+        'circle-open',
+        'circle-close',
+        'curtain-open',
+        'curtain-close',
+        'blinds-h',
+        'blinds-v',
+        'clock-wipe',
+        'radial-wipe',
+        'fade-white',
+        'fade-black',
+        'glitch-lite',
+        'pixelate-lite',
       ]);
+      const fadeWhite = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'set-page-transition',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--type',
+        'fade-white',
+        '--duration',
+        '700',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(fadeWhite.result).toMatchObject({
+        transition: { type: 'fade-white', duration: 700 },
+        changedPaths: ['scenes.start.pages.0.transition'],
+      });
 
       const directCamera = JSON.parse((await execFileAsync('node', [
         cliPath,
@@ -3945,6 +3980,175 @@ describe('vn-author CLI', () => {
         null,
         { type: 'blur', duration: 5000 },
       ]);
+    });
+  });
+
+  it('applies page particle commands through direct CLI, apply-plan, and author-check focus', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_particles',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              { type: 'normal', background: 'backgrounds/gate.png', dialogues: [] },
+              { type: 'normal', background: 'backgrounds/room.png', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const catalog = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'list-particles',
+        '--json',
+      ])).stdout);
+      expect(catalog.presets).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'sakura', label: '樱花' }),
+        expect.objectContaining({ id: 'rain', label: '雨' }),
+      ]));
+      expect(catalog.fields).toMatchObject({
+        density: { minimum: 0, maximum: 1 },
+        speed: { minimum: 0, maximum: 2 },
+      });
+
+      const directResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'set-page-particles',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--preset',
+        'sakura',
+        '--density',
+        '0.45',
+        '--speed',
+        '0.6',
+        '--wind',
+        '0.2',
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(directResult.result).toMatchObject({
+        pathString: 'scenes.start.pages.0.particles',
+        particles: {
+          preset: 'sakura',
+          density: 0.45,
+          speed: 0.6,
+          wind: 0.2,
+        },
+        changedPaths: ['scenes.start.pages.0.particles'],
+      });
+
+      const planPath = path.join(dir, 'particle-plan.json');
+      const resultPath = path.join(dir, 'particle-result.json');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          {
+            id: 'snow-page-1',
+            command: 'set-page-particles',
+            params: {
+              scene: 'start',
+              page: 1,
+              preset: 'snow',
+              density: 0.8,
+              speed: 0.7,
+            },
+          },
+          {
+            id: 'stop-page-0',
+            command: 'clear-page-particles',
+            params: { scene: 'start', page: 0 },
+          },
+          {
+            id: 'inherit-page-1',
+            command: 'inherit-page-particles',
+            params: { scene: 'start', page: 1 },
+          },
+        ],
+      }), 'utf8');
+
+      const planResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--result-out',
+        resultPath,
+        '--json',
+      ])).stdout);
+      expect(planResult.operations).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: 'snow-page-1',
+          command: 'set-page-particles',
+          changedPaths: ['scenes.start.pages.1.particles'],
+        }),
+        expect.objectContaining({
+          id: 'stop-page-0',
+          command: 'clear-page-particles',
+          changedPaths: ['scenes.start.pages.0.particles'],
+        }),
+        expect.objectContaining({
+          id: 'inherit-page-1',
+          command: 'inherit-page-particles',
+          changedPaths: ['scenes.start.pages.1.particles'],
+        }),
+      ]));
+      expect(planResult.changeSummary.changedPaths).toEqual([
+        'scenes.start.pages.1.particles',
+        'scenes.start.pages.0.particles',
+      ]);
+
+      const updatedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(updatedScript.scenes.start.pages[0].particles).toBeNull();
+      expect(updatedScript.scenes.start.pages[1]).not.toHaveProperty('particles');
+
+      const authorCheck = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        resultPath,
+        '--skip-asset-check',
+        '--write-preview-plan',
+        '--json',
+      ])).stdout);
+      expect(authorCheck.focus.pageTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          sceneId: 'start',
+          pageIndex: 1,
+          reason: 'changed-particles',
+          pathString: 'scenes.start.pages.1.particles',
+        }),
+        expect.objectContaining({
+          sceneId: 'start',
+          pageIndex: 0,
+          reason: 'changed-particles',
+          pathString: 'scenes.start.pages.0.particles',
+        }),
+      ]));
+      expect(authorCheck.focus.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          type: 'scene',
+          sceneId: 'start',
+          pageIndex: 1,
+          reason: 'changed-particles',
+        }),
+      ]));
+      expect(authorCheck.particlePreviewIssues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          category: 'particle-preview',
+          pathString: 'scenes.start.pages.1.particles',
+        }),
+      ]));
     });
   });
 

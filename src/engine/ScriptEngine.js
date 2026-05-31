@@ -20,6 +20,8 @@
  *   'stop_bgm'        — { fadeOut }
  *   'play_se'         — { file }
  *   'choice'          — { prompt, options }
+ *   'set_particles'   — { config, sceneId, pageIndex }
+ *   'stop_particles'  — { sceneId, pageIndex }
  *   'end'             — {}
  *   'scene_enter'     — { sceneId, sceneName }
  *   'page_enter'      — { sceneId, pageIndex, page }
@@ -38,6 +40,7 @@ import {
   getRuntimeTransitionType,
 } from '../shared/cinematicContract.js';
 import { applyEffects } from '../shared/effectDsl.js';
+import { resolveEffectivePageParticles } from '../shared/particleContract.js';
 import {
   mergeRuntimeVariables,
   normalizeVariableRegistry,
@@ -344,6 +347,20 @@ export class ScriptEngine extends EventEmitter {
       ?? getPageTransitionContract({ type: 'fade', duration: 800 });
     const transition = getRuntimeTransitionType(transitionContract.type);
     const duration = transitionContract.duration;
+
+    const particles = resolveEffectivePageParticles(this.script, this.currentScene, this.pageIndex);
+    if (particles) {
+      this.emit('set_particles', {
+        config: particles,
+        sceneId: this.currentScene,
+        pageIndex: this.pageIndex,
+      });
+    } else {
+      this.emit('stop_particles', {
+        sceneId: this.currentScene,
+        pageIndex: this.pageIndex,
+      });
+    }
 
     // ─── Background (only emit if changed) ───
     if (page.background && page.background !== this._currentBg) {

@@ -54,6 +54,26 @@ Keyed by scene ID. Each scene has a `name` and a `commands` array:
 }
 ```
 
+Modern page-based scripts may also store visual fields directly on page objects. `particles` is the canonical page atmosphere field:
+
+```json
+{
+  "type": "normal",
+  "background": "backgrounds/park.png",
+  "particles": {
+    "preset": "sakura",
+    "density": 0.45,
+    "speed": 0.6,
+    "wind": 0.2,
+    "opacity": 0.8,
+    "color": "#ffc6d9",
+    "direction": "down"
+  }
+}
+```
+
+Omit `particles` to inherit the last particle state earlier in the same scene. Use `null` or `false` to stop particles. Built-in preset ids are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`.
+
 ## Command Types
 
 ### `dialogue`

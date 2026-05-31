@@ -532,6 +532,49 @@ describe('project validator', () => {
     ]));
   });
 
+  it('warns about invalid particle values without blocking export', () => {
+    const script = createValidScript();
+    script.scenes.start.pages[0].particles = {
+      preset: 'meteor',
+      density: 2,
+      speed: 'fast',
+      wind: -2,
+      color: 'pink',
+    };
+    script.scenes.start.pages[1].particles = 'snow';
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(true);
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'unknown-particle-preset',
+        pathString: 'scenes.start.pages.0.particles.preset',
+        preset: 'meteor',
+      }),
+      expect.objectContaining({
+        code: 'invalid-particle-density',
+        pathString: 'scenes.start.pages.0.particles.density',
+      }),
+      expect.objectContaining({
+        code: 'invalid-particle-speed',
+        pathString: 'scenes.start.pages.0.particles.speed',
+      }),
+      expect.objectContaining({
+        code: 'invalid-particle-wind',
+        pathString: 'scenes.start.pages.0.particles.wind',
+      }),
+      expect.objectContaining({
+        code: 'invalid-particle-color',
+        pathString: 'scenes.start.pages.0.particles.color',
+      }),
+      expect.objectContaining({
+        code: 'invalid-particle-config',
+        pathString: 'scenes.start.pages.1.particles',
+      }),
+    ]));
+  });
+
   it('accepts runtime-supported directional wipe transitions without fallback warnings', () => {
     const script = createValidScript();
     script.scenes.start.pages[0].transition = { type: 'wipe-down', duration: 700 };

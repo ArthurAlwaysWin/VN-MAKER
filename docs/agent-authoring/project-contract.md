@@ -156,6 +156,35 @@ CG ids use the stable registry id shape. Register a CG with `add-cg` before writ
 
 Narration uses `"speaker": null`. For a terminal normal page, `effects` may contain `unlock:ending`; it runs when the player enters the page during story traversal, not when a saved page is merely redrawn after load.
 
+### Page Particles
+
+Page particles are a canonical page-level visual field owned by `src/shared/particleContract.js`:
+
+```json
+{
+  "particles": {
+    "preset": "sakura",
+    "density": 0.45,
+    "speed": 0.6,
+    "wind": 0.2,
+    "opacity": 0.8,
+    "color": "#ffc6d9",
+    "direction": "down"
+  }
+}
+```
+
+Omitted or `undefined` means inherit the last particle state earlier in the same scene. `null` or `false` means explicitly stop particles. The built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids normalize to `dust` for runtime safety and validation warns without blocking export.
+
+Author through no-code editor controls or structured commands only:
+
+- `list-particles`
+- `set-page-particles`
+- `clear-page-particles`
+- `inherit-page-particles`
+
+Changed paths use `scenes.<sceneId>.pages.<pageIndex>.particles` and are routed to preview/handoff as particle review targets.
+
 ## Choice Page
 
 ```json
@@ -236,3 +265,7 @@ npm run vn -- set-character-transition --scene start --page 0 --character sakura
 ```
 
 The shared transition catalog is fully implemented for M5 through existing project fields. Background support includes directional wipes, `zoom-in`, `zoom-out`, `flash`, `iris-in`, `iris-out`, and `crossfade-pan`, all rendered and previewed through `transition.type`. Character motion supports `fade`, `slide-left`, `slide-right`, `pop`, `scale-in`, and `blur-in` through `characters[].animation`; `set-character-transition` does not add a second schema field. Camera support includes `vignette` and `letterbox` through `camera.effect`. Background transition durations clamp to `0..5000` ms and camera durations clamp to `0..2000` ms. Unknown transitions fall back to `fade`; unknown camera effects and character animations are preserved but not played. `validate --json` reports unknown future-compatible data as warnings without breaking export.
+
+## Runtime UI Polish Baseline
+
+The runtime applies default CSS-only motion and focus/hover polish to the title screen, choices, game menu, save/load, settings, and backlog screens. This baseline has no canonical `script.json` field and no authoring command. Agents should not invent `ui.motion`; configurable motion presets are a later extension that must add a shared contract, validation, commands, editor controls, and preview/handoff support before use.

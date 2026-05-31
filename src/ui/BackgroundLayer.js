@@ -4,8 +4,15 @@
 import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   clampNumericTransitionParam,
+  listTransitionCatalog,
 } from '../shared/transitionCatalog.js';
 import { getRuntimeTransitionType } from '../shared/cinematicContract.js';
+
+const BACKGROUND_TRANSITION_CLASS_NAMES = Object.freeze(
+  listTransitionCatalog({ target: 'background', supportedOnly: true })
+    .flatMap((entry) => [`bg-transition-${entry.id}`, `bg-transition-${entry.id}-out`])
+    .filter((className) => !['bg-transition-fade', 'bg-transition-fade-out', 'bg-transition-none', 'bg-transition-none-out'].includes(className)),
+);
 
 export class BackgroundLayer {
   /**
@@ -136,44 +143,14 @@ export class BackgroundLayer {
 
   _clearLayerState(layer) {
     layer.classList.remove(
-      'bg-transition-dissolve',
-      'bg-transition-wipe',
-      'bg-transition-wipe-left',
-      'bg-transition-wipe-right',
-      'bg-transition-wipe-up',
-      'bg-transition-wipe-down',
-      'bg-transition-scale',
-      'bg-transition-blur',
-      'bg-transition-slide-left',
-      'bg-transition-slide-right',
-      'bg-transition-zoom-in',
-      'bg-transition-zoom-out',
-      'bg-transition-flash',
-      'bg-transition-iris-in',
-      'bg-transition-iris-out',
-      'bg-transition-crossfade-pan',
-      'bg-transition-dissolve-out',
-      'bg-transition-wipe-out',
-      'bg-transition-wipe-left-out',
-      'bg-transition-wipe-right-out',
-      'bg-transition-wipe-up-out',
-      'bg-transition-wipe-down-out',
-      'bg-transition-scale-out',
-      'bg-transition-blur-out',
-      'bg-transition-slide-left-out',
-      'bg-transition-slide-right-out',
-      'bg-transition-zoom-in-out',
-      'bg-transition-zoom-out-out',
-      'bg-transition-flash-out',
-      'bg-transition-iris-in-out',
-      'bg-transition-iris-out-out',
-      'bg-transition-crossfade-pan-out',
+      ...BACKGROUND_TRANSITION_CLASS_NAMES,
       'bg-preview-same-page',
       'bg-preview-same-page-out',
     );
     layer.style.filter = '';
     layer.style.transform = '';
     layer.style.clipPath = '';
+    layer.style.boxShadow = '';
     layer.style.removeProperty('--bg-transition-duration');
     layer.style.removeProperty('--bg-preview-opacity');
   }

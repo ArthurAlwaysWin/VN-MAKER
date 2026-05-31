@@ -103,6 +103,9 @@ export function createPageEditor() {
     if (effectKind === 'transition' && !payload.type) {
       return 'missing-transition-config';
     }
+    if (effectKind === 'particle' && !payload.config) {
+      return 'missing-particle-config';
+    }
     return null;
   }
 
@@ -276,6 +279,10 @@ export function createPageEditor() {
     return previewEffect({ effectKind: 'transition', payload });
   }
 
+  function previewParticleEffect(payload) {
+    return previewEffect({ effectKind: 'particle', payload });
+  }
+
   function stopActiveEffectPreview() {
     if (!previewIframeRef.value?.contentWindow || !activeEffectPreviewRequestId.value) return;
     previewIframeRef.value.contentWindow.postMessage({
@@ -374,6 +381,7 @@ export function createPageEditor() {
     previewCharacterEffect,
     previewCameraEffect,
     previewTransitionEffect,
+    previewParticleEffect,
     stopPreview,
     stopActiveEffectPreview,
     toggleMute,

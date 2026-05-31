@@ -159,6 +159,49 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('adds particle preview review items for changed page particle paths', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_particles',
+      characters: {},
+      scenes: {
+        start: {
+          pages: [
+            { type: 'normal', particles: { preset: 'snow' }, dialogues: [{ text: 'Snow.' }] },
+          ],
+        },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: ['scenes.start.pages.0.particles'],
+        },
+      },
+    });
+
+    expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+      {
+        type: 'scene',
+        kind: 'scene-page',
+        sceneId: 'start',
+        pageIndex: 0,
+        reason: 'changed-particles',
+        pathString: 'scenes.start.pages.0.particles',
+      },
+    ]));
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'preview',
+        category: 'particle-preview',
+        code: 'particle-preview-required',
+        pathString: 'scenes.start.pages.0.particles',
+        sceneId: 'start',
+        pageIndex: 0,
+      }),
+    ]));
+  });
+
   it('includes ending-list preview targets for changed ending registry paths', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_ending_targets',

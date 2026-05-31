@@ -4,6 +4,7 @@ This folder keeps superseded planning documents for historical context.
 
 Active guidance should live in:
 
+- `docs/visual-effects-ui-agent-plan.md`
 - `docs/agent-first-vn-systems-plan.md`
 - `docs/agent-authoring/integration-contract.md`
 - `docs/agent-authoring/project-contract.md`

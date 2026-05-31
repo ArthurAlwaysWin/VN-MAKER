@@ -4,7 +4,7 @@
 **Closure Date:** 2026-05-26
 **Post-Roadmap Enhancement Delivery:** 2026-05-26
 
-This roadmap tracks the external AI agent authoring layer. For the active product/system roadmap covering variables, affection, endings, CG gallery, branch graph analysis, and transition expansion, see `docs/agent-first-vn-systems-plan.md`.
+This roadmap tracks the external AI agent authoring layer. For the completed product/system roadmap covering variables, affection, endings, CG gallery, branch graph analysis, and the first transition expansion, see `docs/agent-first-vn-systems-plan.md`. For the active next-cycle visual polish roadmap, see `docs/visual-effects-ui-agent-plan.md`.
 
 The older high-level plan now lives in `docs/archive/agent-authoring-architecture.md`. It is historical context only; follow `docs/agent-authoring/integration-contract.md` for current integration rules.
 

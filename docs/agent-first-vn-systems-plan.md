@@ -5,6 +5,8 @@
 **Closure Date:** 2026-05-26
 **Supersedes:** `docs/archive/v1.7-planning-report.md`, `docs/archive/gap-analysis-vs-mature-engines.md`, and the older high-level plan in `docs/archive/agent-authoring-architecture.md`
 
+For the active next-cycle work on particles, richer page transitions, runtime UI motion, and game UI style presets, follow `docs/visual-effects-ui-agent-plan.md`. This document remains the completed architecture/framework reference for agent-first VN systems.
+
 This plan defines the next development cycle for Galgame Maker. The product direction is:
 
 > Human creators use the no-code editor to review, polish, preview, and export. AI agents use stable structured interfaces to author, analyze, and repair projects at a higher ceiling than a no-code UI can expose.

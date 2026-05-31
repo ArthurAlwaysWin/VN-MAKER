@@ -1,6 +1,6 @@
 # Agent Authoring Implementation Plan
 
-**Status:** Roadmap and recorded post-roadmap enhancements complete; active extension reference
+**Status:** Roadmap and recorded post-roadmap enhancements complete; active extension framework
 **Date:** 2026-05-23
 **Closure Date:** 2026-05-26
 **Supersedes:** `docs/archive/agent-authoring-implementation-plan.md`
@@ -9,6 +9,7 @@ The previous implementation plan described the first external-agent authoring la
 
 Current implementation should follow these active documents:
 
+- `docs/visual-effects-ui-agent-plan.md` — active next-cycle plan for particles, richer transitions, runtime UI motion, UI style presets, and future safe agent-authored effect packs.
 - `docs/agent-first-vn-systems-plan.md` — completed system roadmap and engineering framework.
 - `docs/agent-authoring/integration-contract.md` — operation, transaction, diagnostics, preview, handoff, and conflict rules.
 - `docs/agent-authoring/project-contract.md` — canonical `script.json` author-data contract.
@@ -59,3 +60,5 @@ Feature-specific tests should run before the full gates. Export/profile/Electron
 ## Archived Context
 
 The archived implementation plan remains useful for understanding how the current agent layer was built, but it is not the active roadmap. If it conflicts with the active plan or integration contract, follow the active documents.
+
+For new visual polish work, follow `docs/visual-effects-ui-agent-plan.md` before consulting historical cinematic or theme design documents.

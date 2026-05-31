@@ -281,7 +281,7 @@ These commands edit shared editor-owned UI sections as structured JSON objects. 
 
 Runtime UI polish baseline motion is engine-owned and has no command. Use the commands below for authored visual config, but do not write or document `ui.motion` until the configurable motion milestone lands with validation and editor controls.
 
-Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
+Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Commands target normal/choice pages only; condition pages do not render or inherit particle state. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
 
 Direct CLI examples:
 

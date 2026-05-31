@@ -69,6 +69,14 @@ describe('particle contract', () => {
       density: 0.5,
       color: PARTICLE_PRESET_DEFS.dust.color,
     });
+    expect(normalizeParticleConfig(
+      { preset: 'old-film', density: 0.5 },
+      { preserveUnknownPreset: true },
+    )).toMatchObject({
+      preset: 'old-film',
+      density: 0.5,
+      color: PARTICLE_PRESET_DEFS.dust.color,
+    });
   });
 
   it('clamps numeric fields and falls invalid values back to defaults', () => {
@@ -134,6 +142,24 @@ describe('particle contract', () => {
       preset: 'sakura',
     });
     expect(resolveEffectivePageParticles(script, 'other', 0)).toBeNull();
+  });
+
+  it('does not let condition-page particles affect later inherited pages', () => {
+    const script = {
+      scenes: {
+        start: {
+          pages: [
+            { type: 'normal', particles: { preset: 'snow' } },
+            { type: 'condition', particles: { preset: 'rain' } },
+            { type: 'normal' },
+          ],
+        },
+      },
+    };
+
+    expect(resolveEffectivePageParticles(script, 'start', 2)).toMatchObject({
+      preset: 'snow',
+    });
   });
 
   it('keeps an explicit stop effective until another object appears', () => {

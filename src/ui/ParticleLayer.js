@@ -13,6 +13,42 @@ function randomBetween(min, max) {
   return min + Math.random() * (max - min);
 }
 
+function directionVector(direction) {
+  switch (direction) {
+    case 'up':
+      return { x: 0, y: -1 };
+    case 'left':
+      return { x: -1, y: 0 };
+    case 'right':
+      return { x: 1, y: 0 };
+    case 'down':
+    default:
+      return { x: 0, y: 1 };
+  }
+}
+
+function placeParticleAtSpawnEdge(particle, initial, width, height, direction) {
+  if (initial) {
+    particle.x = randomBetween(-40, width + 40);
+    particle.y = randomBetween(-40, height + 40);
+    return;
+  }
+
+  if (direction === 'up') {
+    particle.x = randomBetween(-40, width + 40);
+    particle.y = height + randomBetween(12, 80);
+  } else if (direction === 'left') {
+    particle.x = width + randomBetween(12, 80);
+    particle.y = randomBetween(-40, height + 40);
+  } else if (direction === 'right') {
+    particle.x = -randomBetween(12, 80);
+    particle.y = randomBetween(-40, height + 40);
+  } else {
+    particle.x = randomBetween(-40, width + 40);
+    particle.y = -randomBetween(12, 80);
+  }
+}
+
 function prefersReducedMotion() {
   return Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
 }
@@ -51,6 +87,7 @@ export class ParticleLayer {
       return;
     }
 
+    const configChanged = JSON.stringify(this.config) !== JSON.stringify(normalized);
     this.config = normalized;
     this._fadeStart = 0;
     this._fadeEnd = 0;
@@ -61,7 +98,7 @@ export class ParticleLayer {
     }
     this.particles.length = count;
     for (const particle of this.particles) {
-      if (!particle.ready) this._resetParticle(particle, true);
+      if (!particle.ready || configChanged) this._resetParticle(particle, true);
     }
     this._start();
   }
@@ -166,26 +203,33 @@ export class ParticleLayer {
     const height = this.canvas.clientHeight || DEFAULT_HEIGHT;
     const config = this.config || normalizeParticleConfig({ preset: 'dust' });
     const speed = config.speed || 1;
+    const direction = config.direction || 'down';
+    const vector = directionVector(direction);
+    const drift = config.wind || 0;
+    const baseVelocity = randomBetween(0.35, 1.2) * speed;
     particle.ready = true;
-    particle.x = randomBetween(-40, width + 40);
-    particle.y = initial ? randomBetween(-40, height + 40) : -randomBetween(12, 80);
+    placeParticleAtSpawnEdge(particle, initial, width, height, direction);
     particle.size = randomBetween(3, 9);
     particle.rotation = randomBetween(0, Math.PI * 2);
     particle.spin = randomBetween(-0.035, 0.035);
-    particle.vx = (config.wind || 0) * randomBetween(0.6, 1.8);
-    particle.vy = randomBetween(0.35, 1.2) * speed;
+    particle.vx = vector.x * baseVelocity + (vector.y !== 0 ? drift * randomBetween(0.6, 1.8) : 0);
+    particle.vy = vector.y * baseVelocity + (vector.x !== 0 ? drift * randomBetween(0.6, 1.8) : 0);
 
     if (config.preset === 'rain') {
       particle.size = randomBetween(10, 22);
-      particle.vy = randomBetween(8, 14) * Math.max(0.2, speed);
-      particle.vx += (config.wind || 0) * 6;
+      const rainVelocity = randomBetween(8, 14) * Math.max(0.2, speed);
+      particle.vx = vector.x * rainVelocity + (vector.y !== 0 ? drift * 6 : 0);
+      particle.vy = vector.y * rainVelocity + (vector.x !== 0 ? drift * 6 : 0);
     } else if (config.preset === 'firefly' || config.preset === 'sparkle') {
       particle.size = randomBetween(2, 5);
-      particle.vy = randomBetween(-0.25, 0.35) * speed;
+      const floatVelocity = randomBetween(0.12, 0.45) * speed;
+      particle.vx = vector.x * floatVelocity + (vector.y !== 0 ? drift * 0.4 : randomBetween(-0.25, 0.25));
+      particle.vy = vector.y * floatVelocity + (vector.x !== 0 ? drift * 0.4 : randomBetween(-0.25, 0.25));
     } else if (config.preset === 'bubbles') {
       particle.size = randomBetween(5, 14);
-      particle.y = initial ? randomBetween(-40, height + 40) : height + randomBetween(12, 80);
-      particle.vy = -randomBetween(0.4, 1.1) * Math.max(0.2, speed);
+      const bubbleVelocity = randomBetween(0.4, 1.1) * Math.max(0.2, speed);
+      particle.vx = vector.x * bubbleVelocity + (vector.y !== 0 ? drift * 0.6 : 0);
+      particle.vy = vector.y * bubbleVelocity + (vector.x !== 0 ? drift * 0.6 : 0);
     }
   }
 
@@ -215,11 +259,15 @@ export class ParticleLayer {
     ctx.strokeStyle = config.color;
 
     if (config.preset === 'rain') {
+      const vector = directionVector(config.direction);
+      const wind = config.wind || 0;
+      const tailX = vector.x * particle.size + (vector.y !== 0 ? wind * 8 : 0);
+      const tailY = vector.y * particle.size + (vector.x !== 0 ? wind * 8 : 0);
       ctx.globalAlpha = opacity * 0.72;
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo((config.wind || 0) * 8, particle.size);
+      ctx.lineTo(tailX, tailY);
       ctx.stroke();
     } else if (config.preset === 'sakura' || config.preset === 'leaves') {
       ctx.scale(1.5, 0.75);

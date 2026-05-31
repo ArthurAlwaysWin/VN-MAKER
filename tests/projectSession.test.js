@@ -934,6 +934,9 @@ describe('project authoring session', () => {
       elements: [
         { id: 'logo', type: 'text', content: 'Moonlit Letter', x: 640, y: 170, anchor: 'center' },
       ],
+      config: {
+        particles: { preset: 'sparkle' },
+      },
       merge: false,
     })).toMatchObject({
       uiPath: 'ui.titleScreen',
@@ -965,6 +968,7 @@ describe('project authoring session', () => {
     session.removeTitleElement({ elementId: 'logo' });
 
     const titleScreen = session.toJSON().ui.titleScreen;
+    expect(titleScreen).not.toHaveProperty('particles');
     expect(titleScreen).toEqual({
       background: 'ui/title/background.png',
       bgm: 'audio/title.ogg',
@@ -1089,5 +1093,45 @@ describe('project authoring session', () => {
 
     expect(() => session.setTheme({ config: 'body { color: red; }' }))
       .toThrow('Theme config must be an object');
+  });
+
+  it('preserves unknown particle presets for validation and rejects hidden condition-page edits', () => {
+    const session = createProjectSession({
+      script: {
+        characters: {},
+        scenes: {
+          start: {
+            pages: [
+              { type: 'normal', dialogues: [] },
+              { type: 'condition', conditionMode: 'all', conditions: [], trueTarget: null, falseTarget: null },
+            ],
+          },
+        },
+      },
+    });
+
+    session.setPageParticles({
+      sceneId: 'start',
+      pageIndex: 0,
+      particles: { preset: 'future-weather', density: 0.4 },
+    });
+    expect(session.toJSON().scenes.start.pages[0].particles).toMatchObject({
+      preset: 'future-weather',
+      density: 0.4,
+    });
+
+    expect(() => session.setPageParticles({
+      sceneId: 'start',
+      pageIndex: 1,
+      particles: { preset: 'rain' },
+    })).toThrow('normal or choice pages');
+    expect(() => session.clearPageParticles({
+      sceneId: 'start',
+      pageIndex: 1,
+    })).toThrow('normal or choice pages');
+    expect(() => session.inheritPageParticles({
+      sceneId: 'start',
+      pageIndex: 1,
+    })).toThrow('normal or choice pages');
   });
 });

@@ -174,7 +174,7 @@ Page particles are a canonical page-level visual field owned by `src/shared/part
 }
 ```
 
-Omitted or `undefined` means inherit the last particle state earlier in the same scene. `null` or `false` means explicitly stop particles. The built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids normalize to `dust` for runtime safety and validation warns without blocking export.
+Omitted or `undefined` means inherit the last particle state earlier in the same scene. `null` or `false` means explicitly stop particles. Condition pages do not render or contribute inherited particle state. The built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids are preserved for validation warnings and fall back to `dust` at runtime without blocking export.
 
 Author through no-code editor controls or structured commands only:
 

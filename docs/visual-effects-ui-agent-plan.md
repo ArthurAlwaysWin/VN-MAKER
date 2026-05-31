@@ -163,9 +163,9 @@ Why same-scene inheritance only:
 - Restore/preview can resolve the effective particle state by scanning pages `0..pageIndex` within the current scene.
 - Agents can make cross-scene persistence explicit by setting particles on the first page of the next scene.
 
-### Title Screen Particles
+### Future Title Screen Particles
 
-Use:
+Do not author this field until the full title-screen particle contract milestone exists. The intended future shape is:
 
 ```json
 {
@@ -416,7 +416,7 @@ npm run test:vitest -- tests/particleContract.test.js
 
 ## Milestone 3: Particle Runtime
 
-Status: implemented on 2026-05-31. Runtime now has a procedural Canvas 2D `ParticleLayer`, ScriptEngine `set_particles`/`stop_particles` events, title-screen particle playback, skip/reset/load/title/preview cleanup, and focused runtime tests. Editor controls, CLI/apply-plan commands, validation, and handoff routing remain pending later milestones.
+Status: implemented on 2026-05-31 for page particles. Runtime now has a procedural Canvas 2D `ParticleLayer`, ScriptEngine `set_particles`/`stop_particles` events, skip/reset/load/preview cleanup, and focused runtime tests. Title-screen particles remain pending until their own shared contract, validation, commands, editor controls, and handoff routing are added.
 
 Purpose: render built-in page atmosphere efficiently.
 
@@ -484,7 +484,7 @@ In `_renderPage(page)`:
 Important:
 
 - Restore/preview must render the correct effective particle state even when the current page inherits from an earlier page.
-- Condition pages do not render particles.
+- Condition pages do not render or contribute inherited particle state.
 - Page particles should not alter save state; current save restore re-renders current page.
 
 ### 3.3 Runtime Wiring
@@ -514,8 +514,8 @@ Modify:
 
 Behavior:
 
-- When title screen shows and `script.ui.titleScreen.particles` exists, play it.
-- When leaving title screen, stop/clear it before story particles start.
+- Pending future work: when title-screen particles become authorable, add the shared contract and validation before runtime playback.
+- When leaving a particle-enabled title screen, stop/clear it before story particles start.
 - If the title screen has no particles, do nothing.
 
 Keep title particles independent from story page particle inheritance.

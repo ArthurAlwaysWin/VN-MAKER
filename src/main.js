@@ -1229,10 +1229,6 @@ async function showTitle() {
     console.error('[GalgameMaker] Failed to check saves:', e);
     titleScreen.show(false, Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0);
   }
-  const titleParticles = engine.script?.ui?.titleScreen?.particles;
-  if (titleParticles) {
-    particles.play(titleParticles);
-  }
 }
 
 titleScreen.onStart = () => {

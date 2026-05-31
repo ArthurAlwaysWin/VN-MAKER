@@ -72,7 +72,7 @@ Modern page-based scripts may also store visual fields directly on page objects.
 }
 ```
 
-Omit `particles` to inherit the last particle state earlier in the same scene. Use `null` or `false` to stop particles. Built-in preset ids are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`.
+Omit `particles` to inherit the last particle state earlier in the same scene. Use `null` or `false` to stop particles. Condition pages do not render or contribute inherited particle state. Built-in preset ids are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`.
 
 ## Command Types
 

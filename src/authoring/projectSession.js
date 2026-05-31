@@ -464,13 +464,15 @@ function normalizeTitleScreenConfig(config = {}) {
   if (!isPlainObject(config)) {
     throw new Error('Title screen config must be an object');
   }
+  const normalized = cloneJsonValue(config);
+  delete normalized.particles;
 
   const elements = Array.isArray(config.elements)
     ? config.elements.map((element, index) => normalizeTitleElement(element, index))
     : [];
 
   return {
-    ...cloneJsonValue(config),
+    ...normalized,
     background: config.background ?? null,
     bgm: config.bgm ?? null,
     elements,
@@ -1229,10 +1231,13 @@ export function createProjectSession(input = {}) {
 
     setPageParticles({ sceneId, pageIndex, particles }) {
       const page = getPage(script, sceneId, pageIndex);
+      if (page.type === 'condition') {
+        throw new Error('Page particles can only be edited on normal or choice pages');
+      }
       if (particles === undefined) {
         throw new Error('particles must be provided');
       }
-      const normalized = normalizePageParticles(particles);
+      const normalized = normalizePageParticles(particles, { preserveUnknownPreset: true });
       if (normalized === null && particles !== null && particles !== false) {
         throw new Error('particles must be a particle config object, null, or false');
       }
@@ -1249,6 +1254,9 @@ export function createProjectSession(input = {}) {
 
     clearPageParticles({ sceneId, pageIndex }) {
       const page = getPage(script, sceneId, pageIndex);
+      if (page.type === 'condition') {
+        throw new Error('Page particles can only be edited on normal or choice pages');
+      }
       page.particles = null;
       return {
         ok: true,
@@ -1262,6 +1270,9 @@ export function createProjectSession(input = {}) {
 
     inheritPageParticles({ sceneId, pageIndex }) {
       const page = getPage(script, sceneId, pageIndex);
+      if (page.type === 'condition') {
+        throw new Error('Page particles can only be edited on normal or choice pages');
+      }
       delete page.particles;
       return {
         ok: true,

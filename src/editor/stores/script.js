@@ -1194,6 +1194,7 @@ export const useScriptStore = defineStore('script', () => {
       delete page.dialogues;
       delete page.prompt;
       delete page.options;
+      delete page.particles;
       const normalizedPage = normalizeConditionPage(page, {
         registry: data.value?.systems?.variables ?? {},
       });

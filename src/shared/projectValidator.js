@@ -914,6 +914,13 @@ function validatePageParticles(page, context, report) {
   }
 
   const pagePath = ['scenes', context.sceneId, 'pages', context.pageIndex];
+  if (page.type === 'condition') {
+    addWarning(report, 'condition-page-particles', 'Condition pages do not render or inherit particle state; remove this hidden particles field.', [...pagePath, 'particles'], {
+      pageType: page.type,
+    });
+    return;
+  }
+
   const value = page.particles;
   if (value === null || value === false) {
     return;

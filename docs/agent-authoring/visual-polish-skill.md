@@ -140,7 +140,7 @@ Use existing commands and structured config:
 
 Runtime UI polish baseline is now applied by the engine by default: title, choices, game menu, save/load, settings, and backlog have tasteful CSS motion and focus/hover polish without requiring a project-data field or command. Do not write `ui.motion` yet; that remains a later planned command/preset surface.
 
-Built-in page/title particles now render at runtime when canonical `particles` data exists. Human page particle controls are no-code in Page Inspector, and agents should use the structured particle commands above instead of raw JSON edits.
+Built-in page particles now render at runtime when canonical page `particles` data exists. Human page particle controls are no-code in Page Inspector, and agents should use the structured particle commands above instead of raw JSON edits. Title-screen particles are not an authorable surface yet; do not write `ui.titleScreen.particles` until validation, commands, editor controls, and handoff support exist.
 
 Use apply-plan for multi-step UI work.
 

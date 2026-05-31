@@ -115,6 +115,6 @@ describe('particle runtime wiring', () => {
     expect(src).toMatch(/function startSkip\(\) \{[\s\S]*particles\.clear\(\)/);
     expect(src).toMatch(/function stopSkip\(\) \{[\s\S]*applyCurrentParticles\(\)/);
     expect(src).toMatch(/function replayCurrentPage\(\) \{[\s\S]*particles\.clear\(\)/);
-    expect(src).toMatch(/const titleParticles = engine\.script\?\.ui\?\.titleScreen\?\.particles/);
+    expect(src).not.toContain('ui?.titleScreen?.particles');
   });
 });

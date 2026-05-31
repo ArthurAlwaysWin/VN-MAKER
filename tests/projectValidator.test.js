@@ -575,6 +575,28 @@ describe('project validator', () => {
     ]));
   });
 
+  it('warns when hidden condition pages carry particle state', () => {
+    const script = createValidScript();
+    script.scenes.start.pages[1] = {
+      type: 'condition',
+      conditionMode: 'all',
+      conditions: [],
+      trueTarget: null,
+      falseTarget: null,
+      particles: { preset: 'rain' },
+    };
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(true);
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'condition-page-particles',
+        pathString: 'scenes.start.pages.1.particles',
+      }),
+    ]));
+  });
+
   it('accepts runtime-supported directional wipe transitions without fallback warnings', () => {
     const script = createValidScript();
     script.scenes.start.pages[0].transition = { type: 'wipe-down', duration: 700 };

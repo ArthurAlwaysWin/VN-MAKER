@@ -127,8 +127,11 @@ export function normalizeParticleConfig(config, options = {}) {
   }
 
   const rawPreset = typeof config.preset === 'string' ? config.preset.trim() : '';
-  const preset = isKnownParticlePreset(rawPreset) ? rawPreset : FALLBACK_PRESET;
-  const presetDef = PARTICLE_PRESET_DEFS[preset];
+  const knownPreset = isKnownParticlePreset(rawPreset);
+  const preset = knownPreset || options.preserveUnknownPreset === true
+    ? (rawPreset || FALLBACK_PRESET)
+    : FALLBACK_PRESET;
+  const presetDef = knownPreset ? PARTICLE_PRESET_DEFS[preset] : PARTICLE_PRESET_DEFS[FALLBACK_PRESET];
 
   const normalized = {
     preset,
@@ -178,6 +181,9 @@ export function resolveEffectivePageParticles(script, sceneId, pageIndex) {
   const lastIndex = Math.min(Math.floor(pageIndex), pages.length - 1);
   for (let index = 0; index <= lastIndex; index += 1) {
     const page = pages[index];
+    if (page?.type === 'condition') {
+      continue;
+    }
     if (!page || !Object.hasOwn(page, 'particles')) {
       continue;
     }

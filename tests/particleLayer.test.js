@@ -96,6 +96,18 @@ describe('ParticleLayer', () => {
     expect(layer.config).toBeNull();
   });
 
+  it('applies authored direction to particle velocity', () => {
+    const layer = new ParticleLayer(container);
+
+    layer.play({ preset: 'dust', density: 0.2, direction: 'right', wind: 0 });
+    expect(layer.particles.length).toBeGreaterThan(0);
+    expect(layer.particles.every((particle) => particle.vx > 0)).toBe(true);
+
+    layer.play({ preset: 'dust', density: 0.2, direction: 'left', wind: 0 });
+    expect(layer.particles.length).toBeGreaterThan(0);
+    expect(layer.particles.every((particle) => particle.vx < 0)).toBe(true);
+  });
+
   it('destroy removes the canvas', () => {
     const layer = new ParticleLayer(container);
     layer.play({ preset: 'dust' });

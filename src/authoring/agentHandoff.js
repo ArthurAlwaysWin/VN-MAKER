@@ -49,6 +49,18 @@ const PREVIEW_SCREEN_IDS = new Set(PREVIEW_SCREEN_PATHS.values());
 function previewTargetsFromChangedPaths(changedPaths = []) {
   const targets = [];
   for (const changedPath of changedPaths) {
+    if (changedPath === 'ui.motion' || String(changedPath).startsWith('ui.motion.')) {
+      for (const screenId of PREVIEW_SCREEN_IDS) {
+        targets.push({
+          type: 'screen',
+          screenId,
+          reason: 'changed-ui-motion',
+          pathString: String(changedPath),
+        });
+      }
+      continue;
+    }
+
     const particleMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.particles$/.exec(String(changedPath));
     if (particleMatch) {
       targets.push({

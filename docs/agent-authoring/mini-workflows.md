@@ -136,6 +136,29 @@ Use particle commands for built-in weather/atmosphere. Keep human-facing edits n
 
 Use `inherit-page-particles` to keep the same particle state later in the same scene. When crossing to another scene, set particles explicitly on the destination scene's first atmospheric page.
 
+## Tune UI Motion
+
+Use `set-ui-motion` for title, dialogue, choice, and menu motion presets. This writes only canonical `ui.motion` dropdown values and routes the result to major screen previews.
+
+```json
+{
+  "version": 1,
+  "operations": [
+    {
+      "id": "suspense-motion",
+      "command": "set-ui-motion",
+      "params": {
+        "intensity": "dramatic",
+        "title": "cinematic-slow",
+        "dialogue": "soft-pop",
+        "choices": "suspense-delay",
+        "menus": "panel-slide"
+      }
+    }
+  ]
+}
+```
+
 ## Add A Branch
 
 Branch edits usually need a choice page, one or more target scenes, and optional variable effects.

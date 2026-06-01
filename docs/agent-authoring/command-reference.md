@@ -273,13 +273,13 @@ Plan manifest example:
 }
 ```
 
-`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `systems.endings.*` paths become an `ending-list` preview target, changed `systems.gallery.cg.*` paths become a `gallery` preview target, and changed `scenes.*` paths also create a `branch-graph` target at `analysis.sceneGraph` for Story Systems review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
+`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `ui.motion` paths create preview targets for all major screens. Changed `systems.endings.*` paths become an `ending-list` preview target, changed `systems.gallery.cg.*` paths become a `gallery` preview target, and changed `scenes.*` paths also create a `branch-graph` target at `analysis.sceneGraph` for Story Systems review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
 
 ## Shared UI Commands
 
 These commands edit shared editor-owned UI sections as structured JSON objects. They do not accept arbitrary HTML/CSS. `merge` defaults to `true`; pass `false` in apply-plan or `--replace` in direct CLI to replace the whole section.
 
-Runtime UI polish baseline motion is engine-owned and has no command. Use the commands below for authored visual config, but do not write or document `ui.motion` until the configurable motion milestone lands with validation and editor controls.
+Configurable runtime UI motion is stored under `ui.motion` and normalized by `src/shared/uiMotionContract.js`. Human editors use dropdowns only; agents use `set-ui-motion`. The changed path is always `ui.motion`, and handoff routes it to all major screen previews.
 
 Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Commands target normal/choice pages only; condition pages do not render or inherit particle state. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
 
@@ -327,6 +327,7 @@ Natural-language mapping:
 | `set-dialogue-box` | `config` | `merge` | Sets `ui.dialogueBox`, including dialogue frame and nameplate style config. |
 | `set-theme` | `config` | `merge` | Sets `ui.theme`, including tokens, icons, cursors, nine-slice, and button families. |
 | `set-widget-styles` | `config` | `merge` | Sets `ui.widgetStyles`, including reusable widget visual config. |
+| `set-ui-motion` | none | `intensity`, `title`, `dialogue`, `choices`, `menus`, `config`, `merge` | Sets canonical `ui.motion`. Values are dropdown-style preset ids, not CSS. |
 
 Direct CLI examples:
 
@@ -334,6 +335,7 @@ Direct CLI examples:
 npm run vn -- set-dialogue-box --script public/game/script.json --config .tmp/dialogue-box.json --force --checkpoint --json
 npm run vn -- set-theme --script public/game/script.json --config-json "{\"tokens\":{\"accent\":\"#88ccff\"}}" --force --json
 npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
+npm run vn -- set-ui-motion --script public/game/script.json --intensity dramatic --title cinematic-slow --choices suspense-delay --force --json
 ```
 
 Plan manifest example:
@@ -358,6 +360,17 @@ Plan manifest example:
         "config": {
           "icons": { "close": "ui/icons/close.png" }
         }
+      }
+    },
+    {
+      "id": "dramatic-motion",
+      "command": "set-ui-motion",
+      "params": {
+        "intensity": "dramatic",
+        "title": "cinematic-slow",
+        "dialogue": "soft-pop",
+        "choices": "suspense-delay",
+        "menus": "panel-slide"
       }
     }
   ]

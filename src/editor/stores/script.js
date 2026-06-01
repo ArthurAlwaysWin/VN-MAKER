@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { normalizeUiMotion } from '../../shared/uiMotionContract.js';
 import { computed, ref, nextTick } from 'vue';
 import { normalizeConditionPage, normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
@@ -1016,6 +1017,20 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function getUiMotion() {
+    if (!data.value) return null;
+    data.value.ui ??= {};
+    data.value.ui.motion = normalizeUiMotion(data.value.ui.motion);
+    return data.value.ui.motion;
+  }
+
+  function updateUiMotion(motion) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.motion = normalizeUiMotion(motion);
+    pushState();
+  }
+
   function getSaveLoadScreen() {
     if (!data.value) return null;
     data.value.ui ??= {};
@@ -1383,6 +1398,7 @@ export const useScriptStore = defineStore('script', () => {
     getDialogueBox, updateDialogueBox,
     getTheme, updateTheme,
     getWidgetStyles, updateWidgetStyles,
+    getUiMotion, updateUiMotion,
     getSaveLoadScreen, updateSaveLoadScreen,
     getBacklogScreen, updateBacklogScreen,
     getGameMenu, updateGameMenu,

@@ -91,6 +91,9 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `unknown-transition-type` | Page transition type is not in the completed M5 runtime catalog; it is preserved but falls back to a declared compatible id when available, otherwise `fade`. |
 | `unknown-character-animation` | Character animation is preserved but ignored at runtime. |
 | `invalid-transition-param` | Cinematic duration, intensity, or direction is outside the shared catalog contract and will be clamped or safely defaulted at runtime. |
+| `invalid-ui-motion-config` | `ui.motion` is not an object; runtime uses default motion presets. |
+| `invalid-ui-motion-intensity` | `ui.motion.intensity` is not one of `off`, `subtle`, `standard`, or `dramatic`; runtime falls back safely. |
+| `invalid-ui-motion-preset` | One of the `ui.motion` preset fields is unsupported; runtime falls back to the field default. |
 
 ## Handoff Checklist
 
@@ -156,7 +159,7 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `asset-check` | Handoff did not run with known assets, so missing files may not have been detected. |
 | `placeholder-asset` | A referenced asset path appears to be a placeholder, such as `placeholder`, `todo`, or `dummy`. Replace it with final art/audio or explicitly accept it. |
 | `ambiguous-asset` | A referenced asset path has a generic filename such as `bg01.png`, `img02.png`, or `button.png`, which may confuse future agent matching. |
-| `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. |
+| `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. `ui.motion` creates targets for all major screens. |
 | `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
 | `gallery-preview` | `systems.gallery.cg` changed and needs review in Story Systems and the runtime gallery. |
 | `branch-graph-preview` | `scenes.*` changed and needs review in the Story Systems branch flow panel. |

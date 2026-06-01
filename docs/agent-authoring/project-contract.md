@@ -266,6 +266,32 @@ npm run vn -- set-character-transition --scene start --page 0 --character sakura
 
 The shared transition catalog is fully implemented for M5 through existing project fields. Background support includes directional wipes, `zoom-in`, `zoom-out`, `flash`, `iris-in`, `iris-out`, and `crossfade-pan`, all rendered and previewed through `transition.type`. Character motion supports `fade`, `slide-left`, `slide-right`, `pop`, `scale-in`, and `blur-in` through `characters[].animation`; `set-character-transition` does not add a second schema field. Camera support includes `vignette` and `letterbox` through `camera.effect`. Background transition durations clamp to `0..5000` ms and camera durations clamp to `0..2000` ms. Unknown transitions fall back to `fade`; unknown camera effects and character animations are preserved but not played. `validate --json` reports unknown future-compatible data as warnings without breaking export.
 
-## Runtime UI Polish Baseline
+## Runtime UI Motion
 
-The runtime applies default CSS-only motion and focus/hover polish to the title screen, choices, game menu, save/load, settings, and backlog screens. This baseline has no canonical `script.json` field and no authoring command. Agents should not invent `ui.motion`; configurable motion presets are a later extension that must add a shared contract, validation, commands, editor controls, and preview/handoff support before use.
+The runtime applies default CSS-only motion and focus/hover polish to the title screen, choices, game menu, save/load, settings, and backlog screens. Projects may now configure that motion through canonical `ui.motion` presets:
+
+```json
+{
+  "ui": {
+    "motion": {
+      "intensity": "standard",
+      "title": "soft-rise",
+      "dialogue": "soft-pop",
+      "choices": "stagger-rise",
+      "menus": "panel-fade"
+    }
+  }
+}
+```
+
+Allowed values:
+
+| Field | Values |
+| --- | --- |
+| `intensity` | `off`, `subtle`, `standard`, `dramatic` |
+| `title` | `none`, `soft-rise`, `cinematic-slow`, `glow-pulse` |
+| `dialogue` | `none`, `soft-pop`, `slide-up`, `glass-fade` |
+| `choices` | `none`, `stagger-rise`, `card-pop`, `suspense-delay` |
+| `menus` | `none`, `panel-fade`, `panel-slide`, `sidebar-sweep` |
+
+Use `set-ui-motion` or the no-code Project Settings controls. Do not write CSS, HTML, or JSON textareas for human authors. Changed `ui.motion` routes to all major screen preview targets.

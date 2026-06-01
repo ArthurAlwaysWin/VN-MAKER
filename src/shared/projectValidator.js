@@ -26,6 +26,11 @@ import {
   isKnownParticlePreset,
 } from './particleContract.js';
 import {
+  UI_MOTION_FIELD_SCHEMA,
+  isKnownUiMotionIntensity,
+  isKnownUiMotionPreset,
+} from './uiMotionContract.js';
+import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   CAMERA_EFFECT_DURATION_SCHEMA,
   isValidNumericTransitionParam,
@@ -1034,6 +1039,37 @@ function validateScenes(script, context, report, options) {
   }
 }
 
+function validateUiMotion(script, report) {
+  const motion = script?.ui?.motion;
+  if (motion === undefined) {
+    return;
+  }
+
+  if (!isPlainObject(motion)) {
+    addWarning(report, 'invalid-ui-motion-config', 'ui.motion must be an object; runtime will use default motion presets.', ['ui', 'motion'], {
+      valueType: Array.isArray(motion) ? 'array' : typeof motion,
+    });
+    return;
+  }
+
+  if (motion.intensity !== undefined && !isKnownUiMotionIntensity(motion.intensity)) {
+    addWarning(report, 'invalid-ui-motion-intensity', `UI motion intensity "${motion.intensity}" is not supported and will fall back to ${UI_MOTION_FIELD_SCHEMA.intensity.default}.`, ['ui', 'motion', 'intensity'], {
+      value: motion.intensity,
+      allowedValues: UI_MOTION_FIELD_SCHEMA.intensity.options,
+    });
+  }
+
+  for (const field of ['title', 'dialogue', 'choices', 'menus']) {
+    if (motion[field] !== undefined && !isKnownUiMotionPreset(field, motion[field])) {
+      addWarning(report, 'invalid-ui-motion-preset', `UI motion ${field} preset "${motion[field]}" is not supported and will fall back to ${UI_MOTION_FIELD_SCHEMA[field].default}.`, ['ui', 'motion', field], {
+        field,
+        value: motion[field],
+        allowedValues: UI_MOTION_FIELD_SCHEMA[field].options,
+      });
+    }
+  }
+}
+
 export function validateProject(script, options = {}) {
   const report = {
     ok: true,
@@ -1053,6 +1089,7 @@ export function validateProject(script, options = {}) {
 
   validateCharacterRegistry(script, report);
   validateCharacterAssets(script, report, config.assetSet);
+  validateUiMotion(script, report);
 
   const registry = normalizeVariableRegistry(script?.systems?.variables);
   const endings = normalizeEndingRegistry(script?.systems?.endings);

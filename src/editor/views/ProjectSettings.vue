@@ -158,6 +158,29 @@
           <ButtonFamilyImageSettings @preview="onButtonFamilyPreview" />
           <CursorIconSettings />
         </div>
+
+        <div class="ps-section" v-if="script.data">
+          <h3 class="ps-section-title">🎞️ 界面动效</h3>
+          <div class="motion-grid">
+            <label v-for="field in uiMotionFields" :key="field.key" class="motion-field">
+              <span>{{ field.label }}</span>
+              <select
+                class="config-select"
+                :value="uiMotion[field.key]"
+                @change="onUiMotionChange(field.key, $event.target.value)"
+              >
+                <option
+                  v-for="option in field.options"
+                  :key="option"
+                  :value="option"
+                >{{ option }}</option>
+              </select>
+            </label>
+          </div>
+          <div class="motion-actions">
+            <button class="toolbar-btn" @click="previewUiMotion" title="预览当前界面动效">预览动效</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -185,6 +208,7 @@ import { provide, ref, computed, onMounted, onActivated, onBeforeUnmount } from 
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
+import { UI_MOTION_FIELD_SCHEMA, normalizeUiMotion } from '../../shared/uiMotionContract.js';
 import { exportCurrentThemePackage } from '../services/themePackageExport.js';
 import DialogueBoxSettings from '../components/DialogueBoxSettings.vue';
 import ExportModal from '../components/ExportModal.vue';
@@ -230,6 +254,12 @@ const DIALOGUE_PREVIEW_SAMPLE = {
   speakerName: '预览角色',
   text: '这是一段用于检查对话框图片层、文字层和继续指示的稳定示例台词。',
 };
+const uiMotionFields = Object.entries(UI_MOTION_FIELD_SCHEMA).map(([key, schema]) => ({
+  key,
+  label: schema.label,
+  options: schema.options,
+}));
+const uiMotion = computed(() => normalizeUiMotion(script.data?.ui?.motion));
 
 function canNavigateAgentPath(pathString) {
   return Boolean(parseAgentPathTarget(pathString));
@@ -434,6 +464,29 @@ function onThemeBrowserClose() {
 
 function sendShowScreen() {
   showPreviewScreen('settingsScreen');
+}
+
+function onUiMotionChange(field, value) {
+  const next = {
+    ...uiMotion.value,
+    [field]: value,
+  };
+  script.updateUiMotion(next);
+  previewUiMotion();
+}
+
+function previewUiMotion() {
+  if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
+  themeEditor.startEngine();
+  themeEditor.flushPreview();
+  themeEditor.iframeRef.value.contentWindow.postMessage({
+    type: 'update-ui-motion',
+    motion: normalizeUiMotion(script.data.ui?.motion),
+  }, '*');
+  themeEditor.iframeRef.value.contentWindow.postMessage({
+    type: 'show-screen',
+    screenId: 'titleScreen',
+  }, '*');
 }
 
 function showPreviewScreen(screenId = 'settingsScreen') {
@@ -703,5 +756,27 @@ onBeforeUnmount(() => {
   align-items: center;
   color: #999;
   font-size: 12px;
+}
+.motion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.motion-field {
+  display: grid;
+  gap: 5px;
+  color: #bbb;
+  font-size: 12px;
+}
+.motion-field .config-select {
+  min-width: 0;
+  background: #272727;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+.motion-actions {
+  margin-top: 10px;
 }
 </style>

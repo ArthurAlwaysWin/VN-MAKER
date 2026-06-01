@@ -295,6 +295,20 @@ async function parseSharedUiConfigArgs(args, command) {
   };
 }
 
+async function parseUiMotionArgs(args) {
+  const config = await parseJsonFileArg(args, '--config', parseJsonArg(args, '--config-json', null));
+  return {
+    motion: config ?? dropUndefinedFields({
+      intensity: getOptionalArgValue(args, '--intensity'),
+      title: getOptionalArgValue(args, '--title'),
+      dialogue: getOptionalArgValue(args, '--dialogue'),
+      choices: getOptionalArgValue(args, '--choices'),
+      menus: getOptionalArgValue(args, '--menus'),
+    }),
+    merge: hasFlag(args, '--replace') ? false : true,
+  };
+}
+
 function parseTitleElementArgs(args, { requireType = true } = {}) {
   const jsonElement = parseJsonArg(args, '--element', null);
   if (jsonElement) {
@@ -694,6 +708,18 @@ const PREVIEW_SCREEN_PATHS = new Map([
 function screenTargetsFromChangedPaths(changedPaths = []) {
   const targets = [];
   for (const changedPath of changedPaths) {
+    if (changedPath === 'ui.motion' || String(changedPath).startsWith('ui.motion.')) {
+      for (const screenId of PREVIEW_SCREEN_PATHS.values()) {
+        targets.push({
+          type: 'screen',
+          screenId,
+          reason: 'changed-ui-motion',
+          pathString: String(changedPath),
+        });
+      }
+      continue;
+    }
+
     for (const [pathPrefix, screenId] of PREVIEW_SCREEN_PATHS.entries()) {
       if (changedPath === pathPrefix || changedPath.startsWith(`${pathPrefix}.`)) {
         targets.push({ type: 'screen', screenId });
@@ -991,6 +1017,7 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-dialogue-box',
   'set-theme',
   'set-widget-styles',
+  'set-ui-motion',
   'add-choice-effect',
   'set-choice-effect',
   'remove-choice-effect',
@@ -1157,6 +1184,20 @@ function buildScreenLayoutPatch(command, params) {
 function buildSharedUiConfigPatch(command, params) {
   return {
     config: requireParam(params, command, 'config'),
+    merge: getParam(params, 'merge') ?? true,
+  };
+}
+
+function buildUiMotionPatch(params) {
+  const explicit = getParam(params, 'motion', 'config');
+  return {
+    motion: explicit ?? dropUndefinedFields({
+      intensity: getParam(params, 'intensity'),
+      title: getParam(params, 'title'),
+      dialogue: getParam(params, 'dialogue'),
+      choices: getParam(params, 'choices'),
+      menus: getParam(params, 'menus'),
+    }),
     merge: getParam(params, 'merge') ?? true,
   };
 }
@@ -1701,6 +1742,10 @@ function applyPlanOperation(session, operation = {}, index = 0) {
 
   if (command === 'set-widget-styles') {
     return session.setWidgetStyles(buildSharedUiConfigPatch(command, params));
+  }
+
+  if (command === 'set-ui-motion') {
+    return session.setUiMotion(buildUiMotionPatch(params));
   }
 
   if (command === 'add-choice-effect') {
@@ -5157,6 +5202,19 @@ async function setSharedUiConfig(args, command, label, mutator) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setUiMotion(args) {
+  const patch = await parseUiMotionArgs(args);
+  const output = await mutateScript(args, (session) => session.setUiMotion(patch));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Set UI motion', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function addChoiceEffect(args) {
   const sceneId = getArgValue(args, '--scene', getArgValue(args, '--scene-id', null));
   if (!sceneId) {
@@ -5361,6 +5419,7 @@ function printHelp() {
   set-dialogue-box --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-theme --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-widget-styles --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-ui-motion [--intensity off|subtle|standard|dramatic] [--title none|soft-rise|cinematic-slow|glow-pulse] [--dialogue none|soft-pop|slide-up|glass-fade] [--choices none|stagger-rise|card-pop|suspense-delay] [--menus none|panel-fade|panel-slide|sidebar-sweep] [--config file|--config-json json] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-choice-effect --scene scene_id --page index --option index [--effect json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-choice-effect --scene scene_id --page index --option index --effect-index index [--effect-json json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-choice-effect --scene scene_id --page index --option index --effect-index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5769,6 +5828,11 @@ async function main() {
         'widget styles',
         (session, patch) => session.setWidgetStyles(patch),
       );
+      return;
+    }
+
+    if (command === 'set-ui-motion') {
+      process.exitCode = await setUiMotion(args);
       return;
     }
 

@@ -41,6 +41,7 @@ import {
   isKnownTransitionType,
 } from './shared/cinematicContract.js';
 import { normalizeParticleConfig, resolveEffectivePageParticles } from './shared/particleContract.js';
+import { getUiMotionClassNames } from './shared/uiMotionContract.js';
 
 // ─── DOM references ─────────────────────────────────────
 const gameContainer = document.getElementById('game-container');
@@ -114,6 +115,7 @@ let backgroundTransitionPending = false;
 let activeEffectPreview = null;
 let previewRestorePending = false;
 let playerDataRepository = null;
+let activeUiMotionClasses = [];
 
 // ─── Toast notifications (D-11, D-12) ──────────────────
 let currentToast = null;
@@ -166,6 +168,7 @@ function applyPreviewScriptSnapshot(request) {
   applyButtonFamilies(engine.script.ui?.theme);
   applyScreenBackgrounds(gameContainer, engine.script.ui);
   applyCursors(engine.script.ui?.theme);
+  applyUiMotion(engine.script.ui?.motion);
 
   if (engine.script.ui?.dialogueBox) {
     dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
@@ -486,6 +489,15 @@ function applyConfig() {
   }
 }
 applyConfig();
+
+function applyUiMotion(motionConfig) {
+  if (!gameContainer) return;
+  if (activeUiMotionClasses.length) {
+    gameContainer.classList.remove(...activeUiMotionClasses);
+  }
+  activeUiMotionClasses = getUiMotionClassNames(motionConfig);
+  gameContainer.classList.add(...activeUiMotionClasses);
+}
 
 // ─── Engine event handlers ──────────────────────────────
 function showDialogueEvent(data) {
@@ -1362,6 +1374,7 @@ async function init(env) {
     applyButtonFamilies(engine.script.ui?.theme);
     applyScreenBackgrounds(gameContainer, engine.script.ui);
     applyCursors(engine.script.ui?.theme);
+    applyUiMotion(engine.script.ui?.motion);
 
     // Apply global dialogue box font settings if defined in script
     if (engine.script.ui?.dialogueBox) {
@@ -1450,6 +1463,10 @@ function initPreview() {
         backlogScreen.setThemeIcons(themeIcons || null);
         settingsScreen.setThemeIcons(themeIcons || null);
         quickBar.setThemeIcons(themeIcons || null);
+        break;
+      }
+      case 'update-ui-motion': {
+        applyUiMotion(msg.motion);
         break;
       }
       case 'update-widget-styles': {

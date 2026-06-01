@@ -25,6 +25,38 @@
   }
 }
 
+.gm-motion-intensity-off *,
+.gm-motion-intensity-off *::before,
+.gm-motion-intensity-off *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+.gm-motion-intensity-subtle {
+  --gm-motion-fast: 100ms;
+  --gm-motion-medium: 180ms;
+  --gm-motion-slow: 280ms;
+}
+
+.gm-motion-intensity-dramatic {
+  --gm-motion-fast: 180ms;
+  --gm-motion-medium: 380ms;
+  --gm-motion-slow: 720ms;
+}
+
+.gm-motion-title-none #title-screen *,
+.gm-motion-dialogue-none #dialogue-box,
+.gm-motion-choices-none #choice-menu *,
+.gm-motion-menus-none #game-menu *,
+.gm-motion-menus-none #save-load-screen *,
+.gm-motion-menus-none #settings-screen *,
+.gm-motion-menus-none #backlog-screen * {
+  animation: none !important;
+  transition-duration: 1ms !important;
+}
+
 /* --- Reset & Base --- */
 *,
 *::before,
@@ -2898,4 +2930,90 @@ body {
   background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
+}
+
+/* --- Configurable UI Motion Presets --- */
+.gm-motion-title-cinematic-slow #title-screen.visible .title-game-name {
+  animation-duration: calc(var(--gm-motion-slow) * 1.35);
+}
+
+.gm-motion-title-cinematic-slow #title-screen.visible .title-button {
+  animation-duration: calc(var(--gm-motion-slow) * 1.1);
+}
+
+.gm-motion-title-glow-pulse #title-screen.visible .title-game-name {
+  animation:
+    title-name-enter var(--gm-motion-slow) var(--gm-motion-ease-out) both,
+    gm-title-glow-pulse 2200ms ease-in-out infinite;
+}
+
+.gm-motion-dialogue-soft-pop #dialogue-box.visible {
+  animation: gm-dialogue-soft-pop var(--gm-motion-medium) var(--gm-motion-ease-out) both;
+}
+
+.gm-motion-dialogue-slide-up #dialogue-box.visible {
+  animation: gm-dialogue-slide-up var(--gm-motion-medium) var(--gm-motion-ease-out) both;
+}
+
+.gm-motion-dialogue-glass-fade #dialogue-box.visible {
+  animation: gm-dialogue-glass-fade var(--gm-motion-slow) var(--gm-motion-ease-out) both;
+}
+
+.gm-motion-choices-card-pop #choice-menu.visible .choice-button {
+  animation-name: gm-choice-card-pop;
+}
+
+.gm-motion-choices-suspense-delay #choice-menu.visible .choice-button {
+  animation-name: choice-button-enter;
+  animation-duration: var(--gm-motion-slow);
+  animation-delay: calc(220ms + var(--choice-index, 0) * 120ms);
+}
+
+.gm-motion-menus-panel-slide #game-menu.visible .game-menu-panel,
+.gm-motion-menus-panel-slide #save-load-screen.visible,
+.gm-motion-menus-panel-slide #settings-screen.visible,
+.gm-motion-menus-panel-slide #backlog-screen.visible {
+  animation: gm-menu-panel-slide var(--gm-motion-medium) var(--gm-motion-ease-out) both;
+}
+
+.gm-motion-menus-sidebar-sweep #game-menu.visible .game-menu-panel,
+.gm-motion-menus-sidebar-sweep #save-load-screen.visible,
+.gm-motion-menus-sidebar-sweep #settings-screen.visible,
+.gm-motion-menus-sidebar-sweep #backlog-screen.visible {
+  animation: gm-menu-sidebar-sweep var(--gm-motion-slow) var(--gm-motion-ease-out) both;
+}
+
+@keyframes gm-title-glow-pulse {
+  0%, 100% { text-shadow: 0 0 18px rgba(255, 255, 255, 0.18); }
+  50% { text-shadow: 0 0 32px rgba(255, 255, 255, 0.38); }
+}
+
+@keyframes gm-dialogue-soft-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes gm-dialogue-slide-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gm-dialogue-glass-fade {
+  from { opacity: 0; filter: blur(8px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes gm-choice-card-pop {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes gm-menu-panel-slide {
+  from { opacity: 0; transform: translateX(22px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes gm-menu-sidebar-sweep {
+  from { opacity: 0; transform: translateX(-34px); }
+  to { opacity: 1; transform: translateX(0); }
 }

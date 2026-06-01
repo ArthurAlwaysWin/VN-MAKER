@@ -339,3 +339,29 @@ Configure the title screen layout with freely positioned text and button element
 | `size` | object | Button dimensions: `{ width, height }` |
 
 When `ui.titleScreen` is not defined, the default centered title screen is displayed.
+
+### `ui.motion`
+
+Configure runtime UI motion using built-in presets. The editor exposes these as dropdowns, and agents should use `set-ui-motion`.
+
+```json
+{
+  "ui": {
+    "motion": {
+      "intensity": "standard",
+      "title": "soft-rise",
+      "dialogue": "soft-pop",
+      "choices": "stagger-rise",
+      "menus": "panel-fade"
+    }
+  }
+}
+```
+
+| Field | Values |
+|-------|--------|
+| `intensity` | `off`, `subtle`, `standard`, `dramatic` |
+| `title` | `none`, `soft-rise`, `cinematic-slow`, `glow-pulse` |
+| `dialogue` | `none`, `soft-pop`, `slide-up`, `glass-fade` |
+| `choices` | `none`, `stagger-rise`, `card-pop`, `suspense-delay` |
+| `menus` | `none`, `panel-fade`, `panel-slide`, `sidebar-sweep` |

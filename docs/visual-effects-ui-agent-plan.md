@@ -1036,6 +1036,8 @@ Tests:
 
 ## Milestone 9: Configurable Runtime UI Motion
 
+Status: implemented on 2026-06-01. `ui.motion` now has a shared contract and normalizer, runtime root motion classes, no-code Project Settings controls, `set-ui-motion` direct/apply-plan support, validation warnings, all-major-screen preview/handoff routing, and focused regression coverage.
+
 Purpose: make UI feel configurable through no-code presets and agent commands.
 
 Do this after default UI motion, particles, and transition expansion are stable.

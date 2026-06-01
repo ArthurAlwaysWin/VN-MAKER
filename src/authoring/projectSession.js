@@ -5,6 +5,7 @@ import {
   getPageTransitionContract,
 } from '../shared/cinematicContract.js';
 import { normalizePageParticles } from '../shared/particleContract.js';
+import { normalizeUiMotion } from '../shared/uiMotionContract.js';
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
 import {
   collectCgUnlockReferences,
@@ -420,6 +421,10 @@ function normalizePageTransitionInput(transition) {
 
 function pageParticlesPath(sceneId, pageIndex) {
   return `scenes.${sceneId}.pages.${pageIndex}.particles`;
+}
+
+function uiMotionPath() {
+  return 'ui.motion';
 }
 
 function normalizeTitleElement(element, index = 0) {
@@ -1482,6 +1487,21 @@ export function createProjectSession(input = {}) {
         : nextConfig;
       return {
         uiPath: 'ui.widgetStyles',
+      };
+    },
+
+    setUiMotion({ motion, config, merge = true, ...fields } = {}) {
+      const patch = normalizeSharedUiConfig(motion ?? config ?? fields, 'UI motion');
+      script.ui ??= {};
+      const base = merge ? script.ui.motion ?? {} : {};
+      script.ui.motion = normalizeUiMotion({
+        ...cloneJsonValue(base),
+        ...cloneJsonValue(patch),
+      });
+      return {
+        uiPath: uiMotionPath(),
+        motion: cloneJsonValue(script.ui.motion),
+        changedPaths: [uiMotionPath()],
       };
     },
 

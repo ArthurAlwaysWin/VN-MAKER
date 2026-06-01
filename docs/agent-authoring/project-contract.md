@@ -311,4 +311,4 @@ Game UI style presets are built-in authoring recipes, not stored project state. 
 
 Built-in preset ids are `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, and `soft-romance`. Supported scopes are `all`, `dialogue`, `choices`, and `screens`.
 
-The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears.
+The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears. Preset application returns an `impactSummary` with section labels, changed paths, and whether existing config will be touched; UI and agent flows should present that summary before applying broad visual changes.

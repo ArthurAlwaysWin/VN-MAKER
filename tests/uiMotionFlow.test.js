@@ -182,6 +182,7 @@ describe('UI motion contract-first flow', () => {
     ]).then(([mainSource, styleSource, projectSettingsSource]) => {
       expect(mainSource).toContain('applyUiMotion(engine.script.ui?.motion)');
       expect(mainSource).toContain("case 'update-ui-motion'");
+      expect(mainSource).toContain('hidePreviewUiSurfaces()');
       expect(styleSource).toContain('.gm-motion-intensity-off');
       expect(styleSource).toContain('.gm-motion-title-glow-pulse');
       expect(projectSettingsSource).toContain('UI_MOTION_FIELD_SCHEMA');

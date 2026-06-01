@@ -179,7 +179,7 @@ Use `apply-ui-style-preset` for a no-code visual pass across existing UI section
 }
 ```
 
-Use `scope: "dialogue"` for frame/nameplate polish only, `scope: "choices"` for choice buttons only, and `scope: "screens"` for game menu, save/load, backlog, and settings panels.
+Use `scope: "dialogue"` for frame/nameplate polish only, `scope: "choices"` for choice buttons only, and `scope: "screens"` for game menu, save/load, backlog, and settings panels. Review the command result `impactSummary.sections` before presenting or applying a broad preset; it lists the normal UI blocks that will be updated.
 
 ## Add A Branch
 

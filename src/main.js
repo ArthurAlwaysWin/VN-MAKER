@@ -177,6 +177,7 @@ function applyPreviewScriptSnapshot(request) {
   titleScreen.setLayout(engine.script.ui?.titleScreen);
   settingsScreen.setLayout(engine.script.ui?.settingsScreen);
   settingsScreen.setWidgetStyles(engine.script.ui?.widgetStyles);
+  choiceMenu.setWidgetStyles(engine.script.ui?.widgetStyles);
   saveLoadScreen.setLayout(engine.script.ui?.saveLoadScreen);
   backlogScreen.setLayout(engine.script.ui?.backlogScreen);
   gameMenu.setLayout(engine.script.ui?.gameMenu);
@@ -497,6 +498,16 @@ function applyUiMotion(motionConfig) {
   }
   activeUiMotionClasses = getUiMotionClassNames(motionConfig);
   gameContainer.classList.add(...activeUiMotionClasses);
+}
+
+function hidePreviewUiSurfaces() {
+  choiceMenu.hide();
+  dialogueBox.hide();
+  gameMenu.hide();
+  saveLoadScreen.hide();
+  backlogScreen.hide();
+  settingsScreen.hide();
+  titleScreen.hide();
 }
 
 // ─── Engine event handlers ──────────────────────────────
@@ -1340,6 +1351,7 @@ async function init(env) {
     // Apply widget styles for settings controls (v1.1 Phase 42)
     if (engine.script.ui?.widgetStyles) {
       settingsScreen.setWidgetStyles(engine.script.ui.widgetStyles);
+      choiceMenu.setWidgetStyles(engine.script.ui.widgetStyles);
     }
 
     // Apply screen layouts (v1.1 Phase 43)
@@ -1471,6 +1483,7 @@ function initPreview() {
       }
       case 'update-widget-styles': {
         settingsScreen.setWidgetStyles(msg.widgetStyles);
+        choiceMenu.setWidgetStyles(msg.widgetStyles);
         break;
       }
       case 'update-screen-layout': {
@@ -1485,6 +1498,7 @@ function initPreview() {
         break;
       }
       case 'show-screen': {
+        hidePreviewUiSurfaces();
         switch (msg.screenId) {
           case 'settingsScreen': settingsScreen.show(); break;
           case 'gameMenu': gameMenu.show(); break;

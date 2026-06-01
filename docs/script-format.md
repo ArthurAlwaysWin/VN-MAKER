@@ -366,4 +366,4 @@ Configure runtime UI motion using built-in presets. The editor exposes these as 
 | `choices` | `none`, `stagger-rise`, `card-pop`, `suspense-delay` |
 | `menus` | `none`, `panel-fade`, `panel-slide`, `sidebar-sweep` |
 
-Style presets are not script fields. The Project Settings preset cards and `apply-ui-style-preset` command write normal editable UI sections such as `ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen config, and `ui.motion`; do not persist `ui.stylePreset`.
+Style presets are not script fields. The Project Settings preset cards and `apply-ui-style-preset` command write normal editable UI sections such as `ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen config, and `ui.motion`; do not persist `ui.stylePreset`. Preset apply results may include an `impactSummary`, but that is transaction metadata, not project data.

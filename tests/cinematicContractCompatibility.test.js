@@ -6,6 +6,7 @@ import {
   DEFAULT_PAGE_CAMERA,
   KNOWN_CAMERA_EFFECTS,
   KNOWN_CHARACTER_ANIMATIONS,
+  LEGACY_TRANSITION_TYPES,
   getCameraDirectionUiOptions,
   getCameraEffectUiOptions,
   getCharacterAnimationUiOptions,
@@ -163,26 +164,7 @@ describe('cinematic contract compatibility', () => {
       known: false,
     });
 
-    expect(getTransitionUiOptions('scale').map(option => option.value)).toEqual([
-      'fade',
-      'slide-left',
-      'slide-right',
-      'none',
-      'dissolve',
-      'wipe',
-      'scale',
-      'blur',
-      'wipe-left',
-      'wipe-right',
-      'wipe-up',
-      'wipe-down',
-      'zoom-in',
-      'zoom-out',
-      'flash',
-      'iris-in',
-      'iris-out',
-      'crossfade-pan',
-    ]);
+    expect(getTransitionUiOptions('scale').map(option => option.value)).toEqual(LEGACY_TRANSITION_TYPES);
     expect(getCharacterAnimationUiOptions('legacy-bounce').at(-1)).toMatchObject({
       value: 'legacy-bounce',
       known: false,

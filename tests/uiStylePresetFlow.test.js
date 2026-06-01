@@ -58,7 +58,20 @@ describe('UI style preset contract-first flow', () => {
         'ui.settingsScreen',
         'ui.motion',
       ],
+      impactSummary: expect.objectContaining({
+        scope: 'screens',
+        confirmationRequired: false,
+      }),
     });
+    expect(result.impactSummary.sections.map((section) => section.label)).toEqual([
+      '主题令牌',
+      '选项与控件',
+      '游戏菜单',
+      '存读档界面',
+      '回想界面',
+      '设置界面',
+      '界面动效',
+    ]);
     expect(session.toJSON().ui.stylePreset).toBeUndefined();
     expect(session.toJSON().ui.gameMenu.background).toBe('rgba(0, 0, 0, 0.78)');
     expect(session.toJSON().ui.motion.menus).toBe('panel-fade');
@@ -164,6 +177,7 @@ describe('UI style preset contract-first flow', () => {
       ])).stdout);
       expect(direct.changeSummary.changedPaths).toEqual(['ui.theme', 'ui.widgetStyles', 'ui.motion']);
       expect(direct.result.scope).toBe('choices');
+      expect(direct.result.impactSummary.sections.map((section) => section.path)).toEqual(['ui.theme', 'ui.widgetStyles', 'ui.motion']);
 
       const plan = JSON.parse((await execFileAsync('node', [
         cliPath,
@@ -179,11 +193,12 @@ describe('UI style preset contract-first flow', () => {
         command: 'apply-ui-style-preset',
         changedPaths: ['ui.theme', 'ui.dialogueBox', 'ui.motion'],
       });
+      expect(plan.operations[0].result.impactSummary.changedPaths).toEqual(['ui.theme', 'ui.dialogueBox', 'ui.motion']);
       expect(plan.changeSummary.changedPaths).toEqual(['ui.theme', 'ui.dialogueBox', 'ui.motion']);
 
       const updated = JSON.parse(await readFile(scriptPath, 'utf8'));
       expect(updated.ui.stylePreset).toBeUndefined();
-      expect(updated.ui.dialogueBox.nameplateStyle).toBe('soft-label');
+      expect(updated.ui.dialogueBox.nameplateStyle).toBe('floating');
       expect(updated.ui.motion.dialogue).toBe('soft-pop');
     });
   });
@@ -192,9 +207,15 @@ describe('UI style preset contract-first flow', () => {
     const source = await readFile(path.resolve('src/editor/views/ProjectSettings.vue'), 'utf8');
     expect(source).toContain('listUiStylePresets');
     expect(source).toContain('uiStylePresetScope');
+    expect(source).toContain('uiStylePresetImpactSections');
     expect(source).toContain('previewUiStylePreset');
+    expect(source).toContain('window.confirm');
     expect(source).toContain('show-choice-preview');
     expect(source).toContain('script.applyUiStylePreset');
     expect(source).not.toContain('textarea v-model="uiStyle');
+
+    const mainSource = await readFile(path.resolve('src/main.js'), 'utf8');
+    expect(mainSource).toContain('choiceMenu.setWidgetStyles(engine.script.ui?.widgetStyles)');
+    expect(mainSource).toContain('choiceMenu.setWidgetStyles(msg.widgetStyles)');
   });
 });

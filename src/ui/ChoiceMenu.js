@@ -17,6 +17,38 @@ export class ChoiceMenu {
 
     /** @type {Function|null} Callback when an option is selected */
     this.onSelect = null;
+    /** @type {object|null} Explicit ui.widgetStyles.button config for choice buttons. */
+    this._buttonWidgetStyle = null;
+  }
+
+  setWidgetStyles(styles) {
+    this._buttonWidgetStyle = styles?.button && typeof styles.button === 'object'
+      ? { ...styles.button }
+      : null;
+  }
+
+  _applyButtonStyle(btn, style = {}) {
+    const background = sanitizeCssValue(style.background);
+    if (background) btn.style.setProperty('--gm-btn-bg', background);
+
+    const hoverBackground = sanitizeCssValue(style.hoverBackground);
+    if (hoverBackground) btn.style.setProperty('--gm-btn-hover-bg', hoverBackground);
+
+    const textColor = sanitizeCssValue(style.textColor);
+    if (textColor) btn.style.color = textColor;
+
+    const border = sanitizeCssValue(style.border);
+    if (border) btn.style.border = border;
+
+    if (style.borderRadius !== undefined) {
+      const radius = clampField('borderRadius', style.borderRadius);
+      if (radius !== undefined) btn.style.borderRadius = `${radius}px`;
+    }
+
+    if (style.fontSize !== undefined) {
+      const fontSize = clampField('fontSize', style.fontSize);
+      if (fontSize !== undefined) btn.style.fontSize = `${fontSize}px`;
+    }
   }
 
   /**
@@ -58,6 +90,9 @@ export class ChoiceMenu {
       btn.className = 'choice-button';
       btn.style.setProperty('--choice-index', String(index));
       btn.textContent = option?.text ?? '';
+      if (this._buttonWidgetStyle) {
+        this._applyButtonStyle(btn, this._buttonWidgetStyle);
+      }
 
       // Per-button custom style
       if (option.style) {

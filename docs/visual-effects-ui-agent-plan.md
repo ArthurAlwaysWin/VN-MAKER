@@ -1132,7 +1132,7 @@ Preview target:
 
 ## Milestone 10: Game UI Style Presets
 
-Status: thin slice implemented on 2026-06-01. The first pass adds a shared preset contract, no-code Project Settings preview/apply cards, `list-ui-style-presets`, `apply-ui-style-preset`, apply-plan support, a validation warning for noncanonical `ui.stylePreset`, preview/handoff path routing through normal UI sections, and focused tests/docs. Asset-backed title-screen recipes and deeper replacement/impact-confirmation UX remain deferred.
+Status: in progress after the 2026-06-01 thin slice. The first pass added a shared preset contract, no-code Project Settings preview/apply cards, `list-ui-style-presets`, `apply-ui-style-preset`, apply-plan support, a validation warning for noncanonical `ui.stylePreset`, preview/handoff path routing through normal UI sections, and focused tests/docs. The next pass adds shared impact-summary metadata, CLI/session result reporting, and Project Settings confirmation before updating existing UI config. Asset-backed title-screen recipes remain deferred.
 
 Purpose: make complete games feel designed, not assembled.
 
@@ -1170,6 +1170,20 @@ Implemented thin slice:
 - keeps recipes asset-free for export safety;
 - warns on noncanonical `ui.stylePreset` instead of treating it as project state.
 
+Implemented follow-up:
+
+- `src/shared/uiStylePresetContract.js` exposes impact sections and `impactSummary` data for preset application;
+- authoring session/direct CLI/apply-plan results can report the same changed UI blocks before humans review the transaction;
+- Project Settings shows the affected editable UI blocks for the selected scope before applying a card;
+- style preset recipes now use runtime-supported nameplate and major-screen fields only;
+- choice-scope presets route explicit `ui.widgetStyles.button` values into `ChoiceMenu` without applying unrelated widget defaults.
+
+Title-screen recipe assessment:
+
+- Low-risk contract-first path: extend the shared preset recipe with normal `ui.titleScreen` patches, add `ui.titleScreen` to changed paths/impact summary, route preview/handoff to `titleScreen`, then expose no-code Project Settings copy.
+- Do not add asset-backed title-screen recipes yet. They need asset scanning/export readiness, validation, and review routing before they are safe.
+- Continue not storing the selected preset as `ui.stylePreset`.
+
 ### 10.2 Human UX
 
 Add:
@@ -1187,9 +1201,15 @@ Implemented thin slice:
 - apply uses the editor store undo stack and marks the project dirty;
 - scopes cover all UI, dialogue, choices, and major screens.
 
+Implemented follow-up:
+
+- selected scope shows the affected editable UI sections;
+- cards warn when existing UI config will be updated;
+- applying a preset asks for confirmation when existing config is present.
+
 Deferred:
 
-- richer impact summary/confirmation before destructive replace flows.
+- richer custom modal copy for replace-mode/bulk operations beyond the current shared impact summary.
 
 ### 10.3 Agent UX
 

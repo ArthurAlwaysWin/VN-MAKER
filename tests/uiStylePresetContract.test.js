@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILTIN_UI_STYLE_PRESETS,
   UI_STYLE_PRESET_CATEGORIES,
+  buildUiStylePresetImpactSummary,
   applyUiStylePresetToScript,
   buildUiStylePresetPatch,
   getUiStylePresetChangedPaths,
+  getUiStylePresetImpactSections,
   isKnownUiStylePreset,
   listUiStylePresets,
   normalizeUiStylePresetScope,
@@ -64,6 +66,32 @@ describe('UI style preset contract', () => {
       'ui.settingsScreen',
       'ui.motion',
     ]);
+    expect(getUiStylePresetImpactSections('choices').map((section) => section.label)).toEqual([
+      '主题令牌',
+      '选项与控件',
+      '界面动效',
+    ]);
+  });
+
+  it('summarizes preset impact before applying normal UI sections', () => {
+    const summary = buildUiStylePresetImpactSummary(baseScript(), {
+      presetId: 'suspense-noir',
+      scope: 'dialogue',
+      merge: true,
+    });
+
+    expect(summary).toMatchObject({
+      presetId: 'suspense-noir',
+      scope: 'dialogue',
+      merge: true,
+      changedPaths: ['ui.theme', 'ui.dialogueBox', 'ui.motion'],
+      confirmationRequired: true,
+    });
+    expect(summary.sections).toEqual([
+      expect.objectContaining({ key: 'theme', path: 'ui.theme', label: '主题令牌', action: 'merge', configExists: true, willOverwrite: true }),
+      expect.objectContaining({ key: 'dialogueBox', path: 'ui.dialogueBox', label: '对话框', action: 'merge', configExists: false, willOverwrite: false }),
+      expect.objectContaining({ key: 'motion', path: 'ui.motion', label: '界面动效', action: 'merge', configExists: true, willOverwrite: true }),
+    ]);
   });
 
   it('applies a preset by writing only existing editable UI sections', () => {
@@ -83,10 +111,14 @@ describe('UI style preset contract', () => {
       'ui.settingsScreen',
       'ui.motion',
     ]);
+    expect(result.impactSummary.sections.map((section) => section.path)).toEqual(result.changedPaths);
     expect(result.script.ui.stylePreset).toBeUndefined();
     expect(result.script.ui.theme.tokens.primary).toBe('rgba(182, 74, 85, 0.88)');
-    expect(result.script.ui.dialogueBox.nameplateStyle).toBe('inline-label');
+    expect(result.script.ui.dialogueBox.nameplateStyle).toBe('inline');
     expect(result.script.ui.widgetStyles.button).toBeTypeOf('object');
+    expect(result.script.ui.saveLoadScreen.background).toBe('rgba(15, 16, 19, 0.92)');
+    expect(result.script.ui.saveLoadScreen.chrome?.backgroundColor).toBeUndefined();
+    expect(result.script.ui.backlogScreen.background).toBe('rgba(15, 16, 19, 0.92)');
     expect(result.script.ui.settingsScreen.header.subtitle).toContain('悬疑黑色');
     expect(result.script.ui.motion).toMatchObject({
       intensity: 'dramatic',

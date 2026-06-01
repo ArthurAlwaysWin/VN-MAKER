@@ -13,6 +13,24 @@ export const UI_STYLE_PRESET_SCOPES = Object.freeze(['all', 'dialogue', 'choices
 
 const SCREEN_KEYS = Object.freeze(['settingsScreen', 'gameMenu', 'saveLoadScreen', 'backlogScreen']);
 
+export const UI_STYLE_PRESET_IMPACT_SECTIONS = Object.freeze([
+  Object.freeze({ key: 'theme', path: 'ui.theme', label: '主题令牌', area: 'theme' }),
+  Object.freeze({ key: 'dialogueBox', path: 'ui.dialogueBox', label: '对话框', area: 'dialogue' }),
+  Object.freeze({ key: 'widgetStyles', path: 'ui.widgetStyles', label: '选项与控件', area: 'widgets' }),
+  Object.freeze({ key: 'gameMenu', path: 'ui.gameMenu', label: '游戏菜单', area: 'screens' }),
+  Object.freeze({ key: 'saveLoadScreen', path: 'ui.saveLoadScreen', label: '存读档界面', area: 'screens' }),
+  Object.freeze({ key: 'backlogScreen', path: 'ui.backlogScreen', label: '回想界面', area: 'screens' }),
+  Object.freeze({ key: 'settingsScreen', path: 'ui.settingsScreen', label: '设置界面', area: 'screens' }),
+  Object.freeze({ key: 'motion', path: 'ui.motion', label: '界面动效', area: 'motion' }),
+]);
+
+const IMPACT_SECTION_KEYS_BY_SCOPE = Object.freeze({
+  dialogue: Object.freeze(['theme', 'dialogueBox', 'motion']),
+  choices: Object.freeze(['theme', 'widgetStyles', 'motion']),
+  screens: Object.freeze(['theme', 'widgetStyles', 'gameMenu', 'saveLoadScreen', 'backlogScreen', 'settingsScreen', 'motion']),
+  all: Object.freeze(['theme', 'dialogueBox', 'widgetStyles', 'gameMenu', 'saveLoadScreen', 'backlogScreen', 'settingsScreen', 'motion']),
+});
+
 function cloneJsonValue(value) {
   if (value === undefined) {
     return undefined;
@@ -34,6 +52,20 @@ function mergePlainObjects(base, patch) {
     }
   }
   return result;
+}
+
+function hasExistingConfigValue(value) {
+  if (value === undefined) {
+    return false;
+  }
+  if (isPlainObject(value)) {
+    return Object.keys(value).length > 0;
+  }
+  return true;
+}
+
+function getPatchKeys(value) {
+  return isPlainObject(value) ? Object.keys(value) : [];
 }
 
 function createPreset({
@@ -89,7 +121,7 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
       },
       dialogueBox: {
         layout: 'lower-third',
-        nameplateStyle: 'polished-plaque',
+        nameplateStyle: 'floating',
         background: 'rgba(12, 15, 20, 0.92)',
         border: '1px solid rgba(185, 196, 218, 0.20)',
         shadow: '0 16px 40px rgba(4, 7, 11, 0.34)',
@@ -100,8 +132,8 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         button: { background: 'rgba(92, 105, 128, 0.64)', hoverBackground: 'rgba(124, 142, 171, 0.82)', borderRadius: 8 },
       },
       gameMenu: { background: 'rgba(12, 15, 20, 0.78)', borderRadius: 10, backdropBlur: 12 },
-      saveLoadScreen: { chrome: { backgroundColor: 'rgba(17, 22, 30, 0.86)', edgeGlow: 'rgba(185, 196, 218, 0.18)' } },
-      backlogScreen: { chrome: { backgroundColor: 'rgba(17, 22, 30, 0.86)', dividerColor: 'rgba(185, 196, 218, 0.18)' } },
+      saveLoadScreen: { background: 'rgba(17, 22, 30, 0.86)', slot: { border: '1px solid rgba(185, 196, 218, 0.18)' } },
+      backlogScreen: { background: 'rgba(17, 22, 30, 0.86)', entry: { borderBottom: '1px solid rgba(185, 196, 218, 0.18)' } },
       settingsScreen: { header: { subtitle: '经典 ADV · 稳定系统界面' }, tabBar: { position: 'left', width: 180 } },
       motion: { intensity: 'standard', title: 'soft-rise', dialogue: 'soft-pop', choices: 'stagger-rise', menus: 'panel-fade' },
     },
@@ -134,15 +166,15 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
           'radius-lg': '10px',
         },
       },
-      dialogueBox: { layout: 'lower-third', nameplateStyle: 'glass-chip', background: 'rgba(15, 28, 42, 0.80)', border: '1px solid rgba(132, 202, 255, 0.22)' },
+      dialogueBox: { layout: 'lower-third', nameplateStyle: 'floating', background: 'rgba(15, 28, 42, 0.80)', border: '1px solid rgba(132, 202, 255, 0.22)' },
       widgetStyles: {
         tab: { activeColor: 'rgba(92, 176, 247, 0.86)', inactiveColor: 'rgba(132, 202, 255, 0.16)' },
         panel: { background: 'rgba(14, 26, 38, 0.62)', borderRadius: 10, backdropBlur: 16 },
         button: { background: 'rgba(39, 94, 148, 0.46)', hoverBackground: 'rgba(74, 143, 217, 0.70)', borderRadius: 10 },
       },
       gameMenu: { background: 'rgba(11, 24, 36, 0.62)', borderRadius: 12, backdropBlur: 18 },
-      saveLoadScreen: { chrome: { backgroundColor: 'rgba(14, 26, 38, 0.56)', edgeGlow: 'rgba(92, 176, 247, 0.22)' } },
-      backlogScreen: { chrome: { backgroundColor: 'rgba(14, 26, 38, 0.56)', dividerColor: 'rgba(132, 202, 255, 0.18)' } },
+      saveLoadScreen: { background: 'rgba(14, 26, 38, 0.56)', slot: { border: '1px solid rgba(92, 176, 247, 0.22)' } },
+      backlogScreen: { background: 'rgba(14, 26, 38, 0.56)', entry: { borderBottom: '1px solid rgba(132, 202, 255, 0.18)' } },
       settingsScreen: { header: { subtitle: '清透校园 · 轻玻璃系统' }, tabBar: { position: 'left', width: 196 } },
       motion: { intensity: 'standard', title: 'soft-rise', dialogue: 'glass-fade', choices: 'card-pop', menus: 'panel-slide' },
     },
@@ -175,15 +207,15 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
           'radius-lg': '4px',
         },
       },
-      dialogueBox: { layout: 'lower-third', nameplateStyle: 'inline-label', background: 'rgba(6, 7, 9, 0.94)', border: '1px solid rgba(216, 192, 106, 0.18)' },
+      dialogueBox: { layout: 'lower-third', nameplateStyle: 'inline', background: 'rgba(6, 7, 9, 0.94)', border: '1px solid rgba(216, 192, 106, 0.18)' },
       widgetStyles: {
         tab: { activeColor: 'rgba(216, 192, 106, 0.78)', inactiveColor: 'rgba(255, 255, 255, 0.08)' },
         panel: { background: 'rgba(9, 10, 13, 0.90)', borderRadius: 4, border: '1px solid rgba(216, 192, 106, 0.16)' },
         button: { background: 'rgba(40, 40, 42, 0.68)', hoverBackground: 'rgba(82, 75, 48, 0.72)', borderRadius: 4 },
       },
       gameMenu: { background: 'rgba(0, 0, 0, 0.78)', borderRadius: 4, backdropBlur: 8 },
-      saveLoadScreen: { chrome: { backgroundColor: 'rgba(9, 10, 13, 0.90)', edgeGlow: 'rgba(216, 192, 106, 0.14)' } },
-      backlogScreen: { chrome: { backgroundColor: 'rgba(9, 10, 13, 0.90)', dividerColor: 'rgba(216, 192, 106, 0.14)' } },
+      saveLoadScreen: { background: 'rgba(9, 10, 13, 0.90)', slot: { border: '1px solid rgba(216, 192, 106, 0.14)' } },
+      backlogScreen: { background: 'rgba(9, 10, 13, 0.90)', entry: { borderBottom: '1px solid rgba(216, 192, 106, 0.14)' } },
       settingsScreen: { header: { subtitle: '暗色电影 · 低调黑场系统' }, tabBar: { position: 'left', width: 176 } },
       motion: { intensity: 'dramatic', title: 'cinematic-slow', dialogue: 'slide-up', choices: 'suspense-delay', menus: 'panel-fade' },
     },
@@ -216,15 +248,15 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
           'radius-lg': '4px',
         },
       },
-      dialogueBox: { layout: 'lower-third', nameplateStyle: 'inline-label', background: 'rgba(10, 11, 13, 0.94)', border: '1px solid rgba(182, 74, 85, 0.20)' },
+      dialogueBox: { layout: 'lower-third', nameplateStyle: 'inline', background: 'rgba(10, 11, 13, 0.94)', border: '1px solid rgba(182, 74, 85, 0.20)' },
       widgetStyles: {
         tab: { activeColor: 'rgba(182, 74, 85, 0.82)', inactiveColor: 'rgba(154, 160, 168, 0.10)' },
         panel: { background: 'rgba(15, 16, 19, 0.92)', borderRadius: 4, border: '1px solid rgba(182, 74, 85, 0.18)' },
         button: { background: 'rgba(48, 42, 45, 0.64)', hoverBackground: 'rgba(94, 48, 54, 0.70)', borderRadius: 4 },
       },
       gameMenu: { background: 'rgba(7, 8, 10, 0.78)', borderRadius: 4, backdropBlur: 10 },
-      saveLoadScreen: { chrome: { backgroundColor: 'rgba(15, 16, 19, 0.92)', edgeGlow: 'rgba(182, 74, 85, 0.16)' } },
-      backlogScreen: { chrome: { backgroundColor: 'rgba(15, 16, 19, 0.92)', dividerColor: 'rgba(182, 74, 85, 0.14)' } },
+      saveLoadScreen: { background: 'rgba(15, 16, 19, 0.92)', slot: { border: '1px solid rgba(182, 74, 85, 0.16)' } },
+      backlogScreen: { background: 'rgba(15, 16, 19, 0.92)', entry: { borderBottom: '1px solid rgba(182, 74, 85, 0.14)' } },
       settingsScreen: { header: { subtitle: '悬疑黑色 · 冷灰红线索系统' }, tabBar: { position: 'left', width: 180 } },
       motion: { intensity: 'dramatic', title: 'cinematic-slow', dialogue: 'glass-fade', choices: 'suspense-delay', menus: 'sidebar-sweep' },
     },
@@ -257,15 +289,15 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
           'radius-lg': '4px',
         },
       },
-      dialogueBox: { layout: 'lower-third', nameplateStyle: 'hud-label', background: 'rgba(4, 18, 24, 0.90)', border: '1px solid rgba(56, 240, 208, 0.24)' },
+      dialogueBox: { layout: 'lower-third', nameplateStyle: 'banner', background: 'rgba(4, 18, 24, 0.90)', border: '1px solid rgba(56, 240, 208, 0.24)' },
       widgetStyles: {
         tab: { activeColor: 'rgba(56, 240, 208, 0.82)', inactiveColor: 'rgba(91, 140, 255, 0.12)' },
         panel: { background: 'rgba(5, 22, 30, 0.86)', borderRadius: 4, border: '1px solid rgba(56, 240, 208, 0.20)' },
         button: { background: 'rgba(20, 82, 96, 0.54)', hoverBackground: 'rgba(36, 128, 144, 0.72)', borderRadius: 4 },
       },
       gameMenu: { background: 'rgba(2, 12, 18, 0.74)', borderRadius: 4, backdropBlur: 12 },
-      saveLoadScreen: { chrome: { backgroundColor: 'rgba(5, 22, 30, 0.88)', edgeGlow: 'rgba(56, 240, 208, 0.22)' } },
-      backlogScreen: { chrome: { backgroundColor: 'rgba(5, 22, 30, 0.88)', dividerColor: 'rgba(56, 240, 208, 0.18)' } },
+      saveLoadScreen: { background: 'rgba(5, 22, 30, 0.88)', slot: { border: '1px solid rgba(56, 240, 208, 0.22)' } },
+      backlogScreen: { background: 'rgba(5, 22, 30, 0.88)', entry: { borderBottom: '1px solid rgba(56, 240, 208, 0.18)' } },
       settingsScreen: { header: { subtitle: '科幻 HUD · 线框控制界面' }, tabBar: { position: 'left', width: 172 } },
       motion: { intensity: 'standard', title: 'glow-pulse', dialogue: 'slide-up', choices: 'card-pop', menus: 'sidebar-sweep' },
     },
@@ -298,15 +330,15 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
           'radius-lg': '10px',
         },
       },
-      dialogueBox: { layout: 'lower-third', nameplateStyle: 'soft-label', background: 'rgba(39, 28, 36, 0.88)', border: '1px solid rgba(233, 169, 190, 0.22)' },
+      dialogueBox: { layout: 'lower-third', nameplateStyle: 'floating', background: 'rgba(39, 28, 36, 0.88)', border: '1px solid rgba(233, 169, 190, 0.22)' },
       widgetStyles: {
         tab: { activeColor: 'rgba(233, 169, 190, 0.86)', inactiveColor: 'rgba(142, 199, 180, 0.12)' },
         panel: { background: 'rgba(42, 31, 39, 0.82)', borderRadius: 10, backdropBlur: 14 },
         button: { background: 'rgba(116, 72, 90, 0.52)', hoverBackground: 'rgba(164, 96, 122, 0.68)', borderRadius: 10 },
       },
       gameMenu: { background: 'rgba(38, 27, 35, 0.70)', borderRadius: 10, backdropBlur: 14 },
-      saveLoadScreen: { chrome: { backgroundColor: 'rgba(42, 31, 39, 0.86)', edgeGlow: 'rgba(233, 169, 190, 0.18)' } },
-      backlogScreen: { chrome: { backgroundColor: 'rgba(42, 31, 39, 0.86)', dividerColor: 'rgba(233, 169, 190, 0.16)' } },
+      saveLoadScreen: { background: 'rgba(42, 31, 39, 0.86)', slot: { border: '1px solid rgba(233, 169, 190, 0.18)' } },
+      backlogScreen: { background: 'rgba(42, 31, 39, 0.86)', entry: { borderBottom: '1px solid rgba(233, 169, 190, 0.16)' } },
       settingsScreen: { header: { subtitle: '柔和恋爱 · 温柔系统界面' }, tabBar: { position: 'left', width: 184 } },
       motion: { intensity: 'subtle', title: 'soft-rise', dialogue: 'soft-pop', choices: 'stagger-rise', menus: 'panel-slide' },
     },
@@ -337,18 +369,17 @@ export function listUiStylePresets() {
   }));
 }
 
-export function getUiStylePresetChangedPaths(scope = 'all') {
+export function getUiStylePresetImpactSections(scope = 'all') {
   const normalizedScope = normalizeUiStylePresetScope(scope);
-  if (normalizedScope === 'dialogue') {
-    return ['ui.theme', 'ui.dialogueBox', 'ui.motion'];
-  }
-  if (normalizedScope === 'choices') {
-    return ['ui.theme', 'ui.widgetStyles', 'ui.motion'];
-  }
-  if (normalizedScope === 'screens') {
-    return ['ui.theme', 'ui.widgetStyles', 'ui.gameMenu', 'ui.saveLoadScreen', 'ui.backlogScreen', 'ui.settingsScreen', 'ui.motion'];
-  }
-  return ['ui.theme', 'ui.dialogueBox', 'ui.widgetStyles', 'ui.gameMenu', 'ui.saveLoadScreen', 'ui.backlogScreen', 'ui.settingsScreen', 'ui.motion'];
+  const keys = IMPACT_SECTION_KEYS_BY_SCOPE[normalizedScope] ?? IMPACT_SECTION_KEYS_BY_SCOPE.all;
+  return keys.map((key) => {
+    const section = UI_STYLE_PRESET_IMPACT_SECTIONS.find((item) => item.key === key);
+    return { ...section };
+  });
+}
+
+export function getUiStylePresetChangedPaths(scope = 'all') {
+  return getUiStylePresetImpactSections(scope).map((section) => section.path);
 }
 
 export function buildUiStylePresetPatch(presetId, { scope = 'all' } = {}) {
@@ -428,6 +459,37 @@ export function applyUiStylePresetToScript(script, { presetId, scope = 'all', me
 
   return {
     ...built,
+    impactSummary: buildUiStylePresetImpactSummary(script, {
+      presetId: built.presetId,
+      scope: built.scope,
+      merge,
+    }),
     script: nextScript,
+  };
+}
+
+export function buildUiStylePresetImpactSummary(script, { presetId, scope = 'all', merge = true } = {}) {
+  const built = buildUiStylePresetPatch(presetId, { scope });
+  const ui = script?.ui ?? {};
+  const sections = getUiStylePresetImpactSections(built.scope).map((section) => {
+    const patchValue = built.patch[section.key];
+    const configExists = hasExistingConfigValue(ui[section.key]);
+    return {
+      ...section,
+      action: merge ? 'merge' : 'replace',
+      configExists,
+      willOverwrite: configExists,
+      patchKeys: getPatchKeys(patchValue),
+    };
+  });
+
+  return {
+    presetId: built.presetId,
+    label: built.label,
+    scope: built.scope,
+    merge: Boolean(merge),
+    changedPaths: [...built.changedPaths],
+    confirmationRequired: sections.some((section) => section.willOverwrite),
+    sections,
   };
 }

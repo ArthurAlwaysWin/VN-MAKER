@@ -195,6 +195,14 @@
                 >{{ uiStyleScopeLabels[scope] }}</option>
               </select>
             </label>
+            <div class="style-impact-summary" aria-live="polite">
+              <span class="style-impact-title">将更新</span>
+              <span
+                v-for="section in uiStylePresetImpactSections"
+                :key="section.path"
+                class="style-impact-chip"
+              >{{ section.label }}</span>
+            </div>
           </div>
           <div class="style-preset-grid">
             <article
@@ -215,6 +223,10 @@
                 <span class="style-preset-copy">
                   <strong>{{ preset.label }}</strong>
                   <small>{{ preset.description }}</small>
+                  <span
+                    v-if="getUiStylePresetImpact(preset.id)?.confirmationRequired"
+                    class="style-preset-warning"
+                  >会更新已有配置</span>
                 </span>
               </button>
               <button
@@ -257,6 +269,8 @@ import { UI_MOTION_FIELD_SCHEMA, normalizeUiMotion } from '../../shared/uiMotion
 import {
   UI_STYLE_PRESET_SCOPES,
   applyUiStylePresetToScript,
+  buildUiStylePresetImpactSummary,
+  getUiStylePresetImpactSections,
   listUiStylePresets,
 } from '../../shared/uiStylePresetContract.js';
 import { exportCurrentThemePackage } from '../services/themePackageExport.js';
@@ -322,6 +336,20 @@ const uiMotionFields = Object.entries(UI_MOTION_FIELD_SCHEMA).map(([key, schema]
 const uiMotion = computed(() => normalizeUiMotion(script.data?.ui?.motion));
 const uiStylePresets = listUiStylePresets();
 const uiStylePresetScopes = UI_STYLE_PRESET_SCOPES;
+const uiStylePresetImpactSections = computed(() => getUiStylePresetImpactSections(uiStylePresetScope.value));
+const uiStylePresetImpactById = computed(() => {
+  if (!script.data) {
+    return {};
+  }
+  return Object.fromEntries(uiStylePresets.map((preset) => [
+    preset.id,
+    buildUiStylePresetImpactSummary(script.data, {
+      presetId: preset.id,
+      scope: uiStylePresetScope.value,
+      merge: true,
+    }),
+  ]));
+});
 const uiStyleScopeLabels = {
   all: '全部 UI',
   dialogue: '仅对话框',
@@ -590,7 +618,31 @@ function previewUiStylePreset(presetId) {
   setTimeout(() => showPresetPreviewTarget(result.scope), 50);
 }
 
+function getUiStylePresetImpact(presetId) {
+  return uiStylePresetImpactById.value[presetId] ?? null;
+}
+
+function formatUiStylePresetConfirmation(summary) {
+  const touched = summary.sections.map((section) => section.label).join('、');
+  const existing = summary.sections
+    .filter((section) => section.willOverwrite)
+    .map((section) => section.label)
+    .join('、');
+  const lines = [
+    `应用「${summary.label}」到「${uiStyleScopeLabels[summary.scope]}」？`,
+    `将更新：${touched}`,
+  ];
+  if (existing) {
+    lines.push(`已有配置会被同名字段覆盖：${existing}`);
+  }
+  return lines.join('\n');
+}
+
 function applyUiStylePreset(presetId) {
+  const summary = getUiStylePresetImpact(presetId);
+  if (summary?.confirmationRequired && !window.confirm(formatUiStylePresetConfirmation(summary))) {
+    return;
+  }
   const result = script.applyUiStylePreset({
     presetId,
     scope: uiStylePresetScope.value,
@@ -894,6 +946,8 @@ onBeforeUnmount(() => {
   margin-top: 10px;
 }
 .style-preset-controls {
+  display: grid;
+  gap: 8px;
   margin-bottom: 10px;
 }
 .style-scope-field {
@@ -908,6 +962,30 @@ onBeforeUnmount(() => {
   border: 1px solid #444;
   border-radius: 4px;
   padding: 5px 8px;
+}
+.style-impact-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  padding: 7px;
+  border: 1px solid #343434;
+  border-radius: 5px;
+  background: #1f1f1f;
+}
+.style-impact-title {
+  color: #aaa;
+  font-size: 11px;
+}
+.style-impact-chip {
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 2px 7px;
+  color: #d6d6d6;
+  background: #292929;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .style-preset-grid {
   display: grid;
@@ -973,6 +1051,16 @@ onBeforeUnmount(() => {
   color: #999;
   font-size: 11px;
   line-height: 1.35;
+}
+.style-preset-warning {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--preset-accent, #777) 44%, #444);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+  line-height: 1.45;
 }
 .style-preset-apply {
   padding: 0 10px;

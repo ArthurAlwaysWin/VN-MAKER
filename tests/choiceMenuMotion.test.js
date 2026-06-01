@@ -80,4 +80,42 @@ describe('ChoiceMenu motion baseline', () => {
     expect(menu.el.classList.contains('visible')).toBe(false);
     expect(menu.el.querySelector('.choice-button').textContent).toBe('Second');
   });
+
+  it('applies shared button widget styles to choice buttons', () => {
+    const menu = new ChoiceMenu(container);
+    menu.setWidgetStyles({
+      button: {
+        background: 'rgba(20, 82, 96, 0.54)',
+        hoverBackground: 'rgba(36, 128, 144, 0.72)',
+        textColor: '#eefafa',
+        border: '1px solid rgba(56, 240, 208, 0.28)',
+        borderRadius: 4,
+        fontSize: 16,
+      },
+    });
+
+    menu.show({ options: [{ text: 'Styled' }] });
+
+    const button = menu.el.querySelector('.choice-button');
+    expect(button.style.getPropertyValue('--gm-btn-bg')).toBe('rgba(20, 82, 96, 0.54)');
+    expect(button.style.getPropertyValue('--gm-btn-hover-bg')).toBe('rgba(36, 128, 144, 0.72)');
+    expect(button.style.color).toBe('rgb(238, 250, 250)');
+    expect(button.style.border).toBe('1px solid rgba(56, 240, 208, 0.28)');
+    expect(button.style.borderRadius).toBe('4px');
+    expect(button.style.fontSize).toBe('16px');
+  });
+
+  it('does not apply default button styles when only other widget categories are configured', () => {
+    const menu = new ChoiceMenu(container);
+    menu.setWidgetStyles({
+      tab: { activeColor: '#ffffff' },
+    });
+
+    menu.show({ options: [{ text: 'Plain' }] });
+
+    const button = menu.el.querySelector('.choice-button');
+    expect(button.style.getPropertyValue('--gm-btn-bg')).toBe('');
+    expect(button.style.fontSize).toBe('');
+    expect(button.style.borderRadius).toBe('');
+  });
 });

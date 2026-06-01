@@ -281,7 +281,7 @@ These commands edit shared editor-owned UI sections as structured JSON objects. 
 
 Configurable runtime UI motion is stored under `ui.motion` and normalized by `src/shared/uiMotionContract.js`. Human editors use dropdowns only; agents use `set-ui-motion`. The changed path is always `ui.motion`, and handoff routes it to all major screen previews.
 
-Game UI style presets are shared recipes in `src/shared/uiStylePresetContract.js`. They do not create an opaque `ui.stylePreset` field. `apply-ui-style-preset` writes normal editable sections (`ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen configs, and `ui.motion`) according to the selected scope.
+Game UI style presets are shared recipes in `src/shared/uiStylePresetContract.js`. They do not create an opaque `ui.stylePreset` field. `apply-ui-style-preset` writes normal editable sections (`ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen configs, and `ui.motion`) according to the selected scope. Results include `impactSummary.sections`, so agents and the Project Settings UI can show which editable UI blocks will be updated before committing.
 
 Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Commands target normal/choice pages only; condition pages do not render or inherit particle state. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
 
@@ -331,7 +331,7 @@ Natural-language mapping:
 | `set-widget-styles` | `config` | `merge` | Sets `ui.widgetStyles`, including reusable widget visual config. |
 | `set-ui-motion` | none | `intensity`, `title`, `dialogue`, `choices`, `menus`, `config`, `merge` | Sets canonical `ui.motion`. Values are dropdown-style preset ids, not CSS. |
 | `list-ui-style-presets` | none | none | Lists built-in no-code UI style presets and scopes. |
-| `apply-ui-style-preset` | `preset` | `scope`, `merge` | Applies `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, or `soft-romance` by writing normal UI config sections. Scopes: `all`, `dialogue`, `choices`, `screens`. |
+| `apply-ui-style-preset` | `preset` | `scope`, `merge` | Applies `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, or `soft-romance` by writing normal UI config sections. Scopes: `all`, `dialogue`, `choices`, `screens`. JSON output includes an impact summary with paths and labels. |
 
 Direct CLI examples:
 

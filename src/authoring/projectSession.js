@@ -1527,6 +1527,7 @@ export function createProjectSession(input = {}) {
         scope: result.scope,
         changedPaths: result.changedPaths,
         patch: cloneJsonValue(result.patch),
+        impactSummary: cloneJsonValue(result.impactSummary),
       };
     },
 

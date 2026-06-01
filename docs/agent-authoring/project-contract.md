@@ -295,3 +295,20 @@ Allowed values:
 | `menus` | `none`, `panel-fade`, `panel-slide`, `sidebar-sweep` |
 
 Use `set-ui-motion` or the no-code Project Settings controls. Do not write CSS, HTML, or JSON textareas for human authors. Changed `ui.motion` routes to all major screen preview targets.
+
+## Game UI Style Presets
+
+Game UI style presets are built-in authoring recipes, not stored project state. Do not add `ui.stylePreset` to a script. Agents use `list-ui-style-presets` to inspect the catalog and `apply-ui-style-preset` to write normal editable sections:
+
+- `ui.theme`
+- `ui.dialogueBox`
+- `ui.widgetStyles`
+- `ui.gameMenu`
+- `ui.saveLoadScreen`
+- `ui.backlogScreen`
+- `ui.settingsScreen`
+- `ui.motion`
+
+Built-in preset ids are `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, and `soft-romance`. Supported scopes are `all`, `dialogue`, `choices`, and `screens`.
+
+The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears.

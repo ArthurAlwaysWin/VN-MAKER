@@ -30,6 +30,7 @@ import {
   isKnownUiMotionIntensity,
   isKnownUiMotionPreset,
 } from './uiMotionContract.js';
+import { isKnownUiStylePreset } from './uiStylePresetContract.js';
 import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   CAMERA_EFFECT_DURATION_SCHEMA,
@@ -1070,6 +1071,21 @@ function validateUiMotion(script, report) {
   }
 }
 
+function validateUiStylePresetField(script, report) {
+  const stylePreset = script?.ui?.stylePreset;
+  if (stylePreset === undefined) {
+    return;
+  }
+
+  const value = typeof stylePreset === 'string'
+    ? stylePreset
+    : stylePreset?.id ?? stylePreset?.presetId;
+  addWarning(report, 'noncanonical-ui-style-preset-field', 'ui.stylePreset is not canonical project data; apply a preset through apply-ui-style-preset so normal editable UI sections are written instead.', ['ui', 'stylePreset'], {
+    value: stylePreset,
+    knownPreset: typeof value === 'string' ? isKnownUiStylePreset(value) : false,
+  });
+}
+
 export function validateProject(script, options = {}) {
   const report = {
     ok: true,
@@ -1090,6 +1106,7 @@ export function validateProject(script, options = {}) {
   validateCharacterRegistry(script, report);
   validateCharacterAssets(script, report, config.assetSet);
   validateUiMotion(script, report);
+  validateUiStylePresetField(script, report);
 
   const registry = normalizeVariableRegistry(script?.systems?.variables);
   const endings = normalizeEndingRegistry(script?.systems?.endings);

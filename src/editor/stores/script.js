@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { normalizeUiMotion } from '../../shared/uiMotionContract.js';
+import { applyUiStylePresetToScript } from '../../shared/uiStylePresetContract.js';
 import { computed, ref, nextTick } from 'vue';
 import { normalizeConditionPage, normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
@@ -1031,6 +1032,14 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function applyUiStylePreset({ presetId, scope = 'all', merge = true } = {}) {
+    if (!data.value) return null;
+    const result = applyUiStylePresetToScript(data.value, { presetId, scope, merge });
+    data.value = result.script;
+    pushState();
+    return result;
+  }
+
   function getSaveLoadScreen() {
     if (!data.value) return null;
     data.value.ui ??= {};
@@ -1399,6 +1408,7 @@ export const useScriptStore = defineStore('script', () => {
     getTheme, updateTheme,
     getWidgetStyles, updateWidgetStyles,
     getUiMotion, updateUiMotion,
+    applyUiStylePreset,
     getSaveLoadScreen, updateSaveLoadScreen,
     getBacklogScreen, updateBacklogScreen,
     getGameMenu, updateGameMenu,

@@ -1132,6 +1132,8 @@ Preview target:
 
 ## Milestone 10: Game UI Style Presets
 
+Status: thin slice implemented on 2026-06-01. The first pass adds a shared preset contract, no-code Project Settings preview/apply cards, `list-ui-style-presets`, `apply-ui-style-preset`, apply-plan support, a validation warning for noncanonical `ui.stylePreset`, preview/handoff path routing through normal UI sections, and focused tests/docs. Asset-backed title-screen recipes and deeper replacement/impact-confirmation UX remain deferred.
+
 Purpose: make complete games feel designed, not assembled.
 
 This milestone should build on current theme/widget/screen config, not replace it.
@@ -1141,6 +1143,7 @@ This milestone should build on current theme/widget/screen config, not replace i
 Add built-in style recipes under a new editor/runtime-owned module:
 
 - `src/editor/builtinUiStylePresets.js` or similar.
+- Implemented as `src/shared/uiStylePresetContract.js` so editor, authoring API, CLI/apply-plan, validation-adjacent tests, and preview routing share one contract.
 
 Preset categories:
 
@@ -1161,6 +1164,12 @@ Each preset may include:
 
 Do not make presets opaque. Applying a preset should write normal existing config sections so humans can edit the result.
 
+Implemented thin slice:
+
+- applies only canonical `ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen config, and `ui.motion`;
+- keeps recipes asset-free for export safety;
+- warns on noncanonical `ui.stylePreset` instead of treating it as project state.
+
 ### 10.2 Human UX
 
 Add:
@@ -1171,12 +1180,25 @@ Add:
 - "apply only major screens";
 - impact summary before replacing existing UI config.
 
+Implemented thin slice:
+
+- Project Settings cards list all built-in presets;
+- preview posts a preset-applied script snapshot into the existing iframe preview;
+- apply uses the editor store undo stack and marks the project dirty;
+- scopes cover all UI, dialogue, choices, and major screens.
+
+Deferred:
+
+- richer impact summary/confirmation before destructive replace flows.
+
 ### 10.3 Agent UX
 
 Add:
 
 - `list-ui-style-presets`
 - `apply-ui-style-preset`
+
+Implemented for direct CLI and `apply-plan`, with changed paths suitable for validation, preview targeting, handoff reporting, and rollback/checkpoint flows.
 
 Natural-language examples:
 

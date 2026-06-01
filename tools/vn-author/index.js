@@ -27,6 +27,10 @@ import {
   normalizeParticleConfig,
 } from '../../src/shared/particleContract.js';
 import {
+  UI_STYLE_PRESET_SCOPES,
+  listUiStylePresets,
+} from '../../src/shared/uiStylePresetContract.js';
+import {
   PREVIEW_BROWSER_UNAVAILABLE,
   PREVIEW_QUALITY_FAILED,
   PREVIEW_RENDERER_UNAVAILABLE,
@@ -305,6 +309,14 @@ async function parseUiMotionArgs(args) {
       choices: getOptionalArgValue(args, '--choices'),
       menus: getOptionalArgValue(args, '--menus'),
     }),
+    merge: hasFlag(args, '--replace') ? false : true,
+  };
+}
+
+function parseUiStylePresetArgs(args) {
+  return {
+    presetId: getArgValue(args, '--preset', getArgValue(args, '--id', null)),
+    scope: getArgValue(args, '--scope', 'all'),
     merge: hasFlag(args, '--replace') ? false : true,
   };
 }
@@ -1018,6 +1030,7 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-theme',
   'set-widget-styles',
   'set-ui-motion',
+  'apply-ui-style-preset',
   'add-choice-effect',
   'set-choice-effect',
   'remove-choice-effect',
@@ -1198,6 +1211,14 @@ function buildUiMotionPatch(params) {
       choices: getParam(params, 'choices'),
       menus: getParam(params, 'menus'),
     }),
+    merge: getParam(params, 'merge') ?? true,
+  };
+}
+
+function buildUiStylePresetPatch(command, params) {
+  return {
+    presetId: requireParam(params, command, 'presetId', 'preset', 'id'),
+    scope: getParam(params, 'scope') ?? 'all',
     merge: getParam(params, 'merge') ?? true,
   };
 }
@@ -1746,6 +1767,10 @@ function applyPlanOperation(session, operation = {}, index = 0) {
 
   if (command === 'set-ui-motion') {
     return session.setUiMotion(buildUiMotionPatch(params));
+  }
+
+  if (command === 'apply-ui-style-preset') {
+    return session.applyUiStylePreset(buildUiStylePresetPatch(command, params));
   }
 
   if (command === 'add-choice-effect') {
@@ -4915,6 +4940,40 @@ async function listParticles(args) {
   return 0;
 }
 
+async function listUiStylePresetsCommand(args) {
+  const presets = listUiStylePresets();
+  const output = {
+    count: presets.length,
+    scopes: UI_STYLE_PRESET_SCOPES,
+    presets,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`UI style presets: ${presets.length}\n`);
+    for (const preset of presets) {
+      process.stdout.write(`- ${preset.id}: ${preset.label} (${preset.category})\n`);
+    }
+    process.stdout.write(`Scopes: ${UI_STYLE_PRESET_SCOPES.join(', ')}\n`);
+  }
+
+  return 0;
+}
+
+async function applyUiStylePreset(args) {
+  const patch = parseUiStylePresetArgs(args);
+  const output = await mutateScript(args, (session) => session.applyUiStylePreset(patch));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult(`Applied UI style preset ${output.result.presetId}`, output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function setPageParticles(args) {
   const { sceneId, pageIndex } = getPageAddress(args, 'set-page-particles');
   const particles = buildParticleConfigFromCliArgs(args, 'set-page-particles');
@@ -5406,6 +5465,7 @@ function printHelp() {
   set-page-transition --scene scene_id --page index [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|condition] [--has-background|--without-background] [--predicate json] [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-particles [--json]
+  list-ui-style-presets [--json]
   set-page-particles --scene scene_id --page index --preset preset [--density number] [--speed number] [--wind number] [--opacity number] [--color #rrggbb] [--direction down|up|left|right] [--particles json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   clear-page-particles --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   inherit-page-particles --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5420,6 +5480,7 @@ function printHelp() {
   set-theme --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-widget-styles --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-ui-motion [--intensity off|subtle|standard|dramatic] [--title none|soft-rise|cinematic-slow|glow-pulse] [--dialogue none|soft-pop|slide-up|glass-fade] [--choices none|stagger-rise|card-pop|suspense-delay] [--menus none|panel-fade|panel-slide|sidebar-sweep] [--config file|--config-json json] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  apply-ui-style-preset --preset classic-adv|glass-school|dark-cinema|suspense-noir|sci-fi-hud|soft-romance [--scope all|dialogue|choices|screens] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-choice-effect --scene scene_id --page index --option index [--effect json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-choice-effect --scene scene_id --page index --option index --effect-index index [--effect-json json] [--effect-type type] [--effect-id id] [--value value] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-choice-effect --scene scene_id --page index --option index --effect-index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5453,6 +5514,11 @@ async function main() {
 
     if (command === 'list-particles') {
       process.exitCode = await listParticles(args);
+      return;
+    }
+
+    if (command === 'list-ui-style-presets') {
+      process.exitCode = await listUiStylePresetsCommand(args);
       return;
     }
 
@@ -5833,6 +5899,11 @@ async function main() {
 
     if (command === 'set-ui-motion') {
       process.exitCode = await setUiMotion(args);
+      return;
+    }
+
+    if (command === 'apply-ui-style-preset') {
+      process.exitCode = await applyUiStylePreset(args);
       return;
     }
 

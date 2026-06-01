@@ -281,6 +281,8 @@ These commands edit shared editor-owned UI sections as structured JSON objects. 
 
 Configurable runtime UI motion is stored under `ui.motion` and normalized by `src/shared/uiMotionContract.js`. Human editors use dropdowns only; agents use `set-ui-motion`. The changed path is always `ui.motion`, and handoff routes it to all major screen previews.
 
+Game UI style presets are shared recipes in `src/shared/uiStylePresetContract.js`. They do not create an opaque `ui.stylePreset` field. `apply-ui-style-preset` writes normal editable sections (`ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen configs, and `ui.motion`) according to the selected scope.
+
 Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Commands target normal/choice pages only; condition pages do not render or inherit particle state. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
 
 Direct CLI examples:
@@ -328,6 +330,8 @@ Natural-language mapping:
 | `set-theme` | `config` | `merge` | Sets `ui.theme`, including tokens, icons, cursors, nine-slice, and button families. |
 | `set-widget-styles` | `config` | `merge` | Sets `ui.widgetStyles`, including reusable widget visual config. |
 | `set-ui-motion` | none | `intensity`, `title`, `dialogue`, `choices`, `menus`, `config`, `merge` | Sets canonical `ui.motion`. Values are dropdown-style preset ids, not CSS. |
+| `list-ui-style-presets` | none | none | Lists built-in no-code UI style presets and scopes. |
+| `apply-ui-style-preset` | `preset` | `scope`, `merge` | Applies `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, or `soft-romance` by writing normal UI config sections. Scopes: `all`, `dialogue`, `choices`, `screens`. |
 
 Direct CLI examples:
 
@@ -336,6 +340,8 @@ npm run vn -- set-dialogue-box --script public/game/script.json --config .tmp/di
 npm run vn -- set-theme --script public/game/script.json --config-json "{\"tokens\":{\"accent\":\"#88ccff\"}}" --force --json
 npm run vn -- set-widget-styles --script public/game/script.json --config .tmp/widget-styles.json --replace --force --json
 npm run vn -- set-ui-motion --script public/game/script.json --intensity dramatic --title cinematic-slow --choices suspense-delay --force --json
+npm run vn -- list-ui-style-presets --json
+npm run vn -- apply-ui-style-preset --script public/game/script.json --preset suspense-noir --scope all --force --checkpoint --json
 ```
 
 Plan manifest example:
@@ -360,6 +366,14 @@ Plan manifest example:
         "config": {
           "icons": { "close": "ui/icons/close.png" }
         }
+      }
+    },
+    {
+      "id": "style-preset",
+      "command": "apply-ui-style-preset",
+      "params": {
+        "preset": "suspense-noir",
+        "scope": "all"
       }
     },
     {

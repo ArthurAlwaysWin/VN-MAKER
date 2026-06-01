@@ -159,6 +159,28 @@ Use `set-ui-motion` for title, dialogue, choice, and menu motion presets. This w
 }
 ```
 
+## Apply UI Style Preset
+
+Use `apply-ui-style-preset` for a no-code visual pass across existing UI sections. Presets are recipes: they do not persist `ui.stylePreset`, and the resulting theme, widget, screen, dialogue, and motion config stays editable.
+
+```json
+{
+  "version": 1,
+  "operations": [
+    {
+      "id": "style-pass",
+      "command": "apply-ui-style-preset",
+      "params": {
+        "preset": "suspense-noir",
+        "scope": "all"
+      }
+    }
+  ]
+}
+```
+
+Use `scope: "dialogue"` for frame/nameplate polish only, `scope: "choices"` for choice buttons only, and `scope: "screens"` for game menu, save/load, backlog, and settings panels.
+
 ## Add A Branch
 
 Branch edits usually need a choice page, one or more target scenes, and optional variable effects.

@@ -135,6 +135,8 @@ npm run vn -- set-page-particles --scene chapter_1 --page 0 --preset sakura --de
 npm run vn -- clear-page-particles --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
 npm run vn -- inherit-page-particles --scene chapter_1 --page 4 --script public/game/script.json --force --backup --json
 npm run vn -- set-ui-motion --intensity dramatic --title cinematic-slow --choices suspense-delay --script public/game/script.json --force --backup --json
+npm run vn -- list-ui-style-presets --json
+npm run vn -- apply-ui-style-preset --preset suspense-noir --scope all --script public/game/script.json --force --backup --json
 npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation pop --script public/game/script.json --force --backup --json
 npm run vn -- list-transitions --target background --supported-only --json
 npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect vignette --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json

@@ -82,7 +82,7 @@ export class ChoiceMenu {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.hide();
-        if (this.onSelect) this.onSelect(index);
+        if (!choiceData.previewOnly && this.onSelect) this.onSelect(index);
       });
       list.appendChild(btn);
     });

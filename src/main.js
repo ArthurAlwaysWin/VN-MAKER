@@ -1520,6 +1520,24 @@ function initPreview() {
         });
         break;
       }
+      case 'show-choice-preview': {
+        stopAuto();
+        stopSkip();
+        cancelPageTransitionGate();
+        gameMenu.hide();
+        saveLoadScreen.hide();
+        backlogScreen.hide();
+        settingsScreen.hide();
+        titleScreen.hide();
+        dialogueBox.hide();
+
+        choiceMenu.show({
+          prompt: msg.prompt,
+          options: Array.isArray(msg.options) ? msg.options : [],
+          previewOnly: true,
+        });
+        break;
+      }
       case 'preview-effect': {
         if (previewRestorePending) {
           postEffectPreviewResult({

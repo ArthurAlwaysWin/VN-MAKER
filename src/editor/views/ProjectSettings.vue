@@ -181,6 +181,51 @@
             <button class="toolbar-btn" @click="previewUiMotion" title="预览当前界面动效">预览动效</button>
           </div>
         </div>
+
+        <div class="ps-section" v-if="script.data">
+          <h3 class="ps-section-title">🎭 界面风格预设</h3>
+          <div class="style-preset-controls">
+            <label class="style-scope-field">
+              <span>应用范围</span>
+              <select v-model="uiStylePresetScope" class="config-select">
+                <option
+                  v-for="scope in uiStylePresetScopes"
+                  :key="scope"
+                  :value="scope"
+                >{{ uiStyleScopeLabels[scope] }}</option>
+              </select>
+            </label>
+          </div>
+          <div class="style-preset-grid">
+            <article
+              v-for="preset in uiStylePresets"
+              :key="preset.id"
+              class="style-preset-card"
+              :style="{ '--preset-accent': preset.accent }"
+            >
+              <button
+                class="style-preset-preview"
+                type="button"
+                @click="previewUiStylePreset(preset.id)"
+                :title="`预览 ${preset.label}`"
+              >
+                <span class="style-preset-swatch" :style="{ background: preset.preview.background, borderColor: preset.preview.accent }">
+                  <strong>{{ preset.preview.text }}</strong>
+                </span>
+                <span class="style-preset-copy">
+                  <strong>{{ preset.label }}</strong>
+                  <small>{{ preset.description }}</small>
+                </span>
+              </button>
+              <button
+                class="style-preset-apply"
+                type="button"
+                @click="applyUiStylePreset(preset.id)"
+                :title="`应用 ${preset.label}`"
+              >应用</button>
+            </article>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -209,6 +254,11 @@ import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
 import { UI_MOTION_FIELD_SCHEMA, normalizeUiMotion } from '../../shared/uiMotionContract.js';
+import {
+  UI_STYLE_PRESET_SCOPES,
+  applyUiStylePresetToScript,
+  listUiStylePresets,
+} from '../../shared/uiStylePresetContract.js';
 import { exportCurrentThemePackage } from '../services/themePackageExport.js';
 import DialogueBoxSettings from '../components/DialogueBoxSettings.vue';
 import ExportModal from '../components/ExportModal.vue';
@@ -234,6 +284,7 @@ const themeEditor = createThemeEditor();
 const showExport = ref(false);
 const showThemeBrowser = ref(false);
 const themeExportStatus = ref('');
+const uiStylePresetScope = ref('all');
 const agentGateRows = computed(() => {
   const gates = project.agentHandoff?.gates ?? {};
   return [
@@ -254,12 +305,29 @@ const DIALOGUE_PREVIEW_SAMPLE = {
   speakerName: '预览角色',
   text: '这是一段用于检查对话框图片层、文字层和继续指示的稳定示例台词。',
 };
+const CHOICE_PREVIEW_SAMPLE = {
+  type: 'show-choice-preview',
+  prompt: '预览分支样式',
+  options: [
+    { text: '追问线索' },
+    { text: '保持沉默' },
+    { text: '改变路线' },
+  ],
+};
 const uiMotionFields = Object.entries(UI_MOTION_FIELD_SCHEMA).map(([key, schema]) => ({
   key,
   label: schema.label,
   options: schema.options,
 }));
 const uiMotion = computed(() => normalizeUiMotion(script.data?.ui?.motion));
+const uiStylePresets = listUiStylePresets();
+const uiStylePresetScopes = UI_STYLE_PRESET_SCOPES;
+const uiStyleScopeLabels = {
+  all: '全部 UI',
+  dialogue: '仅对话框',
+  choices: '仅选项',
+  screens: '仅主要界面',
+};
 
 function canNavigateAgentPath(pathString) {
   return Boolean(parseAgentPathTarget(pathString));
@@ -487,6 +555,52 @@ function previewUiMotion() {
     type: 'show-screen',
     screenId: 'titleScreen',
   }, '*');
+}
+
+function showPresetPreviewTarget(scope = uiStylePresetScope.value) {
+  if (scope === 'dialogue') {
+    themeEditor.iframeRef.value?.contentWindow?.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+    return;
+  }
+  if (scope === 'choices') {
+    themeEditor.iframeRef.value?.contentWindow?.postMessage(CHOICE_PREVIEW_SAMPLE, '*');
+    return;
+  }
+  const screenId = scope === 'screens' ? 'settingsScreen' : 'titleScreen';
+  themeEditor.iframeRef.value?.contentWindow?.postMessage({
+    type: 'show-screen',
+    screenId,
+  }, '*');
+}
+
+function previewUiStylePreset(presetId) {
+  if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
+  const result = applyUiStylePresetToScript(script.data, {
+    presetId,
+    scope: uiStylePresetScope.value,
+    merge: true,
+  });
+  const previewScript = result.script;
+  const firstSceneId = Object.keys(previewScript.scenes || {})[0] || null;
+  themeEditor.iframeRef.value.contentWindow.postMessage({
+    type: 'start',
+    script: previewScript,
+    sceneId: firstSceneId,
+  }, '*');
+  setTimeout(() => showPresetPreviewTarget(result.scope), 50);
+}
+
+function applyUiStylePreset(presetId) {
+  const result = script.applyUiStylePreset({
+    presetId,
+    scope: uiStylePresetScope.value,
+    merge: true,
+  });
+  if (!result) return;
+  project.markDirty();
+  themeEditor.startEngine();
+  themeEditor.flushPreview();
+  setTimeout(() => showPresetPreviewTarget(result.scope), 50);
 }
 
 function showPreviewScreen(screenId = 'settingsScreen') {
@@ -778,5 +892,97 @@ onBeforeUnmount(() => {
 }
 .motion-actions {
   margin-top: 10px;
+}
+.style-preset-controls {
+  margin-bottom: 10px;
+}
+.style-scope-field {
+  display: grid;
+  gap: 5px;
+  color: #bbb;
+  font-size: 12px;
+}
+.style-scope-field .config-select {
+  background: #272727;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+.style-preset-grid {
+  display: grid;
+  gap: 8px;
+}
+.style-preset-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 6px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  background: #202020;
+  overflow: hidden;
+}
+.style-preset-card:hover {
+  border-color: color-mix(in srgb, var(--preset-accent, #777) 56%, #3a3a3a);
+}
+.style-preset-preview,
+.style-preset-apply {
+  border: 0;
+  color: #ddd;
+  cursor: pointer;
+  font: inherit;
+}
+.style-preset-preview {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  text-align: left;
+  background: transparent;
+}
+.style-preset-preview:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.style-preset-swatch {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 42px;
+  border: 1px solid var(--preset-accent, #555);
+  border-radius: 4px;
+  color: #fff;
+  box-shadow: inset 0 0 24px rgba(255, 255, 255, 0.08);
+}
+.style-preset-swatch strong {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.style-preset-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.style-preset-copy strong {
+  color: #eee;
+  font-size: 13px;
+}
+.style-preset-copy small {
+  color: #999;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.style-preset-apply {
+  padding: 0 10px;
+  background: #303030;
+  border-left: 1px solid #3a3a3a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.style-preset-apply:hover {
+  color: #fff;
+  background: color-mix(in srgb, var(--preset-accent, #555) 28%, #303030);
 }
 </style>

@@ -6,6 +6,10 @@ import {
 } from '../shared/cinematicContract.js';
 import { normalizePageParticles } from '../shared/particleContract.js';
 import { normalizeUiMotion } from '../shared/uiMotionContract.js';
+import {
+  applyUiStylePresetToScript,
+  listUiStylePresets,
+} from '../shared/uiStylePresetContract.js';
 import { normalizeEffectContainer, normalizeEffects } from '../shared/effectDsl.js';
 import {
   collectCgUnlockReferences,
@@ -1502,6 +1506,27 @@ export function createProjectSession(input = {}) {
         uiPath: uiMotionPath(),
         motion: cloneJsonValue(script.ui.motion),
         changedPaths: [uiMotionPath()],
+      };
+    },
+
+    listUiStylePresets() {
+      return listUiStylePresets();
+    },
+
+    applyUiStylePreset({ presetId, id, scope = 'all', merge = true } = {}) {
+      const result = applyUiStylePresetToScript(script, {
+        presetId: presetId ?? id,
+        scope,
+        merge,
+      });
+      script = result.script;
+      return {
+        ok: true,
+        presetId: result.presetId,
+        label: result.label,
+        scope: result.scope,
+        changedPaths: result.changedPaths,
+        patch: cloneJsonValue(result.patch),
       };
     },
 

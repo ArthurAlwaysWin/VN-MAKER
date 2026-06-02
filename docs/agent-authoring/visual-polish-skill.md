@@ -241,6 +241,7 @@ The exact config shape must match the current command reference and existing UI 
 | "有点故障感" | `set-page-transition --type glitch-lite` |
 | "噪点溶解过去" | `set-page-transition --type noise-dissolve` |
 | "像水波一样切换" | `set-page-transition --type ripple` |
+| "燃烧一样切过去" | `set-page-transition --type burn` |
 
 After transition edits, run `author-check --transaction --write-preview-plan`; changed transition paths produce scene-page preview targets and `transition-preview` review items.
 

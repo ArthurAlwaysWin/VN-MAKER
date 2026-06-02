@@ -3789,6 +3789,7 @@ describe('vn-author CLI', () => {
         'pixelate-lite',
         'noise-dissolve',
         'ripple',
+        'burn',
       ]);
       const fadeWhite = JSON.parse((await execFileAsync('node', [
         cliPath,

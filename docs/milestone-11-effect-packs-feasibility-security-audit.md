@@ -296,7 +296,7 @@ This audit does not reopen:
 - Generic effect/layout DSL.
 - Rich text.
 - Built-in AI chat.
-- Uploaded transition masks beyond the completed M8 thin slice.
+- Uploaded transition masks beyond the completed M8 built-in canvas-mask milestone.
 
 ## Audit Outcome
 

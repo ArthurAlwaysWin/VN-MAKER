@@ -50,6 +50,7 @@ describe('transition catalog', () => {
       'pixelate-lite',
       'noise-dissolve',
       'ripple',
+      'burn',
     ]);
     expect(getTransitionUiOptions().map((entry) => entry.value)).toEqual(
       supportedBackground.map((entry) => entry.id),
@@ -70,6 +71,7 @@ describe('transition catalog', () => {
     expect(getRuntimeTransitionType('crossfade-pan')).toBe('crossfade-pan');
     expect(getRuntimeTransitionType('fade-black')).toBe('fade-black');
     expect(getRuntimeTransitionType('noise-dissolve')).toBe('noise-dissolve');
+    expect(getRuntimeTransitionType('burn')).toBe('burn');
     expect(getTransitionCatalogEntry('character', 'pop')).toMatchObject({
       runtimeSupported: true,
       editorSupported: true,

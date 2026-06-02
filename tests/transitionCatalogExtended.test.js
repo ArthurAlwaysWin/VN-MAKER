@@ -33,6 +33,7 @@ const M7_BACKGROUND_TRANSITIONS = [
 const M8_CANVAS_MASK_TRANSITIONS = [
   ['noise-dissolve', 'canvas-mask', 'canvas-mask', 'dissolve'],
   ['ripple', 'canvas-mask', 'canvas-mask', 'crossfade-pan'],
+  ['burn', 'canvas-mask', 'canvas-mask', 'fade-white'],
 ];
 
 describe('extended transition catalog', () => {
@@ -59,7 +60,7 @@ describe('extended transition catalog', () => {
     }
   });
 
-  it('lists the Milestone 8 canvas-mask thin slice with safe fallbacks', () => {
+  it('lists the Milestone 8 canvas-mask presets with safe fallbacks', () => {
     const ids = listTransitionCatalog({ target: 'background', supportedOnly: true }).map(entry => entry.id);
     for (const [id, category, renderMode, fallbackId] of M8_CANVAS_MASK_TRANSITIONS) {
       expect(ids).toContain(id);

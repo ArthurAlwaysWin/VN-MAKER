@@ -74,9 +74,39 @@ function drawRipple(ctx, width, height, progress) {
   }
 }
 
+function drawBurn(ctx, width, height, progress) {
+  ctx.clearRect(0, 0, width, height);
+  const edge = progress * (width + 120) - 60;
+  const cell = 10;
+  const emberAlpha = 0.5 * (1 - Math.min(1, progress * 0.8));
+  for (let y = 0; y < height; y += cell) {
+    const waviness = Math.sin(y * 0.035 + progress * 8) * 28;
+    const localEdge = edge + waviness;
+    for (let x = Math.max(0, Math.floor((localEdge - 70) / cell) * cell); x < Math.min(width, localEdge + 70); x += cell) {
+      const seed = Math.sin((x + 41) * 17.271 + (y + 13) * 63.113) * 43758.5453;
+      const noise = seed - Math.floor(seed);
+      const distance = Math.abs(x - localEdge);
+      const heat = Math.max(0, 1 - distance / 70) * (0.65 + noise * 0.35);
+      if (heat <= 0.08) continue;
+      ctx.fillStyle = `rgba(255, ${Math.round(118 + 80 * heat)}, 38, ${emberAlpha * heat})`;
+      ctx.fillRect(x, y, cell, cell);
+    }
+  }
+
+  const ashWidth = Math.max(0, Math.min(width, edge - 35));
+  if (ashWidth > 0) {
+    ctx.fillStyle = `rgba(35, 18, 12, ${0.12 * (1 - progress)})`;
+    ctx.fillRect(0, 0, ashWidth, height);
+  }
+}
+
 function drawMaskFrame(ctx, width, height, type, progress) {
   if (type === 'ripple') {
     drawRipple(ctx, width, height, progress);
+    return;
+  }
+  if (type === 'burn') {
+    drawBurn(ctx, width, height, progress);
     return;
   }
   drawNoiseDissolve(ctx, width, height, progress);

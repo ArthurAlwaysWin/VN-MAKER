@@ -193,30 +193,32 @@ describe('background layer transitions', () => {
     await completion;
   });
 
-  it('routes canvas-mask transitions through a procedural canvas helper and cleans resources', async () => {
+  it('routes all canvas-mask transitions through a procedural canvas helper and cleans resources', async () => {
     mockCanvasContext();
-    const background = makeLayer();
+    for (const transition of ['noise-dissolve', 'ripple', 'burn']) {
+      const background = makeLayer();
 
-    await background.setBackground({
-      image: 'backgrounds/scene-a.png',
-      transition: 'fade',
-      duration: 0,
-    });
+      await background.setBackground({
+        image: 'backgrounds/scene-a.png',
+        transition: 'fade',
+        duration: 0,
+      });
 
-    const completion = background.setBackground({
-      image: 'backgrounds/scene-b.png',
-      transition: 'noise-dissolve',
-      duration: 120,
-    });
+      const completion = background.setBackground({
+        image: 'backgrounds/scene-b.png',
+        transition,
+        duration: 120,
+      });
 
-    expect(background.container.querySelector('.transition-mask-canvas')).not.toBeNull();
-    expect(background.container.querySelector('.bg-transition-noise-dissolve')).toBeNull();
+      expect(background.container.querySelector('.transition-mask-canvas')).not.toBeNull();
+      expect(background.container.querySelector(`.bg-transition-${transition}`)).toBeNull();
 
-    vi.advanceTimersByTime(180);
-    await completion;
+      vi.advanceTimersByTime(180);
+      await completion;
 
-    expect(background.container.querySelector('.transition-mask-canvas')).toBeNull();
-    expect(background.layerA.classList.contains('active') || background.layerB.classList.contains('active')).toBe(true);
+      expect(background.container.querySelector('.transition-mask-canvas')).toBeNull();
+      expect(background.layerA.classList.contains('active') || background.layerB.classList.contains('active')).toBe(true);
+    }
   });
 
   it('resolves canvas-mask transitions immediately under reduced motion without creating a canvas', async () => {
@@ -257,13 +259,13 @@ describe('background layer transitions', () => {
 
     const completion = background.setBackground({
       image: 'backgrounds/scene-b.png',
-      transition: 'noise-dissolve',
+      transition: 'burn',
       duration: 120,
     });
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(background.container.querySelector('.bg-transition-dissolve')).not.toBeNull();
+    expect(background.container.querySelector('.bg-transition-fade-white')).not.toBeNull();
 
     vi.advanceTimersByTime(121);
     await completion;

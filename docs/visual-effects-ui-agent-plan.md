@@ -967,7 +967,7 @@ npm run test:vitest -- tests/transitionCatalogExtended.test.js tests/backgroundL
 
 ## Milestone 8: Canvas-Mask Transition Add-On
 
-Status: completed on 2026-06-02 as a contract-first thin slice after feasibility audit. The shipped scope is intentionally small: two built-in procedural canvas-mask transition ids (`noise-dissolve`, `ripple`) reuse the existing page `transition.type` field, transition catalog, Page Inspector dropdown, direct CLI/apply-plan page transition commands, validation, preview, and handoff path routing. No user-uploaded mask assets, WebGL/shaders, plugins, arbitrary JavaScript, or effect/layout DSL were added.
+Status: completed on 2026-06-02 as a contract-first built-in canvas-mask milestone after feasibility audit. The shipped scope is intentionally bounded: three built-in procedural canvas-mask transition ids (`noise-dissolve`, `ripple`, `burn`) reuse the existing page `transition.type` field, transition catalog, Page Inspector dropdown, direct CLI/apply-plan page transition commands, validation, preview, and handoff path routing. No user-uploaded mask assets, WebGL/shaders, plugins, arbitrary JavaScript, or effect/layout DSL were added.
 
 Purpose: add a small number of high-impact transitions that CSS cannot express well.
 
@@ -1005,14 +1005,14 @@ Supported ids:
 
 - `noise-dissolve`
 - `ripple`
-- `burn` remains deferred until the two-id runtime path has more visual QA.
+- `burn`
 
 Performance rules:
 
 - Do not run at 60 fps if mask generation is expensive; 15-24 fps is acceptable for mask updates.
 - Prefer CSS variables and precomputed frames.
 - Avoid `toDataURL()` per frame if possible.
-- If browser API support is awkward, implement `noise-dissolve` first and defer `ripple`/`burn`.
+- Keep all shipped ids procedural and Canvas 2D only; defer any transition that would require assets, WebGL, shaders, or project code.
 - Always release canvas/resources after transition.
 - Always support cancellation from `BackgroundLayer._cancelActiveTransition()`.
 
@@ -1024,7 +1024,7 @@ Add:
 | --- | --- | --- | --- | --- |
 | `noise-dissolve` | 噪点溶解 | canvas-mask | canvas-mask | `dissolve` |
 | `ripple` | 水波纹 | canvas-mask | canvas-mask | `crossfade-pan` |
-| `burn` | 燃烧 | canvas-mask | canvas-mask | `fade-white` (deferred) |
+| `burn` | 燃烧 | canvas-mask | canvas-mask | `fade-white` |
 
 ### 8.3 BackgroundLayer Integration
 
@@ -1046,7 +1046,7 @@ Tests:
 - Failure falls back.
 - Cancellation does not leave stale styles.
 
-Acceptance for thin slice:
+Acceptance for the built-in milestone:
 
 ```bash
 npm run test:vitest -- tests/transitionCatalogExtended.test.js tests/backgroundLayerTransitions.test.js tests/backgroundTransitionPreview.test.js tests/agentHandoff.test.js
@@ -1057,7 +1057,7 @@ Completion notes:
 
 - Runtime coverage includes canvas-mask routing, resource cleanup, fallback when Canvas 2D is unavailable, cancellation on replacement/clear, same-page preview, and reduced-motion immediate resolution.
 - Authoring coverage includes direct CLI, apply-plan, `author-check --transaction --write-preview-plan`, and handoff review routing for changed transition paths.
-- `burn`, uploaded mask assets, WebGL/shader work, and generalized effect packs remain explicitly out of scope for this completed milestone.
+- Uploaded mask assets, WebGL/shader work, and generalized effect packs remain explicitly out of scope for this completed milestone.
 
 ## Milestone 9: Configurable Runtime UI Motion
 

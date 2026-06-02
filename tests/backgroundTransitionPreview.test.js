@@ -91,26 +91,32 @@ describe('background transition preview', () => {
       stroke: vi.fn(),
     };
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
-    const background = makeLayer();
+    for (const [transition, fallbackClass] of [
+      ['noise-dissolve', '.bg-transition-dissolve'],
+      ['ripple', '.bg-transition-crossfade-pan'],
+      ['burn', '.bg-transition-fade-white'],
+    ]) {
+      const background = makeLayer();
 
-    await background.setBackground({
-      image: 'backgrounds/scene-a.png',
-      transition: 'fade',
-      duration: 0,
-    });
+      await background.setBackground({
+        image: 'backgrounds/scene-a.png',
+        transition: 'fade',
+        duration: 0,
+      });
 
-    const completion = background.setBackground({
-      image: 'backgrounds/scene-a.png',
-      transition: 'ripple',
-      duration: 160,
-      previewVariant: 'same-page',
-    });
+      const completion = background.setBackground({
+        image: 'backgrounds/scene-a.png',
+        transition,
+        duration: 160,
+        previewVariant: 'same-page',
+      });
 
-    expect(background.container.querySelector('.transition-mask-canvas')).not.toBeNull();
-    expect(background.container.querySelector('.bg-transition-crossfade-pan')).toBeNull();
+      expect(background.container.querySelector('.transition-mask-canvas')).not.toBeNull();
+      expect(background.container.querySelector(fallbackClass)).toBeNull();
 
-    vi.advanceTimersByTime(220);
-    await completion;
+      vi.advanceTimersByTime(220);
+      await completion;
+    }
   });
 
   it('cleans preview-only classes, css vars, and stale outgoing imagery on interruption and clear', async () => {

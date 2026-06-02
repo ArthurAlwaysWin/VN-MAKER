@@ -162,7 +162,7 @@ When `x` and `y` are provided, `position` is ignored and the character is placed
 ```json
 { "type": "set_background", "image": "backgrounds/school.png", "transition": "fade", "duration": 1000 }
 ```
-- `transition`: use a background id from `list-transitions --target background --supported-only`, such as `"fade"`, `"none"`, `"dissolve"`, `"wipe-right"`, `"fade-white"`, `"noise-dissolve"`, or `"ripple"`.
+- `transition`: use a background id from `list-transitions --target background --supported-only`, such as `"fade"`, `"none"`, `"dissolve"`, `"wipe-right"`, `"fade-white"`, `"noise-dissolve"`, `"ripple"`, or `"burn"`.
 
 ### `play_bgm`
 ```json

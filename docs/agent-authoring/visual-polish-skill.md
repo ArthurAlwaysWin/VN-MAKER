@@ -240,6 +240,8 @@ The exact config shape must match the current command reference and existing UI 
 | "噪点溶解过去" | `set-page-transition --type noise-dissolve` |
 | "像水波一样切换" | `set-page-transition --type ripple` |
 
+After transition edits, run `author-check --transaction --write-preview-plan`; changed transition paths produce scene-page preview targets and `transition-preview` review items.
+
 ### Particles / Atmosphere
 
 | User says | Planned command |

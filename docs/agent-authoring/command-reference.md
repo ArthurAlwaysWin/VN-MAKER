@@ -173,6 +173,8 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 
 `set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. The background catalog includes fades, slides, directional wipes, zoom, flash, iris, crossfade-pan, CSS-only shape/curtain transitions such as `diamond`, `circle-open`, `blinds-h`, `fade-black`, `fade-white`, `glitch-lite`, and `pixelate-lite`, plus the procedural canvas-mask thin-slice ids `noise-dissolve` and `ripple`; the character catalog includes `pop`, `scale-in`, and `blur-in`; camera effects include `vignette` and `letterbox`. All are exposed by the same shared catalog and editor controls. Use `list-transitions --supported-only` before writing effects; unknown future ids remain safe through runtime fallback or no-op behavior.
 
+Changed page transition paths are routed to `author-check --transaction --write-preview-plan` scene-page targets and `transition-preview` review items so CSS and canvas-mask transitions can be visually reviewed before handoff.
+
 Example bounded bulk operation:
 
 ```json

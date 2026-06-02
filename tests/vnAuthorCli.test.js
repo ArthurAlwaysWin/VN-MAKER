@@ -3906,7 +3906,7 @@ describe('vn-author CLI', () => {
             name: 'Start',
             pages: [
               { type: 'normal', background: 'backgrounds/gate.png', dialogues: [] },
-              { type: 'normal', background: '', dialogues: [] },
+              { type: 'normal', background: 'backgrounds/hall.png', dialogues: [{ text: 'A quiet beat.' }] },
               { type: 'choice', background: 'backgrounds/menu.png', options: [] },
               { type: 'normal', background: 'backgrounds/room.png', dialogues: [] },
             ],
@@ -3936,19 +3936,23 @@ describe('vn-author CLI', () => {
         '--json',
       ])).stdout);
       expect(directResult.result).toMatchObject({
-        matchedPageIndexes: [0],
-        changedPaths: ['scenes.start.pages.0.transition'],
+        matchedPageIndexes: [0, 1],
+        changedPaths: [
+          'scenes.start.pages.0.transition',
+          'scenes.start.pages.1.transition',
+        ],
         transition: { type: 'dissolve', duration: 650 },
       });
 
       const planPath = path.join(dir, 'bulk-transition-plan.json');
+      const resultPath = path.join(dir, 'bulk-transition-result.json');
       await writeFile(planPath, JSON.stringify({
         operations: [{
           command: 'set-page-transitions',
           params: {
             scene: 'start',
             predicate: { pageType: 'normal', hasBackground: true },
-            type: 'blur',
+            type: 'noise-dissolve',
             duration: 9000,
           },
         }],
@@ -3961,27 +3965,70 @@ describe('vn-author CLI', () => {
         '--script',
         scriptPath,
         '--force',
+        '--result-out',
+        resultPath,
         '--json',
       ])).stdout);
       expect(planResult.operations[0]).toMatchObject({
         command: 'set-page-transitions',
         changedPaths: [
           'scenes.start.pages.0.transition',
+          'scenes.start.pages.1.transition',
           'scenes.start.pages.3.transition',
         ],
       });
       expect(planResult.operations[0].result).toMatchObject({
-        matchedPageIndexes: [0, 3],
-        transition: { type: 'blur', duration: 5000 },
+        matchedPageIndexes: [0, 1, 3],
+        transition: { type: 'noise-dissolve', duration: 5000 },
       });
 
       const updatedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
       expect(updatedScript.scenes.start.pages.map(page => page.transition ?? null)).toEqual([
-        { type: 'blur', duration: 5000 },
+        { type: 'noise-dissolve', duration: 5000 },
+        { type: 'noise-dissolve', duration: 5000 },
         null,
-        null,
-        { type: 'blur', duration: 5000 },
+        { type: 'noise-dissolve', duration: 5000 },
       ]);
+
+      const authorCheck = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        resultPath,
+        '--skip-asset-check',
+        '--write-preview-plan',
+        '--json',
+      ])).stdout);
+      expect(authorCheck.focus.pageTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          sceneId: 'start',
+          pageIndex: 0,
+          reason: 'changed-transition',
+          pathString: 'scenes.start.pages.0.transition',
+        }),
+        expect.objectContaining({
+          sceneId: 'start',
+          pageIndex: 3,
+          reason: 'changed-transition',
+          pathString: 'scenes.start.pages.3.transition',
+        }),
+      ]));
+      expect(authorCheck.focus.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          type: 'scene',
+          sceneId: 'start',
+          pageIndex: 0,
+          reason: 'changed-transition',
+        }),
+      ]));
+      expect(authorCheck.transitionPreviewIssues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          category: 'transition-preview',
+          pathString: 'scenes.start.pages.0.transition',
+        }),
+      ]));
     });
   });
 

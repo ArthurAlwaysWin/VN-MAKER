@@ -681,6 +681,22 @@ function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
       continue;
     }
 
+    const transitionMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.transition$/.exec(String(changedPath));
+    if (transitionMatch) {
+      const sceneId = transitionMatch[1];
+      const pageIndex = Number(transitionMatch[2]);
+      if (script.scenes?.[sceneId]?.pages?.[pageIndex]) {
+        targets.push({
+          sceneId,
+          pageIndex,
+          kind: 'scene-page',
+          reason: 'changed-transition',
+          pathString: String(changedPath),
+        });
+      }
+      continue;
+    }
+
     const pageMatch = /^scenes\.([^.]+)\.pages\.(\d+)/.exec(String(changedPath));
     if (pageMatch) {
       const sceneId = pageMatch[1];
@@ -2047,6 +2063,30 @@ function collectParticlePreviewIssues(pageTargets = []) {
     }));
 }
 
+function collectTransitionPreviewIssues(pageTargets = []) {
+  return pageTargets
+    .filter((target) => target?.reason === 'changed-transition')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'transition-preview',
+      code: 'transition-preview-required',
+      pathString: target.pathString ?? `scenes.${target.sceneId}.pages.${target.pageIndex}.transition`,
+      message: `Page transition changed on scene "${target.sceneId}" page ${target.pageIndex} and needs visual review in preview.`,
+      sceneId: target.sceneId,
+      pageIndex: target.pageIndex,
+      suggestedAction: {
+        summary: 'Open the edited page in Page Editor and use the transition preview controls before handoff.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    }));
+}
+
 function collectAuthorCheckSuggestions({
   validation,
   layout,
@@ -2059,6 +2099,7 @@ function collectAuthorCheckSuggestions({
   galleryPreviewIssues,
   branchGraphPreviewIssues,
   particlePreviewIssues,
+  transitionPreviewIssues,
 }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
@@ -2150,6 +2191,15 @@ function collectAuthorCheckSuggestions({
   }
 
   for (const issue of particlePreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of transitionPreviewIssues ?? []) {
     suggestions.push({
       source: issue.source,
       code: issue.code,
@@ -3239,6 +3289,7 @@ async function authorCheck(args, { emit = true } = {}) {
   const galleryPreviewIssues = collectGalleryPreviewIssues(focus.galleryTargets);
   const branchGraphPreviewIssues = collectBranchGraphPreviewIssues(focus.branchGraphTargets);
   const particlePreviewIssues = collectParticlePreviewIssues(focus.pageTargets);
+  const transitionPreviewIssues = collectTransitionPreviewIssues(focus.pageTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
   const requirePreviewScreenshot = hasFlag(args, '--require-preview-screenshot');
   const capturePreview = requirePreviewScreenshot || hasFlag(args, '--capture-preview');
@@ -3362,6 +3413,7 @@ async function authorCheck(args, { emit = true } = {}) {
       galleryPreviewReviewItems: galleryPreviewIssues.length,
       branchGraphPreviewReviewItems: branchGraphPreviewIssues.length,
       particlePreviewReviewItems: particlePreviewIssues.length,
+      transitionPreviewReviewItems: transitionPreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewQualityBlockers: previewQualityIssues.length,
       previewPlanned: Boolean(preview),
@@ -3391,6 +3443,10 @@ async function authorCheck(args, { emit = true } = {}) {
       issues: particlePreviewIssues,
     },
     particlePreviewIssues,
+    transitionPreview: {
+      issues: transitionPreviewIssues,
+    },
+    transitionPreviewIssues,
     referenceScreenshotIssues,
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
@@ -3413,6 +3469,8 @@ async function authorCheck(args, { emit = true } = {}) {
       ...summarizeIssues('preview', endingPreviewIssues),
       ...summarizeIssues('preview', galleryPreviewIssues),
       ...summarizeIssues('preview', branchGraphPreviewIssues),
+      ...summarizeIssues('preview', particlePreviewIssues),
+      ...summarizeIssues('preview', transitionPreviewIssues),
       ...summarizeIssues('preview', referenceScreenshotIssues),
       ...summarizeIssues('preview', previewQualityIssues),
       ...referenceDiagnostics,

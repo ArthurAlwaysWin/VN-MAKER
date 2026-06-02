@@ -980,7 +980,7 @@ Feasibility audit:
 - A low-risk canvas-mask slice can reuse `scenes.<sceneId>.pages.<pageIndex>.transition` without adding schema fields or export assets.
 - Skip remains safe because main runtime already converts background transitions to `duration: 0` and `transition: "cut"` during skip; reduced motion is handled by the canvas helper resolving immediately.
 - Cancellation is feasible through `BackgroundLayer._cancelActiveTransition()` with an `AbortController`; `clear()`, replacement transitions, replay, title return, preview stop, and load flows already call the background owner cleanup path.
-- Preview/apply-plan/handoff/validation stay consistent because changed paths remain `*.transition`; handoff now emits explicit `transition-preview` review items for these changes.
+- Preview/apply-plan/handoff/validation stay consistent because changed paths remain `*.transition`; `author-check --transaction --write-preview-plan` and handoff now emit explicit `changed-transition` scene-page targets and `transition-preview` review items for these changes.
 - Risky expansions remain blocked: uploaded masks, asset pipeline changes, WebGL/shaders, plugin/runtime packs, arbitrary JS, and a generic effect DSL.
 
 ### 8.1 Add TransitionMask

@@ -27,6 +27,10 @@ import {
   normalizeParticleConfig,
 } from '../../src/shared/particleContract.js';
 import {
+  BUILTIN_EFFECT_PACK_ADAPTERS,
+  validateEffectPackManifest,
+} from '../../src/shared/effectPackContract.js';
+import {
   UI_STYLE_PRESET_SCOPES,
   listUiStylePresets,
 } from '../../src/shared/uiStylePresetContract.js';
@@ -263,6 +267,19 @@ function buildParticleConfigFromPlanParams(command, params) {
   });
 }
 
+function buildEffectPackManifestFromCliArgs(args) {
+  const manifest = parseJsonArg(args, '--manifest-json', null)
+    ?? parseJsonArg(args, '--manifest', null);
+  if (!manifest) {
+    throw new Error('register-effect-pack requires --manifest-json');
+  }
+  return manifest;
+}
+
+function buildEffectPackParamsFromCliArgs(args) {
+  return parseJsonArg(args, '--params-json', parseJsonArg(args, '--params', {}));
+}
+
 async function parseTitleScreenArgs(args) {
   const config = await parseJsonFileArg(args, '--config', parseJsonArg(args, '--config-json', {}));
   return dropUndefinedFields({
@@ -405,6 +422,7 @@ const ASSET_LIBRARY_CATEGORIES = [
   'voices',
   'ui',
   'fonts',
+  'effects',
 ];
 
 function tokenizeAssetName(name) {
@@ -691,6 +709,22 @@ function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
           pageIndex,
           kind: 'scene-page',
           reason: 'changed-transition',
+          pathString: String(changedPath),
+        });
+      }
+      continue;
+    }
+
+    const effectPackMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.effectPacks$/.exec(String(changedPath));
+    if (effectPackMatch) {
+      const sceneId = effectPackMatch[1];
+      const pageIndex = Number(effectPackMatch[2]);
+      if (script.scenes?.[sceneId]?.pages?.[pageIndex]) {
+        targets.push({
+          sceneId,
+          pageIndex,
+          kind: 'scene-page',
+          reason: 'changed-effect-packs',
           pathString: String(changedPath),
         });
       }
@@ -1032,6 +1066,9 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'set-camera-effect',
   'set-page-transition',
   'set-page-transitions',
+  'register-effect-pack',
+  'set-page-effect-pack',
+  'clear-page-effect-packs',
   'set-page-particles',
   'clear-page-particles',
   'inherit-page-particles',
@@ -1708,6 +1745,29 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
+  if (command === 'register-effect-pack') {
+    return session.registerEffectPack({
+      manifest: requireParam(params, command, 'manifest'),
+    });
+  }
+
+  if (command === 'set-page-effect-pack') {
+    return session.setPageEffectPack({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      effectPackId: requireParam(params, command, 'effectPackId', 'effectPack', 'id'),
+      params: getParam(params, 'params') ?? {},
+      enabled: getParam(params, 'enabled') ?? true,
+    });
+  }
+
+  if (command === 'clear-page-effect-packs') {
+    return session.clearPageEffectPacks({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }
+
   if (command === 'clear-page-particles') {
     return session.clearPageParticles({
       sceneId: requireParam(params, command, 'sceneId', 'scene'),
@@ -2087,6 +2147,30 @@ function collectTransitionPreviewIssues(pageTargets = []) {
     }));
 }
 
+function collectEffectPackPreviewIssues(pageTargets = []) {
+  return pageTargets
+    .filter((target) => target?.reason === 'changed-effect-packs')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'effect-pack-preview',
+      code: 'effect-pack-preview-required',
+      pathString: target.pathString ?? `scenes.${target.sceneId}.pages.${target.pageIndex}.effectPacks`,
+      message: `Effect packs changed on scene "${target.sceneId}" page ${target.pageIndex} and need visual review in preview.`,
+      sceneId: target.sceneId,
+      pageIndex: target.pageIndex,
+      suggestedAction: {
+        summary: 'Open the edited page in Page Editor or runtime preview and inspect the built-in effect-pack adapter output before handoff.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    }));
+}
+
 function collectAuthorCheckSuggestions({
   validation,
   layout,
@@ -2100,6 +2184,7 @@ function collectAuthorCheckSuggestions({
   branchGraphPreviewIssues,
   particlePreviewIssues,
   transitionPreviewIssues,
+  effectPackPreviewIssues,
 }) {
   const suggestions = [];
   for (const warning of layout.warnings ?? []) {
@@ -2200,6 +2285,15 @@ function collectAuthorCheckSuggestions({
   }
 
   for (const issue of transitionPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of effectPackPreviewIssues ?? []) {
     suggestions.push({
       source: issue.source,
       code: issue.code,
@@ -3290,6 +3384,7 @@ async function authorCheck(args, { emit = true } = {}) {
   const branchGraphPreviewIssues = collectBranchGraphPreviewIssues(focus.branchGraphTargets);
   const particlePreviewIssues = collectParticlePreviewIssues(focus.pageTargets);
   const transitionPreviewIssues = collectTransitionPreviewIssues(focus.pageTargets);
+  const effectPackPreviewIssues = collectEffectPackPreviewIssues(focus.pageTargets);
   const referenceScreenshotIssues = collectReferenceScreenshotIssues(transaction?.data);
   const requirePreviewScreenshot = hasFlag(args, '--require-preview-screenshot');
   const capturePreview = requirePreviewScreenshot || hasFlag(args, '--capture-preview');
@@ -3414,6 +3509,7 @@ async function authorCheck(args, { emit = true } = {}) {
       branchGraphPreviewReviewItems: branchGraphPreviewIssues.length,
       particlePreviewReviewItems: particlePreviewIssues.length,
       transitionPreviewReviewItems: transitionPreviewIssues.length,
+      effectPackPreviewReviewItems: effectPackPreviewIssues.length,
       referenceScreenshotFidelityNotes: referenceScreenshotIssues.length,
       previewQualityBlockers: previewQualityIssues.length,
       previewPlanned: Boolean(preview),
@@ -3447,6 +3543,10 @@ async function authorCheck(args, { emit = true } = {}) {
       issues: transitionPreviewIssues,
     },
     transitionPreviewIssues,
+    effectPackPreview: {
+      issues: effectPackPreviewIssues,
+    },
+    effectPackPreviewIssues,
     referenceScreenshotIssues,
     referenceScreenshotFidelity: {
       issues: referenceScreenshotIssues,
@@ -3471,6 +3571,7 @@ async function authorCheck(args, { emit = true } = {}) {
       ...summarizeIssues('preview', branchGraphPreviewIssues),
       ...summarizeIssues('preview', particlePreviewIssues),
       ...summarizeIssues('preview', transitionPreviewIssues),
+      ...summarizeIssues('preview', effectPackPreviewIssues),
       ...summarizeIssues('preview', referenceScreenshotIssues),
       ...summarizeIssues('preview', previewQualityIssues),
       ...referenceDiagnostics,
@@ -4998,6 +5099,83 @@ async function listParticles(args) {
   return 0;
 }
 
+async function listEffectPacksCommand(args) {
+  const { scriptPath, script } = await readScript(args);
+  const session = createProjectSession(script);
+  const effectPacks = session.listEffectPacks();
+  const output = {
+    scriptPath,
+    count: effectPacks.length,
+    builtInAdapters: Object.values(BUILTIN_EFFECT_PACK_ADAPTERS),
+    effectPacks,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Effect packs: ${effectPacks.length}\n`);
+    for (const effectPack of effectPacks) {
+      process.stdout.write(`- ${effectPack.id}: ${effectPack.label} (${effectPack.adapter})\n`);
+    }
+  }
+
+  return 0;
+}
+
+async function registerEffectPack(args) {
+  const manifest = buildEffectPackManifestFromCliArgs(args);
+  const result = validateEffectPackManifest(manifest);
+  if (!result.ok) {
+    throw new Error(`Invalid effect pack manifest: ${result.errors.join('; ')}`);
+  }
+  const output = await mutateScript(args, (session) => session.registerEffectPack({
+    manifest,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Registered effect pack', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function setPageEffectPack(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'set-page-effect-pack');
+  const output = await mutateScript(args, (session) => session.setPageEffectPack({
+    sceneId,
+    pageIndex,
+    effectPackId: getArgValue(args, '--id', getArgValue(args, '--effect-pack', null)),
+    params: buildEffectPackParamsFromCliArgs(args),
+    enabled: !hasFlag(args, '--disabled'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Set page effect pack', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function clearPageEffectPacks(args) {
+  const { sceneId, pageIndex } = getPageAddress(args, 'clear-page-effect-packs');
+  const output = await mutateScript(args, (session) => session.clearPageEffectPacks({
+    sceneId,
+    pageIndex,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Cleared page effect packs', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function listUiStylePresetsCommand(args) {
   const presets = listUiStylePresets();
   const output = {
@@ -5523,6 +5701,10 @@ function printHelp() {
   set-page-transition --scene scene_id --page index [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|condition] [--has-background|--without-background] [--predicate json] [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-particles [--json]
+  list-effect-packs [--script path] [--json]
+  register-effect-pack --manifest-json json [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-page-effect-pack --scene scene_id --page index --id effect_pack_id [--params-json json] [--disabled] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  clear-page-effect-packs --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-ui-style-presets [--json]
   set-page-particles --scene scene_id --page index --preset preset [--density number] [--speed number] [--wind number] [--opacity number] [--color #rrggbb] [--direction down|up|left|right] [--particles json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   clear-page-particles --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5572,6 +5754,11 @@ async function main() {
 
     if (command === 'list-particles') {
       process.exitCode = await listParticles(args);
+      return;
+    }
+
+    if (command === 'list-effect-packs') {
+      process.exitCode = await listEffectPacksCommand(args);
       return;
     }
 
@@ -5877,6 +6064,21 @@ async function main() {
 
     if (command === 'set-page-transitions') {
       process.exitCode = await setPageTransitions(args);
+      return;
+    }
+
+    if (command === 'register-effect-pack') {
+      process.exitCode = await registerEffectPack(args);
+      return;
+    }
+
+    if (command === 'set-page-effect-pack') {
+      process.exitCode = await setPageEffectPack(args);
+      return;
+    }
+
+    if (command === 'clear-page-effect-packs') {
+      process.exitCode = await clearPageEffectPacks(args);
       return;
     }
 

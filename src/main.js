@@ -24,6 +24,7 @@ import { DialogueBox } from './ui/DialogueBox.js';
 import { CharacterLayer } from './ui/CharacterLayer.js';
 import { BackgroundLayer } from './ui/BackgroundLayer.js';
 import { ParticleLayer } from './ui/ParticleLayer.js';
+import { EffectPackLayer } from './ui/EffectPackLayer.js';
 import { CameraController } from './ui/CameraController.js';
 import { ChoiceMenu } from './ui/ChoiceMenu.js';
 import { SaveLoadScreen } from './ui/SaveLoadScreen.js';
@@ -41,6 +42,7 @@ import {
   isKnownTransitionType,
 } from './shared/cinematicContract.js';
 import { normalizeParticleConfig, resolveEffectivePageParticles } from './shared/particleContract.js';
+import { resolvePageEffectPacks } from './shared/effectPackContract.js';
 import { getUiMotionClassNames } from './shared/uiMotionContract.js';
 
 // ─── DOM references ─────────────────────────────────────
@@ -61,6 +63,7 @@ const config = new ConfigManager();
 // ─── UI instances ───────────────────────────────────────
 const background = new BackgroundLayer(bgLayer, '');
 const particles = new ParticleLayer(stageLayer);
+const effectPacks = new EffectPackLayer(stageLayer);
 const characters = new CharacterLayer(charLayer, '');
 const camera = new CameraController(stageLayer);
 const dialogueBox = new DialogueBox(dialogueLayer);
@@ -214,6 +217,7 @@ function establishPreviewPageBaseline(request) {
   characters.clear();
   background.clear();
   particles.clear();
+  effectPacks.clear();
   engine.resetRenderState();
   engine.renderCurrentPage();
 }
@@ -241,6 +245,7 @@ async function restorePreviewSnapshot(snapshot) {
   characters.clear();
   background.clear();
   particles.clear();
+  effectPacks.clear();
   try {
     engine.restoreState(snapshot);
     engine.resetRenderState();
@@ -368,7 +373,7 @@ async function runEffectPreview(request) {
         return;
       }
 
-      particles.play(particleConfig);
+    particles.play(particleConfig);
       await waitForPreviewDuration(request.payload?.durationMs ?? 1200);
     }
 
@@ -637,6 +642,16 @@ function applyCurrentParticles() {
   }
 }
 
+function applyCurrentEffectPacks() {
+  const page = engine._currentPage?.();
+  if (page) {
+    const effects = resolvePageEffectPacks(engine.script, page);
+    effectPacks.play(effects);
+  } else {
+    effectPacks.clear();
+  }
+}
+
 engine.on('dialogue', (data) => {
   if (pageTransitionGateOpen) {
     pendingUiEvent = { type: 'dialogue', data };
@@ -708,6 +723,18 @@ engine.on('stop_particles', () => {
   particles.stop();
 });
 
+engine.on('set_effect_packs', ({ effects }) => {
+  if (skipMode) {
+    effectPacks.clear();
+    return;
+  }
+  effectPacks.play(effects);
+});
+
+engine.on('clear_effect_packs', () => {
+  effectPacks.clear();
+});
+
 // ─── Audio events (skip-aware D-07) ──────────────────────
 engine.on('play_bgm', (data) => {
   if (skipMode) {
@@ -750,6 +777,7 @@ engine.on('end', () => {
     camera.clear();
     background.clear();
     particles.clear();
+    effectPacks.clear();
     audio.stopVoice();
     window.parent.postMessage({ type: 'ended' }, '*');
     return;
@@ -772,6 +800,7 @@ engine.on('end', () => {
     characters.clear();
     background.clear();
     particles.clear();
+    effectPacks.clear();
     showTitle();
   }, 2000);
 });
@@ -862,6 +891,7 @@ function replayCurrentPage() {
   characters.clear();
   background.clear();
   particles.clear();
+  effectPacks.clear();
   engine.resetRenderState();
   engine.renderCurrentPage();
 }
@@ -904,6 +934,7 @@ gameMenu.onTitle = async () => {
   characters.clear();
   background.clear();
   particles.clear();
+  effectPacks.clear();
   await showTitle();
 };
 
@@ -1166,6 +1197,7 @@ function startSkip() {
   clearAutoTimer();
   audio.stopVoice(); // Stop any playing voice immediately
   particles.clear();
+  effectPacks.clear();
   updateQuickBtnStates();
   skipIndicator.classList.remove('hidden');
 
@@ -1200,6 +1232,7 @@ function stopSkip() {
   if (wasSkipping) {
     restoreBgmAfterSkip();
     applyCurrentParticles();
+    applyCurrentEffectPacks();
   }
 }
 
@@ -1258,6 +1291,7 @@ titleScreen.onStart = () => {
   cancelEndReturnTimer();
   titleScreen.hide();
   particles.clear();
+  effectPacks.clear();
   audio.stopBgm();
   isPlaying = true;
   engine.startGame('start');
@@ -1447,6 +1481,7 @@ function initPreview() {
         characters.clear();
         background.clear();
         particles.clear();
+        effectPacks.clear();
         break;
       }
       case 'mute': {

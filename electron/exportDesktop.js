@@ -113,6 +113,7 @@ export async function exportDesktop(options, sendProgress) {
       ...assetDict.fonts,
       ...assetDict.ui,
       ...assetDict.voices,
+      ...assetDict.effects,
     ];
     for (const relPath of allPaths) {
       const safeRelPath = normalizeExportAssetPath(relPath);

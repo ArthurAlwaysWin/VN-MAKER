@@ -775,12 +775,14 @@ describe('vn-author CLI', () => {
       await mkdir(path.join(dir, 'assets', 'voices'), { recursive: true });
       await mkdir(path.join(dir, 'assets', 'ui', 'title'), { recursive: true });
       await mkdir(path.join(dir, 'assets', 'fonts'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'effects', 'old_film'), { recursive: true });
       await writeFile(path.join(dir, 'assets', 'backgrounds', 'rainy_school_gate.png'), 'bg', 'utf8');
       await writeFile(path.join(dir, 'assets', 'characters', 'sakura_nervous.webp'), 'char', 'utf8');
       await writeFile(path.join(dir, 'assets', 'audio', 'rain_theme.ogg'), 'bgm', 'utf8');
       await writeFile(path.join(dir, 'assets', 'voices', 'sakura_line_001.wav'), 'voice', 'utf8');
       await writeFile(path.join(dir, 'assets', 'ui', 'title', 'logo.png'), 'ui', 'utf8');
       await writeFile(path.join(dir, 'assets', 'fonts', 'story_serif.ttf'), 'font', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'effects', 'old_film', 'preview.png'), 'fx', 'utf8');
 
       const { stdout } = await execFileAsync('node', [
         cliPath,
@@ -794,7 +796,7 @@ describe('vn-author CLI', () => {
       expect(result).toMatchObject({
         projectPath: dir,
         assetRoot: path.join(dir, 'assets'),
-        categories: ['backgrounds', 'characters', 'audio', 'voices', 'ui', 'fonts'],
+        categories: ['backgrounds', 'characters', 'audio', 'voices', 'ui', 'fonts', 'effects'],
       });
       expect(result.assets.backgrounds).toEqual([
         expect.objectContaining({
@@ -815,6 +817,7 @@ describe('vn-author CLI', () => {
       expect(result.assets.voices[0].path).toBe('voices/sakura_line_001.wav');
       expect(result.assets.ui[0].path).toBe('ui/title/logo.png');
       expect(result.assets.fonts[0].path).toBe('fonts/story_serif.ttf');
+      expect(result.assets.effects[0].path).toBe('effects/old_film/preview.png');
     });
   });
 
@@ -838,6 +841,7 @@ describe('vn-author CLI', () => {
       expect(result.assets.voices).toEqual([]);
       expect(result.assets.ui).toEqual([]);
       expect(result.assets.fonts).toEqual([]);
+      expect(result.assets.effects).toEqual([]);
     });
   });
 
@@ -4196,6 +4200,182 @@ describe('vn-author CLI', () => {
         expect.objectContaining({
           category: 'particle-preview',
           pathString: 'scenes.start.pages.1.particles',
+        }),
+      ]));
+    });
+  });
+
+  it('applies manifest-only effect packs through direct CLI, apply-plan, and author-check focus', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_effect_packs',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              { type: 'normal', background: 'backgrounds/gate.png', dialogues: [] },
+              { type: 'normal', background: 'backgrounds/room.png', dialogues: [] },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const manifest = {
+        id: 'old_film',
+        label: 'Old Film',
+        kind: 'postprocess',
+        adapter: 'canvas2d:film-flicker',
+        paramsSchema: {
+          intensity: { type: 'number', default: 0.45, minimum: 0, maximum: 1 },
+          grain: { type: 'number', default: 0.35, minimum: 0, maximum: 1 },
+          flicker: { type: 'number', default: 0.2, minimum: 0, maximum: 1 },
+        },
+        files: [
+          { path: 'effects/old_film/effect.json', role: 'manifest' },
+          { path: 'effects/old_film/preview.png', role: 'preview' },
+        ],
+      };
+
+      const registerResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'register-effect-pack',
+        '--script',
+        scriptPath,
+        '--manifest-json',
+        JSON.stringify(manifest),
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(registerResult.result).toMatchObject({
+        effectPackId: 'old_film',
+        pathString: 'assets.effectPacks.old_film',
+        changedPaths: ['assets.effectPacks.old_film'],
+      });
+
+      const catalog = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'list-effect-packs',
+        '--script',
+        scriptPath,
+        '--json',
+      ])).stdout);
+      expect(catalog.builtInAdapters).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'canvas2d:film-flicker' }),
+      ]));
+      expect(catalog.effectPacks).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: 'old_film',
+          adapter: 'canvas2d:film-flicker',
+        }),
+      ]));
+
+      const directResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'set-page-effect-pack',
+        '--script',
+        scriptPath,
+        '--scene',
+        'start',
+        '--page',
+        '0',
+        '--id',
+        'old_film',
+        '--params-json',
+        JSON.stringify({ intensity: 0.5, grain: 0.4 }),
+        '--force',
+        '--json',
+      ])).stdout);
+      expect(directResult.result).toMatchObject({
+        sceneId: 'start',
+        pageIndex: 0,
+        effectPackId: 'old_film',
+        pathString: 'scenes.start.pages.0.effectPacks',
+      });
+      expect(directResult.result.effectPacks).toEqual([
+        { id: 'old_film', enabled: true, params: { intensity: 0.5, grain: 0.4, flicker: 0.2 } },
+      ]);
+
+      const planPath = path.join(dir, 'effect-pack-plan.json');
+      const resultPath = path.join(dir, 'effect-pack-result.json');
+      await writeFile(planPath, JSON.stringify({
+        operations: [
+          {
+            id: 'set-page-1-effect-pack',
+            command: 'set-page-effect-pack',
+            params: {
+              scene: 'start',
+              page: 1,
+              effectPackId: 'old_film',
+              params: { intensity: 0.8, flicker: 0.3 },
+            },
+          },
+          {
+            id: 'clear-page-0-effect-pack',
+            command: 'clear-page-effect-packs',
+            params: { scene: 'start', page: 0 },
+          },
+        ],
+      }), 'utf8');
+
+      const planResult = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--force',
+        '--result-out',
+        resultPath,
+        '--json',
+      ])).stdout);
+      expect(planResult.operations).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: 'set-page-1-effect-pack',
+          command: 'set-page-effect-pack',
+          changedPaths: ['scenes.start.pages.1.effectPacks'],
+        }),
+        expect.objectContaining({
+          id: 'clear-page-0-effect-pack',
+          command: 'clear-page-effect-packs',
+          changedPaths: ['scenes.start.pages.0.effectPacks'],
+        }),
+      ]));
+      expect(planResult.changeSummary.changedPaths).toEqual([
+        'scenes.start.pages.1.effectPacks',
+        'scenes.start.pages.0.effectPacks',
+      ]);
+
+      const updatedScript = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(updatedScript.scenes.start.pages[0]).not.toHaveProperty('effectPacks');
+      expect(updatedScript.scenes.start.pages[1].effectPacks).toEqual([
+        { id: 'old_film', enabled: true, params: { intensity: 0.8, grain: 0.35, flicker: 0.3 } },
+      ]);
+
+      const authorCheck = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'author-check',
+        '--script',
+        scriptPath,
+        '--transaction',
+        resultPath,
+        '--skip-asset-check',
+        '--write-preview-plan',
+        '--json',
+      ])).stdout);
+      expect(authorCheck.focus.pageTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          sceneId: 'start',
+          pageIndex: 1,
+          reason: 'changed-effect-packs',
+          pathString: 'scenes.start.pages.1.effectPacks',
+        }),
+      ]));
+      expect(authorCheck.effectPackPreviewIssues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          category: 'effect-pack-preview',
+          pathString: 'scenes.start.pages.1.effectPacks',
         }),
       ]));
     });

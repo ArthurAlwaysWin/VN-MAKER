@@ -16,11 +16,12 @@
  * @module scanAssets
  */
 
+import { collectEffectPackAssetPaths } from '../shared/effectPackContract.js';
 import { collectUiImagePaths } from '../shared/uiImageContract.js';
 
 // ─── Path Filter ─────────────────────────────────────────
 
-const ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices']);
+const ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices', 'effects']);
 
 /**
  * Add path to set if it's a valid asset file reference.
@@ -59,6 +60,7 @@ export function scanAssets(script) {
   const chars = new Set();
   const ui = new Set();
   const voices = new Set();
+  const effects = new Set();
 
   // 1. Character expression images
   for (const char of Object.values(script.characters || {})) {
@@ -114,6 +116,9 @@ export function scanAssets(script) {
   }
 
   collectUiImagePaths(script, (value) => _add(ui, value));
+  for (const effectAsset of collectEffectPackAssetPaths(script)) {
+    _add(effects, effectAsset);
+  }
 
   // Convert Sets → sorted arrays for deterministic output
   return {
@@ -123,5 +128,6 @@ export function scanAssets(script) {
     characters: [...chars].sort(),
     ui: [...ui].sort(),
     voices: [...voices].sort(),
+    effects: [...effects].sort(),
   };
 }

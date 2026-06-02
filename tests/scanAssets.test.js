@@ -64,6 +64,18 @@ const fullScript = {
       { family: 'CustomFont', file: 'fonts/custom.ttf' },
       { family: 'AnotherFont', file: 'fonts/another.woff2' },
     ],
+    effectPacks: {
+      'old-film': {
+        id: 'old-film',
+        kind: 'postprocess',
+        version: 1,
+        adapter: 'canvas2d:film-flicker',
+        files: [
+          { path: 'effects/old-film/effect.json', role: 'manifest' },
+          { path: 'effects/old-film/preview.png', role: 'preview' },
+        ],
+      },
+    },
   },
   ui: {
     saveLoadScreen: {
@@ -221,6 +233,10 @@ const expectedFull = {
     'audio/voice01.ogg',
     'audio/voice02.ogg',
   ],
+  effects: [
+    'effects/old-film/effect.json',
+    'effects/old-film/preview.png',
+  ],
   ui: [
     'ui/backlog-bg.png',
     'ui/backlog-header.png',
@@ -272,22 +288,22 @@ const expectedFull = {
 // ─── Tests ───────────────────────────────────────────────
 
 describe('return shape', () => {
-  it('returns an object with exactly 6 keys', () => {
+  it('returns an object with exactly 7 keys', () => {
     const result = scanAssets(fullScript);
     const keys = Object.keys(result).sort();
-    deepStrictEqual(keys, ['audio', 'backgrounds', 'characters', 'fonts', 'ui', 'voices']);
+    deepStrictEqual(keys, ['audio', 'backgrounds', 'characters', 'effects', 'fonts', 'ui', 'voices']);
   });
 
   it('each value is an array', () => {
     const result = scanAssets(fullScript);
-    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui']) {
+    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui', 'effects']) {
       ok(Array.isArray(result[key]), `${key} should be an array`);
     }
   });
 
   it('each array contains only strings', () => {
     const result = scanAssets(fullScript);
-    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui']) {
+    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui', 'effects']) {
       for (const item of result[key]) {
         ok(typeof item === 'string', `${key} item "${item}" should be a string`);
       }
@@ -712,6 +728,7 @@ describe('graceful handling', () => {
       characters: [],
       ui: [],
       voices: [],
+      effects: [],
     });
   });
 
@@ -724,6 +741,7 @@ describe('graceful handling', () => {
       characters: [],
       ui: [],
       voices: [],
+      effects: [],
     });
   });
 
@@ -736,6 +754,7 @@ describe('graceful handling', () => {
       characters: [],
       ui: [],
       voices: [],
+      effects: [],
     });
   });
 
@@ -753,6 +772,7 @@ describe('graceful handling', () => {
       characters: [],
       ui: [],
       voices: [],
+      effects: [],
     });
   });
 });

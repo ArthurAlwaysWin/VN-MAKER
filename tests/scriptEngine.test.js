@@ -564,6 +564,76 @@ describe('unknown cinematic compatibility', () => {
   });
 });
 
+describe('effect pack runtime compatibility', () => {
+  it('emits built-in effect pack playback events for page references', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [
+          {
+            type: 'normal',
+            background: 'bg.png',
+            effectPacks: [{ id: 'old-film', params: { intensity: 0.4 } }],
+            dialogues: [{ speaker: null, text: 'Film grain.' }],
+          },
+        ],
+      },
+    });
+    engine.script.assets = {
+      effectPacks: {
+        'old-film': {
+          id: 'old-film',
+          kind: 'postprocess',
+          version: 1,
+          adapter: 'canvas2d:film-flicker',
+          paramsSchema: {
+            intensity: { type: 'number', minimum: 0, maximum: 1, default: 0.5 },
+          },
+        },
+      },
+    };
+
+    const events = capture(engine, 'set_effect_packs', () => engine.startGame('start'));
+    strictEqual(events.length, 1);
+    strictEqual(events[0].sceneId, 'start');
+    strictEqual(events[0].pageIndex, 0);
+    strictEqual(events[0].effects[0].id, 'old-film');
+    strictEqual(events[0].effects[0].manifest.adapter, 'canvas2d:film-flicker');
+    strictEqual(events[0].effects[0].params.intensity, 0.4);
+  });
+
+  it('clears effect packs when references are missing or adapters are unsupported', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [
+          {
+            type: 'normal',
+            background: 'bg.png',
+            effectPacks: [{ id: 'future' }, { id: 'missing' }],
+            dialogues: [{ speaker: null, text: 'No runtime.' }],
+          },
+        ],
+      },
+    });
+    engine.script.assets = {
+      effectPacks: {
+        future: {
+          id: 'future',
+          kind: 'postprocess',
+          version: 1,
+          adapter: 'project:runtime-js',
+        },
+      },
+    };
+
+    const events = capture(engine, 'clear_effect_packs', () => engine.startGame('start'));
+    strictEqual(events.length, 1);
+    strictEqual(events[0].sceneId, 'start');
+    strictEqual(events[0].pageIndex, 0);
+  });
+});
+
 // ─── getState / restoreState ────────────────────────────────
 
 describe('getState / restoreState', () => {

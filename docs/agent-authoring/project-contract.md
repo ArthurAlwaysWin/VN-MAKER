@@ -313,3 +313,13 @@ Game UI style presets are built-in authoring recipes, not stored project state. 
 Built-in preset ids are `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, and `soft-romance`. Supported scopes are `all`, `dialogue`, `choices`, and `screens`; `screens` covers title plus major screens.
 
 The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears. Title screen preset patches are limited to asset-free text/button `ui.titleScreen.elements`, not BGM, particles, HTML/CSS, or a layout DSL. Preset application returns an `impactSummary` with section labels, changed paths, and whether existing config will be touched; UI and agent flows should present that summary before applying broad visual changes.
+
+## Agent Effect Packs
+
+Milestone 11 shipped a manifest-only + built-in adapter thin slice; see [milestone-11-effect-packs-feasibility-security-audit.md](../milestone-11-effect-packs-feasibility-security-audit.md). Effect-pack project assets are data-only declarations under `assets.effectPacks`, and page references live at `scenes.<sceneId>.pages.<pageIndex>.effectPacks`.
+
+Supported manifest fields include `id`, `kind: "postprocess"`, `version: 1`, `label`, `adapter`, `paramsSchema`, `defaults`, `files`, `performance`, and `capabilities`. Manifest `files[]` entries are objects such as `{ "path": "effects/old_film/preview.png", "role": "preview" }` and must stay inside `effects/<id>/`. The only shipped runtime adapter is `canvas2d:film-flicker`; unknown adapters validate with warnings and do not run.
+
+Agents may use `register-effect-pack`, `list-effect-packs`, `set-page-effect-pack`, and `clear-page-effect-packs`, including through `apply-plan`. Changed page paths route to author-check preview targets and `effect-pack-preview` handoff review items. Export scans the `effects` bucket and copies only manifest-listed referenced files.
+
+Agents must not add project-local `runtime.js` references, arbitrary JavaScript, CSS/HTML snippets, WebGL/shader code, plugin marketplace metadata, generic visual DSL data, or AI chat fields to `script.json`. The runtime boundary remains built-in Canvas 2D adapters only.

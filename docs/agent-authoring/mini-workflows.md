@@ -181,6 +181,17 @@ Use `apply-ui-style-preset` for a no-code visual pass across existing UI section
 
 Use `scope: "dialogue"` for frame/nameplate polish only, `scope: "choices"` for choice buttons only, and `scope: "screens"` for game menu, save/load, backlog, and settings panels. Review the command result `impactSummary.sections` before presenting or applying a broad preset; it lists the normal UI blocks that will be updated.
 
+## Effect Packs
+
+Use effect packs only when a built-in adapter can express the visual as data-only params. Milestone 11 ships the manifest-only `canvas2d:film-flicker` adapter; it does not permit project-local code.
+
+1. Register a data-only manifest with `register-effect-pack` or an apply-plan `register-effect-pack` operation.
+2. Apply it to a normal/choice page with `set-page-effect-pack`.
+3. Run `author-check --transaction --write-preview-plan --json` and review the `effect-pack-preview` item.
+4. Run validation/export readiness before handoff so `effects/<id>/...` files are checked and exported.
+
+Do not add project-local `runtime.js`, arbitrary JavaScript, shaders/WebGL, raw CSS/HTML, plugin metadata, AI chat fields, or generic visual DSL fields. If the desired effect needs new code, implement and test a new built-in app adapter in the repository first.
+
 ## Add A Branch
 
 Branch edits usually need a choice page, one or more target scenes, and optional variable effects.

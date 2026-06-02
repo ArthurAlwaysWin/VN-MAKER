@@ -367,3 +367,44 @@ Configure runtime UI motion using built-in presets. The editor exposes these as 
 | `menus` | `none`, `panel-fade`, `panel-slide`, `sidebar-sweep` |
 
 Style presets are not script fields. The Project Settings preset cards and `apply-ui-style-preset` command write normal editable UI sections such as `ui.theme`, `ui.titleScreen`, `ui.dialogueBox`, `ui.widgetStyles`, major screen config, and `ui.motion`; do not persist `ui.stylePreset`. Preset apply results may include an `impactSummary`, but that is transaction metadata, not project data.
+
+## Agent Effect Packs
+
+Milestone 11 supports manifest-only effect packs with built-in runtime adapters. Effect packs are data-only project declarations under `assets.effectPacks`; page references live on normal or choice pages as `effectPacks`.
+
+```json
+{
+  "assets": {
+    "effectPacks": {
+      "old_film": {
+        "id": "old_film",
+        "label": "Old Film",
+        "kind": "postprocess",
+        "version": 1,
+        "adapter": "canvas2d:film-flicker",
+        "paramsSchema": {
+          "intensity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.45 }
+        },
+        "files": [
+          { "path": "effects/old_film/effect.json", "role": "manifest" },
+          { "path": "effects/old_film/preview.png", "role": "preview" }
+        ]
+      }
+    }
+  },
+  "scenes": {
+    "start": {
+      "pages": [
+        {
+          "type": "normal",
+          "effectPacks": [
+            { "id": "old_film", "enabled": true, "params": { "intensity": 0.5 } }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+The only shipped adapter is `canvas2d:film-flicker`. Manifest file paths must stay inside `effects/<id>/`, and export copies only manifest-listed referenced files. Do not add project-local `runtime.js` references, arbitrary JavaScript, WebGL/shader code, plugin marketplace metadata, raw CSS/HTML, AI chat fields, or a generic visual DSL to `script.json`.

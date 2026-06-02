@@ -2,6 +2,8 @@
 
 For the active visual-polish roadmap, see [../visual-effects-ui-agent-plan.md](../visual-effects-ui-agent-plan.md). For visual polish requests such as "make the game UI look good", use [visual-polish-skill.md](./visual-polish-skill.md). For the completed agent-first systems roadmap, see [../agent-first-vn-systems-plan.md](../agent-first-vn-systems-plan.md). For cross-cutting operation, transaction, diagnostic, preview, handoff, and conflict rules, use [integration-contract.md](./integration-contract.md). For cross-session development details, use [implementation-plan.md](./implementation-plan.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md). For focused edits, use [mini-workflows.md](./mini-workflows.md). For prose-to-VN adaptation, use [novel-adaptation-skill.md](./novel-adaptation-skill.md) and [example-adaptation-preview.md](./example-adaptation-preview.md). For the executable multi-ending example and editor review steps, use [example-plan.json](./example-plan.json) and [human-review-tutorial.md](./human-review-tutorial.md). Existing Phase 83 projects should follow [phase-83-migration.md](./phase-83-migration.md). For asset names that agents can match reliably, use [asset-naming-guidelines.md](./asset-naming-guidelines.md). For screen UI design from a style prompt or reference screenshot, use [screen-ui-skill.md](./screen-ui-skill.md). For plan command parameters, use [command-reference.md](./command-reference.md).
 
+Milestone 11 effect packs are manifest-only; see [../milestone-11-effect-packs-feasibility-security-audit.md](../milestone-11-effect-packs-feasibility-security-audit.md). You may use validated `assets.effectPacks` manifests, page `effectPacks` references, and built-in adapters such as `canvas2d:film-flicker`. Do not add project-local JavaScript, `runtime.js`, shaders/WebGL, raw CSS/HTML, plugin metadata, AI chat fields, or generic visual DSLs to a workflow.
+
 ## 1. Inspect
 
 ```bash
@@ -18,7 +20,7 @@ npm run vn -- list-assets --script public/game/script.json --json
 npm run vn -- list-assets --project "D:/VNProjects/MyStory" --json
 ```
 
-The command is read-only and returns `assets/backgrounds`, `characters`, `audio`, `voices`, `ui`, and `fonts` entries with semantic tokens derived from file names.
+The command is read-only and returns `assets/backgrounds`, `characters`, `audio`, `voices`, `ui`, `fonts`, and `effects` entries with semantic tokens derived from file names.
 
 Use semantic asset names such as `backgrounds/school_gate_rainy.png`, `characters/sakura_nervous.png`, and `ui/game_menu_button_normal.png` so `list-assets` tokens can support honest matching. See `docs/agent-authoring/asset-naming-guidelines.md`.
 

@@ -245,6 +245,63 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('adds effect pack preview review items for changed page effect pack paths', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_effect_packs',
+      characters: {},
+      assets: {
+        effectPacks: {
+          old_film: {
+            id: 'old_film',
+            name: 'Old Film',
+            kind: 'postprocess',
+            adapter: 'canvas2d:film-flicker',
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'normal',
+              effectPacks: [{ id: 'old_film', params: { intensity: 0.4 } }],
+              dialogues: [{ text: 'Film.' }],
+            },
+          ],
+        },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: ['scenes.start.pages.0.effectPacks'],
+        },
+      },
+    });
+
+    expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+      {
+        type: 'scene',
+        kind: 'scene-page',
+        sceneId: 'start',
+        pageIndex: 0,
+        reason: 'changed-effect-packs',
+        pathString: 'scenes.start.pages.0.effectPacks',
+      },
+    ]));
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'preview',
+        category: 'effect-pack-preview',
+        code: 'effect-pack-preview-required',
+        pathString: 'scenes.start.pages.0.effectPacks',
+        sceneId: 'start',
+        pageIndex: 0,
+      }),
+    ]));
+  });
+
   it('includes ending-list preview targets for changed ending registry paths', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_ending_targets',

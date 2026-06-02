@@ -95,6 +95,24 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `invalid-ui-motion-intensity` | `ui.motion.intensity` is not one of `off`, `subtle`, `standard`, or `dramatic`; runtime falls back safely. |
 | `invalid-ui-motion-preset` | One of the `ui.motion` preset fields is unsupported; runtime falls back to the field default. |
 | `noncanonical-ui-style-preset-field` | `ui.stylePreset` was stored as data. Apply presets through `apply-ui-style-preset` so normal editable UI sections are written instead. |
+| `invalid-effect-pack-registry` | `assets.effectPacks` is not an object. |
+| `invalid-effect-pack-manifest` | A data-only effect-pack manifest is malformed or contains blocked executable fields. |
+| `invalid-effect-pack-file-path` | A manifest file path is unsafe or outside `effects/<id>/`. |
+| `unsupported-effect-pack-adapter` | The manifest adapter is not built into the app; validation preserves it but runtime no-ops. |
+| `unsupported-effect-pack-kind` | The manifest kind is unsupported and is treated as `postprocess`. |
+| `effect-pack-id-mismatch` | The registry key and manifest id differ. |
+| `condition-page-effect-packs` | A condition page tried to declare effect packs; condition pages do not render them. |
+| `invalid-page-effect-packs` | A page `effectPacks` field is present but is not an array. |
+| `invalid-page-effect-pack-entry` | A page effect-pack reference is malformed. |
+| `invalid-page-effect-pack-id` | A page effect-pack reference id is not a stable identifier. |
+| `effect-pack-reference-missing` | A page references an effect pack that is not registered in `assets.effectPacks`. |
+| `invalid-effect-pack-params` | A page effect-pack reference contains unsupported params; known params are normalized through the manifest schema. |
+
+## Effect Pack Boundary
+
+Milestone 11 effect packs are manifest-only. Validator support exists for data-only manifests under `assets.effectPacks`, page references under `scenes.*.pages.*.effectPacks`, and path-safe files under `effects/<id>/`.
+
+Do not treat project-local `runtime.js`, arbitrary JavaScript, shader/WebGL code, raw CSS/HTML, plugin metadata, AI chat fields, or generic effect DSL data as supported project data. Unknown adapters may be preserved with a warning, but only built-in allowlisted adapters run.
 
 ## Handoff Checklist
 
@@ -164,6 +182,9 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
 | `gallery-preview` | `systems.gallery.cg` changed and needs review in Story Systems and the runtime gallery. |
 | `branch-graph-preview` | `scenes.*` changed and needs review in the Story Systems branch flow panel. |
+| `particle-preview` | `scenes.*.pages.*.particles` changed and needs visual review in page/runtime preview. |
+| `transition-preview` | `scenes.*.pages.*.transition` changed and needs visual review in page/runtime preview. |
+| `effect-pack-preview` | `scenes.*.pages.*.effectPacks` changed and needs visual review in page/runtime preview. |
 | `reference-screenshot-fidelity` | A plan used a reference screenshot and includes notes about what matched and what still needs human visual comparison. |
 | `layout`, `readiness`, `validation` | Existing structural and quality gates that should be resolved or explicitly accepted before handoff. |
 

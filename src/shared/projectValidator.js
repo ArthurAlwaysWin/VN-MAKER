@@ -20,6 +20,11 @@ import {
   isKnownTransitionType,
 } from './cinematicContract.js';
 import { normalizeEffects } from './effectDsl.js';
+import {
+  isKnownEffectPackAdapter,
+  isValidEffectPackId,
+  validateEffectPackManifest,
+} from './effectPackContract.js';
 import { createBranchGraphReport } from './sceneGraph.js';
 import {
   PARTICLE_FIELD_SCHEMA,
@@ -182,6 +187,64 @@ function validateCharacterAssets(script, report, assetSet) {
       validateAssetReference(report, assetSet, assetPath, ['characters', characterId, 'expressions', expressionId], 'character-expression');
     }
   }
+}
+
+function validateEffectPackRegistry(script, report, assetSet) {
+  const registry = script?.assets?.effectPacks;
+  if (registry === undefined) {
+    return {};
+  }
+
+  if (!isPlainObject(registry)) {
+    addError(report, 'invalid-effect-pack-registry', 'assets.effectPacks must be an object map of manifest-only effect pack declarations.', ['assets', 'effectPacks']);
+    return {};
+  }
+
+  const normalized = {};
+  for (const [effectPackId, manifest] of Object.entries(registry)) {
+    const path = ['assets', 'effectPacks', effectPackId];
+    if (!isPlainObject(manifest)) {
+      addError(report, 'invalid-effect-pack-manifest', 'Effect pack manifest must be an object.', path, {
+        effectPackId,
+      });
+      continue;
+    }
+
+    const result = validateEffectPackManifest({
+      ...manifest,
+      id: manifest.id ?? effectPackId,
+    });
+
+    if (result.manifest && result.manifest.id !== effectPackId) {
+      addWarning(report, 'effect-pack-id-mismatch', `Effect pack key "${effectPackId}" does not match manifest id "${result.manifest.id}".`, [...path, 'id'], {
+        effectPackId,
+        manifestId: result.manifest.id,
+      });
+    }
+
+    for (const error of result.errors) {
+      const code = error.includes('files.') ? 'invalid-effect-pack-file-path' : 'invalid-effect-pack-manifest';
+      addError(report, code, error, path, {
+        effectPackId,
+      });
+    }
+
+    for (const warning of result.warnings) {
+      const code = warning.includes('adapter') ? 'unsupported-effect-pack-adapter' : 'unsupported-effect-pack-kind';
+      addWarning(report, code, warning, path, {
+        effectPackId,
+      });
+    }
+
+    if (result.manifest) {
+      normalized[result.manifest.id] = result.manifest;
+      for (const [fileIndex, file] of (result.manifest.files ?? []).entries()) {
+        validateAssetReference(report, assetSet, file.path, [...path, 'files', fileIndex, 'path'], 'effect-pack');
+      }
+    }
+  }
+
+  return normalized;
 }
 
 function isBooleanLike(value) {
@@ -972,6 +1035,66 @@ function validatePageParticles(page, context, report) {
   }
 }
 
+function validatePageEffectPacks(page, context, report) {
+  if (!Object.hasOwn(page, 'effectPacks') || page.effectPacks === undefined) {
+    return;
+  }
+
+  const pagePath = ['scenes', context.sceneId, 'pages', context.pageIndex];
+  if (page.type === 'condition') {
+    addWarning(report, 'condition-page-effect-packs', 'Condition pages do not render effect packs; remove this hidden effectPacks field.', [...pagePath, 'effectPacks'], {
+      pageType: page.type,
+    });
+    return;
+  }
+
+  if (!Array.isArray(page.effectPacks)) {
+    addWarning(report, 'invalid-page-effect-packs', 'Page effectPacks must be an array; runtime will ignore invalid values.', [...pagePath, 'effectPacks'], {
+      valueType: typeof page.effectPacks,
+    });
+    return;
+  }
+
+  const manifests = context.effectPackManifests ?? {};
+  for (const [effectIndex, entry] of page.effectPacks.entries()) {
+    const entryPath = [...pagePath, 'effectPacks', effectIndex];
+    if (!isPlainObject(entry)) {
+      addWarning(report, 'invalid-page-effect-pack-entry', 'Effect pack references must be objects with id and params.', entryPath, {
+        valueType: typeof entry,
+      });
+      continue;
+    }
+
+    if (!isValidEffectPackId(entry.id)) {
+      addWarning(report, 'invalid-page-effect-pack-id', 'Effect pack reference id must be a stable identifier.', [...entryPath, 'id'], {
+        effectPackId: entry.id ?? null,
+      });
+      continue;
+    }
+
+    const manifest = manifests[entry.id];
+    if (!manifest) {
+      addWarning(report, 'effect-pack-reference-missing', `Effect pack "${entry.id}" is not declared in assets.effectPacks.`, [...entryPath, 'id'], {
+        effectPackId: entry.id,
+      });
+      continue;
+    }
+
+    if (!isKnownEffectPackAdapter(manifest.adapter)) {
+      addWarning(report, 'unsupported-effect-pack-adapter', `Effect pack "${entry.id}" uses unsupported adapter "${manifest.adapter}" and will not run.`, [...entryPath, 'id'], {
+        effectPackId: entry.id,
+        adapter: manifest.adapter,
+      });
+    }
+
+    if (entry.params !== undefined && !isPlainObject(entry.params)) {
+      addWarning(report, 'invalid-effect-pack-params', 'Effect pack params must be an object; runtime will use defaults.', [...entryPath, 'params'], {
+        effectPackId: entry.id,
+      });
+    }
+  }
+}
+
 function validatePage(page, context, report, options) {
   const { sceneId, pageIndex } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
@@ -991,6 +1114,7 @@ function validatePage(page, context, report, options) {
   validatePageCharacters(page, context, report);
   validatePageCinematics(page, context, report);
   validatePageParticles(page, context, report);
+  validatePageEffectPacks(page, context, report);
 
   if (page.type === 'normal') {
     validateNormalPage(page, context, report, options);
@@ -1105,6 +1229,7 @@ export function validateProject(script, options = {}) {
 
   validateCharacterRegistry(script, report);
   validateCharacterAssets(script, report, config.assetSet);
+  const effectPackManifests = validateEffectPackRegistry(script, report, config.assetSet);
   validateUiMotion(script, report);
   validateUiStylePresetField(script, report);
 
@@ -1120,6 +1245,7 @@ export function validateProject(script, options = {}) {
     registry,
     endings,
     cgs,
+    effectPackManifests,
   };
 
   validateScenes(script, context, report, config);

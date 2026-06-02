@@ -50,7 +50,7 @@ These commands are not plan operations. Use them to inspect the project before d
 
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
-| `list-assets` | | `project`, `script`, `json` | Lists files under `assets/backgrounds`, `assets/characters`, `assets/audio`, `assets/voices`, `assets/ui`, and `assets/fonts`. Each entry includes `path`, `name`, `tokens`, `extension`, and `size`. `--script` derives the project path from the script parent folder. |
+| `list-assets` | | `project`, `script`, `json` | Lists files under `assets/backgrounds`, `assets/characters`, `assets/audio`, `assets/voices`, `assets/ui`, `assets/fonts`, and `assets/effects`. Each entry includes `path`, `name`, `tokens`, `extension`, and `size`. `--script` derives the project path from the script parent folder. |
 | `graph-report` | | `script`, `entry`, `mermaid`, `json` | Reports attributed scene edges, repair-ready missing targets, reachability, terminal/dead-end routes, closed cycles, unlock reachability, and Mermaid flowchart text. |
 | `find-dead-ends` | | `script`, `entry`, `json` | Returns missing target edges, terminal routes without an ending resolution, and closed cycles without an exit. |
 | `find-missing-assets` | | `script`, `asset-root`, `json` | Returns referenced assets absent from the checked asset root. |
@@ -287,12 +287,23 @@ Game UI style presets are shared recipes in `src/shared/uiStylePresetContract.js
 
 Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Commands target normal/choice pages only; condition pages do not render or inherit particle state. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
 
+Effect-pack commands normalize through `src/shared/effectPackContract.js`. This is a manifest-only Milestone 11 thin slice: manifests are data-only, files must stay under `effects/<id>/`, and runtime dispatches only to built-in adapters compiled with the app. The only shipped adapter is `canvas2d:film-flicker`. Do not write project-local `runtime.js`, arbitrary JavaScript, shader/WebGL code, raw CSS/HTML, plugin metadata, AI chat fields, or generic effect DSL fields into a plan.
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `list-effect-packs` | | | Direct CLI only. Lists validated `assets.effectPacks` manifests plus built-in adapters. |
+| `register-effect-pack` | `manifest` | | Stores a validated data-only manifest at `assets.effectPacks.<id>`. Direct CLI uses `--manifest-json`; apply-plan uses `params.manifest`. |
+| `set-page-effect-pack` | `sceneId`, `pageIndex`, `effectPackId` | `params`, `enabled` | Writes one canonical page reference at `scenes.<sceneId>.pages.<pageIndex>.effectPacks`. Aliases: `scene`, `page`, `id`, `effect-pack`. |
+| `clear-page-effect-packs` | `sceneId`, `pageIndex` | | Removes page effect-pack references and reports the same changed path. Aliases: `scene`, `page`. |
+
 Direct CLI examples:
 
 ```bash
 npm run vn -- set-page-particles --scene start --page 0 --preset sakura --density 0.45 --speed 0.6 --wind 0.2 --script public/game/script.json --force --json
 npm run vn -- clear-page-particles --scene start --page 4 --script public/game/script.json --force --json
 npm run vn -- inherit-page-particles --scene start --page 5 --script public/game/script.json --force --json
+npm run vn -- register-effect-pack --script public/game/script.json --manifest-json "{\"id\":\"old_film\",\"label\":\"Old Film\",\"kind\":\"postprocess\",\"version\":1,\"adapter\":\"canvas2d:film-flicker\",\"paramsSchema\":{\"intensity\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1,\"default\":0.45}},\"files\":[{\"path\":\"effects/old_film/effect.json\",\"role\":\"manifest\"},{\"path\":\"effects/old_film/preview.png\",\"role\":\"preview\"}]}" --force --json
+npm run vn -- set-page-effect-pack --scene start --page 0 --id old_film --params-json "{\"intensity\":0.5}" --script public/game/script.json --force --json
 ```
 
 Plan manifest examples:
@@ -314,6 +325,40 @@ Plan manifest examples:
 {
   "command": "clear-page-particles",
   "params": { "scene": "start", "page": 4 }
+}
+```
+
+```json
+{
+  "command": "register-effect-pack",
+  "params": {
+    "manifest": {
+      "id": "old_film",
+      "label": "Old Film",
+      "kind": "postprocess",
+      "version": 1,
+      "adapter": "canvas2d:film-flicker",
+      "paramsSchema": {
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.45 }
+      },
+      "files": [
+        { "path": "effects/old_film/effect.json", "role": "manifest" },
+        { "path": "effects/old_film/preview.png", "role": "preview" }
+      ]
+    }
+  }
+}
+```
+
+```json
+{
+  "command": "set-page-effect-pack",
+  "params": {
+    "scene": "start",
+    "page": 0,
+    "effectPackId": "old_film",
+    "params": { "intensity": 0.5 }
+  }
 }
 ```
 

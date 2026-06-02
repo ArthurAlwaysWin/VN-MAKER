@@ -7,6 +7,11 @@ import {
 import { normalizePageParticles } from '../shared/particleContract.js';
 import { normalizeUiMotion } from '../shared/uiMotionContract.js';
 import {
+  listEffectPackManifests,
+  normalizeEffectPackReference,
+  validateEffectPackManifest,
+} from '../shared/effectPackContract.js';
+import {
   applyUiStylePresetToScript,
   listUiStylePresets,
 } from '../shared/uiStylePresetContract.js';
@@ -425,6 +430,10 @@ function normalizePageTransitionInput(transition) {
 
 function pageParticlesPath(sceneId, pageIndex) {
   return `scenes.${sceneId}.pages.${pageIndex}.particles`;
+}
+
+function pageEffectPacksPath(sceneId, pageIndex) {
+  return `scenes.${sceneId}.pages.${pageIndex}.effectPacks`;
 }
 
 function uiMotionPath() {
@@ -1235,6 +1244,70 @@ export function createProjectSession(input = {}) {
         pageIndex,
         transition: cloneJsonValue(page.transition),
         changedPaths: [`scenes.${sceneId}.pages.${pageIndex}.transition`],
+      };
+    },
+
+    registerEffectPack({ manifest } = {}) {
+      const result = validateEffectPackManifest(manifest);
+      if (!result.ok) {
+        throw new Error(`Invalid effect pack manifest: ${result.errors.join('; ')}`);
+      }
+      script.assets ??= {};
+      script.assets.effectPacks ??= {};
+      script.assets.effectPacks[result.manifest.id] = result.manifest;
+      return {
+        ok: true,
+        effectPackId: result.manifest.id,
+        pathString: `assets.effectPacks.${result.manifest.id}`,
+        manifest: cloneJsonValue(result.manifest),
+        changedPaths: [`assets.effectPacks.${result.manifest.id}`],
+      };
+    },
+
+    listEffectPacks() {
+      return listEffectPackManifests(script);
+    },
+
+    setPageEffectPack({ sceneId, pageIndex, effectPackId, id, params = {}, enabled = true } = {}) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type === 'condition') {
+        throw new Error('Effect packs can only be edited on normal or choice pages');
+      }
+      const targetId = assertNonEmptyString(effectPackId ?? id, 'effectPackId');
+      const manifests = script.assets?.effectPacks ?? {};
+      const reference = normalizeEffectPackReference({
+        id: targetId,
+        enabled,
+        params,
+      }, manifests);
+      if (!reference) {
+        throw new Error('effect pack reference must include a valid id');
+      }
+      page.effectPacks = [reference];
+      return {
+        ok: true,
+        sceneId,
+        pageIndex,
+        effectPackId: targetId,
+        pathString: pageEffectPacksPath(sceneId, pageIndex),
+        effectPacks: cloneJsonValue(page.effectPacks),
+        changedPaths: [pageEffectPacksPath(sceneId, pageIndex)],
+      };
+    },
+
+    clearPageEffectPacks({ sceneId, pageIndex } = {}) {
+      const page = getPage(script, sceneId, pageIndex);
+      if (page.type === 'condition') {
+        throw new Error('Effect packs can only be edited on normal or choice pages');
+      }
+      delete page.effectPacks;
+      return {
+        ok: true,
+        sceneId,
+        pageIndex,
+        pathString: pageEffectPacksPath(sceneId, pageIndex),
+        effectPacks: undefined,
+        changedPaths: [pageEffectPacksPath(sceneId, pageIndex)],
       };
     },
 

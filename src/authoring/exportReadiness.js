@@ -68,7 +68,7 @@ function isAssetLikePath(assetPath) {
   const normalized = assetPath.replace(/\\/g, '/');
   if (!normalized || normalized.endsWith('/')) return false;
   if (normalized === 'script.json' || normalized.endsWith('.json')) return false;
-  return /^(backgrounds|characters|audio|fonts|ui|voices)\//.test(normalized);
+  return /^(backgrounds|characters|audio|fonts|ui|voices|effects)\//.test(normalized);
 }
 
 function createReferencedAssetSet(assets) {

@@ -2,6 +2,7 @@ import { createExportReadiness } from './exportReadiness.js';
 import { lintProjectLayout } from './layoutLint.js';
 import { createProjectReport } from './projectReport.js';
 import { collectSceneReferenceDiagnostics } from './sceneReferenceDiagnostics.js';
+import { collectEffectPackAssetPaths } from '../shared/effectPackContract.js';
 
 function summarizeCheckpoint(entry = {}) {
   return {
@@ -82,6 +83,19 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
         sceneId: transitionMatch[1],
         pageIndex: Number(transitionMatch[2]),
         reason: 'changed-transition',
+        pathString: String(changedPath),
+      });
+      continue;
+    }
+
+    const effectPackMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.effectPacks$/.exec(String(changedPath));
+    if (effectPackMatch) {
+      targets.push({
+        type: 'scene',
+        kind: 'scene-page',
+        sceneId: effectPackMatch[1],
+        pageIndex: Number(effectPackMatch[2]),
+        reason: 'changed-effect-packs',
         pathString: String(changedPath),
       });
       continue;
@@ -467,7 +481,29 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
-  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems, ...particleItems, ...transitionItems];
+  const effectPackItems = previewTargets
+    .filter((target) => target?.reason === 'changed-effect-packs')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'effect-pack-preview',
+      code: 'effect-pack-preview-required',
+      pathString: target.pathString ?? `scenes.${target.sceneId}.pages.${target.pageIndex}.effectPacks`,
+      message: `Effect packs changed on scene "${target.sceneId}" page ${target.pageIndex} and need visual review in preview.`,
+      sceneId: target.sceneId,
+      pageIndex: target.pageIndex,
+      suggestedAction: {
+        summary: 'Open the edited page in Page Editor or runtime preview and inspect the built-in effect-pack adapter output before marking this resolved.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    }));
+
+  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems, ...particleItems, ...transitionItems, ...effectPackItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {
@@ -554,7 +590,7 @@ function isReviewableAssetPath(assetPath) {
   const normalized = normalizeAssetPath(assetPath);
   if (!normalized) return false;
   if (/^(https?:|data:|asset:|file:|blob:)/i.test(normalized)) return false;
-  return /^(backgrounds|characters|audio|fonts|ui|voices)\//.test(normalized);
+  return /^(backgrounds|characters|audio|fonts|ui|voices|effects)\//.test(normalized);
 }
 
 const PLACEHOLDER_ASSET_TOKENS = new Set([
@@ -643,6 +679,10 @@ function collectReferencedAssetEntries(script = {}) {
 
   for (const [fontIndex, font] of (script.assets?.fonts ?? []).entries()) {
     add(font?.file, ['assets', 'fonts', fontIndex, 'file'], 'font');
+  }
+
+  for (const assetPath of collectEffectPackAssetPaths(script)) {
+    add(assetPath, ['assets', 'effectPacks'], 'effect-pack');
   }
 
   for (const [cgId, cg] of Object.entries(script.systems?.gallery?.cg ?? {})) {

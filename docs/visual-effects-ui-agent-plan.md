@@ -1269,6 +1269,8 @@ Acceptance completed:
 
 ## Milestone 11: Agent Advanced Effect Packs
 
+Status: completed on 2026-06-02 as a manifest-only + built-in adapter thin slice. The feasibility/security audit is documented in `docs/milestone-11-effect-packs-feasibility-security-audit.md`, and the shipped slice keeps project assets data-only: no project-local JavaScript, WebGL/shader code, plugin marketplace scope, rich effect DSL, or AI chat shipped in this milestone.
+
 Purpose: allow agents to implement higher-ceiling effects with code while preserving safety and no-code human UX.
 
 This is intentionally later than built-in particles/transitions. Do not implement it first.
@@ -1279,14 +1281,13 @@ Human no-code UX should not cap agent capability. Agents may be able to create p
 
 However, arbitrary project-local JS is risky. It can hurt export, security, determinism, and editor preservation.
 
-### 11.2 Proposed Safe Shape
+### 11.2 Safe Shipped Shape
 
-Effect packs should be project assets with manifest, not raw script fields:
+Effect packs are project asset declarations with manifests, not raw script fields or executable project code. Manifests may describe effect assets and choose an allowlisted built-in runtime adapter, but project-local `runtime.js` is still blocked unless a future dedicated sandbox milestone ships.
 
 ```text
-assets/effects/my-effect/
+effects/my-effect/
   effect.json
-  runtime.js
   preview.png
 ```
 
@@ -1295,13 +1296,17 @@ Manifest:
 ```json
 {
   "id": "old-film-flicker",
-  "kind": "particle",
+  "kind": "postprocess",
   "label": "旧胶片闪烁",
   "version": 1,
-  "entry": "runtime.js",
+  "adapter": "canvas2d:film-flicker",
   "paramsSchema": {
     "intensity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 }
   },
+  "files": [
+    { "path": "effects/old-film-flicker/effect.json", "role": "manifest" },
+    { "path": "effects/old-film-flicker/preview.png", "role": "preview" }
+  ],
   "performance": {
     "maxParticles": 0,
     "usesCanvas": true,
@@ -1316,18 +1321,22 @@ Rules:
 - No filesystem.
 - No `eval`.
 - No arbitrary DOM outside the provided canvas/container.
-- Runtime receives a narrow API object.
-- Export copies effect pack files.
-- Validator checks manifest.
-- Editor shows it as a named preset with parameters.
+- Runtime receives a narrow API object and dispatches only to built-in allowlisted adapters.
+- Export copies only manifest-listed, referenced, path-safe effect pack files through the explicit `effects` export bucket.
+- Validator checks manifest, adapter id, parameter schema, capabilities, page references, and file paths before agent writes are accepted.
+- The shipped runtime adapter is `canvas2d:film-flicker`, implemented in-app through Canvas 2D only.
+- CLI/apply-plan support is limited to `list-effect-packs`, `register-effect-pack`, `set-page-effect-pack`, and `clear-page-effect-packs`.
+- Editor controls remain future work; authoring is contract/CLI-first.
 
-This milestone requires a dedicated security/design review before implementation.
+This milestone completed the dedicated security/design review and the lowest-risk implementation path: manifest-only declarations plus one built-in adapter. Any future project-local code execution remains deferred to a separate sandbox milestone.
 
-Recommended next direction after Milestone 10:
+Audit outcome:
 
-1. Keep Milestone 8 closed at the shipped two-id procedural canvas-mask path unless a future milestone opens a separate visual QA and design pass.
-2. Prefer a small Milestone 10 hardening pass only if visual QA finds concrete polish gaps in the shipped preset recipes.
-3. Start Milestone 11 design discovery only as a security-reviewed manifest/runtime proposal, not as arbitrary project-local JavaScript.
+1. Current particles, transitions, cinematic fields, choice effects, validation, preview, handoff, and export already use narrow shared contracts rather than arbitrary code.
+2. Reusable manifest/preset/catalog patterns exist in `transitionCatalog`, `particleContract`, `uiStylePresetContract`, and theme package manifest validation.
+3. The effect-pack contract keeps project assets data-only and uses stable ids plus normalized parameters.
+4. Runtime API must remain canvas/container-bound and must prohibit network, filesystem, `eval`, arbitrary DOM, WebGL/shaders, plugin marketplace scope, generic DSLs, and AI chat.
+5. Preview/apply-plan/handoff/validation/export now use exact changed paths, diagnostics, review items, and the `effects` asset bucket for the manifest-only thin slice.
 
 ## Required Documentation Updates Per Milestone
 
@@ -1394,11 +1403,11 @@ Use this checklist for each feature:
 5. Milestone 8: Canvas-mask transitions.
 6. Milestone 9: Configurable UI motion.
 7. Milestone 10: Game UI style presets.
-8. Milestone 11: Agent advanced effect packs.
+8. Milestone 11: Agent advanced effect packs manifest-only + built-in adapter thin slice.
 
 Reasoning:
 
 - UI polish gives immediate game-feel improvement with low schema risk.
 - Particles are the largest atmosphere win and need a new contract.
 - CSS transitions reuse the existing transition system and are safer than canvas-mask work.
-- Agent advanced effect packs should wait until built-in effects establish the safety and preview pattern.
+- Agent advanced effect packs should remain manifest/security reviewed, and any expansion beyond built-in adapters needs a separate sandbox milestone.

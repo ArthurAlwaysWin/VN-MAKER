@@ -289,6 +289,15 @@ body {
   pointer-events: none;
 }
 
+#effect-pack-canvas,
+.effect-pack-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+}
+
 #dialogue-layer {
   position: absolute;
   inset: 0;

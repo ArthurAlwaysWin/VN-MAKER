@@ -22,6 +22,8 @@
  *   'choice'          — { prompt, options }
  *   'set_particles'   — { config, sceneId, pageIndex }
  *   'stop_particles'  — { sceneId, pageIndex }
+ *   'set_effect_packs' — { effects, sceneId, pageIndex }
+ *   'clear_effect_packs' — { sceneId, pageIndex }
  *   'end'             — {}
  *   'scene_enter'     — { sceneId, sceneName }
  *   'page_enter'      — { sceneId, pageIndex, page }
@@ -40,6 +42,7 @@ import {
   getRuntimeTransitionType,
 } from '../shared/cinematicContract.js';
 import { applyEffects } from '../shared/effectDsl.js';
+import { resolvePageEffectPacks } from '../shared/effectPackContract.js';
 import { resolveEffectivePageParticles } from '../shared/particleContract.js';
 import {
   mergeRuntimeVariables,
@@ -357,6 +360,20 @@ export class ScriptEngine extends EventEmitter {
       });
     } else {
       this.emit('stop_particles', {
+        sceneId: this.currentScene,
+        pageIndex: this.pageIndex,
+      });
+    }
+
+    const effectPacks = resolvePageEffectPacks(this.script, page);
+    if (effectPacks.length > 0) {
+      this.emit('set_effect_packs', {
+        effects: effectPacks,
+        sceneId: this.currentScene,
+        pageIndex: this.pageIndex,
+      });
+    } else {
+      this.emit('clear_effect_packs', {
         sceneId: this.currentScene,
         pageIndex: this.pageIndex,
       });

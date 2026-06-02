@@ -7,6 +7,18 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackgroundLayer } from '../src/ui/BackgroundLayer.js';
 
+function mockCanvasContext() {
+  const context = {
+    scale: vi.fn(),
+    clearRect: vi.fn(),
+    fillRect: vi.fn(),
+    beginPath: vi.fn(),
+    arc: vi.fn(),
+    stroke: vi.fn(),
+  };
+  return vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
+}
+
 function makeLayer() {
   document.body.innerHTML = '<div id="background-layer"></div>';
   const container = document.getElementById('background-layer');
@@ -21,6 +33,7 @@ describe('background layer transitions', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('plays the locked transition set on the existing dual-layer owner and returns a completion promise', async () => {
@@ -177,5 +190,79 @@ describe('background layer transitions', () => {
 
     vi.advanceTimersByTime(401);
     await completion;
+  });
+
+  it('routes canvas-mask transitions through a procedural canvas helper and cleans resources', async () => {
+    mockCanvasContext();
+    const background = makeLayer();
+
+    await background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'fade',
+      duration: 0,
+    });
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-b.png',
+      transition: 'noise-dissolve',
+      duration: 120,
+    });
+
+    expect(background.container.querySelector('.transition-mask-canvas')).not.toBeNull();
+    expect(background.container.querySelector('.bg-transition-noise-dissolve')).toBeNull();
+
+    vi.advanceTimersByTime(180);
+    await completion;
+
+    expect(background.container.querySelector('.transition-mask-canvas')).toBeNull();
+    expect(background.layerA.classList.contains('active') || background.layerB.classList.contains('active')).toBe(true);
+  });
+
+  it('falls back canvas-mask transitions to their catalog fallback when canvas is unavailable', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    const background = makeLayer();
+
+    await background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'fade',
+      duration: 0,
+    });
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-b.png',
+      transition: 'noise-dissolve',
+      duration: 120,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(background.container.querySelector('.bg-transition-dissolve')).not.toBeNull();
+
+    vi.advanceTimersByTime(121);
+    await completion;
+  });
+
+  it('cancels an active canvas-mask transition before starting the next transition', async () => {
+    mockCanvasContext();
+    const background = makeLayer();
+
+    const first = background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'ripple',
+      duration: 500,
+    });
+    expect(background.container.querySelectorAll('.transition-mask-canvas').length).toBe(1);
+
+    const second = background.setBackground({
+      image: 'backgrounds/scene-b.png',
+      transition: 'dissolve',
+      duration: 120,
+    });
+
+    expect(background.container.querySelectorAll('.transition-mask-canvas').length).toBe(0);
+    expect(background.container.querySelector('.bg-transition-dissolve')).not.toBeNull();
+
+    vi.advanceTimersByTime(121);
+    await Promise.all([first, second]);
   });
 });

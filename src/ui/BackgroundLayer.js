@@ -4,9 +4,11 @@
 import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   clampNumericTransitionParam,
+  getTransitionCatalogEntry,
   listTransitionCatalog,
 } from '../shared/transitionCatalog.js';
 import { getRuntimeTransitionType } from '../shared/cinematicContract.js';
+import { runCanvasMaskTransition } from './TransitionMask.js';
 
 const BACKGROUND_TRANSITION_CLASS_NAMES = Object.freeze(
   listTransitionCatalog({ target: 'background', supportedOnly: true })
@@ -37,6 +39,7 @@ export class BackgroundLayer {
     this._transitionTimer = null;
     this._transitionToken = 0;
     this._pendingResolve = null;
+    this._canvasMaskAbortController = null;
   }
 
   /**
@@ -50,6 +53,7 @@ export class BackgroundLayer {
     const imageUrl = `url(${this.basePath}${safeImagePath})`;
     const duration = clampNumericTransitionParam(data.duration, BACKGROUND_TRANSITION_DURATION_SCHEMA);
     const transition = this._normalizeTransition(data.transition);
+    const transitionEntry = getTransitionCatalogEntry('background', transition);
     const previewVariant = data.previewVariant === 'same-page' ? 'same-page' : null;
     const token = ++this._transitionToken;
 
@@ -73,6 +77,24 @@ export class BackgroundLayer {
       return Promise.resolve();
     }
 
+    this._activeLayer = this._activeLayer === 'A' ? 'B' : 'A';
+
+    if (transitionEntry?.renderMode === 'canvas-mask') {
+      return this._playCanvasMaskTransition({
+        incoming,
+        outgoing,
+        transition,
+        fallbackTransition: this._normalizeTransition(transitionEntry.fallbackId),
+        duration,
+        token,
+        previewVariant,
+      });
+    }
+
+    return this._playCssTransition({ incoming, outgoing, transition, duration, token, previewVariant });
+  }
+
+  _playCssTransition({ incoming, outgoing, transition, duration, token, previewVariant }) {
     if (transition !== 'fade') {
       incoming.classList.add(`bg-transition-${transition}`);
       outgoing.classList.add(`bg-transition-${transition}-out`);
@@ -86,8 +108,6 @@ export class BackgroundLayer {
 
     incoming.classList.add('active');
     outgoing.classList.remove('active');
-
-    this._activeLayer = this._activeLayer === 'A' ? 'B' : 'A';
 
     return new Promise((resolve) => {
       this._pendingResolve = resolve;
@@ -106,6 +126,50 @@ export class BackgroundLayer {
         this._pendingResolve = null;
         resolve();
       }, duration);
+    });
+  }
+
+  _playCanvasMaskTransition({ incoming, outgoing, transition, fallbackTransition, duration, token, previewVariant }) {
+    return new Promise((resolve) => {
+      this._pendingResolve = resolve;
+      this._canvasMaskAbortController = new AbortController();
+      runCanvasMaskTransition({
+        incoming,
+        outgoing,
+        type: transition,
+        duration,
+        signal: this._canvasMaskAbortController.signal,
+      }).then(() => {
+        if (token !== this._transitionToken) {
+          resolve();
+          return;
+        }
+        this._clearLayerState(incoming);
+        this._clearLayerState(outgoing);
+        incoming.classList.add('active');
+        outgoing.classList.remove('active');
+        outgoing.style.backgroundImage = '';
+        this._canvasMaskAbortController = null;
+        this._pendingResolve = null;
+        resolve();
+      }).catch(() => {
+        if (token !== this._transitionToken) {
+          resolve();
+          return;
+        }
+        this._canvasMaskAbortController = null;
+        this._pendingResolve = null;
+        this._clearLayerState(incoming);
+        this._clearLayerState(outgoing);
+        this._playCssTransition({
+          incoming,
+          outgoing,
+          transition: fallbackTransition || 'fade',
+          duration,
+          token,
+          previewVariant,
+        }).then(resolve);
+      });
     });
   }
 
@@ -128,9 +192,14 @@ export class BackgroundLayer {
   }
 
   _cancelActiveTransition() {
+    this._transitionToken += 1;
     if (this._transitionTimer) {
       clearTimeout(this._transitionTimer);
       this._transitionTimer = null;
+    }
+    if (this._canvasMaskAbortController) {
+      this._canvasMaskAbortController.abort();
+      this._canvasMaskAbortController = null;
     }
     if (this._pendingResolve) {
       const resolve = this._pendingResolve;

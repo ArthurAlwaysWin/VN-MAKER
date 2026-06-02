@@ -202,6 +202,49 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('adds transition preview review items for changed page transition paths', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_transitions',
+      characters: {},
+      scenes: {
+        start: {
+          pages: [
+            { type: 'normal', transition: { type: 'noise-dissolve', duration: 900 }, dialogues: [{ text: 'Cut.' }] },
+          ],
+        },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: ['scenes.start.pages.0.transition'],
+        },
+      },
+    });
+
+    expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+      {
+        type: 'scene',
+        kind: 'scene-page',
+        sceneId: 'start',
+        pageIndex: 0,
+        reason: 'changed-transition',
+        pathString: 'scenes.start.pages.0.transition',
+      },
+    ]));
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'preview',
+        category: 'transition-preview',
+        code: 'transition-preview-required',
+        pathString: 'scenes.start.pages.0.transition',
+        sceneId: 'start',
+        pageIndex: 0,
+      }),
+    ]));
+  });
+
   it('includes ending-list preview targets for changed ending registry paths', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_ending_targets',

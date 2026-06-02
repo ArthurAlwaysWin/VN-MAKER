@@ -54,11 +54,13 @@ describe('UI style preset contract', () => {
     const dialogue = buildUiStylePresetPatch('soft-romance', { scope: 'dialogue' });
     expect(dialogue.changedPaths).toEqual(['ui.theme', 'ui.dialogueBox', 'ui.motion']);
     expect(dialogue.patch.dialogueBox).toBeTypeOf('object');
+    expect(dialogue.patch.titleScreen).toBeUndefined();
     expect(dialogue.patch.widgetStyles).toBeUndefined();
     expect(dialogue.patch.motion).toEqual({ dialogue: 'soft-pop' });
 
     expect(getUiStylePresetChangedPaths('screens')).toEqual([
       'ui.theme',
+      'ui.titleScreen',
       'ui.widgetStyles',
       'ui.gameMenu',
       'ui.saveLoadScreen',
@@ -71,6 +73,7 @@ describe('UI style preset contract', () => {
       '选项与控件',
       '界面动效',
     ]);
+    expect(buildUiStylePresetPatch('dark-cinema', { scope: 'screens' }).patch.titleScreen.elements).toHaveLength(6);
   });
 
   it('summarizes preset impact before applying normal UI sections', () => {
@@ -103,6 +106,7 @@ describe('UI style preset contract', () => {
 
     expect(result.changedPaths).toEqual([
       'ui.theme',
+      'ui.titleScreen',
       'ui.dialogueBox',
       'ui.widgetStyles',
       'ui.gameMenu',
@@ -114,6 +118,16 @@ describe('UI style preset contract', () => {
     expect(result.impactSummary.sections.map((section) => section.path)).toEqual(result.changedPaths);
     expect(result.script.ui.stylePreset).toBeUndefined();
     expect(result.script.ui.theme.tokens.primary).toBe('rgba(182, 74, 85, 0.88)');
+    expect(result.script.ui.titleScreen.elements.map((element) => element.type)).toEqual([
+      'text',
+      'text',
+      'button',
+      'button',
+      'button',
+      'button',
+    ]);
+    expect(result.script.ui.titleScreen.elements.some((element) => element.type === 'image')).toBe(false);
+    expect(result.script.ui.titleScreen.particles).toBeUndefined();
     expect(result.script.ui.dialogueBox.nameplateStyle).toBe('inline');
     expect(result.script.ui.widgetStyles.button).toBeTypeOf('object');
     expect(result.script.ui.saveLoadScreen.background).toBe('rgba(15, 16, 19, 0.92)');
@@ -124,6 +138,36 @@ describe('UI style preset contract', () => {
       intensity: 'dramatic',
       choices: 'suspense-delay',
     });
+  });
+
+  it('keeps title screen recipes asset-free and repeatable', () => {
+    for (const preset of BUILTIN_UI_STYLE_PRESETS) {
+      const titleScreen = preset.recipe.titleScreen;
+      expect(titleScreen.background).toBeUndefined();
+      expect(titleScreen.bgm).toBeUndefined();
+      expect(titleScreen.particles).toBeUndefined();
+      expect(titleScreen.elements).toHaveLength(6);
+      expect(titleScreen.elements.filter((element) => element.type === 'button').map((button) => button.action)).toEqual([
+        'start',
+        'continue',
+        'gallery',
+        'settings',
+      ]);
+      expect(titleScreen.elements.some((element) => element.src)).toBe(false);
+    }
+
+    const once = applyUiStylePresetToScript(baseScript(), {
+      presetId: 'classic-adv',
+      scope: 'all',
+    });
+    const twice = applyUiStylePresetToScript(once.script, {
+      presetId: 'classic-adv',
+      scope: 'all',
+    });
+
+    expect(twice.script.ui.stylePreset).toBeUndefined();
+    expect(twice.script.ui.titleScreen.elements).toHaveLength(6);
+    expect(twice.script.ui.titleScreen.particles).toBeUndefined();
   });
 
   it('can apply a thin choice-only slice without replacing screen config', () => {

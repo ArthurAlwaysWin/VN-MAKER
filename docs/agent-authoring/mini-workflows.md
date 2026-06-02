@@ -161,7 +161,7 @@ Use `set-ui-motion` for title, dialogue, choice, and menu motion presets. This w
 
 ## Apply UI Style Preset
 
-Use `apply-ui-style-preset` for a no-code visual pass across existing UI sections. Presets are recipes: they do not persist `ui.stylePreset`, and the resulting theme, widget, screen, dialogue, and motion config stays editable.
+Use `apply-ui-style-preset` for a no-code visual pass across existing UI sections. Presets are recipes: they do not persist `ui.stylePreset`, and the resulting theme, title screen, widget, screen, dialogue, and motion config stays editable. Title screen preset patches are asset-free text/button elements only.
 
 ```json
 {

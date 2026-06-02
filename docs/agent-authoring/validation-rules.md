@@ -88,7 +88,7 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `ending-unlock-unreachable` | An ending has unlock effects, but all of them are on unreachable scenes. |
 | `cg-unlock-unreachable` | A CG has unlock effects, but all of them are on unreachable scenes. |
 | `unknown-camera-effect` | Page camera effect is preserved but ignored at runtime. |
-| `unknown-transition-type` | Page transition type is not in the completed M5 runtime catalog; it is preserved but falls back to a declared compatible id when available, otherwise `fade`. |
+| `unknown-transition-type` | Page transition type is not in the shared runtime catalog; it is preserved but falls back to a declared compatible id when available, otherwise `fade`. |
 | `unknown-character-animation` | Character animation is preserved but ignored at runtime. |
 | `invalid-transition-param` | Cinematic duration, intensity, or direction is outside the shared catalog contract and will be clamped or safely defaulted at runtime. |
 | `invalid-ui-motion-config` | `ui.motion` is not an object; runtime uses default motion presets. |
@@ -160,7 +160,7 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `asset-check` | Handoff did not run with known assets, so missing files may not have been detected. |
 | `placeholder-asset` | A referenced asset path appears to be a placeholder, such as `placeholder`, `todo`, or `dummy`. Replace it with final art/audio or explicitly accept it. |
 | `ambiguous-asset` | A referenced asset path has a generic filename such as `bg01.png`, `img02.png`, or `button.png`, which may confuse future agent matching. |
-| `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. `ui.motion` and all-scope UI style presets create targets for all major screens. |
+| `screen-ui-preview` | A supported screen UI path changed and needs visual review in Project Settings preview targets. `ui.motion` and broad UI style preset scopes create targets for title and major screens. |
 | `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
 | `gallery-preview` | `systems.gallery.cg` changed and needs review in Story Systems and the runtime gallery. |
 | `branch-graph-preview` | `scenes.*` changed and needs review in the Story Systems branch flow panel. |

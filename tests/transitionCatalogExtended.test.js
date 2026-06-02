@@ -30,6 +30,11 @@ const M7_BACKGROUND_TRANSITIONS = [
   ['pixelate-lite', 'stylized', 'css'],
 ];
 
+const M8_CANVAS_MASK_TRANSITIONS = [
+  ['noise-dissolve', 'canvas-mask', 'canvas-mask', 'dissolve'],
+  ['ripple', 'canvas-mask', 'canvas-mask', 'crossfade-pan'],
+];
+
 describe('extended transition catalog', () => {
   it('lists every Milestone 7 CSS transition with metadata', () => {
     const ids = listTransitionCatalog({ target: 'background', supportedOnly: true }).map(entry => entry.id);
@@ -49,8 +54,25 @@ describe('extended transition catalog', () => {
 
   it('exposes the new ids to editor transition options', () => {
     const optionIds = getTransitionUiOptions().map(option => option.value);
-    for (const [id] of M7_BACKGROUND_TRANSITIONS) {
+    for (const [id] of [...M7_BACKGROUND_TRANSITIONS, ...M8_CANVAS_MASK_TRANSITIONS]) {
       expect(optionIds).toContain(id);
+    }
+  });
+
+  it('lists the Milestone 8 canvas-mask thin slice with safe fallbacks', () => {
+    const ids = listTransitionCatalog({ target: 'background', supportedOnly: true }).map(entry => entry.id);
+    for (const [id, category, renderMode, fallbackId] of M8_CANVAS_MASK_TRANSITIONS) {
+      expect(ids).toContain(id);
+      expect(getTransitionCatalogEntry('background', id)).toMatchObject({
+        id,
+        category,
+        renderMode,
+        fallbackId,
+        runtimeSupported: true,
+        editorSupported: true,
+      });
+      expect(isKnownTransitionType(id)).toBe(true);
+      expect(getRuntimeTransitionType(id)).toBe(id);
     }
   });
 

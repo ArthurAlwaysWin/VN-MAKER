@@ -354,7 +354,7 @@ const uiStyleScopeLabels = {
   all: '全部 UI',
   dialogue: '仅对话框',
   choices: '仅选项',
-  screens: '仅主要界面',
+  screens: '标题与主要界面',
 };
 
 function canNavigateAgentPath(pathString) {

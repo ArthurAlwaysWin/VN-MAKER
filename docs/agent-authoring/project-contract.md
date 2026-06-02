@@ -301,6 +301,7 @@ Use `set-ui-motion` or the no-code Project Settings controls. Do not write CSS, 
 Game UI style presets are built-in authoring recipes, not stored project state. Do not add `ui.stylePreset` to a script. Agents use `list-ui-style-presets` to inspect the catalog and `apply-ui-style-preset` to write normal editable sections:
 
 - `ui.theme`
+- `ui.titleScreen`
 - `ui.dialogueBox`
 - `ui.widgetStyles`
 - `ui.gameMenu`
@@ -309,6 +310,6 @@ Game UI style presets are built-in authoring recipes, not stored project state. 
 - `ui.settingsScreen`
 - `ui.motion`
 
-Built-in preset ids are `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, and `soft-romance`. Supported scopes are `all`, `dialogue`, `choices`, and `screens`.
+Built-in preset ids are `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, and `soft-romance`. Supported scopes are `all`, `dialogue`, `choices`, and `screens`; `screens` covers title plus major screens.
 
-The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears. Preset application returns an `impactSummary` with section labels, changed paths, and whether existing config will be touched; UI and agent flows should present that summary before applying broad visual changes.
+The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears. Title screen preset patches are limited to asset-free text/button `ui.titleScreen.elements`, not BGM, particles, HTML/CSS, or a layout DSL. Preset application returns an `impactSummary` with section labels, changed paths, and whether existing config will be touched; UI and agent flows should present that summary before applying broad visual changes.

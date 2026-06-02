@@ -51,6 +51,7 @@ describe('UI style preset contract-first flow', () => {
       scope: 'screens',
       changedPaths: [
         'ui.theme',
+        'ui.titleScreen',
         'ui.widgetStyles',
         'ui.gameMenu',
         'ui.saveLoadScreen',
@@ -65,6 +66,7 @@ describe('UI style preset contract-first flow', () => {
     });
     expect(result.impactSummary.sections.map((section) => section.label)).toEqual([
       '主题令牌',
+      '标题界面',
       '选项与控件',
       '游戏菜单',
       '存读档界面',
@@ -73,6 +75,10 @@ describe('UI style preset contract-first flow', () => {
       '界面动效',
     ]);
     expect(session.toJSON().ui.stylePreset).toBeUndefined();
+    expect(session.toJSON().ui.titleScreen.elements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'button', action: 'start' }),
+      expect.objectContaining({ type: 'button', action: 'settings' }),
+    ]));
     expect(session.toJSON().ui.gameMenu.background).toBe('rgba(0, 0, 0, 0.78)');
     expect(session.toJSON().ui.motion.menus).toBe('panel-fade');
   });
@@ -103,6 +109,7 @@ describe('UI style preset contract-first flow', () => {
         changeSummary: {
           changedPaths: [
             'ui.theme',
+            'ui.titleScreen',
             'ui.dialogueBox',
             'ui.widgetStyles',
             'ui.gameMenu',
@@ -116,11 +123,11 @@ describe('UI style preset contract-first flow', () => {
     });
 
     expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'screen', screenId: 'titleScreen' }),
       expect.objectContaining({ type: 'screen', screenId: 'settingsScreen' }),
       expect.objectContaining({ type: 'screen', screenId: 'gameMenu' }),
       expect.objectContaining({ type: 'screen', screenId: 'saveLoadScreen' }),
       expect.objectContaining({ type: 'screen', screenId: 'backlogScreen' }),
-      expect.objectContaining({ type: 'screen', screenId: 'titleScreen', reason: 'changed-ui-motion' }),
     ]));
     expect(handoff.reviewItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -215,7 +222,9 @@ describe('UI style preset contract-first flow', () => {
     expect(source).not.toContain('textarea v-model="uiStyle');
 
     const mainSource = await readFile(path.resolve('src/main.js'), 'utf8');
+    expect(mainSource).toContain('titleScreen.setLayout(engine.script.ui?.titleScreen)');
     expect(mainSource).toContain('choiceMenu.setWidgetStyles(engine.script.ui?.widgetStyles)');
     expect(mainSource).toContain('choiceMenu.setWidgetStyles(msg.widgetStyles)');
+    expect(mainSource).toContain("case 'titleScreen': titleScreen.show(false); break;");
   });
 });

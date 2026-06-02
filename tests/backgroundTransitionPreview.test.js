@@ -19,6 +19,7 @@ describe('background transition preview', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('keeps same-page transition preview visible with preview-only classes even when the background image does not change', async () => {
@@ -77,6 +78,38 @@ describe('background transition preview', () => {
     expect(previewIn?.classList.contains('bg-transition-glitch-lite')).toBe(true);
 
     vi.advanceTimersByTime(361);
+    await completion;
+  });
+
+  it('previews canvas-mask transition ids on the same page without CSS fallback classes', async () => {
+    const context = {
+      scale: vi.fn(),
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      beginPath: vi.fn(),
+      arc: vi.fn(),
+      stroke: vi.fn(),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
+    const background = makeLayer();
+
+    await background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'fade',
+      duration: 0,
+    });
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'ripple',
+      duration: 160,
+      previewVariant: 'same-page',
+    });
+
+    expect(background.container.querySelector('.transition-mask-canvas')).not.toBeNull();
+    expect(background.container.querySelector('.bg-transition-crossfade-pan')).toBeNull();
+
+    vi.advanceTimersByTime(220);
     await completion;
   });
 

@@ -11,10 +11,12 @@ export const UI_STYLE_PRESET_CATEGORIES = Object.freeze([
 
 export const UI_STYLE_PRESET_SCOPES = Object.freeze(['all', 'dialogue', 'choices', 'screens']);
 
-const SCREEN_KEYS = Object.freeze(['settingsScreen', 'gameMenu', 'saveLoadScreen', 'backlogScreen']);
+const MAJOR_SCREEN_KEYS = Object.freeze(['settingsScreen', 'gameMenu', 'saveLoadScreen', 'backlogScreen']);
+const SCREEN_KEYS = Object.freeze(['titleScreen', ...MAJOR_SCREEN_KEYS]);
 
 export const UI_STYLE_PRESET_IMPACT_SECTIONS = Object.freeze([
   Object.freeze({ key: 'theme', path: 'ui.theme', label: '主题令牌', area: 'theme' }),
+  Object.freeze({ key: 'titleScreen', path: 'ui.titleScreen', label: '标题界面', area: 'screens' }),
   Object.freeze({ key: 'dialogueBox', path: 'ui.dialogueBox', label: '对话框', area: 'dialogue' }),
   Object.freeze({ key: 'widgetStyles', path: 'ui.widgetStyles', label: '选项与控件', area: 'widgets' }),
   Object.freeze({ key: 'gameMenu', path: 'ui.gameMenu', label: '游戏菜单', area: 'screens' }),
@@ -27,8 +29,8 @@ export const UI_STYLE_PRESET_IMPACT_SECTIONS = Object.freeze([
 const IMPACT_SECTION_KEYS_BY_SCOPE = Object.freeze({
   dialogue: Object.freeze(['theme', 'dialogueBox', 'motion']),
   choices: Object.freeze(['theme', 'widgetStyles', 'motion']),
-  screens: Object.freeze(['theme', 'widgetStyles', 'gameMenu', 'saveLoadScreen', 'backlogScreen', 'settingsScreen', 'motion']),
-  all: Object.freeze(['theme', 'dialogueBox', 'widgetStyles', 'gameMenu', 'saveLoadScreen', 'backlogScreen', 'settingsScreen', 'motion']),
+  screens: Object.freeze(['theme', 'titleScreen', 'widgetStyles', 'gameMenu', 'saveLoadScreen', 'backlogScreen', 'settingsScreen', 'motion']),
+  all: Object.freeze(['theme', 'titleScreen', 'dialogueBox', 'widgetStyles', 'gameMenu', 'saveLoadScreen', 'backlogScreen', 'settingsScreen', 'motion']),
 });
 
 function cloneJsonValue(value) {
@@ -89,6 +91,62 @@ function createPreset({
   });
 }
 
+function createTitleScreenRecipe({
+  subtitle,
+  titleColor,
+  subtitleColor,
+  buttonColor,
+  buttonBackground,
+  buttonHoverBackground,
+  buttonBorder,
+  titleShadow,
+  buttonRadius,
+}) {
+  const buttonBase = {
+    type: 'button',
+    anchor: 'center',
+    width: 264,
+    height: 44,
+    fontSize: 16,
+    color: buttonColor,
+    backgroundColor: buttonBackground,
+    hoverColor: buttonHoverBackground,
+    border: buttonBorder,
+    borderRadius: buttonRadius,
+  };
+
+  return {
+    elements: [
+      {
+        type: 'text',
+        id: 'preset-title',
+        anchor: 'center',
+        x: 640,
+        y: 190,
+        fontSize: 58,
+        color: titleColor,
+        letterSpacing: 6,
+        textShadow: titleShadow,
+      },
+      {
+        type: 'text',
+        id: 'preset-subtitle',
+        anchor: 'center',
+        x: 640,
+        y: 252,
+        content: subtitle,
+        fontSize: 15,
+        color: subtitleColor,
+        letterSpacing: 2,
+      },
+      { ...buttonBase, id: 'preset-start', text: '开 始 游 戏', action: 'start', x: 640, y: 366 },
+      { ...buttonBase, id: 'preset-continue', text: '继 续 游 戏', action: 'continue', x: 640, y: 420 },
+      { ...buttonBase, id: 'preset-gallery', text: 'CG 鉴 赏', action: 'gallery', x: 640, y: 474 },
+      { ...buttonBase, id: 'preset-settings', text: '设 定', action: 'settings', x: 640, y: 528 },
+    ],
+  };
+}
+
 export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
   createPreset({
     id: 'classic-adv',
@@ -126,6 +184,17 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         border: '1px solid rgba(185, 196, 218, 0.20)',
         shadow: '0 16px 40px rgba(4, 7, 11, 0.34)',
       },
+      titleScreen: createTitleScreenRecipe({
+        subtitle: 'CLASSIC ADV SYSTEM',
+        titleColor: 'rgba(250, 252, 255, 0.96)',
+        subtitleColor: 'rgba(188, 198, 217, 0.64)',
+        buttonColor: 'rgba(239, 243, 249, 0.88)',
+        buttonBackground: 'rgba(92, 105, 128, 0.42)',
+        buttonHoverBackground: 'rgba(124, 142, 171, 0.72)',
+        buttonBorder: '1px solid rgba(185, 196, 218, 0.28)',
+        titleShadow: '0 0 34px rgba(185, 196, 218, 0.24), 0 2px 8px rgba(0, 0, 0, 0.42)',
+        buttonRadius: 8,
+      }),
       widgetStyles: {
         tab: { activeColor: 'rgba(133, 147, 173, 0.94)', inactiveColor: 'rgba(185, 196, 218, 0.16)' },
         panel: { background: 'rgba(17, 22, 30, 0.90)', borderRadius: 8, border: '1px solid rgba(185, 196, 218, 0.20)' },
@@ -167,6 +236,17 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         },
       },
       dialogueBox: { layout: 'lower-third', nameplateStyle: 'floating', background: 'rgba(15, 28, 42, 0.80)', border: '1px solid rgba(132, 202, 255, 0.22)' },
+      titleScreen: createTitleScreenRecipe({
+        subtitle: 'CLEAR SCHOOL GLASS',
+        titleColor: 'rgba(246, 251, 255, 0.98)',
+        subtitleColor: 'rgba(132, 202, 255, 0.70)',
+        buttonColor: 'rgba(236, 246, 255, 0.92)',
+        buttonBackground: 'rgba(39, 94, 148, 0.38)',
+        buttonHoverBackground: 'rgba(74, 143, 217, 0.64)',
+        buttonBorder: '1px solid rgba(132, 202, 255, 0.30)',
+        titleShadow: '0 0 38px rgba(132, 202, 255, 0.28), 0 2px 8px rgba(0, 0, 0, 0.30)',
+        buttonRadius: 10,
+      }),
       widgetStyles: {
         tab: { activeColor: 'rgba(92, 176, 247, 0.86)', inactiveColor: 'rgba(132, 202, 255, 0.16)' },
         panel: { background: 'rgba(14, 26, 38, 0.62)', borderRadius: 10, backdropBlur: 16 },
@@ -208,6 +288,17 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         },
       },
       dialogueBox: { layout: 'lower-third', nameplateStyle: 'inline', background: 'rgba(6, 7, 9, 0.94)', border: '1px solid rgba(216, 192, 106, 0.18)' },
+      titleScreen: createTitleScreenRecipe({
+        subtitle: 'DARK CINEMA CUT',
+        titleColor: 'rgba(255, 249, 230, 0.96)',
+        subtitleColor: 'rgba(216, 192, 106, 0.58)',
+        buttonColor: 'rgba(240, 236, 226, 0.86)',
+        buttonBackground: 'rgba(40, 40, 42, 0.50)',
+        buttonHoverBackground: 'rgba(82, 75, 48, 0.68)',
+        buttonBorder: '1px solid rgba(216, 192, 106, 0.24)',
+        titleShadow: '0 0 28px rgba(216, 192, 106, 0.18), 0 2px 10px rgba(0, 0, 0, 0.60)',
+        buttonRadius: 4,
+      }),
       widgetStyles: {
         tab: { activeColor: 'rgba(216, 192, 106, 0.78)', inactiveColor: 'rgba(255, 255, 255, 0.08)' },
         panel: { background: 'rgba(9, 10, 13, 0.90)', borderRadius: 4, border: '1px solid rgba(216, 192, 106, 0.16)' },
@@ -249,6 +340,17 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         },
       },
       dialogueBox: { layout: 'lower-third', nameplateStyle: 'inline', background: 'rgba(10, 11, 13, 0.94)', border: '1px solid rgba(182, 74, 85, 0.20)' },
+      titleScreen: createTitleScreenRecipe({
+        subtitle: 'NOIR CASE FILE',
+        titleColor: 'rgba(248, 248, 246, 0.95)',
+        subtitleColor: 'rgba(182, 74, 85, 0.66)',
+        buttonColor: 'rgba(234, 235, 236, 0.86)',
+        buttonBackground: 'rgba(48, 42, 45, 0.48)',
+        buttonHoverBackground: 'rgba(94, 48, 54, 0.66)',
+        buttonBorder: '1px solid rgba(182, 74, 85, 0.26)',
+        titleShadow: '0 0 26px rgba(182, 74, 85, 0.22), 0 2px 10px rgba(0, 0, 0, 0.62)',
+        buttonRadius: 4,
+      }),
       widgetStyles: {
         tab: { activeColor: 'rgba(182, 74, 85, 0.82)', inactiveColor: 'rgba(154, 160, 168, 0.10)' },
         panel: { background: 'rgba(15, 16, 19, 0.92)', borderRadius: 4, border: '1px solid rgba(182, 74, 85, 0.18)' },
@@ -290,6 +392,17 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         },
       },
       dialogueBox: { layout: 'lower-third', nameplateStyle: 'banner', background: 'rgba(4, 18, 24, 0.90)', border: '1px solid rgba(56, 240, 208, 0.24)' },
+      titleScreen: createTitleScreenRecipe({
+        subtitle: 'HUD INTERFACE ONLINE',
+        titleColor: 'rgba(240, 255, 252, 0.98)',
+        subtitleColor: 'rgba(56, 240, 208, 0.72)',
+        buttonColor: 'rgba(226, 252, 248, 0.90)',
+        buttonBackground: 'rgba(20, 82, 96, 0.42)',
+        buttonHoverBackground: 'rgba(36, 128, 144, 0.68)',
+        buttonBorder: '1px solid rgba(56, 240, 208, 0.30)',
+        titleShadow: '0 0 34px rgba(56, 240, 208, 0.26), 0 0 8px rgba(91, 140, 255, 0.22)',
+        buttonRadius: 4,
+      }),
       widgetStyles: {
         tab: { activeColor: 'rgba(56, 240, 208, 0.82)', inactiveColor: 'rgba(91, 140, 255, 0.12)' },
         panel: { background: 'rgba(5, 22, 30, 0.86)', borderRadius: 4, border: '1px solid rgba(56, 240, 208, 0.20)' },
@@ -331,6 +444,17 @@ export const BUILTIN_UI_STYLE_PRESETS = Object.freeze([
         },
       },
       dialogueBox: { layout: 'lower-third', nameplateStyle: 'floating', background: 'rgba(39, 28, 36, 0.88)', border: '1px solid rgba(233, 169, 190, 0.22)' },
+      titleScreen: createTitleScreenRecipe({
+        subtitle: 'SOFT ROMANCE DAYS',
+        titleColor: 'rgba(255, 247, 250, 0.98)',
+        subtitleColor: 'rgba(233, 169, 190, 0.70)',
+        buttonColor: 'rgba(255, 241, 246, 0.90)',
+        buttonBackground: 'rgba(116, 72, 90, 0.42)',
+        buttonHoverBackground: 'rgba(164, 96, 122, 0.64)',
+        buttonBorder: '1px solid rgba(233, 169, 190, 0.28)',
+        titleShadow: '0 0 38px rgba(233, 169, 190, 0.24), 0 2px 10px rgba(70, 32, 48, 0.36)',
+        buttonRadius: 10,
+      }),
       widgetStyles: {
         tab: { activeColor: 'rgba(233, 169, 190, 0.86)', inactiveColor: 'rgba(142, 199, 180, 0.12)' },
         panel: { background: 'rgba(42, 31, 39, 0.82)', borderRadius: 10, backdropBlur: 14 },
@@ -445,9 +569,10 @@ export function applyUiStylePresetToScript(script, { presetId, scope = 'all', me
   const { patch } = built;
 
   setUiSection(nextScript.ui, 'theme', patch.theme, merge);
+  setUiSection(nextScript.ui, 'titleScreen', patch.titleScreen, merge);
   setUiSection(nextScript.ui, 'dialogueBox', patch.dialogueBox, merge);
   setUiSection(nextScript.ui, 'widgetStyles', patch.widgetStyles, merge);
-  for (const key of SCREEN_KEYS) {
+  for (const key of MAJOR_SCREEN_KEYS) {
     setUiSection(nextScript.ui, key, patch[key], merge);
   }
   if (patch.motion) {

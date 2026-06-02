@@ -230,13 +230,15 @@ The exact config shape must match the current command reference and existing UI 
 | User says | Command |
 | --- | --- |
 | "这一页到下一页淡入淡出" | `set-page-transition --type fade` |
-| "切到下一幕时闪白" | `set-page-transition --type flash` or planned `fade-white` |
+| "切到下一幕时闪白" | `set-page-transition --type flash` or `fade-white` |
 | "黑场转过去" | `set-page-transition --type fade-black` |
 | "慢一点转场" | increase duration, usually `900..1400` ms |
 | "不要转场" | `set-page-transition --type none --duration 0` |
 | "百叶窗打开" | `set-page-transition --type blinds-h` or `blinds-v` |
 | "从中心展开" | `set-page-transition --type circle-open` or `diamond` |
 | "有点故障感" | `set-page-transition --type glitch-lite` |
+| "噪点溶解过去" | `set-page-transition --type noise-dissolve` |
+| "像水波一样切换" | `set-page-transition --type ripple` |
 
 ### Particles / Atmosphere
 

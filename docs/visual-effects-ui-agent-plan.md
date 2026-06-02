@@ -967,9 +967,21 @@ npm run test:vitest -- tests/transitionCatalogExtended.test.js tests/backgroundL
 
 ## Milestone 8: Canvas-Mask Transition Add-On
 
+Status: thin slice implemented on 2026-06-02 after feasibility audit. The shipped scope is contract-first and intentionally small: two built-in procedural canvas-mask transition ids (`noise-dissolve`, `ripple`) reuse the existing page `transition.type` field, transition catalog, Page Inspector dropdown, direct CLI/apply-plan page transition commands, validation, preview, and handoff path routing. No user-uploaded mask assets, WebGL/shaders, plugins, arbitrary JavaScript, or effect/layout DSL were added.
+
 Purpose: add a small number of high-impact transitions that CSS cannot express well.
 
 Do this only after Milestone 7 is stable.
+
+Feasibility audit:
+
+- Current runtime uses `ScriptEngine._renderPage()` page visual events, `main.js` transition gating, and `BackgroundLayer` dual background layers with promise-based completion.
+- The transition contract is already extensible through `src/shared/transitionCatalog.js` metadata (`category`, `renderMode`, `fallbackId`) and `src/shared/cinematicContract.js` normalization.
+- A low-risk canvas-mask slice can reuse `scenes.<sceneId>.pages.<pageIndex>.transition` without adding schema fields or export assets.
+- Skip remains safe because main runtime already converts background transitions to `duration: 0` and `transition: "cut"` during skip; reduced motion is handled by the canvas helper resolving immediately.
+- Cancellation is feasible through `BackgroundLayer._cancelActiveTransition()` with an `AbortController`; `clear()`, replacement transitions, replay, title return, preview stop, and load flows already call the background owner cleanup path.
+- Preview/apply-plan/handoff/validation stay consistent because changed paths remain `*.transition`; handoff now emits explicit `transition-preview` review items for these changes.
+- Risky expansions remain blocked: uploaded masks, asset pipeline changes, WebGL/shaders, plugin/runtime packs, arbitrary JS, and a generic effect DSL.
 
 ### 8.1 Add TransitionMask
 
@@ -993,7 +1005,7 @@ Supported ids:
 
 - `noise-dissolve`
 - `ripple`
-- `burn`
+- `burn` remains deferred until the two-id runtime path has more visual QA.
 
 Performance rules:
 
@@ -1012,7 +1024,7 @@ Add:
 | --- | --- | --- | --- | --- |
 | `noise-dissolve` | 噪点溶解 | canvas-mask | canvas-mask | `dissolve` |
 | `ripple` | 水波纹 | canvas-mask | canvas-mask | `crossfade-pan` |
-| `burn` | 燃烧 | canvas-mask | canvas-mask | `fade-white` |
+| `burn` | 燃烧 | canvas-mask | canvas-mask | `fade-white` (deferred) |
 
 ### 8.3 BackgroundLayer Integration
 
@@ -1033,6 +1045,13 @@ Tests:
 - Canvas-mask ids route to `TransitionMask`.
 - Failure falls back.
 - Cancellation does not leave stale styles.
+
+Acceptance for thin slice:
+
+```bash
+npm run test:vitest -- tests/transitionCatalogExtended.test.js tests/backgroundLayerTransitions.test.js tests/backgroundTransitionPreview.test.js tests/agentHandoff.test.js
+npm run test:vitest -- tests/vnAuthorCli.test.js
+```
 
 ## Milestone 9: Configurable Runtime UI Motion
 
@@ -1132,7 +1151,7 @@ Preview target:
 
 ## Milestone 10: Game UI Style Presets
 
-Status: in progress after the 2026-06-01 thin slice. The first pass added a shared preset contract, no-code Project Settings preview/apply cards, `list-ui-style-presets`, `apply-ui-style-preset`, apply-plan support, a validation warning for noncanonical `ui.stylePreset`, preview/handoff path routing through normal UI sections, and focused tests/docs. The next pass adds shared impact-summary metadata, CLI/session result reporting, and Project Settings confirmation before updating existing UI config. Asset-backed title-screen recipes remain deferred.
+Status: completed on 2026-06-02. The implementation follows the contract-first order: shared preset contract, runtime consumption through existing UI sections, authoring session methods, direct CLI/apply-plan commands, validation warning for noncanonical `ui.stylePreset`, no-code Project Settings cards, preview/handoff routing, focused tests, and documentation.
 
 Purpose: make complete games feel designed, not assembled.
 
@@ -1166,7 +1185,7 @@ Do not make presets opaque. Applying a preset should write normal existing confi
 
 Implemented thin slice:
 
-- applies only canonical `ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen config, and `ui.motion`;
+- applies only canonical `ui.theme`, `ui.titleScreen`, `ui.dialogueBox`, `ui.widgetStyles`, major screen config, and `ui.motion`;
 - keeps recipes asset-free for export safety;
 - warns on noncanonical `ui.stylePreset` instead of treating it as project state.
 
@@ -1177,11 +1196,13 @@ Implemented follow-up:
 - Project Settings shows the affected editable UI blocks for the selected scope before applying a card;
 - style preset recipes now use runtime-supported nameplate and major-screen fields only;
 - choice-scope presets route explicit `ui.widgetStyles.button` values into `ChoiceMenu` without applying unrelated widget defaults.
+- title-screen recipes now write only existing editable `ui.titleScreen.elements` text/button fields; they do not reference images, BGM, particles, CSS, HTML, or new layout DSL;
+- all/screen-scope preset application includes `ui.titleScreen` in changed paths, impact summary, preview targets, and handoff review.
 
 Title-screen recipe assessment:
 
-- Low-risk contract-first path: extend the shared preset recipe with normal `ui.titleScreen` patches, add `ui.titleScreen` to changed paths/impact summary, route preview/handoff to `titleScreen`, then expose no-code Project Settings copy.
-- Do not add asset-backed title-screen recipes yet. They need asset scanning/export readiness, validation, and review routing before they are safe.
+- Completed low-risk contract-first path: shared recipes patch only normal `ui.titleScreen.elements`, runtime consumes them through existing `TitleScreen.setLayout()`, and preview/handoff already route `ui.titleScreen` to the title screen target.
+- Do not add asset-backed title-screen recipes yet. They need curated assets, asset scanning/export readiness, validation, and visual review routing before they are safe.
 - Continue not storing the selected preset as `ui.stylePreset`.
 
 ### 10.2 Human UX
@@ -1191,7 +1212,7 @@ Add:
 - preview cards;
 - "apply to current project";
 - "apply only dialogue/choices";
-- "apply only major screens";
+- "apply only title and major screens";
 - impact summary before replacing existing UI config.
 
 Implemented thin slice:
@@ -1199,17 +1220,19 @@ Implemented thin slice:
 - Project Settings cards list all built-in presets;
 - preview posts a preset-applied script snapshot into the existing iframe preview;
 - apply uses the editor store undo stack and marks the project dirty;
-- scopes cover all UI, dialogue, choices, and major screens.
+- scopes cover all UI, dialogue, choices, and title plus major screens.
 
 Implemented follow-up:
 
 - selected scope shows the affected editable UI sections;
 - cards warn when existing UI config will be updated;
 - applying a preset asks for confirmation when existing config is present.
+- `screens` scope now means title plus major screens; `dialogue` and `choices` scopes remain narrow and do not write title screen data.
 
 Deferred:
 
 - richer custom modal copy for replace-mode/bulk operations beyond the current shared impact summary.
+- asset-backed title art, title BGM presets, title particles, complex layout DSL, and generated thumbnail previews.
 
 ### 10.3 Agent UX
 
@@ -1227,6 +1250,16 @@ Natural-language examples:
 | "Make the UI feel like a suspense movie." | Apply `suspense-noir`, then tune `ui.motion`. |
 | "Use a clean school romance style." | Apply `glass-school` or `soft-romance`. |
 | "Make choices feel more like dramatic branching cards." | Apply choice-only preset or widget style patch. |
+
+Acceptance completed:
+
+- every preset scope reports changed paths, impact summary, and apply result through the shared contract;
+- preset application never persists `ui.stylePreset` and repeated application does not create invalid fields;
+- runtime wiring consumes all preset-written fields through `TitleScreen`, `DialogueBox`, `ChoiceMenu`, major screen classes, theme helpers, and `ui.motion`;
+- Project Settings preview uses the same shared apply path as actual application;
+- validation, preview targets, handoff review items, docs, and focused tests agree on the canonical paths.
+- visual QA completed for all six presets through the Project Settings-style iframe preview path across title, dialogue, choices, settings, game menu, save/load, and backlog surfaces with no text overflow, out-of-bounds controls, or significant overlaps.
+- short release note/changelog added in `docs/milestone-10-ui-style-presets-release-note.md`.
 
 ## Milestone 11: Agent Advanced Effect Packs
 
@@ -1283,6 +1316,12 @@ Rules:
 - Editor shows it as a named preset with parameters.
 
 This milestone requires a dedicated security/design review before implementation.
+
+Recommended next direction after Milestone 10:
+
+1. Keep Milestone 8 limited to the shipped two-id procedural canvas-mask path until visual QA proves cancellation/fallback/performance are stable.
+2. Prefer a small Milestone 10 hardening pass only if visual QA finds concrete polish gaps in the shipped preset recipes.
+3. Start Milestone 11 design discovery only as a security-reviewed manifest/runtime proposal, not as arbitrary project-local JavaScript.
 
 ## Required Documentation Updates Per Milestone
 

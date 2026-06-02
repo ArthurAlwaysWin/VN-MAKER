@@ -74,6 +74,19 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
       continue;
     }
 
+    const transitionMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.transition$/.exec(String(changedPath));
+    if (transitionMatch) {
+      targets.push({
+        type: 'scene',
+        kind: 'scene-page',
+        sceneId: transitionMatch[1],
+        pageIndex: Number(transitionMatch[2]),
+        reason: 'changed-transition',
+        pathString: String(changedPath),
+      });
+      continue;
+    }
+
     const scenePageMatch = /^scenes\.([^.]+)\.pages\.(\d+)/.exec(String(changedPath));
     if (scenePageMatch) {
       targets.push({
@@ -432,7 +445,29 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
-  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems, ...particleItems];
+  const transitionItems = previewTargets
+    .filter((target) => target?.reason === 'changed-transition')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'transition-preview',
+      code: 'transition-preview-required',
+      pathString: target.pathString ?? `scenes.${target.sceneId}.pages.${target.pageIndex}.transition`,
+      message: `Page transition changed on scene "${target.sceneId}" page ${target.pageIndex} and needs visual review in preview.`,
+      sceneId: target.sceneId,
+      pageIndex: target.pageIndex,
+      suggestedAction: {
+        summary: 'Open the edited page in Page Editor and run the transition preview before marking this resolved.',
+        commands: [
+          {
+            command: 'author-check',
+            args: ['--script', '<script.json>', '--transaction', '<apply-result.json>', '--write-preview-plan', '--json'],
+          },
+        ],
+      },
+    }));
+
+  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems, ...particleItems, ...transitionItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {

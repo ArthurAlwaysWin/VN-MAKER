@@ -326,6 +326,14 @@ body {
   opacity: 1;
 }
 
+.transition-mask-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
 .bg-image-layer.bg-transition-dissolve {
   animation: bg-transition-dissolve-in var(--bg-transition-duration, 800ms) ease-out;
 }

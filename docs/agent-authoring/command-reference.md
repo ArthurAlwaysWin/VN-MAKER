@@ -171,7 +171,7 @@ Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report
 | `set-character-animation` | `sceneId`, `pageIndex`, `characterId` | `animation` | `animation` defaults to `none`. Aliases: `scene`, `page`, `character`. |
 | `set-character-transition` | `sceneId`, `pageIndex`, `characterId` | `transition` | Catalog-oriented compatibility alias for `set-character-animation`; writes canonical `animation`. Aliases: `scene`, `page`, `character`, `animation`, `id`. |
 
-`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. The background catalog includes fades, slides, directional wipes, zoom, flash, iris, crossfade-pan, CSS-only shape/curtain transitions such as `diamond`, `circle-open`, `blinds-h`, `fade-black`, `fade-white`, `glitch-lite`, and `pixelate-lite`; the character catalog includes `pop`, `scale-in`, and `blur-in`; camera effects include `vignette` and `letterbox`. All are exposed by the same shared catalog and editor controls. Use `list-transitions --supported-only` before writing effects; unknown future ids remain safe through runtime fallback or no-op behavior.
+`set-page-transition` and `set-page-transitions` clamp background transition duration to `0..5000` ms. The background catalog includes fades, slides, directional wipes, zoom, flash, iris, crossfade-pan, CSS-only shape/curtain transitions such as `diamond`, `circle-open`, `blinds-h`, `fade-black`, `fade-white`, `glitch-lite`, and `pixelate-lite`, plus the procedural canvas-mask thin-slice ids `noise-dissolve` and `ripple`; the character catalog includes `pop`, `scale-in`, and `blur-in`; camera effects include `vignette` and `letterbox`. All are exposed by the same shared catalog and editor controls. Use `list-transitions --supported-only` before writing effects; unknown future ids remain safe through runtime fallback or no-op behavior.
 
 Example bounded bulk operation:
 
@@ -281,7 +281,7 @@ These commands edit shared editor-owned UI sections as structured JSON objects. 
 
 Configurable runtime UI motion is stored under `ui.motion` and normalized by `src/shared/uiMotionContract.js`. Human editors use dropdowns only; agents use `set-ui-motion`. The changed path is always `ui.motion`, and handoff routes it to all major screen previews.
 
-Game UI style presets are shared recipes in `src/shared/uiStylePresetContract.js`. They do not create an opaque `ui.stylePreset` field. `apply-ui-style-preset` writes normal editable sections (`ui.theme`, `ui.dialogueBox`, `ui.widgetStyles`, major screen configs, and `ui.motion`) according to the selected scope. Results include `impactSummary.sections`, so agents and the Project Settings UI can show which editable UI blocks will be updated before committing.
+Game UI style presets are shared recipes in `src/shared/uiStylePresetContract.js`. They do not create an opaque `ui.stylePreset` field. `apply-ui-style-preset` writes normal editable sections (`ui.theme`, `ui.titleScreen`, `ui.dialogueBox`, `ui.widgetStyles`, major screen configs, and `ui.motion`) according to the selected scope. Title recipe patches are asset-free text/button `ui.titleScreen.elements` only. Results include `impactSummary.sections`, so agents and the Project Settings UI can show which editable UI blocks will be updated before committing.
 
 Page particle commands normalize through `src/shared/particleContract.js`. Built-in presets are `sakura`, `snow`, `rain`, `firefly`, `dust`, `sparkle`, `leaves`, and `bubbles`; unknown preset ids warn in validation and fall back at runtime. Commands target normal/choice pages only; condition pages do not render or inherit particle state. Changed particle paths are routed to `author-check` preview targets and handoff `particle-preview` review items.
 
@@ -331,7 +331,7 @@ Natural-language mapping:
 | `set-widget-styles` | `config` | `merge` | Sets `ui.widgetStyles`, including reusable widget visual config. |
 | `set-ui-motion` | none | `intensity`, `title`, `dialogue`, `choices`, `menus`, `config`, `merge` | Sets canonical `ui.motion`. Values are dropdown-style preset ids, not CSS. |
 | `list-ui-style-presets` | none | none | Lists built-in no-code UI style presets and scopes. |
-| `apply-ui-style-preset` | `preset` | `scope`, `merge` | Applies `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, or `soft-romance` by writing normal UI config sections. Scopes: `all`, `dialogue`, `choices`, `screens`. JSON output includes an impact summary with paths and labels. |
+| `apply-ui-style-preset` | `preset` | `scope`, `merge` | Applies `classic-adv`, `glass-school`, `dark-cinema`, `suspense-noir`, `sci-fi-hud`, or `soft-romance` by writing normal UI config sections. Scopes: `all`, `dialogue`, `choices`, `screens`; `screens` covers title plus major screens. JSON output includes an impact summary with paths and labels. |
 
 Direct CLI examples:
 

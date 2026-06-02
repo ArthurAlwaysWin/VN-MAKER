@@ -12,7 +12,7 @@ import {
 } from '../src/shared/transitionCatalog.js';
 
 describe('transition catalog', () => {
-  it('exposes the completed M5 cinematic surfaces to agents', () => {
+  it('exposes the shared cinematic surfaces to agents', () => {
     const supportedBackground = listTransitionCatalog({ target: 'background', supportedOnly: true });
     expect(supportedBackground.map((entry) => entry.id)).toEqual([
       'fade',
@@ -48,6 +48,8 @@ describe('transition catalog', () => {
       'fade-black',
       'glitch-lite',
       'pixelate-lite',
+      'noise-dissolve',
+      'ripple',
     ]);
     expect(getTransitionUiOptions().map((entry) => entry.value)).toEqual(
       supportedBackground.map((entry) => entry.id),
@@ -67,6 +69,7 @@ describe('transition catalog', () => {
     expect(getRuntimeTransitionType('zoom-in')).toBe('zoom-in');
     expect(getRuntimeTransitionType('crossfade-pan')).toBe('crossfade-pan');
     expect(getRuntimeTransitionType('fade-black')).toBe('fade-black');
+    expect(getRuntimeTransitionType('noise-dissolve')).toBe('noise-dissolve');
     expect(getTransitionCatalogEntry('character', 'pop')).toMatchObject({
       runtimeSupported: true,
       editorSupported: true,

@@ -63,6 +63,7 @@ function isInsidePath(fullPath, basePath) {
  * @param {boolean} [options._skipBuild] - Skip Vite build (testing)
  * @param {string} [options._appRoot] - Override APP_ROOT (testing)
  * @param {boolean} [options._skipPackager] - Skip @electron/packager (testing)
+ * @param {string} [options._electronRuntimeDir] - Override Electron runtime source (packaged editor)
  * @param {Function} sendProgress - Callback: ({ step: string, percent: number }) => void
  * @returns {Promise<{success: boolean, outputPath: string, zipPath: string|null, warnings: string[]}>}
  */
@@ -70,7 +71,7 @@ export async function exportDesktop(options, sendProgress) {
   const {
     projectPath, outputDir, gameTitle, iconPath, zip,
     gameWidth = 1280, gameHeight = 720,
-    _skipBuild, _appRoot, _skipPackager,
+    _skipBuild, _appRoot, _skipPackager, _electronRuntimeDir,
   } = options;
   const appRoot = _appRoot || process.env.APP_ROOT;
   const distWeb = path.join(appRoot, 'dist-web');
@@ -187,7 +188,7 @@ export async function exportDesktop(options, sendProgress) {
     sendProgress({ step: '复制 Electron 运行时', percent: 75 });
     let finalOutputDir;
     if (!_skipPackager) {
-      const electronDist = path.join(appRoot, 'node_modules', 'electron', 'dist');
+      const electronDist = _electronRuntimeDir || path.join(appRoot, 'node_modules', 'electron', 'dist');
       if (!existsSync(electronDist)) {
         throw new Error(`Electron dist not found: ${electronDist}`);
       }
@@ -218,6 +219,7 @@ export async function exportDesktop(options, sendProgress) {
       const resourcesApp = path.join(finalOutputDir, 'resources', 'app');
       const defaultAsar = path.join(finalOutputDir, 'resources', 'default_app.asar');
       await fs.rm(defaultAsar, { force: true }).catch(() => {});
+      await fs.rm(resourcesApp, { recursive: true, force: true }).catch(() => {});
       await fs.mkdir(resourcesApp, { recursive: true });
       await fs.cp(stagingDir, resourcesApp, { recursive: true });
 

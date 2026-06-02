@@ -5,6 +5,7 @@ node_modules/
 dist/
 dist-electron/
 dist-web/
+release/
 
 # IDE / Editor
 .idea/

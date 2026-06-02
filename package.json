@@ -9,6 +9,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:web": "vite build --config vite.web.config.js",
+    "package:editor:win": "npm run build && npm run build:web && node scripts/package-editor-win.js --zip",
+    "package:editor:win:dir": "npm run build && npm run build:web && node scripts/package-editor-win.js",
     "preview": "vite preview",
     "test": "npm run test:vitest && npm run test:node",
     "test:node": "node --test tests/colorRecipe.test.js tests/configurableTabs.test.js tests/decorLayoutEditor.test.js tests/effectDsl.test.js tests/exportDesktop.test.js tests/oklch.test.js tests/scanAssets.test.js tests/scriptEngine.test.js tests/smartColorPanel.test.js tests/tabLayoutEditor.test.js tests/uiImageContract.test.js tests/widgetDefaults.test.js",

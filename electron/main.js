@@ -1308,6 +1308,7 @@ ipcMain.handle('export-game', async (event, options) => {
     return await exportGame({
       ...safeOptions,
       projectPath: currentProjectPath,
+      _skipBuild: app.isPackaged || safeOptions._skipBuild,
     }, sendProgress);
   } catch (e) {
     console.error('[ExportGame] Failed:', e);
@@ -1335,6 +1336,8 @@ ipcMain.handle('export-game-desktop', async (event, options) => {
     return await exportDesktop({
       ...safeOptions,
       projectPath: currentProjectPath,
+      _skipBuild: app.isPackaged || safeOptions._skipBuild,
+      _electronRuntimeDir: app.isPackaged ? path.dirname(process.execPath) : safeOptions._electronRuntimeDir,
     }, sendProgress);
   } catch (e) {
     console.error('[ExportDesktop] Failed:', e);

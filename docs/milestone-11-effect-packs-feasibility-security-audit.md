@@ -258,9 +258,11 @@ future adapters warn and runtime no-ops.
 Export is consistent through the deliberate `effects` bucket:
 
 - `scanAssets()` returns `effects`.
-- Web and Electron export copy manifest-listed effect files.
+- Web and Electron export copy only manifest-listed effect files from
+  runtime-resolved page references.
 - Export readiness treats `effects/...` as an asset-like path.
-- Unreferenced effect pack folders remain outside the script-driven export set.
+- Invalid, unsupported-adapter, disabled, and unreferenced effect pack folders
+  remain outside the script-driven runtime/export set.
 - Preserve current URL, traversal, absolute-path, and root filtering.
 - Keep Web and Electron desktop export behavior identical.
 
@@ -284,6 +286,36 @@ Effect-pack commands follow existing visual paths:
 Commands are documented only for this manifest-only thin slice, and tests cover
 contract, validation, CLI/apply-plan, preview planning, handoff, export scanning,
 runtime events, and Canvas 2D adapter behavior.
+
+## Final Completion Audit
+
+The final M11 completion audit on 2026-06-02 found no blockers. The completed
+contract is:
+
+- Effect packs are project data only: `assets.effectPacks` manifests plus page
+  `effectPacks` references on normal and choice pages.
+- Runtime, export, readiness, validation, author-check, handoff, direct CLI, and
+  apply-plan all use the same shared effect-pack contract.
+- Runtime/export resolution is referenced-only: a pack must be referenced by a
+  renderable page, enabled, valid, and backed by a built-in adapter before its
+  files are considered.
+- Unsupported, invalid, disabled, condition-page-only, and unreferenced manifests
+  may be reported by validation, but they do not enter runtime playback or export
+  file copying.
+- Changed paths for direct CLI and apply-plan effect-pack edits are canonical:
+  `scenes.<sceneId>.pages.<pageIndex>.effectPacks`.
+- The built-in adapter surface remains narrow. The shipped adapter allowlist is
+  compiled with the app and dispatches only to reviewed Canvas 2D code.
+- Network, filesystem, eval, arbitrary DOM, WebGL, shader, plugin marketplace,
+  AI chat, and project-local JavaScript remain explicitly out of scope.
+
+Verification commands passed during the completion audit:
+
+- `git status --short --branch`
+- `git log --oneline -8`
+- `npm run test`
+- `npm run build`
+- `npm run build:web`
 
 ## Explicit Non-Scope
 

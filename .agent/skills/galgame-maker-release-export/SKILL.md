@@ -14,7 +14,7 @@ git status --short --branch
 npm run test
 npm run build
 npm run build:web
-npm run vn:readiness -- --script public/game/script.json --asset-root public/game --json
+npm run vn:readiness -- --script public/game/script.json --asset-root public/game/assets --json
 ```
 
 If readiness reports blockers, stop and fix or report them before packaging.
@@ -24,11 +24,13 @@ If readiness reports blockers, stop and fix or report them before packaging.
 The repo currently has:
 
 - Electron editor export flows through the desktop app.
+- `npm run vn:export-web -- --out <dir>` for hands-free web game export.
+- `npm run vn:export-desktop -- --out <dir>` for hands-free Windows desktop game export.
 - `npm run package:editor:win` for a portable Windows editor zip.
 - `npm run package:editor:win:dir` for an unpacked portable Windows editor directory.
 - `vn-author export-readiness` for export safety checks.
 
-If a direct `vn-author export-web` or `vn-author export-desktop` command exists in the current branch, use it. If it does not exist, do not fake a CLI export. Use the desktop editor export flow or report that a dedicated export CLI command is needed for fully hands-free agent export.
+CLI export runs export readiness first and refuses to write when blockers exist unless `--allow-readiness-blockers` is explicitly passed.
 
 ## Portable Editor Package
 
@@ -51,9 +53,19 @@ When the user says "export to <directory>":
 
 1. Run project QA and export readiness.
 2. Confirm whether the target is web game, desktop game, or portable editor unless the request is explicit.
-3. Use direct CLI export if available.
-4. Otherwise, tell the user that current automated CLI export is not available and use the editor export flow when possible.
-5. Report the output path, readiness result, and any limitations.
+3. For web export, run:
+
+```bash
+npm run vn:export-web -- --script public/game/script.json --out "<directory>" --zip --json
+```
+
+4. For desktop game export, run:
+
+```bash
+npm run vn:export-desktop -- --script public/game/script.json --out "<directory>" --zip --json
+```
+
+5. Report the output path, zip path when present, readiness result, and any warnings.
 
 ## References
 
@@ -65,6 +77,5 @@ When the user says "export to <directory>":
 ## Do Not
 
 - Do not skip readiness before export.
-- Do not claim hands-free game export exists unless the CLI command exists in the current branch.
 - Do not include source-only, temporary, or development files in a user-facing release package unless the user asked for source distribution.
 - Do not open commercial licensing or marketplace claims unless the release policy explicitly allows them.

@@ -62,6 +62,67 @@ async function withTempDir(fn) {
   }
 }
 
+async function createExportFixture(dir, { missingAsset = false } = {}) {
+  const projectDir = path.join(dir, 'project');
+  const appRoot = path.join(dir, 'app');
+  await mkdir(path.join(projectDir, 'assets', 'backgrounds'), { recursive: true });
+  await mkdir(path.join(projectDir, 'assets', 'characters'), { recursive: true });
+  await mkdir(path.join(projectDir, 'assets', 'audio'), { recursive: true });
+  await mkdir(path.join(projectDir, 'assets', 'ui', 'endings'), { recursive: true });
+  await mkdir(path.join(appRoot, 'dist-web'), { recursive: true });
+  await mkdir(path.join(appRoot, 'electron', 'game'), { recursive: true });
+  await mkdir(path.join(appRoot, 'public'), { recursive: true });
+
+  await writeFile(path.join(projectDir, 'script.json'), JSON.stringify({
+    projectId: 'gm_cli_export',
+    title: 'CLI Export Fixture',
+    meta: { resolution: { width: 960, height: 540 } },
+    characters: {
+      hero: {
+        name: 'Hero',
+        expressions: { normal: 'characters/hero_normal.png' },
+      },
+    },
+    scenes: {
+      start: {
+        pages: [{
+          type: 'normal',
+          background: 'backgrounds/city.png',
+          bgm: { file: 'audio/theme.ogg' },
+          dialogues: [{ speaker: 'hero', text: 'Ready.' }],
+          effects: [{ type: 'unlock:ending', id: 'good' }],
+        }],
+      },
+    },
+    systems: {
+      endings: {
+        good: { title: 'Good End', thumbnail: 'ui/endings/good.png' },
+      },
+    },
+  }), 'utf8');
+
+  if (!missingAsset) {
+    await writeFile(path.join(projectDir, 'assets', 'backgrounds', 'city.png'), 'BG', 'utf8');
+  }
+  await writeFile(path.join(projectDir, 'assets', 'characters', 'hero_normal.png'), 'CHAR', 'utf8');
+  await writeFile(path.join(projectDir, 'assets', 'audio', 'theme.ogg'), 'BGM', 'utf8');
+  await writeFile(path.join(projectDir, 'assets', 'ui', 'endings', 'good.png'), 'END', 'utf8');
+  await writeFile(path.join(appRoot, 'dist-web', 'engine.js'), '// engine', 'utf8');
+  await writeFile(path.join(appRoot, 'dist-web', 'engine.css'), '/* engine */', 'utf8');
+  await writeFile(
+    path.join(appRoot, 'electron', 'game', 'main.js'),
+    "const GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n",
+    'utf8',
+  );
+  await writeFile(path.join(appRoot, 'electron', 'game', 'preload.js'), '// preload', 'utf8');
+  await writeFile(
+    path.join(appRoot, 'public', 'default-game-icon.png'),
+    Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwADBwIAMCbHYQAAAABJRU5ErkJggg==', 'base64'),
+  );
+
+  return { projectDir, appRoot };
+}
+
 describe('vn-author CLI', () => {
   it('accepts preview screenshots with visible color variety', () => {
     const png = createPng({
@@ -208,6 +269,91 @@ describe('vn-author CLI', () => {
         'scenes.start',
         'scenes.start.pages.0',
       ]));
+    });
+  });
+
+  it('exports a web build from the CLI after readiness passes', async () => {
+    await withTempDir(async (dir) => {
+      const { projectDir, appRoot } = await createExportFixture(dir);
+      const outDir = path.join(dir, 'web-out');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'export-web',
+        '--project',
+        projectDir,
+        '--out',
+        outDir,
+        '--app-root',
+        appRoot,
+        '--skip-build',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        success: true,
+        format: 'web',
+        outputPath: outDir,
+        readiness: { ready: true },
+      });
+      expect(await readFile(path.join(outDir, 'index.html'), 'utf8')).toContain('CLI Export Fixture');
+      expect(await readFile(path.join(outDir, 'engine.js'), 'utf8')).toBe('// engine');
+      await expect(stat(path.join(outDir, 'assets', 'backgrounds', 'city.png'))).resolves.toBeTruthy();
+    });
+  });
+
+  it('exports a desktop staging build from the CLI in skip-packager mode', async () => {
+    await withTempDir(async (dir) => {
+      const { projectDir, appRoot } = await createExportFixture(dir);
+      const outDir = path.join(dir, 'desktop-out');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'export-desktop',
+        '--project',
+        projectDir,
+        '--out',
+        outDir,
+        '--app-root',
+        appRoot,
+        '--skip-build',
+        '--skip-packager',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        success: true,
+        format: 'desktop',
+        readiness: { ready: true },
+      });
+      expect(await readFile(path.join(result.outputPath, 'package.json'), 'utf8')).toContain('"main": "main.js"');
+      expect(await readFile(path.join(result.outputPath, 'main.js'), 'utf8')).toContain('CLI Export Fixture');
+      await expect(stat(path.join(result.outputPath, 'assets', 'characters', 'hero_normal.png'))).resolves.toBeTruthy();
+    });
+  });
+
+  it('blocks CLI export when readiness has blockers', async () => {
+    await withTempDir(async (dir) => {
+      const { projectDir, appRoot } = await createExportFixture(dir, { missingAsset: true });
+      const outDir = path.join(dir, 'blocked-out');
+
+      await expect(execFileAsync('node', [
+        cliPath,
+        'export-web',
+        '--project',
+        projectDir,
+        '--out',
+        outDir,
+        '--app-root',
+        appRoot,
+        '--skip-build',
+        '--json',
+      ])).rejects.toMatchObject({
+        code: 1,
+        stdout: expect.stringContaining('"success": false'),
+      });
     });
   });
 

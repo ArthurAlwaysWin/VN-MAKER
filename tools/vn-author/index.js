@@ -41,6 +41,8 @@ import {
   renderPreviewScreenshot,
   writePreviewRenderPlan,
 } from './preview-renderer.js';
+import { exportGame } from '../../electron/exportGame.js';
+import { exportDesktop } from '../../electron/exportDesktop.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3236,6 +3238,171 @@ async function exportReadiness(args) {
   return report.ready ? 0 : 1;
 }
 
+async function resolveExportProject(args) {
+  const projectArg = getArgValue(args, '--project', null);
+  const scriptArg = getArgValue(args, '--script', null);
+  const projectPath = path.resolve(repoRoot, projectArg ?? path.dirname(scriptArg ?? defaultScriptPath));
+  const scriptPath = path.resolve(repoRoot, scriptArg ?? path.join(projectPath, 'script.json'));
+  const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+  const assetRoot = path.resolve(repoRoot, getArgValue(args, '--asset-root', path.join(projectPath, 'assets')));
+  return { projectPath, scriptPath, script, assetRoot };
+}
+
+async function ensureExportReadiness(args, { scriptPath, script, assetRoot }) {
+  const knownAssets = hasFlag(args, '--skip-asset-check')
+    ? null
+    : (await pathExists(assetRoot) ? await collectKnownAssets(assetRoot) : []);
+  const readiness = createExportReadiness(script, {
+    knownAssets,
+    requireAssetCheck: !hasFlag(args, '--skip-asset-check'),
+  });
+  const report = { scriptPath, assetRoot, ...readiness };
+
+  if (!readiness.ready && !hasFlag(args, '--allow-readiness-blockers')) {
+    const error = new Error('Export readiness blocked. Fix blockers or pass --allow-readiness-blockers.');
+    error.readiness = report;
+    throw error;
+  }
+
+  return report;
+}
+
+function createCliProgressCollector({ silent = false } = {}) {
+  const progress = [];
+  return {
+    progress,
+    sendProgress(payload) {
+      progress.push(payload);
+      if (!silent) {
+        process.stderr.write(`[export] ${payload.percent}% ${payload.step}\n`);
+      }
+    },
+  };
+}
+
+function getExportTitle(args, script) {
+  return (
+    getArgValue(args, '--title', null)
+    ?? getArgValue(args, '--game-title', null)
+    ?? script.title
+    ?? script.meta?.title
+    ?? script.projectId
+    ?? 'Galgame Maker Game'
+  );
+}
+
+function resolveOptionalPath(value) {
+  return value ? path.resolve(repoRoot, value) : null;
+}
+
+async function runWithJsonSafeConsole(enabled, fn) {
+  if (!enabled) {
+    return fn();
+  }
+
+  const originalLog = console.log;
+  console.log = (...values) => {
+    process.stderr.write(`${values.map(value => String(value)).join(' ')}\n`);
+  };
+  try {
+    return await fn();
+  } finally {
+    console.log = originalLog;
+  }
+}
+
+async function exportWebCommand(args) {
+  const outputDirArg = getArgValue(args, '--out', getArgValue(args, '--output-dir', null));
+  if (!outputDirArg) {
+    throw new Error('export-web requires --out');
+  }
+
+  const { projectPath, scriptPath, script, assetRoot } = await resolveExportProject(args);
+  const readiness = await ensureExportReadiness(args, { scriptPath, script, assetRoot });
+  const outputDir = path.resolve(repoRoot, outputDirArg);
+  const title = getExportTitle(args, script);
+  const { progress, sendProgress } = createCliProgressCollector({ silent: hasFlag(args, '--json') });
+  const result = await runWithJsonSafeConsole(hasFlag(args, '--json'), () => exportGame({
+    projectPath,
+    outputDir,
+    gameTitle: title,
+    faviconPath: resolveOptionalPath(getArgValue(args, '--favicon', getArgValue(args, '--favicon-path', null))),
+    zip: hasFlag(args, '--zip'),
+    _skipBuild: hasFlag(args, '--skip-build'),
+    _appRoot: path.resolve(repoRoot, getArgValue(args, '--app-root', repoRoot)),
+  }, sendProgress));
+  const output = {
+    format: 'web',
+    scriptPath,
+    projectPath,
+    readiness,
+    progress,
+    ...result,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Exported web game: ${result.outputPath}\n`);
+    if (result.zipPath) {
+      process.stdout.write(`ZIP: ${result.zipPath}\n`);
+    }
+    if (result.warnings?.length) {
+      process.stdout.write(`Warnings: ${result.warnings.length}\n`);
+    }
+  }
+  return result.success ? 0 : 1;
+}
+
+async function exportDesktopCommand(args) {
+  const outputDirArg = getArgValue(args, '--out', getArgValue(args, '--output-dir', null));
+  if (!outputDirArg) {
+    throw new Error('export-desktop requires --out');
+  }
+
+  const { projectPath, scriptPath, script, assetRoot } = await resolveExportProject(args);
+  const readiness = await ensureExportReadiness(args, { scriptPath, script, assetRoot });
+  const outputDir = path.resolve(repoRoot, outputDirArg);
+  const title = getExportTitle(args, script);
+  const width = getIntArg(args, '--width', script.meta?.resolution?.width ?? 1280);
+  const height = getIntArg(args, '--height', script.meta?.resolution?.height ?? 720);
+  const { progress, sendProgress } = createCliProgressCollector({ silent: hasFlag(args, '--json') });
+  const result = await runWithJsonSafeConsole(hasFlag(args, '--json'), () => exportDesktop({
+    projectPath,
+    outputDir,
+    gameTitle: title,
+    iconPath: resolveOptionalPath(getArgValue(args, '--icon', getArgValue(args, '--icon-path', null))),
+    zip: hasFlag(args, '--zip'),
+    gameWidth: width,
+    gameHeight: height,
+    _skipBuild: hasFlag(args, '--skip-build'),
+    _appRoot: path.resolve(repoRoot, getArgValue(args, '--app-root', repoRoot)),
+    _skipPackager: hasFlag(args, '--skip-packager'),
+    _electronRuntimeDir: resolveOptionalPath(getArgValue(args, '--electron-runtime-dir', null)),
+  }, sendProgress));
+  const output = {
+    format: 'desktop',
+    scriptPath,
+    projectPath,
+    readiness,
+    progress,
+    ...result,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Exported desktop game: ${result.outputPath}\n`);
+    if (result.zipPath) {
+      process.stdout.write(`ZIP: ${result.zipPath}\n`);
+    }
+    if (result.warnings?.length) {
+      process.stdout.write(`Warnings: ${result.warnings.length}\n`);
+    }
+  }
+  return result.success ? 0 : 1;
+}
+
 async function lintLayout(args) {
   const { scriptPath, script } = await readScript(args);
   const report = {
@@ -5648,6 +5815,8 @@ function printHelp() {
   author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--capture-preview] [--require-preview-screenshot] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
+  export-web --out dir [--project dir|--script path] [--asset-root path] [--title title] [--favicon path] [--zip] [--skip-build] [--app-root path] [--skip-asset-check] [--allow-readiness-blockers] [--json]
+  export-desktop --out dir [--project dir|--script path] [--asset-root path] [--title title] [--icon path] [--width px] [--height px] [--zip] [--skip-build] [--app-root path] [--electron-runtime-dir path] [--skip-asset-check] [--allow-readiness-blockers] [--json]
   handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   review-handoff [author-check/handoff-report options] [--review-out path] [--capture-preview] [--require-preview-screenshot] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
@@ -5819,6 +5988,16 @@ async function main() {
 
     if (command === 'export-readiness') {
       process.exitCode = await exportReadiness(args);
+      return;
+    }
+
+    if (command === 'export-web') {
+      process.exitCode = await exportWebCommand(args);
+      return;
+    }
+
+    if (command === 'export-desktop') {
+      process.exitCode = await exportDesktopCommand(args);
       return;
     }
 
@@ -6185,6 +6364,13 @@ async function main() {
     printHelp();
     process.exitCode = command ? 1 : 0;
   } catch (error) {
+    if (hasFlag(args, '--json') && error?.readiness) {
+      writeJson({
+        success: false,
+        error: error.message,
+        readiness: error.readiness,
+      });
+    }
     process.stderr.write(`${error.stack || error.message}\n`);
     process.exitCode = 1;
   }

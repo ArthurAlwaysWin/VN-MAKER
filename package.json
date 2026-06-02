@@ -30,6 +30,8 @@
     "vn:review-handoff": "node tools/vn-author/index.js review-handoff",
     "vn:render-preview": "node tools/vn-author/index.js render-preview",
     "vn:readiness": "node tools/vn-author/index.js export-readiness",
+    "vn:export-web": "node tools/vn-author/index.js export-web",
+    "vn:export-desktop": "node tools/vn-author/index.js export-desktop",
     "verify:agent-example": "node tools/vn-author/verify-example-workflow.js",
     "verify": "npm run build && npm run test",
     "postinstall": "patch-package"

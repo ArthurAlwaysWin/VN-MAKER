@@ -157,11 +157,51 @@ describe('effect pack contract', () => {
     ]);
   });
 
-  it('collects manifest-listed effect assets for export scanning', () => {
+  it('collects only runtime-resolved referenced effect assets for export scanning', () => {
     const script = {
       assets: {
         effectPacks: {
           'old-film': manifest(),
+          unused: manifest({
+            id: 'unused',
+            files: [
+              { path: 'effects/unused/effect.json', role: 'manifest' },
+            ],
+          }),
+          disabled: manifest({
+            id: 'disabled',
+            files: [
+              { path: 'effects/disabled/effect.json', role: 'manifest' },
+            ],
+          }),
+          future: manifest({
+            id: 'future',
+            adapter: 'project:future-runtime',
+            files: [
+              { path: 'effects/future/effect.json', role: 'manifest' },
+            ],
+          }),
+        },
+      },
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'normal',
+              effectPacks: [
+                { id: 'old-film' },
+                { id: 'old-film' },
+                { id: 'disabled', enabled: false },
+                { id: 'future' },
+              ],
+            },
+            {
+              type: 'condition',
+              effectPacks: [{ id: 'unused' }],
+              trueTarget: null,
+              falseTarget: null,
+            },
+          ],
         },
       },
     };

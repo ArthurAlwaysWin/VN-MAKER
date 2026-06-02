@@ -189,7 +189,7 @@ function validateCharacterAssets(script, report, assetSet) {
   }
 }
 
-function validateEffectPackRegistry(script, report, assetSet) {
+function validateEffectPackRegistry(script, report) {
   const registry = script?.assets?.effectPacks;
   if (registry === undefined) {
     return {};
@@ -238,9 +238,6 @@ function validateEffectPackRegistry(script, report, assetSet) {
 
     if (result.manifest) {
       normalized[result.manifest.id] = result.manifest;
-      for (const [fileIndex, file] of (result.manifest.files ?? []).entries()) {
-        validateAssetReference(report, assetSet, file.path, [...path, 'files', fileIndex, 'path'], 'effect-pack');
-      }
     }
   }
 
@@ -1080,7 +1077,8 @@ function validatePageEffectPacks(page, context, report) {
       continue;
     }
 
-    if (!isKnownEffectPackAdapter(manifest.adapter)) {
+    const adapterSupported = isKnownEffectPackAdapter(manifest.adapter);
+    if (!adapterSupported) {
       addWarning(report, 'unsupported-effect-pack-adapter', `Effect pack "${entry.id}" uses unsupported adapter "${manifest.adapter}" and will not run.`, [...entryPath, 'id'], {
         effectPackId: entry.id,
         adapter: manifest.adapter,
@@ -1091,6 +1089,13 @@ function validatePageEffectPacks(page, context, report) {
       addWarning(report, 'invalid-effect-pack-params', 'Effect pack params must be an object; runtime will use defaults.', [...entryPath, 'params'], {
         effectPackId: entry.id,
       });
+    }
+
+    if (adapterSupported && !context.checkedEffectPackAssets?.has(entry.id)) {
+      context.checkedEffectPackAssets?.add(entry.id);
+      for (const [fileIndex, file] of (manifest.files ?? []).entries()) {
+        validateAssetReference(report, context.assetSet, file.path, ['assets', 'effectPacks', entry.id, 'files', fileIndex, 'path'], 'effect-pack');
+      }
     }
   }
 }
@@ -1229,7 +1234,7 @@ export function validateProject(script, options = {}) {
 
   validateCharacterRegistry(script, report);
   validateCharacterAssets(script, report, config.assetSet);
-  const effectPackManifests = validateEffectPackRegistry(script, report, config.assetSet);
+  const effectPackManifests = validateEffectPackRegistry(script, report);
   validateUiMotion(script, report);
   validateUiStylePresetField(script, report);
 
@@ -1246,6 +1251,8 @@ export function validateProject(script, options = {}) {
     endings,
     cgs,
     effectPackManifests,
+    assetSet: config.assetSet,
+    checkedEffectPackAssets: new Set(),
   };
 
   validateScenes(script, context, report, config);

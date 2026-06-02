@@ -39,9 +39,11 @@ const fullScript = {
     intro: {
       pages: [
         {
+          type: 'normal',
           background: 'backgrounds/city.png',
           bgm: { file: 'audio/bgm1.mp3', volume: 0.8 },
           se: { file: 'audio/click.mp3' },
+          effectPacks: [{ id: 'old-film' }],
           characters: [],
           dialogues: [
             { speaker: 'hero', text: 'Hello', voice: 'audio/voice01.ogg' },
@@ -49,6 +51,7 @@ const fullScript = {
           ],
         },
         {
+          type: 'normal',
           background: 'backgrounds/park.png',
           bgm: { file: 'audio/bgm1.mp3', volume: 0.5 },
           characters: [],
@@ -658,6 +661,63 @@ describe('filtering', () => {
     };
     const result = scanAssets(script);
     deepStrictEqual(result.characters, ['characters/valid.png']);
+  });
+
+  it('exports only runtime-resolved referenced effect pack assets', () => {
+    const script = {
+      assets: {
+        effectPacks: {
+          used: {
+            id: 'used',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'canvas2d:film-flicker',
+            files: [
+              { path: 'effects/used/effect.json', role: 'manifest' },
+              { path: 'effects/used/preview.png', role: 'preview' },
+            ],
+          },
+          unused: {
+            id: 'unused',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'canvas2d:film-flicker',
+            files: [
+              { path: 'effects/unused/effect.json', role: 'manifest' },
+            ],
+          },
+          future: {
+            id: 'future',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'project:future-runtime',
+            files: [
+              { path: 'effects/future/effect.json', role: 'manifest' },
+            ],
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'normal',
+              effectPacks: [
+                { id: 'used' },
+                { id: 'future' },
+                { id: 'unused', enabled: false },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const result = scanAssets(script);
+    deepStrictEqual(result.effects, [
+      'effects/used/effect.json',
+      'effects/used/preview.png',
+    ]);
   });
 });
 

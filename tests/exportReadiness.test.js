@@ -129,6 +129,64 @@ describe('export readiness', () => {
     ]);
   });
 
+  it('checks effect pack assets only when page references resolve to a built-in adapter', () => {
+    const report = createExportReadiness(createReadyScript({
+      assets: {
+        effectPacks: {
+          used: {
+            id: 'used',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'canvas2d:film-flicker',
+            files: [{ path: 'effects/used/effect.json', role: 'manifest' }],
+          },
+          unused: {
+            id: 'unused',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'canvas2d:film-flicker',
+            files: [{ path: 'effects/unused/effect.json', role: 'manifest' }],
+          },
+          future: {
+            id: 'future',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'project:future-runtime',
+            files: [{ path: 'effects/future/effect.json', role: 'manifest' }],
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'normal',
+              background: 'backgrounds/school.svg',
+              characters: [{ id: 'sakura', expression: 'normal', position: 'center' }],
+              effectPacks: [{ id: 'used' }, { id: 'future' }],
+              dialogues: [{ speaker: 'sakura', text: 'Hello.' }],
+            },
+          ],
+        },
+      },
+    }), {
+      knownAssets: [
+        'characters/sakura_normal.svg',
+        'backgrounds/school.svg',
+      ],
+    });
+
+    expect(report.ready).toBe(false);
+    expect(report.assets.missing).toEqual([
+      expect.objectContaining({
+        assetPath: 'effects/used/effect.json',
+        pathString: 'assets.effectPacks.used.files.0.path',
+      }),
+    ]);
+    expect(report.assets.missing.map((item) => item.assetPath)).not.toContain('effects/unused/effect.json');
+    expect(report.assets.missing.map((item) => item.assetPath)).not.toContain('effects/future/effect.json');
+  });
+
   it('reports unused known assets as warnings without blocking export', () => {
     const report = createExportReadiness(createReadyScript(), {
       knownAssets: [

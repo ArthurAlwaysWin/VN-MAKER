@@ -253,6 +253,67 @@ describe('exportGame — asset filtering', () => {
     expect(await fs.readFile(userFile, 'utf-8')).toBe('keep me');
     expect(existsSync(path.join(outputDir, 'assets', 'backgrounds', 'city.png'))).toBe(true);
   });
+
+  it('copies only runtime-resolved referenced effect pack files', async () => {
+    const projDir = path.join(tempRoot, 'project-effect-pack-filtering');
+    const outputDir = path.join(tempRoot, 'output-effect-pack-filtering');
+    await fs.mkdir(path.join(projDir, 'assets', 'effects', 'used'), { recursive: true });
+    await fs.mkdir(path.join(projDir, 'assets', 'effects', 'unused'), { recursive: true });
+    await fs.mkdir(path.join(projDir, 'assets', 'effects', 'future'), { recursive: true });
+    await fs.writeFile(path.join(projDir, 'assets', 'effects', 'used', 'effect.json'), Buffer.from('USED'));
+    await fs.writeFile(path.join(projDir, 'assets', 'effects', 'unused', 'effect.json'), Buffer.from('UNUSED'));
+    await fs.writeFile(path.join(projDir, 'assets', 'effects', 'future', 'effect.json'), Buffer.from('FUTURE'));
+    await fs.writeFile(path.join(projDir, 'script.json'), JSON.stringify({
+      assets: {
+        effectPacks: {
+          used: {
+            id: 'used',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'canvas2d:film-flicker',
+            files: [{ path: 'effects/used/effect.json', role: 'manifest' }],
+          },
+          unused: {
+            id: 'unused',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'canvas2d:film-flicker',
+            files: [{ path: 'effects/unused/effect.json', role: 'manifest' }],
+          },
+          future: {
+            id: 'future',
+            kind: 'postprocess',
+            version: 1,
+            adapter: 'project:future-runtime',
+            files: [{ path: 'effects/future/effect.json', role: 'manifest' }],
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [{
+            type: 'normal',
+            effectPacks: [{ id: 'used' }, { id: 'future' }],
+            dialogues: [],
+          }],
+        },
+      },
+    }), 'utf-8');
+
+    await exportGame({
+      projectPath: projDir,
+      outputDir,
+      gameTitle: 'Effect Pack Filtering',
+      faviconPath: null,
+      zip: false,
+      _skipBuild: true,
+      _appRoot: mockAppRoot,
+    }, () => {});
+
+    expect(existsSync(path.join(outputDir, 'assets', 'effects', 'used', 'effect.json'))).toBe(true);
+    expect(existsSync(path.join(outputDir, 'assets', 'effects', 'unused', 'effect.json'))).toBe(false);
+    expect(existsSync(path.join(outputDir, 'assets', 'effects', 'future', 'effect.json'))).toBe(false);
+  });
 });
 
 // ─── exportGame — Path Safety ───────────────────────────

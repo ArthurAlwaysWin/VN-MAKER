@@ -359,9 +359,16 @@ export function resolvePageEffectPacks(script = {}, page = {}) {
 
 export function collectEffectPackAssetPaths(script = {}) {
   const paths = [];
-  for (const manifest of Object.values(normalizeEffectPackRegistry(getEffectPackRegistry(script)))) {
-    for (const file of manifest.files ?? []) {
-      paths.push(file.path);
+  for (const scene of Object.values(script?.scenes ?? {})) {
+    for (const page of (scene?.pages ?? [])) {
+      if (!['normal', 'choice'].includes(page?.type)) {
+        continue;
+      }
+      for (const effect of resolvePageEffectPacks(script, page)) {
+        for (const file of effect.manifest?.files ?? []) {
+          paths.push(file.path);
+        }
+      }
     }
   }
   return unique(paths).sort();

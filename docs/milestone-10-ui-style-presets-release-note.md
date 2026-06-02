@@ -58,8 +58,8 @@ canonical editable sections.
 - Asset-backed title art, title BGM, and generated preset thumbnails.
 - Rich title layout DSL, plugin marketplace, WebGL, Live2D, rich text, and built-in
   AI chat.
-- Milestone 8 canvas-mask transitions have started as a two-preset procedural
-  thin slice that keeps the existing transition contract small and runtime-safe.
+- Milestone 8 canvas-mask transitions shipped as a two-preset procedural thin
+  slice that keeps the existing transition contract small and runtime-safe.
 - A future milestone should focus on preset thumbnails, lightweight visual
   regression fixtures, and optional authored effect packs without expanding the
   current UI preset contract.

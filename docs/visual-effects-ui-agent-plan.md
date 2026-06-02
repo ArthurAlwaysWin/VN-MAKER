@@ -967,7 +967,7 @@ npm run test:vitest -- tests/transitionCatalogExtended.test.js tests/backgroundL
 
 ## Milestone 8: Canvas-Mask Transition Add-On
 
-Status: thin slice implemented on 2026-06-02 after feasibility audit. The shipped scope is contract-first and intentionally small: two built-in procedural canvas-mask transition ids (`noise-dissolve`, `ripple`) reuse the existing page `transition.type` field, transition catalog, Page Inspector dropdown, direct CLI/apply-plan page transition commands, validation, preview, and handoff path routing. No user-uploaded mask assets, WebGL/shaders, plugins, arbitrary JavaScript, or effect/layout DSL were added.
+Status: completed on 2026-06-02 as a contract-first thin slice after feasibility audit. The shipped scope is intentionally small: two built-in procedural canvas-mask transition ids (`noise-dissolve`, `ripple`) reuse the existing page `transition.type` field, transition catalog, Page Inspector dropdown, direct CLI/apply-plan page transition commands, validation, preview, and handoff path routing. No user-uploaded mask assets, WebGL/shaders, plugins, arbitrary JavaScript, or effect/layout DSL were added.
 
 Purpose: add a small number of high-impact transitions that CSS cannot express well.
 
@@ -1052,6 +1052,12 @@ Acceptance for thin slice:
 npm run test:vitest -- tests/transitionCatalogExtended.test.js tests/backgroundLayerTransitions.test.js tests/backgroundTransitionPreview.test.js tests/agentHandoff.test.js
 npm run test:vitest -- tests/vnAuthorCli.test.js
 ```
+
+Completion notes:
+
+- Runtime coverage includes canvas-mask routing, resource cleanup, fallback when Canvas 2D is unavailable, cancellation on replacement/clear, same-page preview, and reduced-motion immediate resolution.
+- Authoring coverage includes direct CLI, apply-plan, `author-check --transaction --write-preview-plan`, and handoff review routing for changed transition paths.
+- `burn`, uploaded mask assets, WebGL/shader work, and generalized effect packs remain explicitly out of scope for this completed milestone.
 
 ## Milestone 9: Configurable Runtime UI Motion
 
@@ -1319,7 +1325,7 @@ This milestone requires a dedicated security/design review before implementation
 
 Recommended next direction after Milestone 10:
 
-1. Keep Milestone 8 limited to the shipped two-id procedural canvas-mask path until visual QA proves cancellation/fallback/performance are stable.
+1. Keep Milestone 8 closed at the shipped two-id procedural canvas-mask path unless a future milestone opens a separate visual QA and design pass.
 2. Prefer a small Milestone 10 hardening pass only if visual QA finds concrete polish gaps in the shipped preset recipes.
 3. Start Milestone 11 design discovery only as a security-reviewed manifest/runtime proposal, not as arbitrary project-local JavaScript.
 

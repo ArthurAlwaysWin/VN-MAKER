@@ -34,6 +34,7 @@ describe('background layer transitions', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('plays the locked transition set on the existing dual-layer owner and returns a completion promise', async () => {
@@ -216,6 +217,32 @@ describe('background layer transitions', () => {
 
     expect(background.container.querySelector('.transition-mask-canvas')).toBeNull();
     expect(background.layerA.classList.contains('active') || background.layerB.classList.contains('active')).toBe(true);
+  });
+
+  it('resolves canvas-mask transitions immediately under reduced motion without creating a canvas', async () => {
+    const getContextSpy = mockCanvasContext();
+    vi.stubGlobal('matchMedia', vi.fn((query) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })));
+    const background = makeLayer();
+
+    const completion = background.setBackground({
+      image: 'backgrounds/scene-a.png',
+      transition: 'noise-dissolve',
+      duration: 500,
+    });
+
+    await completion;
+
+    expect(getContextSpy).not.toHaveBeenCalled();
+    expect(background.container.querySelector('.transition-mask-canvas')).toBeNull();
+    expect(background.layerB.classList.contains('active')).toBe(true);
   });
 
   it('falls back canvas-mask transitions to their catalog fallback when canvas is unavailable', async () => {

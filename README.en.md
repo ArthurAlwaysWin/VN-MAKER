@@ -15,9 +15,16 @@ Galgame Maker is a visual novel engine and native Chinese editor built from scra
 
 ## Recommended AI Agents
 
-Any agent that can read a GitHub repository, edit files, and run shell commands can work with Galgame Maker. You can try:
+Any agent that can read a GitHub repository, edit files, and run shell commands can work with Galgame Maker.
+
+For users in China, you can try AI coding agents / AI IDEs such as:
 
 - [CodeBuddy](https://www.codebuddy.cn/docs/ide/Introduction)
+- [Trae](https://www.trae.ai/)
+- [Qoder](https://qoder.com/zh)
+
+If overseas services are available to you, you can also try:
+
 - [OpenAI Codex](https://openai.com/codex/)
 - [Claude Code](https://code.claude.com/docs/en/overview)
 - [Cursor](https://docs.cursor.com/)
@@ -93,11 +100,27 @@ Source repository: https://github.com/ArthurAlwaysWin/VN-MAKER.git
 
 Please:
 1. Create the target directory if it does not exist.
-2. Clone the source repository into VN-MAKER under the target directory.
-3. Enter VN-MAKER and run npm install.
-4. Read README.md, .agent/skills/galgame-maker-authoring/SKILL.md, docs/agent-authoring/workflow.md, and docs/agent-authoring/command-reference.md.
-5. Do not modify Galgame Maker-win32-x64/resources/app.
-6. If I ask you to adapt prose into a visual novel, first show an adaptation preview with characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing-asset notes. Wait for my approval before generating a plan and running npm run vn:apply-plan.
+2. First check whether Node.js and npm are installed by running node -v and npm -v.
+3. If Node.js is missing, tell me to install Node.js LTS and open https://nodejs.org/ or give me clear installation steps. Continue only after Node.js is installed.
+4. Clone the source repository into VN-MAKER under the target directory.
+5. Enter VN-MAKER and run npm install.
+6. Read README.md, .agent/skills/galgame-maker-authoring/SKILL.md, docs/agent-authoring/workflow.md, and docs/agent-authoring/command-reference.md.
+7. Do not modify Galgame Maker-win32-x64/resources/app.
+8. If I ask you to adapt prose into a visual novel, first show an adaptation preview with characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing-asset notes. Wait for my approval before generating a plan and running npm run vn:apply-plan.
+```
+
+You can also use this direct system prompt for your agent:
+
+```text
+If you are an AI Agent working with Galgame Maker:
+
+1. Do not edit the portable editor folder, especially Galgame Maker-win32-x64/resources/app.
+2. Work from the VN-MAKER source repository.
+3. Check Node.js and npm first with node -v and npm -v. If they are missing, ask the user to install Node.js LTS from https://nodejs.org/ before continuing.
+4. Run npm install in VN-MAKER before using npm run vn:* commands.
+5. Read .agent/skills/galgame-maker-authoring/SKILL.md and docs/agent-authoring/workflow.md before editing a project.
+6. For prose adaptation, show the user a plan first: characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing assets. Wait for approval before applying changes.
+7. Use absolute paths when targeting the user's game project, for example D:\Galgame-Maker\Projects\MyStory\script.json.
 ```
 
 The portable editor and source repository do not conflict with each other. The editor is for human visual review and editing; the source repository gives the agent skills, docs, and commands. Both should operate on your game project folder, such as `Projects/MyStory/`.

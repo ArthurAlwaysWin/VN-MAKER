@@ -15,9 +15,16 @@ Galgame Maker 是一个从零开发的视觉小说引擎和原生中文编辑器
 
 ## 推荐搭配的 AI Agent
 
-只要 agent 能读取 GitHub 仓库、编辑文件、执行 shell 命令，就可以配合 Galgame Maker 使用。你可以尝试：
+只要 agent 能读取 GitHub 仓库、编辑文件、执行 shell 命令，就可以配合 Galgame Maker 使用。
+
+国内也有很多可以尝试的 AI 编程 agent / AI IDE，例如：
 
 - [CodeBuddy](https://www.codebuddy.cn/docs/ide/Introduction)
+- [Trae](https://www.trae.ai/)
+- [Qoder](https://qoder.com/zh)
+
+如果你能正常访问海外服务，也可以尝试：
+
 - [OpenAI Codex](https://openai.com/codex/)
 - [Claude Code](https://code.claude.com/docs/en/overview)
 - [Cursor](https://docs.cursor.com/)
@@ -93,11 +100,27 @@ npm run vn:apply-plan -- .tmp/plan.json --script "D:\Galgame-Maker\Projects\MySt
 
 请完成：
 1. 如果目标目录不存在，请创建它。
-2. 在目标目录下 clone 源码仓库到 VN-MAKER。
-3. 进入 VN-MAKER，运行 npm install。
-4. 阅读 README.md、.agent/skills/galgame-maker-authoring/SKILL.md、docs/agent-authoring/workflow.md、docs/agent-authoring/command-reference.md。
-5. 不要修改 Galgame Maker-win32-x64/resources/app。
-6. 如果我要把小说原文改成视觉小说，请先输出改编预览，包含角色、场景、页面、对话、选择项、变量、条件、结局、CG 和缺失素材说明。等我确认后，再生成 plan 并运行 npm run vn:apply-plan。
+2. 先检查我的电脑是否已经安装 Node.js 和 npm，例如运行 node -v 和 npm -v。
+3. 如果没有 Node.js，请先告诉我需要安装 Node.js LTS，并帮我打开 https://nodejs.org/zh-cn 或给出清晰安装步骤；安装完成后再继续。
+4. 在目标目录下 clone 源码仓库到 VN-MAKER。
+5. 进入 VN-MAKER，运行 npm install。
+6. 阅读 README.md、.agent/skills/galgame-maker-authoring/SKILL.md、docs/agent-authoring/workflow.md、docs/agent-authoring/command-reference.md。
+7. 不要修改 Galgame Maker-win32-x64/resources/app。
+8. 如果我要把小说原文改成视觉小说，请先输出改编预览，包含角色、场景、页面、对话、选择项、变量、条件、结局、CG 和缺失素材说明。等我确认后，再生成 plan 并运行 npm run vn:apply-plan。
+```
+
+也可以使用更直接的 agent 系统提示词：
+
+```text
+If you are an AI Agent working with Galgame Maker:
+
+1. Do not edit the portable editor folder, especially Galgame Maker-win32-x64/resources/app.
+2. Work from the VN-MAKER source repository.
+3. Check Node.js and npm first with node -v and npm -v. If they are missing, ask the user to install Node.js LTS from https://nodejs.org/zh-cn before continuing.
+4. Run npm install in VN-MAKER before using npm run vn:* commands.
+5. Read .agent/skills/galgame-maker-authoring/SKILL.md and docs/agent-authoring/workflow.md before editing a project.
+6. For prose adaptation, show the user a plan first: characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing assets. Wait for approval before applying changes.
+7. Use absolute paths when targeting the user's game project, for example D:\Galgame-Maker\Projects\MyStory\script.json.
 ```
 
 绿色编辑器和源码仓库不会互相冲突：编辑器负责让人类可视化查看和修改项目，源码仓库负责给 agent 提供 skills、文档和命令。真正被双方共同操作的是你的游戏项目目录，例如 `Projects/MyStory/`。

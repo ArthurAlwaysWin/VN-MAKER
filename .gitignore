@@ -46,5 +46,16 @@ CODEBUDDY.md
 .agent/workflows/
 copilot-instructions.md
 
+# Development-only documentation
+docs/archive/
+docs/agent-first-vn-systems-plan.md
+docs/visual-effects-ui-agent-plan.md
+docs/bugfixes-*.md
+docs/milestone-*-release-note.md
+docs/v1.7-phase-83-report.md
+docs/agent-authoring/implementation-plan.md
+docs/agent-authoring/roadmap.md
+docs/agent-authoring/phase-83-migration.md
+
 .superpowers/
 .worktrees/

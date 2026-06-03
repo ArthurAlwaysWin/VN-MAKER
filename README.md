@@ -16,12 +16,11 @@
 > **⚠️ 项目以下列文档为准，其他文档仅供参考：**
 
 - **[项目契约](docs/agent-authoring/project-contract.md)** — project.json、script.json、assets/ 与 agent 交互边界
-- **[Agent-First 开发计划](docs/agent-first-vn-systems-plan.md)** — 已完成的变量/好感度、结局/CG、分支图、转场与发布收口路线图
 - **[AI Agent Integration Contract](docs/agent-authoring/integration-contract.md)** — agent 操作、事务、诊断、预览与交接的统一接口约束
 - **[脚本格式参考](docs/script-format.md)** — script.json 技术规格
 - **[外部 Agent 创作工作流](docs/agent-authoring/workflow.md)** — 供 Codex、Claude、opencode、GitHub Copilot 等外部 agent 通过 CLI/API 编辑同一个项目；不是内置 AI 助手
+- **[Agent 命令参考](docs/agent-authoring/command-reference.md)** — apply-plan、导出、校验、预览、handoff 等命令说明
 - **[多结局示例与人工复核](docs/agent-authoring/human-review-tutorial.md)** — 通过可执行示例计划检查好感度、结局、CG、分支图与转场
-- **[Phase 83 项目迁移说明](docs/agent-authoring/phase-83-migration.md)** — 在保留玩家进度权威边界的前提下升级旧项目
 
 ## 快速开始
 

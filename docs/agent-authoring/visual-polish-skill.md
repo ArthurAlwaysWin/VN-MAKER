@@ -13,7 +13,6 @@ Example user requests:
 
 This skill complements:
 
-- `docs/visual-effects-ui-agent-plan.md`
 - `docs/milestone-11-effect-packs-feasibility-security-audit.md`
 - `docs/agent-authoring/screen-ui-skill.md`
 - `docs/agent-authoring/command-reference.md`
@@ -22,9 +21,9 @@ This skill complements:
 ## Product Boundary
 
 - Human-facing editor stays no-code: no raw JSON, CSS, JS, or shader UI.
-- Agent-facing workflow may use structured commands, apply-plan manifests, and implementation work.
+- Agent-facing workflow may use structured commands and apply-plan manifests.
 - Agent output must remain canonical, validated, previewable, exportable, and reviewable in the editor.
-- Do not invent unsupported `script.json` fields. If the requested visual effect needs a feature that is not implemented, say so and follow `docs/visual-effects-ui-agent-plan.md` to implement it first.
+- Do not invent unsupported `script.json` fields. If the requested visual effect needs a feature that is not implemented, report the limitation and offer the nearest supported Canvas2D or structured alternative.
 - Milestone 11 effect packs are manifest-only. You may use validated `assets.effectPacks` manifests and the built-in `canvas2d:film-flicker` adapter, but do not write project-local JavaScript, `runtime.js`, shaders/WebGL, raw CSS/HTML, plugin metadata, AI chat fields, or generic visual DSL fields.
 - Do not imply there is an in-editor AI assistant. The external agent is the assistant; the editor is the human review and polish surface.
 
@@ -146,9 +145,9 @@ Built-in page particles now render at runtime when canonical page `particles` da
 
 Use apply-plan for multi-step UI work.
 
-### Planned Visual-Polish Path
+### Additional Supported Visual-Polish Path
 
-When the branch has implemented `docs/visual-effects-ui-agent-plan.md`, also use:
+When available in the current command reference, also use:
 
 - `list-particles`
 - `set-page-particles`
@@ -160,8 +159,8 @@ When the branch has implemented `docs/visual-effects-ui-agent-plan.md`, also use
 
 If a planned command does not exist yet, do not fake it. Either:
 
-- implement the relevant milestone from `docs/visual-effects-ui-agent-plan.md`, or
-- complete the UI work using current structured screen/theme commands and note that particles/motion presets are pending engine support.
+- complete the UI work using current structured screen/theme commands, or
+- report that the requested particles/motion presets are not supported yet.
 
 ## Apply-Plan Strategy For "Make A Good UI"
 

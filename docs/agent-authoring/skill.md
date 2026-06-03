@@ -31,7 +31,6 @@ See also:
 - `docs/agent-authoring/human-review-tutorial.md`
 - `docs/agent-authoring/layout-rules.md`
 - `docs/agent-authoring/novel-adaptation-skill.md`
-- `docs/agent-authoring/phase-83-migration.md`
 - `docs/agent-authoring/screen-ui-skill.md`
 - `docs/agent-authoring/validation-rules.md`
 - `docs/agent-authoring/visual-polish-skill.md`

@@ -38,6 +38,13 @@ npm-debug.log*
 .cursor/
 .codebuddy/
 CODEBUDDY.md
+.claude/
+
+# Local development planning / assistant workflows
+.planning/
+.agent/rules/
+.agent/workflows/
+copilot-instructions.md
 
 .superpowers/
 .worktrees/

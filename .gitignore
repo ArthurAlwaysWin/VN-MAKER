@@ -36,6 +36,8 @@ npm-debug.log*
 # Local code intelligence / editor agent state
 .codegraph/
 .cursor/
+.codebuddy/
+CODEBUDDY.md
 
 .superpowers/
 .worktrees/

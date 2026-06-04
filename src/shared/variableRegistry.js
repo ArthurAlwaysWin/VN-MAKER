@@ -8,10 +8,12 @@
 
 import { normalizeEffects } from './effectDsl.js';
 import { normalizeConditionPage } from './branchingContract.js';
+import { collectTextTemplateVariableIds } from './textTemplate.js';
 
 export const VARIABLE_TYPES = Object.freeze([
   'bool',
   'number',
+  'string',
 ]);
 
 export const VARIABLE_KINDS = Object.freeze([
@@ -96,6 +98,14 @@ function normalizeNumberValue(value) {
   return Number.isFinite(normalized) ? normalized : 0;
 }
 
+function normalizeStringValue(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value);
+}
+
 function normalizeOptionalNumber(value) {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -106,9 +116,15 @@ function normalizeOptionalNumber(value) {
 }
 
 function normalizeRuntimeValueForEntry(entry = {}, value) {
-  return entry.type === 'bool'
-    ? normalizeBooleanValue(value)
-    : normalizeNumberValue(value);
+  if (entry.type === 'bool') {
+    return normalizeBooleanValue(value);
+  }
+
+  if (entry.type === 'string') {
+    return normalizeStringValue(value);
+  }
+
+  return normalizeNumberValue(value);
 }
 
 export function normalizeVariableEntry(entry = {}) {
@@ -335,6 +351,91 @@ export function collectVariableReferences(scriptData = {}) {
             conditionIndex,
           });
         });
+      }
+
+      if (page.type === 'input') {
+        const variableId = normalizeVariableId(page.variableId ?? page.variable);
+        if (variableId) {
+          references.push({
+            variableId,
+            kind: 'input-target',
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.variableId`,
+            sceneId,
+            sceneName: scene.name || sceneId,
+            pageIndex,
+            pageType: 'input',
+            source: 'input-target',
+          });
+        }
+      }
+
+      const templateFields = [];
+      if (page.type === 'normal') {
+        (Array.isArray(page.dialogues) ? page.dialogues : []).forEach((dialogue, dialogueIndex) => {
+          templateFields.push({
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.dialogues.${dialogueIndex}.text`,
+            text: dialogue?.text,
+            kind: 'dialogue-template',
+            source: 'dialogue-template',
+            dialogueIndex,
+          });
+          templateFields.push({
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.dialogues.${dialogueIndex}.speaker`,
+            text: dialogue?.speaker,
+            kind: 'speaker-template',
+            source: 'speaker-template',
+            dialogueIndex,
+          });
+        });
+      } else if (page.type === 'choice') {
+        templateFields.push({
+          pathString: `scenes.${sceneId}.pages.${pageIndex}.prompt`,
+          text: page.prompt,
+          kind: 'choice-prompt-template',
+          source: 'choice-prompt-template',
+        });
+        (Array.isArray(page.options) ? page.options : []).forEach((option, optionIndex) => {
+          templateFields.push({
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.text`,
+            text: option?.text,
+            kind: 'choice-option-template',
+            source: 'choice-option-template',
+            optionIndex,
+          });
+        });
+      } else if (page.type === 'input') {
+        for (const [field, text] of Object.entries({
+          prompt: page.prompt,
+          placeholder: page.placeholder,
+          defaultValue: page.defaultValue,
+          submitText: page.submitText,
+        })) {
+          templateFields.push({
+            pathString: `scenes.${sceneId}.pages.${pageIndex}.${field}`,
+            text,
+            kind: 'input-template',
+            source: 'input-template',
+            field,
+          });
+        }
+      }
+
+      for (const field of templateFields) {
+        for (const variableId of collectTextTemplateVariableIds(field.text)) {
+          references.push({
+            variableId,
+            kind: field.kind,
+            pathString: field.pathString,
+            sceneId,
+            sceneName: scene.name || sceneId,
+            pageIndex,
+            pageType: page.type,
+            source: field.source,
+            dialogueIndex: field.dialogueIndex,
+            optionIndex: field.optionIndex,
+            field: field.field,
+          });
+        }
       }
     });
   }

@@ -62,6 +62,16 @@ function collectPageSceneEdges(sceneId, page, pageIndex) {
     ].filter(Boolean);
   }
 
+  if (page.type === 'input' && isNonEmptyString(page.target)) {
+    return [createEdge(
+      sceneId,
+      page.target,
+      'input-target',
+      ['scenes', sceneId, 'pages', pageIndex, 'target'],
+      { pageIndex, optionIndex: null, targetField: 'target' },
+    )];
+  }
+
   return [];
 }
 

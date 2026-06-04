@@ -27,6 +27,7 @@ import { ParticleLayer } from './ui/ParticleLayer.js';
 import { EffectPackLayer } from './ui/EffectPackLayer.js';
 import { CameraController } from './ui/CameraController.js';
 import { ChoiceMenu } from './ui/ChoiceMenu.js';
+import { TextInputScreen } from './ui/TextInputScreen.js';
 import { SaveLoadScreen } from './ui/SaveLoadScreen.js';
 import { BacklogScreen } from './ui/BacklogScreen.js';
 import { SettingsScreen } from './ui/SettingsScreen.js';
@@ -68,6 +69,7 @@ const characters = new CharacterLayer(charLayer, '');
 const camera = new CameraController(stageLayer);
 const dialogueBox = new DialogueBox(dialogueLayer);
 const choiceMenu = new ChoiceMenu(uiOverlay);
+const textInputScreen = new TextInputScreen(uiOverlay);
 // Settings, save/load, and backlog use gameContainer directly (not uiOverlay)
 // so their z-index 200 is in the same stacking context as TitleScreen (z-index 100)
 const saveLoadScreen = new SaveLoadScreen(gameContainer, null);
@@ -148,9 +150,12 @@ function showToast(message, duration = 3000) {
 function buildPreviewText() {
   const page = engine._currentPage();
   if (page && page.type === 'choice') {
-    const prompt = page.prompt || '';
-    const opts = (page.options || []).map((o, i) => `${i + 1}.${o.text}`).join(' ');
+    const prompt = engine.interpolateText(page.prompt || '');
+    const opts = (page.options || []).map((o, i) => `${i + 1}.${engine.interpolateText(o.text || '')}`).join(' ');
     return `${prompt} ${opts}`.substring(0, 80);
+  }
+  if (page && page.type === 'input') {
+    return engine.interpolateText(page.prompt || '').substring(0, 60);
   }
   const lastDialogue = engine.history.length > 0
     ? engine.history[engine.history.length - 1].text
@@ -240,6 +245,7 @@ async function restorePreviewSnapshot(snapshot) {
   stopSkip();
   dialogueBox.hide();
   choiceMenu.hide();
+  textInputScreen.hide();
   camera.clear();
   audio.stopVoice();
   characters.clear();
@@ -507,6 +513,7 @@ function applyUiMotion(motionConfig) {
 
 function hidePreviewUiSurfaces() {
   choiceMenu.hide();
+  textInputScreen.hide();
   dialogueBox.hide();
   gameMenu.hide();
   saveLoadScreen.hide();
@@ -518,6 +525,7 @@ function hidePreviewUiSurfaces() {
 // ─── Engine event handlers ──────────────────────────────
 function showDialogueEvent(data) {
   choiceMenu.hide();
+  textInputScreen.hide();
 
   // Inject per-page font override into dialogue data
   const currentPage = engine.script?.scenes?.[engine.currentScene]?.pages?.[engine.pageIndex];
@@ -548,9 +556,18 @@ function showDialogueEvent(data) {
 
 function showChoiceEvent(data) {
   dialogueBox.hide();
+  textInputScreen.hide();
   stopAuto();
   stopSkip();
   choiceMenu.show(data);
+}
+
+function showInputEvent(data) {
+  dialogueBox.hide();
+  choiceMenu.hide();
+  stopAuto();
+  stopSkip();
+  textInputScreen.show(data);
 }
 
 function playCharacterEvent(type, data) {
@@ -621,6 +638,8 @@ function flushPageTransitionGate(token = pageTransitionToken) {
     showDialogueEvent(uiEvent.data);
   } else if (uiEvent?.type === 'choice') {
     showChoiceEvent(uiEvent.data);
+  } else if (uiEvent?.type === 'input') {
+    showInputEvent(uiEvent.data);
   }
 }
 
@@ -766,6 +785,15 @@ engine.on('choice', (data) => {
   showChoiceEvent(data);
 });
 
+engine.on('input', (data) => {
+  if (pageTransitionGateOpen) {
+    pendingUiEvent = { type: 'input', data };
+    return;
+  }
+
+  showInputEvent(data);
+});
+
 engine.on('end', () => {
   // In preview mode, notify editor instead of returning to title
   if (engine._previewMode) {
@@ -773,6 +801,8 @@ engine.on('end', () => {
     stopAuto();
     stopSkip();
     dialogueBox.hide();
+    choiceMenu.hide();
+    textInputScreen.hide();
     cancelPageTransitionGate();
     camera.clear();
     background.clear();
@@ -787,6 +817,8 @@ engine.on('end', () => {
   stopAuto();
   stopSkip();
   dialogueBox.hide();
+  choiceMenu.hide();
+  textInputScreen.hide();
   audio.stopBgm({ fadeOut: 2000 });
   audio.stopVoice();
 
@@ -835,6 +867,8 @@ dialogueBox.onAdvance = () => {
 choiceMenu.onSelect = (index) => {
   engine.selectChoice(index);
 };
+
+textInputScreen.onSubmit = (value) => engine.submitInput(value);
 
 // ─── Save / Load ────────────────────────────────────────
 saveLoadScreen.onSave = async (slot) => {
@@ -926,6 +960,7 @@ gameMenu.onTitle = async () => {
   stopSkip();
   dialogueBox.hide();
   choiceMenu.hide();
+  textInputScreen.hide();
   cancelPageTransitionGate();
   camera.clear();
   audio.stopBgm({ fadeOut: 500 });
@@ -994,6 +1029,10 @@ quickBar.onSettings = () => {
 
 // ─── Keyboard shortcuts ─────────────────────────────────
 document.addEventListener('keydown', (e) => {
+  if (e.target?.closest?.('#text-input-screen')) {
+    return;
+  }
+
   // ESC priority chain — overlays first, regardless of play state or preview mode
   if (e.key === 'Escape') {
     if (!saveLoadScreen.el.classList.contains('hidden')) { saveLoadScreen.hide(); return; }
@@ -1062,6 +1101,7 @@ gameContainer.addEventListener('click', (e) => {
   const target = e.target;
   if (target.closest('#quick-action-bar')) return;
   if (target.closest('#choice-menu')) return;
+  if (target.closest('#text-input-screen')) return;
   if (target.closest('#game-menu')) return;
   if (target.closest('#save-load-screen')) return;
   if (target.closest('#settings-screen')) return;
@@ -1473,6 +1513,7 @@ function initPreview() {
         stopSkip();
         dialogueBox.hide();
         choiceMenu.hide();
+        textInputScreen.hide();
         cancelPageTransitionGate();
         camera.clear();
         audio.stopBgm({ fadeOut: 0 });
@@ -1548,6 +1589,7 @@ function initPreview() {
         stopSkip();
         cancelPageTransitionGate();
         choiceMenu.hide();
+        textInputScreen.hide();
         gameMenu.hide();
         saveLoadScreen.hide();
         backlogScreen.hide();
@@ -1579,6 +1621,7 @@ function initPreview() {
         settingsScreen.hide();
         titleScreen.hide();
         dialogueBox.hide();
+        textInputScreen.hide();
 
         choiceMenu.show({
           prompt: msg.prompt,

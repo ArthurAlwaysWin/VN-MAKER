@@ -361,7 +361,7 @@ export function collectEffectPackAssetPaths(script = {}) {
   const paths = [];
   for (const scene of Object.values(script?.scenes ?? {})) {
     for (const page of (scene?.pages ?? [])) {
-      if (!['normal', 'choice'].includes(page?.type)) {
+      if (!['normal', 'choice', 'input'].includes(page?.type)) {
         continue;
       }
       for (const effect of resolvePageEffectPacks(script, page)) {

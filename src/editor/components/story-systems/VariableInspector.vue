@@ -46,6 +46,7 @@
         <select :value="variableEntry.type" @change="onTypeChange">
           <option value="bool">布尔</option>
           <option value="number">数值</option>
+          <option value="string">文本</option>
         </select>
       </label>
 
@@ -96,6 +97,17 @@
           >
         </label>
       </template>
+
+      <label class="field" v-else-if="variableEntry.type === 'string'">
+        <span>默认值</span>
+        <input
+          data-test="variable-default-string"
+          :value="variableEntry.initial || ''"
+          type="text"
+          placeholder="例如：悠真"
+          @input="onStringInput"
+        >
+      </label>
 
       <div class="field" v-else>
         <span>默认值</span>
@@ -260,7 +272,7 @@ function onTypeChange(event) {
     type: nextType,
     initial: nextType === 'bool'
       ? Boolean(props.variableEntry?.initial)
-      : Number(props.variableEntry?.initial ?? 0),
+      : (nextType === 'string' ? String(props.variableEntry?.initial ?? '') : Number(props.variableEntry?.initial ?? 0)),
   });
 }
 
@@ -273,6 +285,12 @@ function onNumberInput(event) {
 function onOptionalNumberInput(field, value) {
   script.updateVariableFields(props.variableId, {
     [field]: value === '' ? undefined : Number(value),
+  });
+}
+
+function onStringInput(event) {
+  script.updateVariableFields(props.variableId, {
+    initial: event.target.value,
   });
 }
 

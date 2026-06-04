@@ -92,6 +92,14 @@
       <div v-if="page && page.type === 'condition'" class="canvas-condition-hint">
         条件页不显示对白画布预览
       </div>
+
+      <div v-if="page && page.type === 'input'" class="canvas-input-preview">
+        <div class="input-prompt">{{ page.prompt || '请输入主角名字' }}</div>
+        <div class="input-row">
+          <div class="input-field-preview">{{ page.defaultValue || page.placeholder || '名字' }}</div>
+          <button type="button">{{ page.submitText || '确定' }}</button>
+        </div>
+      </div>
     </div>
 
     <!-- Empty state -->
@@ -625,5 +633,55 @@ const speakerStyle = computed(() => {
   font-size: 13px;
   padding: 10px 14px;
   z-index: 3;
+}
+
+.canvas-input-preview {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 12px;
+  width: 460px;
+  padding: 20px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.input-prompt {
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.input-field-preview,
+.input-row button {
+  height: 42px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  font-size: 15px;
+}
+
+.input-field-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 14px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.input-row button {
+  min-width: 88px;
+  padding: 0 16px;
 }
 </style>

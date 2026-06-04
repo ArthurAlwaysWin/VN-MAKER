@@ -276,12 +276,14 @@ onBeforeUnmount(() => {
 
 function pageIcon(type) {
   if (type === 'choice') return '🔀';
+  if (type === 'input') return '⌨';
   if (type === 'condition') return '❓';
   return '📑';
 }
 
 function pageSnippet(page) {
   if (page.type === 'choice') return '[选择页]';
+  if (page.type === 'input') return '[输入页]';
   if (page.type === 'condition') return '[条件页]';
   const dlg = page.dialogues?.[0];
   if (!dlg?.text) return '';

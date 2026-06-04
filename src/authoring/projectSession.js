@@ -33,6 +33,7 @@ import {
   createAffectionVariableId,
   normalizeVariableRegistry,
 } from '../shared/variableRegistry.js';
+import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -86,6 +87,28 @@ function createDefaultChoicePage(overrides = {}) {
     ...cloneJsonValue(overrides),
     options,
     type: 'choice',
+    transition: getPageTransitionContract(overrides.transition ?? { type: 'fade', duration: 800 }),
+  };
+}
+
+function createDefaultInputPage(overrides = {}) {
+  return {
+    id: overrides.id,
+    type: 'input',
+    background: overrides.background ?? '',
+    characters: Array.isArray(overrides.characters) ? cloneJsonValue(overrides.characters) : [],
+    bgm: overrides.bgm ?? null,
+    se: overrides.se ?? null,
+    prompt: overrides.prompt ?? '请输入主角名字',
+    variableId: overrides.variableId ?? '',
+    placeholder: overrides.placeholder ?? '名字',
+    defaultValue: overrides.defaultValue ?? '',
+    submitText: overrides.submitText ?? '确定',
+    maxLength: overrides.maxLength ?? 24,
+    required: overrides.required ?? true,
+    target: overrides.target ?? null,
+    ...cloneJsonValue(overrides),
+    type: 'input',
     transition: getPageTransitionContract(overrides.transition ?? { type: 'fade', duration: 800 }),
   };
 }
@@ -160,6 +183,11 @@ function replaceSceneReferences(script, fromSceneId, toSceneId) {
           updatedReferenceCount += 1;
         }
       }
+
+      if (page?.type === 'input' && page.target === fromSceneId) {
+        page.target = toSceneId;
+        updatedReferenceCount += 1;
+      }
     }
   }
 
@@ -194,6 +222,11 @@ function clearSceneReferenceTargets(script, targetSceneId) {
           clearedReferenceCount += 1;
         }
       }
+
+      if (page?.type === 'input' && page.target === targetSceneId) {
+        page.target = null;
+        clearedReferenceCount += 1;
+      }
     }
   }
 
@@ -212,6 +245,39 @@ function isEndingUnlockEffect(effect) {
 
 function isCgUnlockEffect(effect) {
   return effect?.type === 'unlock:cg';
+}
+
+function rewriteTextTemplateFields(page, fromVariableId, toVariableId) {
+  let rewriteCount = 0;
+  const rewriteField = (target, field) => {
+    if (typeof target?.[field] !== 'string') {
+      return;
+    }
+
+    const next = replaceTextTemplateVariableId(target[field], fromVariableId, toVariableId);
+    if (next !== target[field]) {
+      target[field] = next;
+      rewriteCount += 1;
+    }
+  };
+
+  if (page?.type === 'normal') {
+    for (const dialogue of page.dialogues ?? []) {
+      rewriteField(dialogue, 'speaker');
+      rewriteField(dialogue, 'text');
+    }
+  } else if (page?.type === 'choice') {
+    rewriteField(page, 'prompt');
+    for (const option of page.options ?? []) {
+      rewriteField(option, 'text');
+    }
+  } else if (page?.type === 'input') {
+    for (const field of ['prompt', 'placeholder', 'defaultValue', 'submitText']) {
+      rewriteField(page, field);
+    }
+  }
+
+  return rewriteCount;
 }
 
 function findVariableReferences(script, variableId) {
@@ -269,6 +335,13 @@ function replaceVariableReferences(script, fromVariableId, toVariableId) {
         });
         Object.assign(page, normalizedPage);
       }
+
+      if (page?.type === 'input' && page.variableId === fromVariableId) {
+        page.variableId = toVariableId;
+        updatedReferenceCount += 1;
+      }
+
+      updatedReferenceCount += rewriteTextTemplateFields(page, fromVariableId, toVariableId);
     }
   }
 
@@ -311,6 +384,11 @@ function removeVariableReferences(script, variableId) {
           return shouldKeep;
         });
         Object.assign(page, normalizedPage);
+      }
+
+      if (page?.type === 'input' && page.variableId === variableId) {
+        page.variableId = '';
+        deletedReferenceCount += 1;
       }
     }
   }
@@ -1094,6 +1172,13 @@ export function createProjectSession(input = {}) {
       return { sceneId, pageIndex: scene.pages.length - 1 };
     },
 
+    addInputPage({ sceneId, page = {}, ...pageFields }) {
+      const scene = getScene(script, sceneId);
+      const nextPage = createDefaultInputPage({ ...page, ...pageFields });
+      scene.pages.push(nextPage);
+      return { sceneId, pageIndex: scene.pages.length - 1 };
+    },
+
     addConditionPage({ sceneId, page = {}, ...pageFields }) {
       const scene = getScene(script, sceneId);
       const nextPage = createDefaultConditionPage({ ...page, ...pageFields }, script.systems.variables);
@@ -1379,7 +1464,7 @@ export function createProjectSession(input = {}) {
       const fromIndex = fromPageIndex ?? 0;
       const toIndex = toPageIndex ?? pageCount - 1;
 
-      if (pageType !== undefined && !['normal', 'choice', 'condition'].includes(pageType)) {
+      if (pageType !== undefined && !['normal', 'choice', 'input', 'condition'].includes(pageType)) {
         throw new Error(`Unsupported page type filter: ${pageType}`);
       }
       if (hasBackground !== undefined && typeof hasBackground !== 'boolean') {

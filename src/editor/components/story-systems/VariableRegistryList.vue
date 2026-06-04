@@ -28,6 +28,7 @@
         <option value="all">全部类型</option>
         <option value="bool">布尔</option>
         <option value="number">数值</option>
+        <option value="string">文本</option>
       </select>
       <select
         class="filter-select"

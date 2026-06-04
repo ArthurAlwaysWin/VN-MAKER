@@ -11,6 +11,7 @@
           <select :value="page.type || 'normal'" class="field-input" @change="setPageType($event.target.value)">
             <option value="normal">普通对白</option>
             <option value="choice">选择菜单</option>
+            <option value="input">文本输入</option>
             <option value="condition">条件分支</option>
           </select>
         </div>
@@ -445,6 +446,13 @@
                     <option value="false">否</option>
                   </select>
                   <input
+                    v-else-if="effectValueType(effect) === 'string'"
+                    type="text"
+                    class="field-input effect-value"
+                    :value="effect.value ?? ''"
+                    @input="setChoiceEffectValue(idx, effectIdx, $event.target.value)"
+                  />
+                  <input
                     v-else
                     type="number"
                     class="field-input effect-value"
@@ -516,6 +524,70 @@
       </div>
     </div>
 
+    <!-- Section 3c: Text Input (input pages only) -->
+    <div class="inspector-section" v-if="page && page.type === 'input'">
+      <div class="section-toggle" @click="sections.input = !sections.input">
+        {{ sections.input ? '▼' : '▶' }} 文本输入
+      </div>
+      <div v-if="sections.input" class="section-body">
+        <div class="form-group">
+          <label>写入变量</label>
+          <select class="field-input" :value="page.variableId || ''" @change="setInputField('variableId', $event.target.value)">
+            <option value="">选择字符串变量</option>
+            <option v-for="variable in stringVariableOptions" :key="variable.id" :value="variable.id">
+              {{ variable.label }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>提示文本</label>
+          <input type="text" :value="page.prompt || ''"
+            @input="setInputField('prompt', $event.target.value)"
+            class="field-input" placeholder="请输入主角名字" />
+        </div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label>占位文本</label>
+            <input type="text" :value="page.placeholder || ''"
+              @input="setInputField('placeholder', $event.target.value)"
+              class="field-input" placeholder="名字" />
+          </div>
+          <div class="form-group half">
+            <label>默认值</label>
+            <input type="text" :value="page.defaultValue || ''"
+              @input="setInputField('defaultValue', $event.target.value)"
+              class="field-input" placeholder="可选" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label>按钮文本</label>
+            <input type="text" :value="page.submitText || ''"
+              @input="setInputField('submitText', $event.target.value)"
+              class="field-input" placeholder="确定" />
+          </div>
+          <div class="form-group half">
+            <label>最大长度</label>
+            <input type="number" :value="page.maxLength ?? 24"
+              min="1" max="80"
+              @change="setInputNumberField('maxLength', $event.target.value)"
+              class="field-input" />
+          </div>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" :checked="page.required !== false" @change="setInputField('required', $event.target.checked)" />
+          必填
+        </label>
+        <div class="form-group">
+          <label>提交后跳转</label>
+          <select class="field-input" :value="page.target || ''" @change="setInputField('target', $event.target.value || null)">
+            <option value="">继续下一页</option>
+            <option v-for="[sId, s] in allScenes" :key="sId" :value="sId">{{ s.name }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <!-- Section 3c: Conditions (condition pages only) -->
     <div class="inspector-section" v-if="page && page.type === 'condition'">
       <div class="section-toggle" @click="sections.conditions = !sections.conditions">
@@ -542,7 +614,7 @@
               @change="setConditionVariable(rowIndex, $event.target.value)"
             >
               <option value="">选择变量</option>
-              <option v-for="variable in variableOptions" :key="variable.id" :value="variable.id">
+              <option v-for="variable in conditionVariableOptions" :key="variable.id" :value="variable.id">
                 {{ variable.label }}
               </option>
             </select>
@@ -581,7 +653,7 @@
         <button
           class="secondary-add-btn"
           type="button"
-          :disabled="!variableOptions.length || (page.conditions || []).length >= 3"
+          :disabled="!conditionVariableOptions.length || (page.conditions || []).length >= 3"
           @click="addConditionRow"
         >+ 添加条件</button>
 
@@ -776,7 +848,7 @@ const editor = usePageEditor();
 const script = useScriptStore();
 const assets = useAssetStore();
 
-const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, conditions: true, fonts: false });
+const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, input: true, conditions: true, fonts: false });
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
 const showSpeakerDropdown = ref(false);
@@ -810,7 +882,9 @@ const cgOptions = computed(() => Object.entries(script.data?.systems?.gallery?.c
   label: cg.title || cg.name || id,
   order: Number(cg.order ?? 0),
 })).sort((left, right) => left.order - right.order || left.label.localeCompare(right.label)));
-const numberVariableOptions = computed(() => variableOptions.value.filter((variable) => variable.type !== 'bool'));
+const numberVariableOptions = computed(() => variableOptions.value.filter((variable) => variable.type === 'number'));
+const stringVariableOptions = computed(() => variableOptions.value.filter((variable) => variable.type === 'string'));
+const conditionVariableOptions = computed(() => variableOptions.value.filter((variable) => variable.type !== 'string'));
 const characterAnimationOptions = computed(() => {
   const idx = editor.selectedCharIndex.value;
   const currentAnimation = idx >= 0 ? page.value?.characters?.[idx]?.animation : undefined;
@@ -1329,6 +1403,18 @@ function setPrompt(text) {
   // Continuous typing — do NOT call pushState
 }
 
+function setInputField(field, value) {
+  if (!page.value || page.value.type !== 'input') return;
+  page.value[field] = value;
+}
+
+function setInputNumberField(field, value) {
+  if (!page.value || page.value.type !== 'input') return;
+  const normalized = Number(value);
+  page.value[field] = Number.isFinite(normalized) ? normalized : 24;
+  script.pushState();
+}
+
 function addOption() {
   if (!page.value || page.value.type !== 'choice') return;
   if (!page.value.options) page.value.options = [];
@@ -1372,7 +1458,7 @@ function variableEntry(variableId) {
 
 function variableOptionsForEffect(effectType) {
   if (effectType === 'var:add' || effectType === 'var:sub') {
-    return numberVariableOptions.value.length ? numberVariableOptions.value : variableOptions.value;
+    return numberVariableOptions.value;
   }
   return variableOptions.value;
 }
@@ -1382,7 +1468,14 @@ function defaultVariableIdForEffect(effectType) {
 }
 
 function effectValueType(effect) {
-  return variableEntry(effect?.id)?.type === 'bool' && effect?.type === 'var:set' ? 'bool' : 'number';
+  const entryType = variableEntry(effect?.id)?.type;
+  if (effect?.type === 'var:set' && entryType === 'bool') {
+    return 'bool';
+  }
+  if (effect?.type === 'var:set' && entryType === 'string') {
+    return 'string';
+  }
+  return 'number';
 }
 
 function effectNumberBounds(effect) {
@@ -1398,6 +1491,9 @@ function normalizeEffectValue(effectType, variableId, value) {
   const entry = variableEntry(variableId);
   if (effectType === 'var:set' && entry?.type === 'bool') {
     return value === true;
+  }
+  if (effectType === 'var:set' && entry?.type === 'string') {
+    return String(value ?? '');
   }
   return Number(value ?? (effectType === 'var:set' ? 0 : 1)) || 0;
 }
@@ -1560,10 +1656,10 @@ function setConditionMode(mode) {
 }
 
 function addConditionRow() {
-  if (!page.value || page.value.type !== 'condition' || !variableOptions.value.length) return;
+  if (!page.value || page.value.type !== 'condition' || !conditionVariableOptions.value.length) return;
   const conditions = [...(page.value.conditions ?? [])];
   if (conditions.length >= 3) return;
-  const variable = variableOptions.value[0];
+  const variable = conditionVariableOptions.value[0];
   conditions.push({
     variableId: variable.id,
     operator: variable.type === 'bool' ? '==' : '>=',

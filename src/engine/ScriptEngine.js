@@ -8,6 +8,7 @@
  * Page types:
  *   'normal'    — Visual state + dialogues (player clicks to advance)
  *   'choice'    — Visual state + prompt/options (player selects an option)
+ *   'input'     — Text input → variable assignment (player submits to advance)
  *   'condition' — Variable check → jump to target scene (auto, no visual)
  *
  * Events emitted:
@@ -20,6 +21,7 @@
  *   'stop_bgm'        — { fadeOut }
  *   'play_se'         — { file }
  *   'choice'          — { prompt, options }
+ *   'input'           — { prompt, variableId, placeholder, defaultValue, submitText, maxLength, required }
  *   'set_particles'   — { config, sceneId, pageIndex }
  *   'stop_particles'  — { sceneId, pageIndex }
  *   'set_effect_packs' — { effects, sceneId, pageIndex }
@@ -49,6 +51,20 @@ import {
   normalizeVariableRegistry,
   seedRuntimeVariablesFromRegistry,
 } from '../shared/variableRegistry.js';
+import { interpolateTextTemplate } from '../shared/textTemplate.js';
+
+const DEFAULT_INPUT_MAX_LENGTH = 24;
+
+function normalizeInputText(value, {
+  trim = true,
+  maxLength = DEFAULT_INPUT_MAX_LENGTH,
+} = {}) {
+  const source = value === null || value === undefined ? '' : String(value);
+  const normalized = trim ? source.trim() : source;
+  const length = Number(maxLength);
+  const cappedLength = Number.isInteger(length) && length > 0 ? length : DEFAULT_INPUT_MAX_LENGTH;
+  return normalized.slice(0, cappedLength);
+}
 
 export class ScriptEngine extends EventEmitter {
   constructor() {
@@ -187,6 +203,44 @@ export class ScriptEngine extends EventEmitter {
     }
   }
 
+  /**
+   * Handle text input submission
+   * @param {string} value
+   */
+  submitInput(value) {
+    if (this.ended) return false;
+    const page = this._currentPage();
+    if (!page || page.type !== 'input') return false;
+
+    const variableId = typeof page.variableId === 'string' && page.variableId.trim()
+      ? page.variableId.trim()
+      : null;
+    if (!variableId) {
+      console.warn('[ScriptEngine] Input page is missing variableId');
+      return false;
+    }
+
+    const fallback = this.interpolateText(page.defaultValue ?? '');
+    const submitted = normalizeInputText(value || fallback, {
+      trim: page.trim !== false,
+      maxLength: page.maxLength,
+    });
+    if (page.required !== false && !submitted) {
+      return false;
+    }
+
+    this.variables.set(variableId, submitted);
+    this.waiting = false;
+
+    if (page.target) {
+      this._enterScene(page.target);
+    } else {
+      this._advancePage();
+    }
+
+    return true;
+  }
+
   setPlayerDataRepository(repository) {
     this._playerDataRepository = repository ?? null;
   }
@@ -250,6 +304,9 @@ export class ScriptEngine extends EventEmitter {
     } else if (page.type === 'choice') {
       this._renderPage(page);
       this._execChoice(page);
+    } else if (page.type === 'input') {
+      this._renderPage(page);
+      this._execInput(page);
     }
     // condition pages have no visual — should not be a restore target
   }
@@ -264,6 +321,10 @@ export class ScriptEngine extends EventEmitter {
     this._currentBgmFile = null;
     this._currentBg = null;
     this._expressionState.clear();
+  }
+
+  interpolateText(text) {
+    return interpolateTextTemplate(text, this.variables);
   }
 
   /**
@@ -322,6 +383,10 @@ export class ScriptEngine extends EventEmitter {
       case 'choice':
         this._renderPage(page);
         this._execChoice(page);
+        break;
+      case 'input':
+        this._renderPage(page);
+        this._execInput(page);
         break;
       case 'condition':
         this._execCondition(page);
@@ -477,6 +542,9 @@ export class ScriptEngine extends EventEmitter {
 
     const dlg = page.dialogues[this.dialogueIndex];
     const char = dlg.speaker ? this.script.characters[dlg.speaker] : null;
+    const speakerName = char?.name || (dlg.speaker ? String(dlg.speaker) : null);
+    const renderedSpeakerName = speakerName ? this.interpolateText(speakerName) : null;
+    const renderedText = this.interpolateText(dlg.text ?? '');
 
     // Handle mid-dialogue expression change for the speaking character
     if (dlg.expression && dlg.speaker) {
@@ -497,16 +565,16 @@ export class ScriptEngine extends EventEmitter {
     // Emit dialogue event
     const data = {
       speaker: dlg.speaker,
-      speakerName: char?.name || null,
+      speakerName: renderedSpeakerName,
       speakerColor: char?.color || null,
-      text: dlg.text,
+      text: renderedText,
       voice: dlg.voice || null,
     };
 
     this.history.push({
       speaker: dlg.speaker,
       speakerName: data.speakerName,
-      text: dlg.text,
+      text: renderedText,
       voice: dlg.voice || null,
     });
 
@@ -537,8 +605,27 @@ export class ScriptEngine extends EventEmitter {
   _execChoice(page) {
     this.waiting = true;
     this.emit('choice', {
-      prompt: page.prompt,
-      options: Array.isArray(page.options) ? page.options : [],
+      prompt: this.interpolateText(page.prompt ?? ''),
+      options: (Array.isArray(page.options) ? page.options : []).map((option) => ({
+        ...option,
+        text: this.interpolateText(option?.text ?? ''),
+      })),
+    });
+  }
+
+  /**
+   * @private
+   */
+  _execInput(page) {
+    this.waiting = true;
+    this.emit('input', {
+      prompt: this.interpolateText(page.prompt ?? '请输入名称'),
+      variableId: typeof page.variableId === 'string' ? page.variableId.trim() : '',
+      placeholder: this.interpolateText(page.placeholder ?? ''),
+      defaultValue: this.interpolateText(page.defaultValue ?? ''),
+      submitText: this.interpolateText(page.submitText ?? '确定'),
+      maxLength: page.maxLength ?? DEFAULT_INPUT_MAX_LENGTH,
+      required: page.required !== false,
     });
   }
 

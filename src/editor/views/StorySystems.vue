@@ -170,12 +170,17 @@ const impactState = reactive({
 });
 
 function formatType(type) {
-  return type === 'bool' ? '布尔' : '数值';
+  if (type === 'bool') return '布尔';
+  if (type === 'string') return '文本';
+  return '数值';
 }
 
 function formatDefaultValue(entry = {}) {
   if (entry.type === 'bool') {
     return entry.initial ? '是' : '否';
+  }
+  if (entry.type === 'string') {
+    return entry.initial || '';
   }
 
   return String(entry.initial ?? 0);

@@ -53,6 +53,10 @@ function collectPageTargets(page = {}) {
       .filter((target) => typeof target === 'string' && target.trim());
   }
 
+  if (page?.type === 'input') {
+    return typeof page.target === 'string' && page.target.trim() ? [page.target] : [];
+  }
+
   return [];
 }
 

@@ -42,13 +42,14 @@ import {
   isValidNumericTransitionParam,
 } from './transitionCatalog.js';
 import { isValidVariableId, normalizeVariableId, normalizeVariableRegistry } from './variableRegistry.js';
+import { collectTextTemplateVariableIds } from './textTemplate.js';
 
 export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
   ERROR: 'error',
   WARNING: 'warning',
 });
 
-const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'condition']);
+const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'input', 'condition']);
 const VARIABLE_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub']);
 const UNLOCK_EFFECT_TYPES = new Set(['unlock:ending', 'unlock:cg']);
 const BOOL_CONDITION_OPERATORS = new Set(['==', '!=']);
@@ -565,6 +566,12 @@ function validateEffects(container, context, report) {
           expectedType: 'number',
           actualValue: effect.value,
         });
+      } else if (variableEntry.type === 'string' && effect.type !== 'var:set') {
+        addWarning(report, 'variable-type-mismatch', `Text variable "${effect.id}" cannot use numeric effect "${effect.type}".`, [...effectPath, 'type'], {
+          variableId: effect.id,
+          expectedType: 'string',
+          actualEffectType: effect.type,
+        });
       }
     }
 
@@ -699,6 +706,54 @@ function validateChoicePage(page, context, report, options) {
   });
 }
 
+function validateInputPage(page, context, report, options) {
+  const { registry, sceneIds, sceneId, pageIndex } = context;
+  const pagePath = ['scenes', sceneId, 'pages', pageIndex];
+  validatePageMedia(page, context, report, options);
+
+  if (!isNonEmptyString(page.variableId)) {
+    addError(report, 'missing-input-variable', 'Input page requires a variableId.', [...pagePath, 'variableId']);
+  } else if (!isValidVariableId(page.variableId)) {
+    addError(report, 'invalid-variable-id', `Input page references invalid variable id "${page.variableId}".`, [...pagePath, 'variableId'], {
+      variableId: page.variableId,
+    });
+  } else if (!registry[page.variableId]) {
+    addError(report, 'missing-variable-reference', `Input page references missing variable "${page.variableId}".`, [...pagePath, 'variableId'], {
+      variableId: page.variableId,
+    });
+  } else if (registry[page.variableId].type !== 'string') {
+    addError(report, 'input-variable-not-string', `Input page variable "${page.variableId}" must be a text variable.`, [...pagePath, 'variableId'], {
+      variableId: page.variableId,
+      variableType: registry[page.variableId].type,
+    });
+  }
+
+  if (page.prompt !== undefined && typeof page.prompt !== 'string') {
+    addError(report, 'invalid-input-prompt', 'Input page prompt must be a string.', [...pagePath, 'prompt']);
+  }
+
+  if (page.maxLength !== undefined) {
+    const maxLength = Number(page.maxLength);
+    if (!Number.isInteger(maxLength) || maxLength < 1 || maxLength > 80) {
+      addWarning(report, 'input-max-length-range', 'Input page maxLength should be an integer from 1 to 80.', [...pagePath, 'maxLength'], {
+        maxLength: page.maxLength,
+      });
+    }
+  }
+
+  validateSceneTarget(report, sceneIds, page.target, [...pagePath, 'target']);
+}
+
+function validateTemplateField(text, path, context, report) {
+  for (const variableId of collectTextTemplateVariableIds(text)) {
+    if (!Object.hasOwn(context.registry, variableId)) {
+      addWarning(report, 'missing-template-variable', `Text template references missing variable "${variableId}".`, path, {
+        variableId,
+      });
+    }
+  }
+}
+
 function validateConditionPage(page, context, report, options) {
   const { registry, sceneIds, sceneId, pageIndex } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
@@ -756,6 +811,12 @@ function validateConditionPage(page, context, report, options) {
         variableId: condition.variableId,
         expectedType: 'number',
         actualValue: rawValue,
+      });
+    } else if (entry.type === 'string') {
+      addWarning(report, 'variable-type-mismatch', `Text variable "${condition.variableId}" is not supported in condition pages yet.`, [...conditionPath, 'variableId'], {
+        variableId: condition.variableId,
+        expectedType: 'bool-or-number',
+        actualType: 'string',
       });
     }
   });
@@ -1120,11 +1181,28 @@ function validatePage(page, context, report, options) {
   validatePageCinematics(page, context, report);
   validatePageParticles(page, context, report);
   validatePageEffectPacks(page, context, report);
+  if (page.type === 'normal') {
+    (Array.isArray(page.dialogues) ? page.dialogues : []).forEach((dialogue, dialogueIndex) => {
+      validateTemplateField(dialogue?.speaker, [...pagePath, 'dialogues', dialogueIndex, 'speaker'], context, report);
+      validateTemplateField(dialogue?.text, [...pagePath, 'dialogues', dialogueIndex, 'text'], context, report);
+    });
+  } else if (page.type === 'choice') {
+    validateTemplateField(page.prompt, [...pagePath, 'prompt'], context, report);
+    (Array.isArray(page.options) ? page.options : []).forEach((option, optionIndex) => {
+      validateTemplateField(option?.text, [...pagePath, 'options', optionIndex, 'text'], context, report);
+    });
+  } else if (page.type === 'input') {
+    for (const field of ['prompt', 'placeholder', 'defaultValue', 'submitText']) {
+      validateTemplateField(page[field], [...pagePath, field], context, report);
+    }
+  }
 
   if (page.type === 'normal') {
     validateNormalPage(page, context, report, options);
   } else if (page.type === 'choice') {
     validateChoicePage(page, context, report, options);
+  } else if (page.type === 'input') {
+    validateInputPage(page, context, report, options);
   } else if (page.type === 'condition') {
     validateConditionPage(page, context, report, options);
   }

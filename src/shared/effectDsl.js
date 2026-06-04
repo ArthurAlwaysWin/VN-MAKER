@@ -78,7 +78,11 @@ function normalizeVarSetValue(value) {
     return value;
   }
 
-  throw new Error('var:set requires a boolean or finite numeric value');
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  throw new Error('var:set requires a string, boolean, or finite numeric value');
 }
 
 function normalizeVariableMathValue(value, type) {

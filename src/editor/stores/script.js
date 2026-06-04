@@ -18,6 +18,7 @@ import {
   createAffectionVariableId,
   normalizeVariableRegistry,
 } from '../../shared/variableRegistry.js';
+import { replaceTextTemplateVariableId } from '../../shared/textTemplate.js';
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 const DRAFT_ENDING_PREFIX = '__draft_ending__';
@@ -38,6 +39,12 @@ function slugifyEndingId(value) {
 function formatVariableReferenceLocation(reference = {}) {
   const sceneName = reference.sceneName || reference.sceneId || '未命名场景';
   const pageLabel = `第 ${Number(reference.pageIndex ?? 0) + 1} 页`;
+  if (reference.source === 'input-target') {
+    return `${sceneName} > ${pageLabel} > 文本输入变量`;
+  }
+  if (reference.source?.endsWith('-template')) {
+    return `${sceneName} > ${pageLabel} > 文本变量`;
+  }
   if (reference.source === 'choice-effect') {
     return `${sceneName} > ${pageLabel} > 选项 ${reference.optionIndex + 1} > 效果 ${reference.effectIndex + 1}`;
   }
@@ -99,6 +106,39 @@ function isVariableEffect(effect) {
   return effect?.type === 'var:set'
     || effect?.type === 'var:add'
     || effect?.type === 'var:sub';
+}
+
+function rewriteTextTemplateFields(page, fromVariableId, toVariableId) {
+  let rewriteCount = 0;
+  const rewriteField = (target, field) => {
+    if (typeof target?.[field] !== 'string') {
+      return;
+    }
+
+    const next = replaceTextTemplateVariableId(target[field], fromVariableId, toVariableId);
+    if (next !== target[field]) {
+      target[field] = next;
+      rewriteCount++;
+    }
+  };
+
+  if (page?.type === 'normal') {
+    for (const dialogue of page.dialogues ?? []) {
+      rewriteField(dialogue, 'speaker');
+      rewriteField(dialogue, 'text');
+    }
+  } else if (page?.type === 'choice') {
+    rewriteField(page, 'prompt');
+    for (const option of page.options ?? []) {
+      rewriteField(option, 'text');
+    }
+  } else if (page?.type === 'input') {
+    for (const field of ['prompt', 'placeholder', 'defaultValue', 'submitText']) {
+      rewriteField(page, field);
+    }
+  }
+
+  return rewriteCount;
 }
 
 export const useScriptStore = defineStore('script', () => {
@@ -803,6 +843,13 @@ export const useScriptStore = defineStore('script', () => {
             delete page.value;
             delete page.target;
           }
+
+          if (page?.type === 'input' && page.variableId === variableId) {
+            page.variableId = normalizedId;
+            rewriteCount++;
+          }
+
+          rewriteCount += rewriteTextTemplateFields(page, variableId, normalizedId);
         }
       }
     }
@@ -1188,11 +1235,18 @@ export const useScriptStore = defineStore('script', () => {
     const page = scene.pages?.[pageIndex];
     if (!page || page.type === type) return false;
 
-    page.type = ['normal', 'choice', 'condition'].includes(type) ? type : 'normal';
+    page.type = ['normal', 'choice', 'input', 'condition'].includes(type) ? type : 'normal';
 
     if (page.type === 'normal') {
       delete page.prompt;
       delete page.options;
+      delete page.variableId;
+      delete page.placeholder;
+      delete page.defaultValue;
+      delete page.submitText;
+      delete page.maxLength;
+      delete page.required;
+      delete page.target;
       delete page.conditionMode;
       delete page.conditions;
       delete page.trueTarget;
@@ -1204,6 +1258,13 @@ export const useScriptStore = defineStore('script', () => {
     } else if (page.type === 'choice') {
       delete page.effects;
       delete page.dialogues;
+      delete page.variableId;
+      delete page.placeholder;
+      delete page.defaultValue;
+      delete page.submitText;
+      delete page.maxLength;
+      delete page.required;
+      delete page.target;
       delete page.conditionMode;
       delete page.conditions;
       delete page.trueTarget;
@@ -1213,11 +1274,35 @@ export const useScriptStore = defineStore('script', () => {
       page.options = Array.isArray(page.options) && page.options.length > 0
         ? page.options.map((option) => normalizeEffectContainer(option))
         : [{ text: '', target: null, effects: [] }, { text: '', target: null, effects: [] }];
+    } else if (page.type === 'input') {
+      delete page.effects;
+      delete page.dialogues;
+      delete page.options;
+      delete page.conditionMode;
+      delete page.conditions;
+      delete page.trueTarget;
+      delete page.falseTarget;
+      delete page.unresolvedCondition;
+      page.prompt ??= '请输入主角名字';
+      page.variableId ??= '';
+      page.placeholder ??= '名字';
+      page.defaultValue ??= '';
+      page.submitText ??= '确定';
+      page.maxLength ??= 24;
+      page.required ??= true;
+      page.target ??= null;
     } else if (page.type === 'condition') {
       delete page.effects;
       delete page.dialogues;
       delete page.prompt;
       delete page.options;
+      delete page.variableId;
+      delete page.placeholder;
+      delete page.defaultValue;
+      delete page.submitText;
+      delete page.maxLength;
+      delete page.required;
+      delete page.target;
       delete page.particles;
       const normalizedPage = normalizeConditionPage(page, {
         registry: data.value?.systems?.variables ?? {},

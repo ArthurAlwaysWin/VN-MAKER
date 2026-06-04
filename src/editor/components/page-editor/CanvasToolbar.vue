@@ -2,7 +2,7 @@
   <div class="canvas-toolbar">
     <template v-if="editor.previewSessionType.value === null">
       <button class="add-char-btn" @click="editor.showCharPicker.value = true"
-        :disabled="editor.currentPage.value?.type === 'normal' ? false : true" title="添加角色到当前页面">
+        :disabled="!editor.currentPage.value || editor.currentPage.value?.type === 'condition'" title="添加角色到当前页面">
         + 添加角色
       </button>
       <HelpTip :text="HELP_SCRIPT.addCharacter" />
@@ -10,6 +10,7 @@
       <span class="toolbar-info" v-if="editor.currentPage.value">
         页面 {{ editor.selectedPageIndex.value + 1 }}
         <template v-if="editor.currentPage.value?.type === 'choice'">(选择页)</template>
+        <template v-else-if="editor.currentPage.value?.type === 'input'">(输入页)</template>
         <template v-else-if="editor.currentPage.value?.type === 'condition'">(条件页)</template>
       </span>
       <span class="toolbar-info" v-else>未选中页面</span>

@@ -1202,6 +1202,18 @@ function buildPlanPage(command, params) {
     return { type, page };
   }
 
+  if (type === 'input') {
+    page.prompt = getParam(params, 'prompt') ?? page.prompt ?? '请输入主角名字';
+    page.variableId = getParam(params, 'variableId', 'variable-id', 'variable') ?? page.variableId ?? '';
+    page.placeholder = getParam(params, 'placeholder') ?? page.placeholder ?? '名字';
+    page.defaultValue = getParam(params, 'defaultValue', 'default-value') ?? page.defaultValue ?? '';
+    page.submitText = getParam(params, 'submitText', 'submit-text') ?? page.submitText ?? '确定';
+    page.maxLength = getParam(params, 'maxLength', 'max-length') ?? page.maxLength ?? 24;
+    page.required = getParam(params, 'required') ?? page.required ?? true;
+    page.target = getParam(params, 'target') ?? page.target ?? null;
+    return { type, page };
+  }
+
   page.dialogues = getParam(params, 'dialogues') ?? page.dialogues ?? [];
   return { type: 'normal', page };
 }
@@ -1512,6 +1524,9 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     }
     if (type === 'condition') {
       return session.addConditionPage({ sceneId, page });
+    }
+    if (type === 'input') {
+      return session.addInputPage({ sceneId, page });
     }
     return session.addNormalPage({ sceneId, page });
   }
@@ -4073,10 +4088,11 @@ async function addVariable(args) {
   }
 
   const type = getArgValue(args, '--type', 'number');
+  const defaultInitial = type === 'bool' ? 'false' : (type === 'string' ? '' : '0');
   const output = await mutateScript(args, (session) => session.addVariable({
     id: variableId,
     type,
-    initial: parseScalarValue(getArgValue(args, '--initial', type === 'bool' ? 'false' : '0')),
+    initial: parseScalarValue(getArgValue(args, '--initial', defaultInitial)),
     label: getArgValue(args, '--label', getArgValue(args, '--name', variableId)),
     group: getArgValue(args, '--group', undefined),
     notes: getArgValue(args, '--notes', undefined),
@@ -4516,6 +4532,18 @@ function buildPageArgs(args) {
     return { type, page };
   }
 
+  if (type === 'input') {
+    page.prompt = getArgValue(args, '--prompt', '请输入主角名字');
+    page.variableId = getArgValue(args, '--variable', getArgValue(args, '--variable-id', ''));
+    page.placeholder = getArgValue(args, '--placeholder', '名字');
+    page.defaultValue = getArgValue(args, '--default-value', '');
+    page.submitText = getArgValue(args, '--submit-text', '确定');
+    page.maxLength = Number(getArgValue(args, '--max-length', '24'));
+    page.required = !hasFlag(args, '--optional');
+    page.target = getArgValue(args, '--target', null);
+    return { type, page };
+  }
+
   page.dialogues = parseJsonArg(args, '--dialogues', []);
   return { type: 'normal', page };
 }
@@ -4533,6 +4561,9 @@ async function addPage(args) {
     }
     if (type === 'condition') {
       return session.addConditionPage({ sceneId, page });
+    }
+    if (type === 'input') {
+      return session.addInputPage({ sceneId, page });
     }
     return session.addNormalPage({ sceneId, page });
   });
@@ -5833,8 +5864,8 @@ function printHelp() {
   delete-scene --scene scene_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-scene-next --scene scene_id [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-character --id character_id [--name name] [--color hex] [--expression name=path] [--expressions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  add-variable --id variable_id [--type number|bool] [--initial value] [--label label] [--group group] [--notes text] [--kind generic|affection] [--character character_id] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  update-variable --id variable_id [--patch json] [--type number|bool] [--initial value] [--label label] [--group group] [--notes text] [--kind generic|affection] [--character character_id] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-variable --id variable_id [--type number|bool|string] [--initial value] [--label label] [--group group] [--notes text] [--kind generic|affection] [--character character_id] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-variable --id variable_id [--patch json] [--type number|bool|string] [--initial value] [--label label] [--group group] [--notes text] [--kind generic|affection] [--character character_id] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   rename-variable --id variable_id --new-id variable_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   delete-variable --id variable_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-affection-variable --character character_id [--id variable_id] [--initial value] [--label label] [--group group] [--notes text] [--min number] [--max number] [--step number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5848,7 +5879,7 @@ function printHelp() {
   update-cg --id cg_id [--patch json] [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-cg --id cg_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-cg-unlock --scene scene_id --page index --option index --id cg_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  add-page --scene scene_id [--type normal|choice|condition] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-page --scene scene_id [--type normal|choice|input|condition] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--variable id] [--prompt text] [--placeholder text] [--default-value text] [--submit-text text] [--max-length number] [--optional] [--target scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-page --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-page --scene scene_id --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-dialogue --scene scene_id --page index [--speaker character_id] [--text text] [--expression expression] [--dialogue json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -5868,7 +5899,7 @@ function printHelp() {
   set-page-camera --scene scene_id --page index [--effect shake|zoom|pan|flash] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--camera json] [--clear-camera] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-camera-effect --scene scene_id --page index [--effect shake|zoom|pan|flash|vignette|letterbox | --camera json | --clear-camera] [--direction direction] [--intensity low|medium|high] [--duration-ms number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-page-transition --scene scene_id --page index [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|condition] [--has-background|--without-background] [--predicate json] [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-page-transitions --scene scene_id [--from-page index] [--to-page index] [--page-type normal|choice|input|condition] [--has-background|--without-background] [--predicate json] [--type transition_id] [--duration number] [--transition json] [--clear-transition] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-particles [--json]
   list-effect-packs [--script path] [--json]
   register-effect-pack --manifest-json json [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]

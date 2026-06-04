@@ -564,6 +564,93 @@ describe('unknown cinematic compatibility', () => {
   });
 });
 
+describe('text templates and input pages', () => {
+  it('interpolates variables in dialogue speaker names and text', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [{
+          type: 'normal',
+          dialogues: [
+            { speaker: '${mc}', text: '${mc}，我喜欢你。', voice: null },
+          ],
+        }],
+      },
+    });
+    engine.script.systems = {
+      variables: {
+        mc: { type: 'string', initial: '悠真' },
+      },
+    };
+
+    const events = capture(engine, 'dialogue', () => engine.startGame('start'));
+    strictEqual(events[0].speakerName, '悠真');
+    strictEqual(events[0].text, '悠真，我喜欢你。');
+    strictEqual(engine.history[0].text, '悠真，我喜欢你。');
+  });
+
+  it('stores submitted input text in a string variable and advances', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [
+          {
+            type: 'input',
+            variableId: 'mc',
+            prompt: '请输入主角名字',
+            defaultValue: '默认名',
+            maxLength: 8,
+          },
+          {
+            type: 'normal',
+            dialogues: [{ speaker: null, text: '你好，${mc}', voice: null }],
+          },
+        ],
+      },
+    });
+    engine.script.systems = {
+      variables: {
+        mc: { type: 'string', initial: '' },
+      },
+    };
+
+    const inputs = capture(engine, 'input', () => engine.startGame('start'));
+    strictEqual(inputs[0].variableId, 'mc');
+    strictEqual(engine.submitInput('  小明  '), true);
+    strictEqual(engine.variables.get('mc'), '小明');
+    strictEqual(engine.pageIndex, 1);
+
+    const dialogues = capture(engine, 'dialogue', () => engine.renderCurrentPage());
+    strictEqual(dialogues[0].text, '你好，小明');
+  });
+
+  it('interpolates choice prompt and option text without mutating option effects', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [{
+          type: 'choice',
+          prompt: '${mc}，去哪？',
+          options: [
+            { text: '跟${mc}回家', target: null, effects: [{ type: 'var:add', id: 'affection', value: 1 }] },
+          ],
+        }],
+      },
+    });
+    engine.script.systems = {
+      variables: {
+        mc: { type: 'string', initial: '悠真' },
+        affection: { type: 'number', initial: 0 },
+      },
+    };
+
+    const choices = capture(engine, 'choice', () => engine.startGame('start'));
+    strictEqual(choices[0].prompt, '悠真，去哪？');
+    strictEqual(choices[0].options[0].text, '跟悠真回家');
+    deepStrictEqual(choices[0].options[0].effects, [{ type: 'var:add', id: 'affection', value: 1 }]);
+  });
+});
+
 describe('effect pack runtime compatibility', () => {
   it('emits built-in effect pack playback events for page references', () => {
     const engine = makeEngine({

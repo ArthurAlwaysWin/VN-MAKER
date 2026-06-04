@@ -1625,6 +1625,93 @@ body {
 }
 
 /* ============================================
+   Text Input Screen
+   ============================================ */
+#text-input-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gm-panel-bg, rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(var(--gm-blur, 4px));
+  opacity: 0;
+  transition: opacity var(--gm-motion-medium) var(--gm-motion-ease-out);
+}
+
+#text-input-screen.visible {
+  opacity: 1;
+}
+
+#text-input-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.text-input-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) auto;
+  gap: 12px;
+  align-items: center;
+  width: min(560px, calc(100% - 80px));
+}
+
+.text-input-prompt {
+  grid-column: 1 / -1;
+  color: var(--gm-text-heading, rgba(255, 255, 255, 0.88));
+  font-family: var(--gm-font-display, 'Noto Serif SC', serif);
+  font-size: 20px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.text-input-field {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  padding: 0 16px;
+  color: var(--gm-text, #fff);
+  background: rgba(15, 18, 28, 0.78);
+  border: 1px solid var(--gm-btn-border, rgba(255, 255, 255, 0.16));
+  border-radius: var(--gm-radius-md, 6px);
+  font: 18px var(--gm-font-body, 'Noto Sans SC', sans-serif);
+  text-align: center;
+  outline: none;
+  transition:
+    border-color var(--gm-motion-fast) ease,
+    box-shadow var(--gm-motion-fast) ease;
+}
+
+.text-input-field:focus {
+  border-color: var(--gm-focus-ring, rgba(220, 210, 255, 0.75));
+  box-shadow: 0 0 0 3px rgba(160, 140, 255, 0.18);
+}
+
+.text-input-submit {
+  height: 48px;
+  min-width: 96px;
+  padding: 0 20px;
+  color: var(--gm-btn-text, rgba(255, 255, 255, 0.92));
+  background: var(--gm-btn-bg, linear-gradient(135deg, rgba(60, 60, 100, 0.72), rgba(40, 40, 80, 0.72)));
+  border: 1px solid var(--gm-btn-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--gm-radius-md, 6px);
+  cursor: pointer;
+  font: 16px var(--gm-font-body, 'Noto Sans SC', sans-serif);
+}
+
+.text-input-submit:hover,
+.text-input-submit:focus-visible {
+  background: var(--gm-btn-hover-bg, linear-gradient(135deg, rgba(100, 80, 160, 0.78), rgba(70, 50, 130, 0.78)));
+  border-color: var(--gm-btn-hover-border, rgba(180, 160, 255, 0.3));
+}
+
+.text-input-submit:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* ============================================
    Title Screen
    ============================================ */
 #title-screen {

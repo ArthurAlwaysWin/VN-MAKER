@@ -10,7 +10,7 @@ import {
 } from '../src/shared/variableRegistry.js';
 
 describe('variableRegistry contract', () => {
-  it('preserves systems.variables as a canonical object-map keyed by variable id and clamps entries to bool/number', () => {
+  it('preserves systems.variables as a canonical object-map keyed by variable id and supports bool/number/string entries', () => {
     const normalized = normalizeVariableRegistry({
       route_locked: {
         label: '锁定路线',
@@ -48,8 +48,8 @@ describe('variableRegistry contract', () => {
       },
       legacy_text: {
         label: '旧文本变量',
-        type: 'number',
-        initial: 0,
+        type: 'string',
+        initial: 'hello',
       },
     });
 
@@ -107,7 +107,7 @@ describe('variableRegistry contract', () => {
     ]);
   });
 
-  it('derives stable bool/number defaults and seeds runtime maps without inventing string behavior', () => {
+  it('derives stable bool/number/string defaults and seeds runtime maps', () => {
     const registry = normalizeVariableRegistry({
       route_locked: {
         type: 'bool',
@@ -123,7 +123,7 @@ describe('variableRegistry contract', () => {
       fallback_number: {
         type: 'number',
       },
-      coerced_invalid: {
+      player_name: {
         type: 'string',
         initial: 'hello',
       },
@@ -133,14 +133,14 @@ describe('variableRegistry contract', () => {
     expect(getVariableInitialValue(registry.affection)).toBe(3);
     expect(getVariableInitialValue(registry.fallback_bool)).toBe(false);
     expect(getVariableInitialValue(registry.fallback_number)).toBe(0);
-    expect(getVariableInitialValue(registry.coerced_invalid)).toBe(0);
+    expect(getVariableInitialValue(registry.player_name)).toBe('hello');
 
     expect(seedRuntimeVariablesFromRegistry(registry)).toEqual(new Map([
       ['route_locked', true],
       ['affection', 3],
       ['fallback_bool', false],
       ['fallback_number', 0],
-      ['coerced_invalid', 0],
+      ['player_name', 'hello'],
     ]));
   });
 

@@ -2,32 +2,20 @@
 
 [简体中文](README.md) | **English**
 
-Galgame Maker is a visual novel engine and native Chinese editor built from scratch. Its goal is simple: people with no programming background should be able to make their own galgame with a PPT-like visual workflow; users who work with AI agents should be able to turn prose, outlines, routes, endings, and assets into an editable visual novel project.
+Galgame Maker is a visual novel engine and native no-code editor built from scratch. Its biggest features are **no-code authoring** and **AI-agent-assisted game creation**. It lets people without programming experience make their own galgame with a PPT-like workflow; it also lets users who work with AI agents turn prose, settings, branches, endings, and assets into an editable visual novel project.
 
-## Key Features
-
-- **Visual novel engine built from scratch**: dialogue, narration, characters, expressions, backgrounds, BGM/SE, choices, variables, conditional branches, text input pages, endings, CG unlocks, save/load, title screen, and settings screen.
-- **Native Chinese no-code editor**: visual editing for pages, characters, assets, title screens, settings screens, and UI styles.
-- **PPT-like authoring experience**: canvas-based page editing, drag-and-drop layout, asset management, title screen design, themes, and widget configuration.
-- **Custom player-name workflows**: define text variables such as `mc`, collect player input with an input page, then write dialogue like `${mc}, I like you.`. The runtime expands `${variable}` placeholders in dialogue, speaker names, choice prompts, and option text.
-- **AI-agent ready**: the repository includes `.agent/skills/galgame-maker-*`, the `tools/vn-author` CLI, project contracts, command references, and validation workflows. An agent can turn prose into a reviewable adaptation plan before writing to the project.
-- **Clear safety boundary**: current effect-pack and export flows are manifest-only and built-in Canvas2D-adapter-only. Project-local arbitrary JS, eval, shader, WebGL, plugin marketplace, and arbitrary DOM extensions are not supported.
-- **Export support**: export Web games, Windows desktop games, and a portable Windows editor package.
+The editor currently supports dialogue, narration, characters, expressions, backgrounds, BGM/SE, choices, variables, conditional branches, endings, CG unlocks, save/load, title screens, settings screens, and more. Other advanced features are still in development.
 
 ## Recommended AI Agents
 
-Any agent that can read a GitHub repository, edit files, and run shell commands can work with Galgame Maker.
+Any agent that can read a GitHub repository, edit files, and run shell commands can work with Galgame Maker. Agents such as Claude Code, OpenAI Codex, Cursor, GitHub Copilot coding agent, and opencode can be used.
 
-For users in China, you can try AI coding agents / AI IDEs such as:
+If you want to use an agent to develop a galgame with this editor, install your preferred agent first. The small chores later, such as downloading, extracting, and installing dependencies, can be handed to AI directly.
 
-- [CodeBuddy](https://www.codebuddy.cn/docs/ide/Introduction)
-- [Trae](https://www.trae.ai/)
-- [Qoder](https://qoder.com/zh)
+You can try:
 
-If overseas services are available to you, you can also try:
-
-- [OpenAI Codex](https://openai.com/codex/)
 - [Claude Code](https://code.claude.com/docs/en/overview)
+- [OpenAI Codex](https://openai.com/codex/)
 - [Cursor](https://docs.cursor.com/)
 - [GitHub Copilot coding agent](https://docs.github.com/en/copilot/concepts/coding-agent/coding-agent)
 - [opencode](https://www.opencode.live/)
@@ -38,10 +26,10 @@ Installation and account requirements differ by agent. Please follow each offici
 
 ### Editor Only
 
-If you only want to open the editor and make or edit games, you do not need Node.js and you do not need the source code.
+If you only want to open the editor and make or edit games without using an AI agent, downloading it is simple.
 
 1. Open the [Releases](https://github.com/ArthurAlwaysWin/VN-MAKER/releases) page.
-2. Download `Galgame Maker-win32-x64.zip`.
+2. Click `Assets` and download `Galgame Maker-win32-x64.zip`.
 3. Extract it into a clean folder, for example:
 
 ```text
@@ -50,29 +38,40 @@ D:\Galgame-Maker\
     Galgame Maker.exe
 ```
 
-4. Double-click `Galgame Maker.exe`.
+4. Double-click `Galgame Maker.exe` to start the editor.
+
+Note: if you click the green `Code` button at the top of the GitHub page and choose `Download ZIP`, you are downloading the source code. It cannot be used by double-clicking directly; it requires Node.js and dependencies. If you want the ready-to-use editor, download `Galgame Maker-win32-x64.zip` from the [Releases](https://github.com/ArthurAlwaysWin/VN-MAKER/releases) page.
 
 Do not place game projects or the source repository inside `Galgame Maker-win32-x64/`. That folder should only contain the portable editor.
 
-### AI Agent Workflow
+### Use AI Agents To Make Games
 
-If you want an AI agent to help turn prose, settings, or outlines into a galgame, prepare:
+If you want an AI agent to help turn prose, settings, or outlines into a galgame, install your preferred AI agent first. Then send this prompt to the agent:
 
-1. `Galgame Maker-win32-x64.zip`: for the human creator to open the editor.
-2. This source repository: for the AI agent to read skills, docs, and CLI commands.
-3. Node.js: required for `npm install` and `npm run vn:*` in the source repository.
+```text
+Please download the GitHub project https://github.com/ArthurAlwaysWin/VN-MAKER to my computer, then follow the Instructions For AI Agents in the README to install and configure it.
+```
+
+After the agent reads the project README, it should continue with the `Instructions For AI Agents` below to install and prepare the workspace.
+
+If you want to download things manually, create or choose a clean folder for this project, then follow these steps:
+
+1. Open the [Releases](https://github.com/ArthurAlwaysWin/VN-MAKER/releases) page and download `Galgame Maker-win32-x64.zip`.
+2. Download this repository's source code: return to the top of this page, click the green `Code` button, choose `Download ZIP`, then extract it. It is recommended to rename the extracted source folder to `VN-MAKER` and confirm that `package.json` is inside it.
+3. If Node.js is not installed on your computer, download and install Node.js LTS first.
+4. After Node.js is installed, open a terminal in the source directory and run `npm install`.
 
 Recommended directory layout:
 
 ```text
 D:\Galgame-Maker\
   Galgame Maker-win32-x64\   # portable editor
-  VN-MAKER\                  # source checkout for the agent
+  VN-MAKER\                  # source repository
   Projects\
     MyStory\                 # your game project
 ```
 
-You can use GitHub **Download ZIP** or `git clone` for the source code. Both can run `npm install`, but `git clone` is recommended because agents can use `git status`, inspect changes, update the repository, and commit work.
+If Git is installed, you can also use `git clone` to download the source repository:
 
 ```bash
 git clone https://github.com/ArthurAlwaysWin/VN-MAKER.git VN-MAKER
@@ -80,60 +79,16 @@ cd VN-MAKER
 npm install
 ```
 
-Usually, ask the agent to open `D:\Galgame-Maker\VN-MAKER\` as its workspace. When targeting your game project, use absolute paths or paths relative to `VN-MAKER/`:
+Usually, ask the agent to open `D:\Galgame-Maker\VN-MAKER\` as its workspace. When the agent operates on your game project, use absolute paths or paths relative to `VN-MAKER/`:
 
 ```bash
 npm run vn:inspect -- --script "D:\Galgame-Maker\Projects\MyStory\script.json" --json
 npm run vn:apply-plan -- .tmp/plan.json --script "D:\Galgame-Maker\Projects\MyStory\script.json" --validate-only --json
 ```
 
-If your agent can only access files inside the opened folder, ask it to open `D:\Galgame-Maker\` instead, but it must enter `VN-MAKER/` before running commands.
+If your agent can only access files inside the opened folder, you can ask it to open the parent directory `D:\Galgame-Maker\`, but it must enter `VN-MAKER/` before running commands.
 
-For custom protagonist names, ask the agent to create a string variable and an input page, then use `${variable}` placeholders in later dialogue:
-
-```bash
-npm run vn -- add-variable --id mc --type string --label "Main character name" --script "D:\Galgame-Maker\Projects\MyStory\script.json"
-npm run vn -- add-page --scene start --type input --variable mc --prompt "Enter your name" --placeholder "Name" --script "D:\Galgame-Maker\Projects\MyStory\script.json"
-```
-
-After that, dialogue text can contain `${mc}`. During gameplay, the runtime replaces it with the player's submitted name.
-
-### Let The Agent Prepare Things For You
-
-Of course, in the age of AI, you can ask an agent to handle these small chores. Copy this prompt to your agent:
-
-```text
-Please prepare a Galgame Maker AI-agent workspace for me.
-
-Target directory: D:\Galgame-Maker
-Source repository: https://github.com/ArthurAlwaysWin/VN-MAKER.git
-
-Please:
-1. Create the target directory if it does not exist.
-2. First check whether Node.js and npm are installed by running node -v and npm -v.
-3. If Node.js is missing, tell me to install Node.js LTS and open https://nodejs.org/ or give me clear installation steps. Continue only after Node.js is installed.
-4. Clone the source repository into VN-MAKER under the target directory.
-5. Enter VN-MAKER and run npm install.
-6. Read README.md, .agent/skills/galgame-maker-authoring/SKILL.md, docs/agent-authoring/workflow.md, and docs/agent-authoring/command-reference.md.
-7. Do not modify Galgame Maker-win32-x64/resources/app.
-8. If I ask you to adapt prose into a visual novel, first show an adaptation preview with characters, scenes, pages, dialogue, choices, variables, input pages, conditions, endings, CG, and missing-asset notes. Wait for my approval before generating a plan and running npm run vn:apply-plan.
-```
-
-You can also use this direct system prompt for your agent:
-
-```text
-If you are an AI Agent working with Galgame Maker:
-
-1. Do not edit the portable editor folder, especially Galgame Maker-win32-x64/resources/app.
-2. Work from the VN-MAKER source repository.
-3. Check Node.js and npm first with node -v and npm -v. If they are missing, ask the user to install Node.js LTS from https://nodejs.org/ before continuing.
-4. Run npm install in VN-MAKER before using npm run vn:* commands.
-5. Read .agent/skills/galgame-maker-authoring/SKILL.md and docs/agent-authoring/workflow.md before editing a project.
-6. For prose adaptation, show the user a plan first: characters, scenes, pages, dialogue, choices, variables, input pages, conditions, endings, CG, and missing assets. Wait for approval before applying changes.
-7. Use absolute paths when targeting the user's game project, for example D:\Galgame-Maker\Projects\MyStory\script.json.
-```
-
-The portable editor and source repository do not conflict with each other. The editor is for human visual review and editing; the source repository gives the agent skills, docs, and commands. Both should operate on your game project folder, such as `Projects/MyStory/`.
+The portable editor and source repository do not conflict with each other. The editor is for human visual review and editing; the source repository gives the agent skills, docs, and commands. The real shared target is your game project folder, such as `Projects/MyStory/`.
 
 ## Source Development
 
@@ -152,6 +107,57 @@ npm run package:editor:win
 npm run vn:inspect -- --json
 npm run vn:readiness -- --script public/game/script.json --json
 ```
+
+## Instructions For AI Agents
+
+If you are an AI agent helping the user install Galgame Maker, follow these instructions.
+
+1. Ask the user where they want to place the files. Recommend a clean folder named `Galgame-Maker`.
+2. Check whether Node.js and npm are installed:
+
+```bash
+node -v
+npm -v
+```
+
+If Node.js is missing, ask for the user's permission before installing it, or guide the user to install Node.js LTS.
+
+3. Check whether Git is installed:
+
+```bash
+git --version
+```
+
+If Git is available, clone the repository:
+
+```bash
+git clone https://github.com/ArthurAlwaysWin/VN-MAKER.git VN-MAKER
+```
+
+If Git is not available, download the source code as a ZIP file from GitHub and extract it. Rename the extracted source folder to `VN-MAKER`.
+
+4. Download `Galgame Maker-win32-x64.zip` from the Releases page, then extract it.
+5. Use this recommended directory structure:
+
+```text
+D:\Galgame-Maker\
+  Galgame Maker-win32-x64\   # Editor
+  VN-MAKER\                  # Source repository
+  Projects\
+    MyStory\                 # User's game project
+```
+
+6. Enter the `VN-MAKER` directory and run:
+
+```bash
+npm install
+```
+
+7. If this agent supports custom skills, install the skills stored under `.agent/skills/` into the agent's skills directory.
+8. Read `README.md`, `.agent/skills/galgame-maker-authoring/SKILL.md`, `docs/agent-authoring/workflow.md`, and `docs/agent-authoring/command-reference.md`.
+9. Tell the user that future agent sessions should be opened from inside the `VN-MAKER` source directory. The actual game projects should live under `Projects/`, not inside the editor folder.
+10. Do not edit the portable editor folder, especially `Galgame Maker-win32-x64/resources/app`.
+11. If the user wants to turn prose into a visual novel, first show an adaptation preview that includes characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing assets. Wait for the user's approval before generating a plan or running `npm run vn:apply-plan`.
 
 ## AI Agent Docs
 

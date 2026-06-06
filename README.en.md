@@ -6,9 +6,10 @@ Galgame Maker is a visual novel engine and native Chinese editor built from scra
 
 ## Key Features
 
-- **Visual novel engine built from scratch**: dialogue, narration, characters, expressions, backgrounds, BGM/SE, choices, variables, conditional branches, endings, CG unlocks, save/load, title screen, and settings screen.
+- **Visual novel engine built from scratch**: dialogue, narration, characters, expressions, backgrounds, BGM/SE, choices, variables, conditional branches, text input pages, endings, CG unlocks, save/load, title screen, and settings screen.
 - **Native Chinese no-code editor**: visual editing for pages, characters, assets, title screens, settings screens, and UI styles.
 - **PPT-like authoring experience**: canvas-based page editing, drag-and-drop layout, asset management, title screen design, themes, and widget configuration.
+- **Custom player-name workflows**: define text variables such as `mc`, collect player input with an input page, then write dialogue like `${mc}, I like you.`. The runtime expands `${variable}` placeholders in dialogue, speaker names, choice prompts, and option text.
 - **AI-agent ready**: the repository includes `.agent/skills/galgame-maker-*`, the `tools/vn-author` CLI, project contracts, command references, and validation workflows. An agent can turn prose into a reviewable adaptation plan before writing to the project.
 - **Clear safety boundary**: current effect-pack and export flows are manifest-only and built-in Canvas2D-adapter-only. Project-local arbitrary JS, eval, shader, WebGL, plugin marketplace, and arbitrary DOM extensions are not supported.
 - **Export support**: export Web games, Windows desktop games, and a portable Windows editor package.
@@ -88,6 +89,15 @@ npm run vn:apply-plan -- .tmp/plan.json --script "D:\Galgame-Maker\Projects\MySt
 
 If your agent can only access files inside the opened folder, ask it to open `D:\Galgame-Maker\` instead, but it must enter `VN-MAKER/` before running commands.
 
+For custom protagonist names, ask the agent to create a string variable and an input page, then use `${variable}` placeholders in later dialogue:
+
+```bash
+npm run vn -- add-variable --id mc --type string --label "Main character name" --script "D:\Galgame-Maker\Projects\MyStory\script.json"
+npm run vn -- add-page --scene start --type input --variable mc --prompt "Enter your name" --placeholder "Name" --script "D:\Galgame-Maker\Projects\MyStory\script.json"
+```
+
+After that, dialogue text can contain `${mc}`. During gameplay, the runtime replaces it with the player's submitted name.
+
 ### Let The Agent Prepare Things For You
 
 Of course, in the age of AI, you can ask an agent to handle these small chores. Copy this prompt to your agent:
@@ -106,7 +116,7 @@ Please:
 5. Enter VN-MAKER and run npm install.
 6. Read README.md, .agent/skills/galgame-maker-authoring/SKILL.md, docs/agent-authoring/workflow.md, and docs/agent-authoring/command-reference.md.
 7. Do not modify Galgame Maker-win32-x64/resources/app.
-8. If I ask you to adapt prose into a visual novel, first show an adaptation preview with characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing-asset notes. Wait for my approval before generating a plan and running npm run vn:apply-plan.
+8. If I ask you to adapt prose into a visual novel, first show an adaptation preview with characters, scenes, pages, dialogue, choices, variables, input pages, conditions, endings, CG, and missing-asset notes. Wait for my approval before generating a plan and running npm run vn:apply-plan.
 ```
 
 You can also use this direct system prompt for your agent:
@@ -119,7 +129,7 @@ If you are an AI Agent working with Galgame Maker:
 3. Check Node.js and npm first with node -v and npm -v. If they are missing, ask the user to install Node.js LTS from https://nodejs.org/ before continuing.
 4. Run npm install in VN-MAKER before using npm run vn:* commands.
 5. Read .agent/skills/galgame-maker-authoring/SKILL.md and docs/agent-authoring/workflow.md before editing a project.
-6. For prose adaptation, show the user a plan first: characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing assets. Wait for approval before applying changes.
+6. For prose adaptation, show the user a plan first: characters, scenes, pages, dialogue, choices, variables, input pages, conditions, endings, CG, and missing assets. Wait for approval before applying changes.
 7. Use absolute paths when targeting the user's game project, for example D:\Galgame-Maker\Projects\MyStory\script.json.
 ```
 

@@ -426,6 +426,15 @@ describe('agent handoff editor integration', () => {
     expect(panelSource).toContain('external-script-diff');
   });
 
+  it('keeps Agent Live Mode opt-in and gated on a clean editor state', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src', 'editor', 'App.vue'), 'utf8');
+
+    expect(source).toContain('VITE_AGENT_LIVE_MODE');
+    expect(source).toContain('galgame-maker:agent-live-mode');
+    expect(source).toContain('if (changed && isAgentLiveModeEnabled() && !project.isDirty)');
+    expect(source).toContain('await reloadCurrentProject()');
+  });
+
   it('groups handoff review items by scene and non-scene path targets', () => {
     const groups = groupHandoffReviewByPath({
       transactionSummary: {

@@ -7,6 +7,11 @@ import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
 import { analyzePreviewScreenshot } from '../tools/vn-author/preview-renderer.js';
+import {
+  getRecommendedProjectRootCandidates,
+  resolveProjectPathForCreate,
+  sanitizeProjectName,
+} from '../src/authoring/projectScaffold.js';
 
 const execFileAsync = promisify(execFile);
 const cliPath = path.resolve('tools/vn-author/index.js');
@@ -893,6 +898,128 @@ describe('vn-author CLI', () => {
       const request = JSON.parse(await readFile(path.join(dir, 'pending-open-project.json'), 'utf8'));
       expect(request.projectPath).toBe(projectDir);
     });
+  });
+
+  it('generates safe default project paths from the title', async () => {
+    await withTempDir(async (dir) => {
+      const projectsRoot = path.join(dir, 'Galgame Maker', 'Projects');
+      const resolved = await resolveProjectPathForCreate({
+        title: 'A:Story?/Final',
+        env: { GALGAME_MAKER_PROJECTS_DIR: projectsRoot },
+        appRoot: path.join(dir, 'repo'),
+        tmpDir: path.join(dir, 'other-temp'),
+      });
+
+      expect(sanitizeProjectName('A:Story?/Final')).toBe('A_Story__Final');
+      expect(sanitizeProjectName('.')).toBe('untitled');
+      expect(sanitizeProjectName('CON')).toBe('untitled');
+      expect(sanitizeProjectName('After School.')).toBe('After School');
+      expect(getRecommendedProjectRootCandidates({
+        env: { GALGAME_MAKER_PROJECTS_DIR: projectsRoot },
+        platform: 'win32',
+        homeDir: dir,
+      })[0]).toBe(path.resolve(projectsRoot));
+      expect(resolved).toMatchObject({
+        projectPath: path.join(projectsRoot, 'A_Story__Final'),
+        projectRoot: projectsRoot,
+        generated: true,
+      });
+    });
+  });
+
+  it('creates projects without --out in the recommended projects directory', async () => {
+    const defaultRoot = path.resolve(process.cwd(), '..', `.tmp-galgame-projects-${Date.now()}`);
+    try {
+      await withTempDir(async (dir) => {
+        const created = JSON.parse((await execFileAsync('node', [
+          cliPath,
+          'projects',
+          'create',
+          '--title',
+          'Agent Default Path',
+          '--user-data',
+          dir,
+          '--json',
+        ], {
+          env: {
+            ...process.env,
+            GALGAME_MAKER_PROJECTS_DIR: defaultRoot,
+          },
+        })).stdout);
+
+        const projectDir = path.join(defaultRoot, 'Agent Default Path');
+        expect(created.ok).toBe(true);
+        expect(created.createPath).toMatchObject({
+          projectPath: projectDir,
+          projectRoot: defaultRoot,
+          generated: true,
+        });
+        expect(created.project.scriptPath).toBe(path.join(projectDir, 'script.json'));
+        await stat(path.join(projectDir, 'project.json'));
+        await stat(path.join(projectDir, 'script.json'));
+      });
+    } finally {
+      await rm(defaultRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('prints project help without creating a default project', async () => {
+    const defaultRoot = path.resolve(process.cwd(), '..', `.tmp-galgame-help-${Date.now()}`);
+    try {
+      const result = await execFileAsync('node', [
+        cliPath,
+        'projects',
+        'create',
+        '--help',
+      ], {
+        env: {
+          ...process.env,
+          GALGAME_MAKER_PROJECTS_DIR: defaultRoot,
+        },
+      });
+
+      expect(result.stdout).toContain('projects create [--out dir]');
+      await expect(stat(defaultRoot)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await rm(defaultRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a clear editor executable hint for --open --launch', async () => {
+    const defaultRoot = path.resolve(process.cwd(), '..', `.tmp-galgame-launch-${Date.now()}`);
+    try {
+      await withTempDir(async (dir) => {
+        const created = JSON.parse((await execFileAsync('node', [
+          cliPath,
+          'projects',
+          'create',
+          '--title',
+          'Launch Hint',
+          '--open',
+          '--launch',
+          '--user-data',
+          dir,
+          '--json',
+        ], {
+          env: {
+            ...process.env,
+            GALGAME_MAKER_PROJECTS_DIR: defaultRoot,
+            GALGAME_MAKER_EDITOR_EXE: path.join(defaultRoot, 'missing-editor.exe'),
+          },
+        })).stdout);
+
+        expect(created.ok).toBe(true);
+        expect(created.openRequest.request.projectPath).toBe(path.join(defaultRoot, 'Launch Hint'));
+        expect(created.launch).toMatchObject({
+          attempted: true,
+          launched: false,
+          error: expect.stringContaining('GALGAME_MAKER_EDITOR_EXE'),
+          hint: expect.stringContaining('Set GALGAME_MAKER_EDITOR_EXE'),
+        });
+      });
+    } finally {
+      await rm(defaultRoot, { recursive: true, force: true });
+    }
   });
 
   it('keeps the documented example draft convertible to an executable plan', async () => {

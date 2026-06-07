@@ -145,7 +145,7 @@ npm run vn:author-check -- --script public/game/script.json --transaction .tmp/a
 
 For reference-screenshot-based screen work, include `handoff.referenceScreenshotNotes` in the plan manifest so `handoff-report --transaction` creates a structured fidelity review item for the human reviewer.
 
-If the editor is open while an external agent changes `script.json`, the editor detects the changed file state, blocks stale saves, and shows a read-only structured path diff before reload. Reload the project before continuing GUI edits so agent-authored changes are not overwritten.
+If the editor is open while an external agent changes `script.json`, the editor detects the changed file state, blocks stale saves, and shows a read-only structured path diff before reload. Reload the project before continuing GUI edits so agent-authored changes are not overwritten. Agent Live Mode is opt-in for demonstrations (`VITE_AGENT_LIVE_MODE=true` or localStorage key `galgame-maker:agent-live-mode=true`): when the editor has no unsaved changes, external script updates can reload automatically; when the editor is dirty, it stays on the diff/conflict warning and never auto-reloads over local work.
 
 Then dry-run and apply it:
 

@@ -30,8 +30,10 @@ Use the returned `project.scriptPath` for later authoring commands.
 3. If the user asks to create a new game project:
 
 ```bash
-npm run vn -- projects create --out "D:/Galgame-Maker/Projects/MyStory" --title "My Story" --open --json
+npm run vn -- projects create --title "My Story" --open --launch --json
 ```
+
+When `--out` is omitted, `projects create` uses a recommended projects directory. The priority is `GALGAME_MAKER_PROJECTS_DIR`, then platform defaults such as `D:/Galgame-Maker/Projects` or the user's Documents folder on Windows, and Documents/home based folders on other platforms. The directory name is generated safely from the title. Avoid creating projects inside this source checkout, packaged editor release folders, `node_modules`, `dist*`, or temporary directories.
 
 4. If the user asks to open or continue a project in the editor:
 
@@ -39,7 +41,7 @@ npm run vn -- projects create --out "D:/Galgame-Maker/Projects/MyStory" --title 
 npm run vn -- projects open "Project Name" --json
 ```
 
-`projects open` writes an editor open request. If the desktop editor is already running, it will open the project through its request watcher. If the editor is launched later, it will consume the pending request on startup. Use `--launch --editor "path/to/Galgame Maker.exe"` or set `GALGAME_MAKER_EDITOR_EXE` when the agent should also start the packaged editor.
+`projects open` writes an editor open request. `--open` on `projects create` does the same. If the desktop editor is already running, it will open the project through its request watcher. If the editor is launched later, it will consume the pending request on startup. Add `--launch` when the agent should also try to start the packaged editor. If the executable is not found, pass `--editor "path/to/Galgame Maker.exe"` or set `GALGAME_MAKER_EDITOR_EXE`; JSON output includes this hint.
 
 ## Choose The Right Skill
 
@@ -77,18 +79,18 @@ Read only the skill needed for the task:
 Inspect and validate a resolved project:
 
 ```bash
-npm run vn -- inspect --script "D:/Galgame-Maker/Projects/MyStory/script.json" --json
-npm run vn -- validate --script "D:/Galgame-Maker/Projects/MyStory/script.json" --json
-npm run vn -- export-report --script "D:/Galgame-Maker/Projects/MyStory/script.json" --json
+npm run vn -- inspect --script "<scriptPath>" --json
+npm run vn -- validate --script "<scriptPath>" --json
+npm run vn -- export-report --script "<scriptPath>" --json
 ```
 
 Apply a multi-step plan:
 
 ```bash
-npm run vn:apply-plan -- .tmp/plan.json --script "D:/Galgame-Maker/Projects/MyStory/script.json" --validate-only --result-out .tmp/apply-plan-validation.json --json
-npm run vn:apply-plan -- .tmp/plan.json --script "D:/Galgame-Maker/Projects/MyStory/script.json" --dry-run --json
-npm run vn:apply-plan -- .tmp/plan.json --script "D:/Galgame-Maker/Projects/MyStory/script.json" --force --checkpoint --result-out .tmp/apply-plan-result.json --json
-npm run vn:review-handoff -- --script "D:/Galgame-Maker/Projects/MyStory/script.json" --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
+npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --validate-only --result-out .tmp/apply-plan-validation.json --json
+npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --dry-run --json
+npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --force --checkpoint --result-out .tmp/apply-plan-result.json --json
+npm run vn:review-handoff -- --script "<scriptPath>" --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --json
 ```
 
 Final response to the human should summarize changed scenes/pages/systems, validation or readiness results, generated handoff artifacts, and what to review in the editor.

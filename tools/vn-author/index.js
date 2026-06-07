@@ -15,7 +15,7 @@ import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
 import { createCharacterBlocking, LAYOUT_PRESETS } from '../../src/authoring/layoutPresets.js';
 import { createProjectSession } from '../../src/authoring/projectSession.js';
 import { createProjectReport } from '../../src/authoring/projectReport.js';
-import { createGalgameProject } from '../../src/authoring/projectScaffold.js';
+import { createGalgameProject, resolveProjectPathForCreate } from '../../src/authoring/projectScaffold.js';
 import {
   describeProjectPath,
   getProjectRegistryPath,
@@ -265,15 +265,20 @@ function getProjectsQuery(args) {
 
 async function findEditorExecutable(args) {
   const explicit = getArgValue(args, '--editor', null) || process.env.GALGAME_MAKER_EDITOR_EXE;
-  const candidates = [];
   if (explicit) {
-    candidates.push(path.resolve(repoRoot, explicit));
+    const explicitPath = path.resolve(repoRoot, explicit);
+    try {
+      await stat(explicitPath);
+      return explicitPath;
+    } catch {
+      return null;
+    }
   }
 
-  candidates.push(
+  const candidates = [
     path.join(repoRoot, 'release', 'Galgame Maker-win32-x64', 'Galgame Maker.exe'),
     path.join(repoRoot, 'release', 'Galgame Maker', 'Galgame Maker.exe'),
-  );
+  ];
 
   for (const candidate of candidates) {
     try {
@@ -299,6 +304,7 @@ async function maybeLaunchEditor(args, projectPath) {
       attempted: true,
       launched: false,
       error: 'Editor executable not found. Pass --editor or set GALGAME_MAKER_EDITOR_EXE.',
+      hint: 'Set GALGAME_MAKER_EDITOR_EXE to the packaged Galgame Maker.exe path, or pass --editor "path/to/Galgame Maker.exe". --open still wrote the pending open request for the next editor startup.',
     };
   }
 
@@ -6004,6 +6010,10 @@ async function resolveProjectForCli(args) {
 
 async function projectsCommand(args) {
   const [subcommand = 'list', ...rest] = args;
+  if (subcommand === '--help' || subcommand === '-h' || hasFlag(rest, '--help') || hasFlag(rest, '-h')) {
+    printHelp();
+    return 0;
+  }
   const registryPath = getProjectRegistryFileFromArgs(rest);
   const userDataDir = getProjectUserDataDirFromArgs(rest);
 
@@ -6043,17 +6053,19 @@ async function projectsCommand(args) {
 
   if (subcommand === 'create') {
     const outPath = getArgValue(rest, '--out', null) || getArgValue(rest, '--project', null);
-    if (!outPath) {
-      throw new Error('projects create requires --out project-dir');
-    }
-
     const width = getIntArg(rest, '--width', 1280);
     const height = getIntArg(rest, '--height', 720);
+    const title = getArgValue(rest, '--title', null)
+      || getArgValue(rest, '--name', null)
+      || (outPath ? path.basename(outPath) : 'Untitled');
+    const resolvedCreatePath = await resolveProjectPathForCreate({
+      projectPath: outPath ? path.resolve(repoRoot, outPath) : null,
+      title,
+      appRoot: repoRoot,
+    });
     const created = await createGalgameProject({
-      projectPath: path.resolve(repoRoot, outPath),
-      name: getArgValue(rest, '--title', null)
-        || getArgValue(rest, '--name', null)
-        || path.basename(outPath),
+      projectPath: resolvedCreatePath.projectPath,
+      name: title,
       author: getArgValue(rest, '--author', ''),
       resolution: { width, height },
       template: getArgValue(rest, '--template', 'blank'),
@@ -6070,6 +6082,7 @@ async function projectsCommand(args) {
       ok: true,
       registryPath,
       userDataDir,
+      createPath: resolvedCreatePath,
       project,
       openRequest: openRequest
         ? { requestPath: openRequest.requestPath, request: openRequest.request }
@@ -6081,6 +6094,9 @@ async function projectsCommand(args) {
     } else {
       process.stdout.write(`Created project: ${project.path}\n`);
       process.stdout.write(`Script: ${project.scriptPath}\n`);
+      if (resolvedCreatePath.generated) {
+        process.stdout.write(`Recommended projects directory: ${resolvedCreatePath.projectRoot}\n`);
+      }
       if (openRequest) {
         process.stdout.write(`Editor open request: ${openRequest.requestPath}\n`);
       }
@@ -6137,7 +6153,7 @@ function printHelp() {
   projects list|resolve|create|open [options] [--json]
     projects list [--registry path|--user-data dir] [--json]
     projects resolve [name] [--project dir] [--registry path|--user-data dir] [--json]
-    projects create --out dir [--title title] [--author author] [--width px] [--height px] [--open] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
+    projects create [--out dir] [--title title] [--author author] [--width px] [--height px] [--open] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
     projects open [name] [--project dir] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]

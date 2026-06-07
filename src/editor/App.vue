@@ -121,6 +121,17 @@ let snapshotTimer = null;
 let externalChangeTimer = null;
 let removeOpenProjectListener = null;
 
+function isAgentLiveModeEnabled() {
+  const envValue = import.meta.env?.VITE_AGENT_LIVE_MODE;
+  if (envValue === '1' || envValue === 'true') {
+    return true;
+  }
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return false;
+  }
+  return window.localStorage.getItem('galgame-maker:agent-live-mode') === 'true';
+}
+
 watch(() => script.data, () => {
   if (!script.data || script._skipWatch) return;
   project.markDirty();
@@ -194,7 +205,12 @@ onMounted(async () => {
     : Promise.resolve(false);
   externalChangeTimer = setInterval(() => {
     if (currentView.value === 'editing' && project.projectPath) {
-      void project.checkExternalScriptChange(script.data);
+      void (async () => {
+        const changed = await project.checkExternalScriptChange(script.data);
+        if (changed && isAgentLiveModeEnabled() && !project.isDirty) {
+          await reloadCurrentProject();
+        }
+      })();
     }
   }, 3000);
 });

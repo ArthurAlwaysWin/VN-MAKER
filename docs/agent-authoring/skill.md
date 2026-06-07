@@ -42,10 +42,18 @@ Resolve or create the target project before inspecting `script.json`:
 ```bash
 npm run vn -- projects list --json
 npm run vn -- projects resolve "Project Name" --json
-npm run vn -- projects create --out "D:/Galgame-Maker/Projects/ProjectName" --title "Project Name" --open --json
+npm run vn -- projects create --title "Project Name" --open --launch --json
 ```
 
+When creating a new game, prefer omitting `--out` and let the CLI choose the recommended projects directory. Resolution priority is `GALGAME_MAKER_PROJECTS_DIR`, then platform defaults such as `D:/Galgame-Maker/Projects` or the user's Documents folder on Windows, and Documents/home based folders on other platforms. The folder name is generated safely from the title.
+
+Avoid project locations inside the Galgame Maker source checkout, packaged editor release output, `node_modules`, `dist*`, or temporary directories. Those locations are easy to delete, rebuild, or confuse with app internals.
+
+`--open` writes a pending editor open request for the running or next-started editor. `--launch` also attempts to start the packaged editor. If JSON output reports that the editor executable was not found, set `GALGAME_MAKER_EDITOR_EXE` or pass `--editor "path/to/Galgame Maker.exe"`.
+
 Use the returned `project.scriptPath` in later commands. Do not overwrite `public/game/script.json` unless the human explicitly asks to edit the built-in example project.
+
+If the editor is already open while an external agent changes `script.json`, it detects the changed file state, blocks stale saves, and shows a read-only structured diff before reload. Agent Live Mode is opt-in for demos (`VITE_AGENT_LIVE_MODE=true` or localStorage key `galgame-maker:agent-live-mode=true`): clean editor state may auto-reload external Agent changes, but unsaved editor changes keep the diff/conflict prompt and never auto-reload.
 
 ```bash
 npm run vn:inspect -- --json
@@ -59,13 +67,13 @@ npm run vn:readiness -- --json
 Use direct CLI when you need specific paths:
 
 ```bash
-npm run vn -- inspect --script public/game/script.json --json
-npm run vn -- validate --script public/game/script.json --json
-npm run vn -- validate --script public/game/script.json --check-assets --json
-npm run vn -- lint-layout --script public/game/script.json --json
-npm run vn -- export-report --script public/game/script.json --json
-npm run vn -- export-readiness --script public/game/script.json --json
-npm run vn -- render-preview --script public/game/script.json --scene start --page 0 --out .tmp/preview.png --json
+npm run vn -- inspect --script "<scriptPath>" --json
+npm run vn -- validate --script "<scriptPath>" --json
+npm run vn -- validate --script "<scriptPath>" --check-assets --json
+npm run vn -- lint-layout --script "<scriptPath>" --json
+npm run vn -- export-report --script "<scriptPath>" --json
+npm run vn -- export-readiness --script "<scriptPath>" --json
+npm run vn -- render-preview --script "<scriptPath>" --scene start --page 0 --out .tmp/preview.png --json
 ```
 
 ## Draft Import
@@ -76,14 +84,14 @@ For raw novel prose, first show the human an adaptation preview: concrete backgr
 Before naming concrete assets, run `list-assets` and prefer semantic filenames documented in `docs/agent-authoring/asset-naming-guidelines.md`.
 
 ```bash
-npm run vn -- import-draft draft.json --fresh --out public/game/script.json --json
+npm run vn -- import-draft draft.json --fresh --out "<scriptPath>" --json
 ```
 
 For reviewable prose-derived edits, convert that structured draft into an apply-plan manifest first:
 
 ```bash
 npm run vn -- draft-plan draft.json --out .tmp/draft-plan.json --require-adaptation-preview --json
-npm run vn -- apply-plan .tmp/draft-plan.json --script public/game/script.json --dry-run --json
+npm run vn -- apply-plan .tmp/draft-plan.json --script "<scriptPath>" --dry-run --json
 ```
 
 `--require-adaptation-preview` requires reviewed adaptation metadata before prose-derived plans are emitted. Use `--fresh` for a new generated project. Omit `--fresh` when importing into an existing script and preserving current content is intended.
@@ -91,7 +99,7 @@ npm run vn -- apply-plan .tmp/draft-plan.json --script public/game/script.json -
 `--out` refuses to overwrite existing files unless `--force` is present. Use `--checkpoint` before larger edits and `--backup` with `--force` when overwriting important scripts:
 
 ```bash
-npm run vn -- import-draft draft.json --fresh --out public/game/script.json --force --checkpoint --backup --json
+npm run vn -- import-draft draft.json --fresh --out "<scriptPath>" --force --checkpoint --backup --json
 ```
 
 Mutation JSON includes:
@@ -104,8 +112,8 @@ Mutation JSON includes:
 For multi-step changes, create a plan manifest and dry-run it before writing:
 
 ```bash
-npm run vn -- apply-plan plan.json --script public/game/script.json --dry-run --json
-npm run vn -- apply-plan plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
+npm run vn -- apply-plan plan.json --script "<scriptPath>" --dry-run --json
+npm run vn -- apply-plan plan.json --script "<scriptPath>" --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 ```
 
 See `docs/agent-authoring/plan-manifest.md` for the manifest shape, `docs/agent-authoring/command-reference.md` for operation params, and `docs/agent-authoring/mini-workflows.md` for focused task examples. If validation fails, `apply-plan` does not write unless `--allow-invalid` is present. When `--checkpoint` is used, JSON output includes a rollback descriptor for `restore-checkpoint`.
@@ -125,38 +133,38 @@ The generated directory includes project metadata, illustrative SVG assets, the 
 For small changes, prefer incremental commands:
 
 ```bash
-npm run vn -- add-scene --id chapter_1 --name "Chapter 1" --script public/game/script.json --force --backup --json
-npm run vn -- rename-scene --scene chapter_1 --new-id chapter_01 --name "Chapter 01" --script public/game/script.json --force --backup --json
-npm run vn -- delete-scene --scene unused_branch --script public/game/script.json --force --backup --json
-npm run vn -- add-character --id sakura --name "Sakura" --expression normal=characters/sakura_normal.svg --script public/game/script.json --force --backup --json
-npm run vn -- add-variable --id sakura_affection --type number --initial 0 --label "Sakura Affection" --script public/game/script.json --force --backup --json
-npm run vn -- add-page --scene chapter_1 --type normal --preset solo-center --character sakura:normal --dialogues '[{"speaker":"sakura","text":"Hello."}]' --script public/game/script.json --force --backup --json
-npm run vn -- move-page --scene chapter_1 --from 2 --to 0 --script public/game/script.json --force --backup --json
-npm run vn -- remove-page --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
-npm run vn -- add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Welcome back." --script public/game/script.json --force --backup --json
-npm run vn -- set-page-background --scene chapter_1 --page 0 --background backgrounds/classroom.svg --script public/game/script.json --force --backup --json
-npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script public/game/script.json --force --backup --json
-npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset speaker-emphasis --character sakura:smile --script public/game/script.json --force --backup --json
-npm run vn -- set-page-camera --scene chapter_1 --page 0 --effect shake --direction both --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
-npm run vn -- set-page-transition --scene chapter_1 --page 0 --type crossfade-pan --duration 700 --script public/game/script.json --force --backup --json
+npm run vn -- add-scene --id chapter_1 --name "Chapter 1" --script "<scriptPath>" --force --backup --json
+npm run vn -- rename-scene --scene chapter_1 --new-id chapter_01 --name "Chapter 01" --script "<scriptPath>" --force --backup --json
+npm run vn -- delete-scene --scene unused_branch --script "<scriptPath>" --force --backup --json
+npm run vn -- add-character --id sakura --name "Sakura" --expression normal=characters/sakura_normal.svg --script "<scriptPath>" --force --backup --json
+npm run vn -- add-variable --id sakura_affection --type number --initial 0 --label "Sakura Affection" --script "<scriptPath>" --force --backup --json
+npm run vn -- add-page --scene chapter_1 --type normal --preset solo-center --character sakura:normal --dialogues '[{"speaker":"sakura","text":"Hello."}]' --script "<scriptPath>" --force --backup --json
+npm run vn -- move-page --scene chapter_1 --from 2 --to 0 --script "<scriptPath>" --force --backup --json
+npm run vn -- remove-page --scene chapter_1 --page 3 --script "<scriptPath>" --force --backup --json
+npm run vn -- add-dialogue --scene chapter_1 --page 0 --speaker sakura --text "Welcome back." --script "<scriptPath>" --force --backup --json
+npm run vn -- set-page-background --scene chapter_1 --page 0 --background backgrounds/classroom.svg --script "<scriptPath>" --force --backup --json
+npm run vn -- set-page-media --scene chapter_1 --page 0 --background backgrounds/classroom.svg --bgm audio/theme.ogg --bgm-volume 0.6 --clear-se --script "<scriptPath>" --force --backup --json
+npm run vn -- set-page-characters --scene chapter_1 --page 0 --preset speaker-emphasis --character sakura:smile --script "<scriptPath>" --force --backup --json
+npm run vn -- set-page-camera --scene chapter_1 --page 0 --effect shake --direction both --intensity medium --duration-ms 450 --script "<scriptPath>" --force --backup --json
+npm run vn -- set-page-transition --scene chapter_1 --page 0 --type crossfade-pan --duration 700 --script "<scriptPath>" --force --backup --json
 npm run vn -- list-particles --json
-npm run vn -- set-page-particles --scene chapter_1 --page 0 --preset sakura --density 0.45 --wind 0.2 --script public/game/script.json --force --backup --json
-npm run vn -- clear-page-particles --scene chapter_1 --page 3 --script public/game/script.json --force --backup --json
-npm run vn -- inherit-page-particles --scene chapter_1 --page 4 --script public/game/script.json --force --backup --json
-npm run vn -- set-ui-motion --intensity dramatic --title cinematic-slow --choices suspense-delay --script public/game/script.json --force --backup --json
+npm run vn -- set-page-particles --scene chapter_1 --page 0 --preset sakura --density 0.45 --wind 0.2 --script "<scriptPath>" --force --backup --json
+npm run vn -- clear-page-particles --scene chapter_1 --page 3 --script "<scriptPath>" --force --backup --json
+npm run vn -- inherit-page-particles --scene chapter_1 --page 4 --script "<scriptPath>" --force --backup --json
+npm run vn -- set-ui-motion --intensity dramatic --title cinematic-slow --choices suspense-delay --script "<scriptPath>" --force --backup --json
 npm run vn -- list-ui-style-presets --json
-npm run vn -- apply-ui-style-preset --preset suspense-noir --scope all --script public/game/script.json --force --backup --json
-npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation pop --script public/game/script.json --force --backup --json
+npm run vn -- apply-ui-style-preset --preset suspense-noir --scope all --script "<scriptPath>" --force --backup --json
+npm run vn -- set-character-animation --scene chapter_1 --page 0 --character sakura --animation pop --script "<scriptPath>" --force --backup --json
 npm run vn -- list-transitions --target background --supported-only --json
-npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect vignette --intensity medium --duration-ms 450 --script public/game/script.json --force --backup --json
-npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition pop --script public/game/script.json --force --backup --json
-npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script public/game/script.json --force --backup --json
-npm run vn -- add-ending --id good_end --title "Good End" --category main --order 1 --script public/game/script.json --force --backup --json
-npm run vn -- add-ending-unlock --scene chapter_1 --page 1 --option 0 --id good_end --script public/game/script.json --force --backup --json
-npm run vn -- add-ending-unlock --scene good_ending --page 0 --id good_end --script public/game/script.json --force --checkpoint --json
-npm run vn -- add-cg --id cg_confession --title "Confession" --images '["backgrounds/cg/confession.png"]' --thumbnail backgrounds/cg/confession_thumb.png --script public/game/script.json --force --backup --json
-npm run vn -- add-cg-unlock --scene chapter_1 --page 1 --option 0 --id cg_confession --script public/game/script.json --force --backup --json
-npm run vn -- set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script public/game/script.json --force --backup --json
+npm run vn -- set-camera-effect --scene chapter_1 --page 0 --effect vignette --intensity medium --duration-ms 450 --script "<scriptPath>" --force --backup --json
+npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sakura --transition pop --script "<scriptPath>" --force --backup --json
+npm run vn -- add-choice-effect --scene chapter_1 --page 1 --option 0 --effect-type var:add --effect-id sakura_affection --value 1 --script "<scriptPath>" --force --backup --json
+npm run vn -- add-ending --id good_end --title "Good End" --category main --order 1 --script "<scriptPath>" --force --backup --json
+npm run vn -- add-ending-unlock --scene chapter_1 --page 1 --option 0 --id good_end --script "<scriptPath>" --force --backup --json
+npm run vn -- add-ending-unlock --scene good_ending --page 0 --id good_end --script "<scriptPath>" --force --checkpoint --json
+npm run vn -- add-cg --id cg_confession --title "Confession" --images '["backgrounds/cg/confession.png"]' --thumbnail backgrounds/cg/confession_thumb.png --script "<scriptPath>" --force --backup --json
+npm run vn -- add-cg-unlock --scene chapter_1 --page 1 --option 0 --id cg_confession --script "<scriptPath>" --force --backup --json
+npm run vn -- set-choice-page --scene chapter_1 --page 1 --prompt "What do you ask?" --script "<scriptPath>" --force --backup --json
 ```
 
 Use `rename-scene` instead of direct JSON edits when a scene id changes; it updates scene flow, choice targets, and condition targets. `delete-scene` is guarded against deleting externally referenced scenes unless `--force-references` is explicitly used.
@@ -164,12 +172,12 @@ Use `rename-scene` instead of direct JSON edits when a scene id changes; it upda
 Inspect and repair scene references before deleting or merging branch scenes:
 
 ```bash
-npm run vn -- scene-references --all --script public/game/script.json --json
-npm run vn -- scene-references --scene old_route --script public/game/script.json --json
-npm run vn -- retarget-scene --from old_route --to new_route --script public/game/script.json --force --checkpoint --json
-npm run vn -- graph-report --script public/game/script.json --json
-npm run vn -- find-dead-ends --script public/game/script.json --json
-npm run vn -- clear-scene-references --scene unused_route --script public/game/script.json --force --checkpoint --json
+npm run vn -- scene-references --all --script "<scriptPath>" --json
+npm run vn -- scene-references --scene old_route --script "<scriptPath>" --json
+npm run vn -- retarget-scene --from old_route --to new_route --script "<scriptPath>" --force --checkpoint --json
+npm run vn -- graph-report --script "<scriptPath>" --json
+npm run vn -- find-dead-ends --script "<scriptPath>" --json
+npm run vn -- clear-scene-references --scene unused_route --script "<scriptPath>" --force --checkpoint --json
 ```
 
 Use `--dry-run` to inspect the validation result without writing:
@@ -181,7 +189,7 @@ npm run vn -- add-scene --id chapter_1 --name "Chapter 1" --dry-run --json
 Use `author-check` as the preferred handoff gate after meaningful edits:
 
 ```bash
-npm run vn -- author-check --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
+npm run vn -- author-check --script "<scriptPath>" --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 ```
 
 The command aggregates validation, layout lint, export readiness, preview dry-run planning, issues, and suggestions into one JSON payload. With `--transaction`, it reads changed paths from the apply result, focuses changed scene/page checks, plans preview targets for changed scenes and supported screen UI paths, and emits screen UI preview review items; add `--scene` and `--page` only to override that target list.
@@ -189,13 +197,13 @@ The command aggregates validation, layout lint, export readiness, preview dry-ru
 Generate a handoff report when returning work to the no-code editor or a human reviewer:
 
 ```bash
-npm run vn -- handoff-report --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review newly authored branch." --json
+npm run vn -- handoff-report --script "<scriptPath>" --transaction .tmp/apply-plan-result.json --write-editor-handoff --note "Review newly authored branch." --json
 ```
 
 For one final continuous review step, combine author-check and editor handoff generation:
 
 ```bash
-npm run vn:review-handoff -- --script public/game/script.json --asset-root public/game --transaction .tmp/apply-plan-result.json --preview-out .tmp/agent-preview.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
+npm run vn:review-handoff -- --script "<scriptPath>" --asset-root "<projectPath>" --transaction .tmp/apply-plan-result.json --preview-out .tmp/agent-preview.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
 ```
 
 Add `--require-preview-screenshot` when a workflow must capture and quality-check preview screenshots instead of accepting planned preview targets for later human inspection.

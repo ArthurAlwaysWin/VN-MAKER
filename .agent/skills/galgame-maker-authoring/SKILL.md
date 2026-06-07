@@ -31,8 +31,12 @@ npm run vn -- projects resolve "Project Name" --json
 If the user asks to make a new game, create a separate project directory instead of overwriting `public/game/script.json`:
 
 ```bash
-npm run vn -- projects create --out "D:/Galgame-Maker/Projects/ProjectName" --title "Project Name" --open --json
+npm run vn -- projects create --title "Project Name" --open --launch --json
 ```
+
+When `--out` is omitted, the CLI creates the project under the recommended projects directory: first `GALGAME_MAKER_PROJECTS_DIR`, then platform defaults such as `D:/Galgame-Maker/Projects` or the user's Documents folder on Windows, and Documents/home based folders elsewhere. The project folder name is generated safely from the title. Do not create projects in the Galgame Maker source checkout, packaged editor release folders, `node_modules`, `dist*`, or temporary folders.
+
+`--open` writes the pending editor open request. `--launch` additionally tries to start the packaged editor; if it cannot find the executable, set `GALGAME_MAKER_EDITOR_EXE` or pass `--editor`.
 
 Use the returned `project.scriptPath` for all later commands. Only fall back to `public/game/script.json` when the user explicitly asks to edit the built-in example project.
 
@@ -56,10 +60,10 @@ npm run vn -- validate --script "<scriptPath>" --json
 Prefer this chain for meaningful work:
 
 ```bash
-npm run vn:apply-plan -- .tmp/plan.json --script public/game/script.json --validate-only --result-out .tmp/apply-plan-validation.json --json
-npm run vn:apply-plan -- .tmp/plan.json --script public/game/script.json --dry-run --json
-npm run vn:apply-plan -- .tmp/plan.json --script public/game/script.json --force --checkpoint --result-out .tmp/apply-plan-result.json --json
-npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
+npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --validate-only --result-out .tmp/apply-plan-validation.json --json
+npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --dry-run --json
+npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --force --checkpoint --result-out .tmp/apply-plan-result.json --json
+npm run vn:review-handoff -- --script "<scriptPath>" --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
 ```
 
 For small targeted edits, use `npm run vn -- <command>` from the command reference. Do not invent unsupported fields.

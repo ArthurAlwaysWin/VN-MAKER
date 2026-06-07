@@ -37,6 +37,16 @@ See also:
 
 ## First Commands
 
+Resolve or create the target project before inspecting `script.json`:
+
+```bash
+npm run vn -- projects list --json
+npm run vn -- projects resolve "Project Name" --json
+npm run vn -- projects create --out "D:/Galgame-Maker/Projects/ProjectName" --title "Project Name" --open --json
+```
+
+Use the returned `project.scriptPath` in later commands. Do not overwrite `public/game/script.json` unless the human explicitly asks to edit the built-in example project.
+
 ```bash
 npm run vn:inspect -- --json
 npm run validate:project -- --json

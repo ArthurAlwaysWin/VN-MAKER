@@ -801,6 +801,100 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('lists and resolves editor recent projects for agent sessions', async () => {
+    await withTempDir(async (dir) => {
+      const projectDir = path.join(dir, 'summer-song');
+      await mkdir(projectDir, { recursive: true });
+      await writeFile(path.join(projectDir, 'project.json'), JSON.stringify({
+        name: '夏日恋曲',
+        author: '',
+      }), 'utf8');
+      await writeFile(path.join(projectDir, 'script.json'), JSON.stringify({
+        projectId: 'gm_summer_song',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const registryPath = path.join(dir, 'recent-projects.json');
+      await writeFile(registryPath, JSON.stringify({
+        hasCreatedProject: true,
+        projects: [{
+          name: '夏日恋曲',
+          path: projectDir,
+          openedAt: '2026-06-07T00:00:00.000Z',
+        }],
+      }), 'utf8');
+
+      const list = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'projects',
+        'list',
+        '--registry',
+        registryPath,
+        '--json',
+      ])).stdout);
+      expect(list.projects[0]).toMatchObject({
+        name: '夏日恋曲',
+        path: projectDir,
+        scriptPath: path.join(projectDir, 'script.json'),
+        valid: true,
+      });
+
+      const resolved = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'projects',
+        'resolve',
+        '夏日',
+        '--registry',
+        registryPath,
+        '--json',
+      ])).stdout);
+      expect(resolved.ok).toBe(true);
+      expect(resolved.project.scriptPath).toBe(path.join(projectDir, 'script.json'));
+    });
+  });
+
+  it('creates and opens registered projects through the agent project commands', async () => {
+    await withTempDir(async (dir) => {
+      const registryPath = path.join(dir, 'recent-projects.json');
+      const projectDir = path.join(dir, 'agent-created-project');
+
+      const created = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'projects',
+        'create',
+        '--out',
+        projectDir,
+        '--title',
+        'Agent Created',
+        '--user-data',
+        dir,
+        '--json',
+      ])).stdout);
+
+      expect(created.ok).toBe(true);
+      expect(created.registryPath).toBe(registryPath);
+      await stat(path.join(projectDir, 'project.json'));
+      await stat(path.join(projectDir, 'script.json'));
+      await stat(path.join(projectDir, 'assets', 'backgrounds'));
+
+      const opened = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'projects',
+        'open',
+        'Agent',
+        '--user-data',
+        dir,
+        '--json',
+      ])).stdout);
+
+      expect(opened.ok).toBe(true);
+      expect(opened.project.scriptPath).toBe(path.join(projectDir, 'script.json'));
+      const request = JSON.parse(await readFile(path.join(dir, 'pending-open-project.json'), 'utf8'));
+      expect(request.projectPath).toBe(projectDir);
+    });
+  });
+
   it('keeps the documented example draft convertible to an executable plan', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');

@@ -13,21 +13,43 @@ Keep the human creator in control and keep the project editable in the Galgame M
 
 ## Start
 
-1. Inspect before editing:
+1. Check the workspace:
 
 ```bash
 git status --short --branch
-npm run vn:inspect -- --json
-npm run vn:report -- --json
-npm run validate:project -- --json
 ```
 
-2. If the task involves prose, use `galgame-maker-prose-to-plan`.
-3. If the task involves missing or ambiguous assets, use `galgame-maker-asset-intake`.
-4. If the task involves title/settings/menu/save/load/backlog/dialogue/choice UI, use `galgame-maker-screen-ui`.
-5. If the task involves visual quality, atmosphere, transitions, particles, or effect packs, use `galgame-maker-visual-polish`.
-6. If the task is final review or pre-release verification, use `galgame-maker-project-qa`.
-7. If the task is export, package, or release delivery, use `galgame-maker-release-export`.
+2. Resolve the target project before inspecting `script.json`.
+
+If the user asks to continue an existing project by name, use the editor-maintained project registry:
+
+```bash
+npm run vn -- projects list --json
+npm run vn -- projects resolve "Project Name" --json
+```
+
+If the user asks to make a new game, create a separate project directory instead of overwriting `public/game/script.json`:
+
+```bash
+npm run vn -- projects create --out "D:/Galgame-Maker/Projects/ProjectName" --title "Project Name" --open --json
+```
+
+Use the returned `project.scriptPath` for all later commands. Only fall back to `public/game/script.json` when the user explicitly asks to edit the built-in example project.
+
+3. Inspect the resolved project:
+
+```bash
+npm run vn -- inspect --script "<scriptPath>" --json
+npm run vn -- export-report --script "<scriptPath>" --json
+npm run vn -- validate --script "<scriptPath>" --json
+```
+
+4. If the task involves prose, use `galgame-maker-prose-to-plan`.
+5. If the task involves missing or ambiguous assets, use `galgame-maker-asset-intake`.
+6. If the task involves title/settings/menu/save/load/backlog/dialogue/choice UI, use `galgame-maker-screen-ui`.
+7. If the task involves visual quality, atmosphere, transitions, particles, or effect packs, use `galgame-maker-visual-polish`.
+8. If the task is final review or pre-release verification, use `galgame-maker-project-qa`.
+9. If the task is export, package, or release delivery, use `galgame-maker-release-export`.
 
 ## Edit Path
 

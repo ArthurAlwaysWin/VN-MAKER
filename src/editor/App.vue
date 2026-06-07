@@ -119,6 +119,7 @@ const canRedo = computed(() => script.historyIndex < script.history.length - 1);
 let saveTimer = null;
 let snapshotTimer = null;
 let externalChangeTimer = null;
+let removeOpenProjectListener = null;
 
 watch(() => script.data, () => {
   if (!script.data || script._skipWatch) return;
@@ -181,6 +182,11 @@ function onKeyDown(e) {
 onMounted(async () => {
   document.addEventListener('keydown', onKeyDown);
   await project.loadRecentProjects();
+  if (window.ipcRenderer) {
+    removeOpenProjectListener = window.ipcRenderer.on('open-project-path', (_event, projectPath) => {
+      void openProjectFromExternal(projectPath);
+    });
+  }
   // Expose for Electron close handler
   window.__hasDirtyProject = () => project.isDirty && !!script.data;
   window.__saveCurrentProject = () => script.data
@@ -194,6 +200,8 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeyDown);
+  removeOpenProjectListener?.();
+  removeOpenProjectListener = null;
   if (saveTimer) clearTimeout(saveTimer);
   if (snapshotTimer) clearTimeout(snapshotTimer);
   if (externalChangeTimer) clearInterval(externalChangeTimer);
@@ -245,6 +253,25 @@ async function openProject(projectPath) {
   } else if (result && result.error) {
     alert(result.error);
   }
+}
+
+async function openProjectFromExternal(projectPath) {
+  if (!projectPath || typeof projectPath !== 'string') {
+    return;
+  }
+
+  if (project.isDirty && script.data) {
+    const action = await window.ipcRenderer.invoke('show-save-dialog');
+    if (action === 'cancel') return;
+    if (action === 'save') {
+      const saved = await attemptSave({ source: 'external-open-project' });
+      if (!saved) return;
+    }
+  }
+
+  if (saveTimer) clearTimeout(saveTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  await openProject(projectPath);
 }
 
 async function onProjectCreated(projectPath) {

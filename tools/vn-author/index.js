@@ -2,6 +2,8 @@
 
 import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
@@ -13,6 +15,16 @@ import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
 import { createCharacterBlocking, LAYOUT_PRESETS } from '../../src/authoring/layoutPresets.js';
 import { createProjectSession } from '../../src/authoring/projectSession.js';
 import { createProjectReport } from '../../src/authoring/projectReport.js';
+import { createGalgameProject } from '../../src/authoring/projectScaffold.js';
+import {
+  describeProjectPath,
+  getProjectRegistryPath,
+  getProjectRegistryUserDataCandidates,
+  listRegisteredProjects,
+  registerProject,
+  resolveRegisteredProject,
+  writeProjectOpenRequest,
+} from '../../src/authoring/projectRegistry.js';
 import {
   collectSceneReferenceDiagnostics,
   sceneIdsFromChangedPaths,
@@ -173,6 +185,129 @@ function getIntArg(args, name, fallback = null) {
   }
 
   return parsed;
+}
+
+function getProjectRegistryFileFromArgs(args) {
+  const registryPath = getArgValue(args, '--registry', null);
+  if (registryPath) {
+    return path.resolve(repoRoot, registryPath);
+  }
+
+  const userDataDir = getArgValue(args, '--user-data', null);
+  if (userDataDir) {
+    return getProjectRegistryPath(path.resolve(repoRoot, userDataDir));
+  }
+
+  const userDataCandidates = getProjectRegistryUserDataCandidates();
+  const [defaultUserDataDir] = userDataCandidates;
+  const existingRegistryPath = userDataCandidates
+    .map((candidate) => getProjectRegistryPath(candidate))
+    .find((candidate) => existsSync(candidate));
+  if (existingRegistryPath) {
+    return existingRegistryPath;
+  }
+
+  if (!defaultUserDataDir) {
+    throw new Error('Could not resolve Galgame Maker user data directory. Pass --user-data or --registry.');
+  }
+  return getProjectRegistryPath(defaultUserDataDir);
+}
+
+function getProjectUserDataDirFromArgs(args) {
+  const userDataDir = getArgValue(args, '--user-data', null);
+  if (userDataDir) {
+    return path.resolve(repoRoot, userDataDir);
+  }
+
+  const registryPath = getArgValue(args, '--registry', null);
+  if (registryPath) {
+    return path.dirname(path.resolve(repoRoot, registryPath));
+  }
+
+  const userDataCandidates = getProjectRegistryUserDataCandidates();
+  const existingUserDataDir = userDataCandidates
+    .find((candidate) => existsSync(getProjectRegistryPath(candidate)));
+  if (existingUserDataDir) {
+    return existingUserDataDir;
+  }
+
+  const [defaultUserDataDir] = userDataCandidates;
+  if (!defaultUserDataDir) {
+    throw new Error('Could not resolve Galgame Maker user data directory. Pass --user-data or --registry.');
+  }
+  return defaultUserDataDir;
+}
+
+function getProjectsQuery(args) {
+  const explicit = getArgValue(args, '--name', null)
+    || getArgValue(args, '--query', null);
+  if (explicit) {
+    return explicit;
+  }
+
+  const valueFlags = new Set([
+    '--registry', '--user-data', '--project', '--editor', '--name', '--query',
+    '--out', '--title', '--author', '--width', '--height', '--template',
+  ]);
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = String(args[index]);
+    if (valueFlags.has(arg)) {
+      index += 1;
+      continue;
+    }
+    if (!arg.startsWith('--')) {
+      return arg;
+    }
+  }
+
+  return null;
+}
+
+async function findEditorExecutable(args) {
+  const explicit = getArgValue(args, '--editor', null) || process.env.GALGAME_MAKER_EDITOR_EXE;
+  const candidates = [];
+  if (explicit) {
+    candidates.push(path.resolve(repoRoot, explicit));
+  }
+
+  candidates.push(
+    path.join(repoRoot, 'release', 'Galgame Maker-win32-x64', 'Galgame Maker.exe'),
+    path.join(repoRoot, 'release', 'Galgame Maker', 'Galgame Maker.exe'),
+  );
+
+  for (const candidate of candidates) {
+    try {
+      await stat(candidate);
+      return candidate;
+    } catch {
+      // Try the next known packaging location.
+    }
+  }
+
+  return null;
+}
+
+async function maybeLaunchEditor(args, projectPath) {
+  const shouldLaunch = hasFlag(args, '--launch') || Boolean(getArgValue(args, '--editor', null));
+  if (!shouldLaunch) {
+    return { attempted: false };
+  }
+
+  const editor = await findEditorExecutable(args);
+  if (!editor) {
+    return {
+      attempted: true,
+      launched: false,
+      error: 'Editor executable not found. Pass --editor or set GALGAME_MAKER_EDITOR_EXE.',
+    };
+  }
+
+  const child = spawn(editor, ['--project', projectPath], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  return { attempted: true, launched: true, editor };
 }
 
 function parseExpressions(args) {
@@ -5833,8 +5968,177 @@ async function removeChoiceEffect(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function resolveProjectForCli(args) {
+  const registryPath = getProjectRegistryFileFromArgs(args);
+  const directProjectPath = getArgValue(args, '--project', null);
+  if (directProjectPath) {
+    const project = await describeProjectPath(path.resolve(repoRoot, directProjectPath));
+    return {
+      ok: project.valid,
+      query: directProjectPath,
+      registryPath,
+      project: project.valid ? project : null,
+      matches: project.valid ? [project] : [],
+      ambiguous: false,
+      error: project.valid ? null : 'Not a valid Galgame Maker project',
+    };
+  }
+
+  const query = getProjectsQuery(args);
+  if (query) {
+    return resolveRegisteredProject(registryPath, query);
+  }
+
+  const registry = await listRegisteredProjects(registryPath);
+  const latest = registry.projects[0] || null;
+  return {
+    ok: Boolean(latest),
+    query: null,
+    registryPath,
+    project: latest,
+    matches: latest ? [latest] : [],
+    ambiguous: false,
+    error: latest ? null : 'No recent Galgame Maker projects found',
+  };
+}
+
+async function projectsCommand(args) {
+  const [subcommand = 'list', ...rest] = args;
+  const registryPath = getProjectRegistryFileFromArgs(rest);
+  const userDataDir = getProjectUserDataDirFromArgs(rest);
+
+  if (subcommand === 'list') {
+    const output = {
+      ok: true,
+      userDataDir,
+      ...(await listRegisteredProjects(registryPath)),
+    };
+    if (hasFlag(rest, '--json')) {
+      writeJson(output);
+    } else if (output.projects.length === 0) {
+      process.stdout.write('No recent Galgame Maker projects found.\n');
+    } else {
+      for (const project of output.projects) {
+        process.stdout.write(`${project.name}: ${project.path}\n`);
+      }
+    }
+    return 0;
+  }
+
+  if (subcommand === 'resolve') {
+    const output = await resolveProjectForCli(rest);
+    if (hasFlag(rest, '--json')) {
+      writeJson(output);
+    } else if (output.ok) {
+      process.stdout.write(`Project: ${output.project.name}\n`);
+      process.stdout.write(`Path: ${output.project.path}\n`);
+      process.stdout.write(`Script: ${output.project.scriptPath}\n`);
+    } else if (output.ambiguous) {
+      process.stderr.write(`Ambiguous project name. Matches: ${output.matches.map(p => p.name).join(', ')}\n`);
+    } else {
+      process.stderr.write(`${output.error || 'Project not found'}\n`);
+    }
+    return output.ok ? 0 : 1;
+  }
+
+  if (subcommand === 'create') {
+    const outPath = getArgValue(rest, '--out', null) || getArgValue(rest, '--project', null);
+    if (!outPath) {
+      throw new Error('projects create requires --out project-dir');
+    }
+
+    const width = getIntArg(rest, '--width', 1280);
+    const height = getIntArg(rest, '--height', 720);
+    const created = await createGalgameProject({
+      projectPath: path.resolve(repoRoot, outPath),
+      name: getArgValue(rest, '--title', null)
+        || getArgValue(rest, '--name', null)
+        || path.basename(outPath),
+      author: getArgValue(rest, '--author', ''),
+      resolution: { width, height },
+      template: getArgValue(rest, '--template', 'blank'),
+    });
+    const project = await registerProject(registryPath, created.projectPath, created.project.name);
+    let openRequest = null;
+    let launch = { attempted: false };
+    if (hasFlag(rest, '--open')) {
+      openRequest = await writeProjectOpenRequest(userDataDir, project.path);
+      launch = await maybeLaunchEditor(rest, project.path);
+    }
+
+    const output = {
+      ok: true,
+      registryPath,
+      userDataDir,
+      project,
+      openRequest: openRequest
+        ? { requestPath: openRequest.requestPath, request: openRequest.request }
+        : null,
+      launch,
+    };
+    if (hasFlag(rest, '--json')) {
+      writeJson(output);
+    } else {
+      process.stdout.write(`Created project: ${project.path}\n`);
+      process.stdout.write(`Script: ${project.scriptPath}\n`);
+      if (openRequest) {
+        process.stdout.write(`Editor open request: ${openRequest.requestPath}\n`);
+      }
+    }
+    return 0;
+  }
+
+  if (subcommand === 'open') {
+    const resolved = await resolveProjectForCli(rest);
+    if (!resolved.ok) {
+      if (hasFlag(rest, '--json')) {
+        writeJson(resolved);
+      } else if (resolved.ambiguous) {
+        process.stderr.write(`Ambiguous project name. Matches: ${resolved.matches.map(p => p.name).join(', ')}\n`);
+      } else {
+        process.stderr.write(`${resolved.error || 'Project not found'}\n`);
+      }
+      return 1;
+    }
+
+    const project = await registerProject(registryPath, resolved.project.path, resolved.project.name);
+    const openRequest = hasFlag(rest, '--no-request')
+      ? null
+      : await writeProjectOpenRequest(userDataDir, project.path);
+    const launch = await maybeLaunchEditor(rest, project.path);
+    const output = {
+      ok: true,
+      registryPath,
+      userDataDir,
+      project,
+      openRequest: openRequest
+        ? { requestPath: openRequest.requestPath, request: openRequest.request }
+        : null,
+      launch,
+    };
+    if (hasFlag(rest, '--json')) {
+      writeJson(output);
+    } else {
+      process.stdout.write(`Opened project request: ${project.name}\n`);
+      process.stdout.write(`Path: ${project.path}\n`);
+      process.stdout.write(`Script: ${project.scriptPath}\n`);
+      if (openRequest) {
+        process.stdout.write(`Editor open request: ${openRequest.requestPath}\n`);
+      }
+    }
+    return 0;
+  }
+
+  throw new Error(`Unknown projects subcommand: ${subcommand}`);
+}
+
 function printHelp() {
   process.stdout.write(`vn-author commands:
+  projects list|resolve|create|open [options] [--json]
+    projects list [--registry path|--user-data dir] [--json]
+    projects resolve [name] [--project dir] [--registry path|--user-data dir] [--json]
+    projects create --out dir [--title title] [--author author] [--width px] [--height px] [--open] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
+    projects open [name] [--project dir] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
   inspect [--script path] [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
   list-assets [--project path|--script path] [--json]
@@ -5932,6 +6236,21 @@ async function main() {
   const [, , command, ...args] = process.argv;
 
   try {
+    if (command === 'projects') {
+      process.exitCode = await projectsCommand(args);
+      return;
+    }
+
+    if (command === 'create-project') {
+      process.exitCode = await projectsCommand(['create', ...args]);
+      return;
+    }
+
+    if (command === 'open-project') {
+      process.exitCode = await projectsCommand(['open', ...args]);
+      return;
+    }
+
     if (command === 'inspect') {
       process.exitCode = await inspect(args);
       return;

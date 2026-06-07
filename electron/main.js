@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, net, dialog, shell, screen } fro
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, watch as watchFs } from 'node:fs';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 import { exportGame } from './exportGame.js';
 import { exportDesktop } from './exportDesktop.js';
@@ -13,6 +13,15 @@ import {
   createDefaultPlayerProfile,
   normalizePlayerProfile,
 } from '../src/engine/PlayerDataRepository.js';
+import {
+  clearProjectOpenRequest,
+  describeProjectPath,
+  getProjectRegistryPath,
+  readProjectOpenRequest,
+  readProjectRegistry,
+  registerProject,
+  writeProjectRegistry,
+} from '../src/authoring/projectRegistry.js';
 import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 
@@ -28,6 +37,9 @@ protocol.registerSchemesAsPrivileged([
 
 let currentProjectPath = null;
 let win;
+let pendingProjectPathToOpen = null;
+let openRequestWatcher = null;
+let openRequestDebounce = null;
 
 function getMainWindow() {
   return win || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
@@ -36,29 +48,19 @@ function getMainWindow() {
 // --- Recent Projects ---
 
 function recentProjectsPath() {
-  return path.join(app.getPath('userData'), 'recent-projects.json');
+  return getProjectRegistryPath(app.getPath('userData'));
 }
 
 async function readRecentProjects() {
-  try {
-    const raw = await fs.readFile(recentProjectsPath(), 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return { hasCreatedProject: false, projects: [] };
-  }
+  return readProjectRegistry(recentProjectsPath());
 }
 
 async function writeRecentProjects(data) {
-  await fs.writeFile(recentProjectsPath(), JSON.stringify(data, null, 2), 'utf-8');
+  await writeProjectRegistry(recentProjectsPath(), data);
 }
 
 async function addToRecent(projectPath, name) {
-  const recent = await readRecentProjects();
-  recent.projects = recent.projects.filter(p => p.path !== projectPath);
-  recent.projects.unshift({ path: projectPath, name, openedAt: new Date().toISOString() });
-  if (recent.projects.length > 20) recent.projects = recent.projects.slice(0, 20);
-  recent.hasCreatedProject = true;
-  await writeRecentProjects(recent);
+  return registerProject(recentProjectsPath(), projectPath, name);
 }
 
 // --- Path Security ---
@@ -1396,6 +1398,106 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST;
 
+function getProjectPathFromArgv(argv = []) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--project' || arg === '--open-project') {
+      return argv[index + 1] || null;
+    }
+    if (typeof arg === 'string' && arg.startsWith('--project=')) {
+      return arg.slice('--project='.length);
+    }
+    if (typeof arg === 'string' && arg.startsWith('--open-project=')) {
+      return arg.slice('--open-project='.length);
+    }
+  }
+  return null;
+}
+
+function flushPendingProjectOpen() {
+  if (!win || win.isDestroyed() || !pendingProjectPathToOpen) {
+    return;
+  }
+
+  const projectPath = pendingProjectPathToOpen;
+  pendingProjectPathToOpen = null;
+  setTimeout(() => {
+    if (!win || win.isDestroyed()) {
+      pendingProjectPathToOpen = projectPath;
+      return;
+    }
+    win.webContents.send('open-project-path', projectPath);
+  }, 100);
+}
+
+async function requestEditorOpenProject(projectPath) {
+  if (!projectPath) {
+    return { success: false, error: 'No project path provided' };
+  }
+
+  const described = await describeProjectPath(projectPath);
+  if (!described.valid) {
+    return {
+      success: false,
+      error: 'Not a valid Galgame Maker project',
+      path: described.path,
+    };
+  }
+
+  rememberProjectPath(described.path);
+  await addToRecent(described.path, described.name);
+  pendingProjectPathToOpen = described.path;
+  flushPendingProjectOpen();
+  return { success: true, project: described };
+}
+
+async function processPendingProjectOpenRequest() {
+  let pending;
+  try {
+    pending = await readProjectOpenRequest(app.getPath('userData'));
+  } catch (error) {
+    console.error('[open-project-request] Failed to read request:', error);
+    return;
+  }
+
+  if (!pending?.projectPath) {
+    return;
+  }
+
+  try {
+    await clearProjectOpenRequest(app.getPath('userData'));
+  } catch (error) {
+    console.error('[open-project-request] Failed to clear request:', error);
+  }
+
+  const result = await requestEditorOpenProject(pending.projectPath);
+  if (!result.success) {
+    console.error('[open-project-request] Failed:', result.error);
+  }
+}
+
+function startProjectOpenRequestWatcher() {
+  if (openRequestWatcher) {
+    return;
+  }
+
+  try {
+    openRequestWatcher = watchFs(app.getPath('userData'), (_eventType, filename) => {
+      if (filename && filename !== 'pending-open-project.json') {
+        return;
+      }
+      if (openRequestDebounce) {
+        clearTimeout(openRequestDebounce);
+      }
+      openRequestDebounce = setTimeout(() => {
+        void processPendingProjectOpenRequest();
+      }, 80);
+    });
+  } catch (error) {
+    console.error('[open-project-request] Failed to start watcher:', error);
+  }
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1280, height: 800,
@@ -1443,14 +1545,36 @@ function createWindow() {
   } else {
     win.loadFile(path.join(RENDERER_DIST, 'editor.html'));
   }
+
+  win.webContents.on('did-finish-load', () => {
+    flushPendingProjectOpen();
+    void processPendingProjectOpenRequest();
+  });
 }
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') { app.quit(); win = null; }
-});
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+    const projectPath = getProjectPathFromArgv(argv);
+    if (projectPath) {
+      void requestEditorOpenProject(projectPath);
+    }
+  });
+}
 
-app.whenReady().then(() => {
-  protocol.handle('asset', async (request) => {
+if (gotSingleInstanceLock) {
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') { app.quit(); win = null; }
+  });
+
+  app.whenReady().then(() => {
+    protocol.handle('asset', async (request) => {
     const url = new URL(request.url);
     const filePath = decodeURIComponent(url.hostname + url.pathname);
 
@@ -1540,6 +1664,10 @@ app.whenReady().then(() => {
     } catch {
       return new Response('Not Found', { status: 404 });
     }
+    });
+    createWindow();
+    startProjectOpenRequestWatcher();
+    void requestEditorOpenProject(getProjectPathFromArgv(process.argv));
+    void processPendingProjectOpenRequest();
   });
-  createWindow();
-});
+}

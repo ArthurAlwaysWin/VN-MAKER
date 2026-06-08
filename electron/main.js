@@ -1501,16 +1501,19 @@ function flushPendingProjectOpen() {
     return;
   }
 
-  const projectPath = pendingProjectPathToOpen;
-  pendingProjectPathToOpen = null;
   setTimeout(() => {
-    if (!win || win.isDestroyed()) {
-      pendingProjectPathToOpen = projectPath;
+    if (!win || win.isDestroyed() || !pendingProjectPathToOpen) {
       return;
     }
-    win.webContents.send('open-project-path', projectPath);
+    win.webContents.send('open-project-path', pendingProjectPathToOpen);
   }, 100);
 }
+
+ipcMain.handle('consume-pending-open-project-path', () => {
+  const projectPath = pendingProjectPathToOpen;
+  pendingProjectPathToOpen = null;
+  return projectPath || null;
+});
 
 async function requestEditorOpenProject(projectPath) {
   if (!projectPath) {

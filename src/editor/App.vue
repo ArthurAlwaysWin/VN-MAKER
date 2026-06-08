@@ -120,6 +120,7 @@ let saveTimer = null;
 let snapshotTimer = null;
 let externalChangeTimer = null;
 let removeOpenProjectListener = null;
+let openingExternalProjectPath = null;
 
 function isAgentLiveModeEnabled() {
   const envValue = import.meta.env?.VITE_AGENT_LIVE_MODE;
@@ -194,9 +195,14 @@ onMounted(async () => {
   document.addEventListener('keydown', onKeyDown);
   await project.loadRecentProjects();
   if (window.ipcRenderer?.on) {
-    removeOpenProjectListener = window.ipcRenderer.on('open-project-path', (_event, projectPath) => {
-      void openProjectFromExternal(projectPath);
+    removeOpenProjectListener = window.ipcRenderer.on('open-project-path', async (_event, projectPath) => {
+      const pendingProjectPath = await consumePendingOpenProjectPath();
+      void openProjectFromExternal(pendingProjectPath || projectPath);
     });
+  }
+  const pendingProjectPath = await consumePendingOpenProjectPath();
+  if (pendingProjectPath) {
+    void openProjectFromExternal(pendingProjectPath);
   }
   // Expose for Electron close handler
   window.__hasDirtyProject = () => project.isDirty && !!script.data;
@@ -224,6 +230,14 @@ onBeforeUnmount(() => {
 });
 
 // --- Actions ---
+async function consumePendingOpenProjectPath() {
+  if (!window.ipcRenderer?.invoke) {
+    return null;
+  }
+
+  return window.ipcRenderer.invoke('consume-pending-open-project-path');
+}
+
 function showCreateDialog() {
   if (project.hasCreatedProject) {
     showQuickCreate.value = true;
@@ -275,19 +289,27 @@ async function openProjectFromExternal(projectPath) {
   if (!projectPath || typeof projectPath !== 'string') {
     return;
   }
-
-  if (project.isDirty && script.data) {
-    const action = await window.ipcRenderer.invoke('show-save-dialog');
-    if (action === 'cancel') return;
-    if (action === 'save') {
-      const saved = await attemptSave({ source: 'external-open-project' });
-      if (!saved) return;
-    }
+  if (openingExternalProjectPath === projectPath) {
+    return;
   }
+  openingExternalProjectPath = projectPath;
 
-  if (saveTimer) clearTimeout(saveTimer);
-  if (snapshotTimer) clearTimeout(snapshotTimer);
-  await openProject(projectPath);
+  try {
+    if (project.isDirty && script.data) {
+      const action = await window.ipcRenderer.invoke('show-save-dialog');
+      if (action === 'cancel') return;
+      if (action === 'save') {
+        const saved = await attemptSave({ source: 'external-open-project' });
+        if (!saved) return;
+      }
+    }
+
+    if (saveTimer) clearTimeout(saveTimer);
+    if (snapshotTimer) clearTimeout(snapshotTimer);
+    await openProject(projectPath);
+  } finally {
+    openingExternalProjectPath = null;
+  }
 }
 
 async function onProjectCreated(projectPath) {

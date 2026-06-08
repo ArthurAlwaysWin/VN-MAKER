@@ -34,12 +34,22 @@ const nameInput = ref(null);
 
 const canCreate = computed(() => name.value.trim() && location.value.trim());
 
-onMounted(() => { nameInput.value?.focus(); });
+onMounted(async () => {
+  if (!project.projectLibraryDir) {
+    await project.loadRecentProjects();
+  }
+  location.value = project.projectLibraryDir || '';
+  nameInput.value?.focus();
+});
 
 async function browseLocation() {
   if (!window.ipcRenderer) return;
-  const result = await window.ipcRenderer.invoke('dialog-open-directory');
-  if (result) location.value = result;
+  const result = await project.chooseProjectLibrary();
+  if (result?.success) {
+    location.value = result.projectLibraryDir;
+  } else if (result?.error) {
+    alert(result.error);
+  }
 }
 
 async function handleCreate() {

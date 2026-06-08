@@ -919,6 +919,11 @@ describe('vn-author CLI', () => {
         platform: 'win32',
         homeDir: dir,
       })[0]).toBe(path.resolve(projectsRoot));
+      expect(getRecommendedProjectRootCandidates({
+        env: { USERPROFILE: dir },
+        platform: 'win32',
+        homeDir: dir,
+      })[0]).toBe(path.join(dir, 'Documents', 'Galgame Maker', 'Projects'));
       expect(resolved).toMatchObject({
         projectPath: path.join(projectsRoot, 'A_Story__Final'),
         projectRoot: projectsRoot,
@@ -960,6 +965,87 @@ describe('vn-author CLI', () => {
       });
     } finally {
       await rm(defaultRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('recommends project creation paths without creating directories', async () => {
+    const defaultRoot = path.resolve(process.cwd(), '..', `.tmp-galgame-recommend-${Date.now()}`);
+    try {
+      await withTempDir(async (dir) => {
+        const recommended = JSON.parse((await execFileAsync('node', [
+          cliPath,
+          'projects',
+          'recommend-create',
+          '--title',
+          'Ask First',
+          '--user-data',
+          dir,
+          '--json',
+        ], {
+          env: {
+            ...process.env,
+            GALGAME_MAKER_PROJECTS_DIR: defaultRoot,
+          },
+        })).stdout);
+
+        expect(recommended.ok).toBe(true);
+        expect(recommended.createPath).toMatchObject({
+          projectRoot: defaultRoot,
+          projectPath: path.join(defaultRoot, 'Ask First'),
+          generated: true,
+        });
+        expect(recommended.guidance).toMatchObject({
+          askBeforeCreate: true,
+          createCommand: expect.stringContaining('--out'),
+        });
+        await expect(stat(defaultRoot)).rejects.toMatchObject({ code: 'ENOENT' });
+      });
+    } finally {
+      await rm(defaultRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('prefers the editor registry that stores a project library', async () => {
+    const libraryDir = path.resolve(process.cwd(), '..', `.tmp-editor-library-${Date.now()}`);
+    try {
+      await withTempDir(async (dir) => {
+        const appData = path.join(dir, 'AppData');
+        const staleUserData = path.join(appData, 'Galgame Maker');
+        const editorUserData = path.join(appData, 'galgame-maker');
+        await mkdir(staleUserData, { recursive: true });
+        await mkdir(editorUserData, { recursive: true });
+        await writeFile(path.join(staleUserData, 'recent-projects.json'), JSON.stringify({
+          hasCreatedProject: true,
+          projects: [{ name: 'Old', path: path.join(dir, 'old') }],
+        }), 'utf8');
+        await writeFile(path.join(editorUserData, 'recent-projects.json'), JSON.stringify({
+          hasCreatedProject: true,
+          projectLibraryDir: libraryDir,
+          projects: [],
+        }), 'utf8');
+
+        const recommended = JSON.parse((await execFileAsync('node', [
+          cliPath,
+          'projects',
+          'recommend-create',
+          '--title',
+          'Library Project',
+          '--json',
+        ], {
+          env: {
+            ...process.env,
+            APPDATA: appData,
+          },
+        })).stdout);
+
+        expect(recommended.registryPath).toBe(path.join(editorUserData, 'recent-projects.json'));
+        expect(recommended.createPath).toMatchObject({
+          projectRoot: libraryDir,
+          projectPath: path.join(libraryDir, 'Library Project'),
+        });
+      });
+    } finally {
+      await rm(libraryDir, { recursive: true, force: true });
     }
   });
 

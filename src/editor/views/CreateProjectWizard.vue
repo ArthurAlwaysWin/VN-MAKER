@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useProjectStore } from '../stores/project.js';
 
 const project = useProjectStore();
@@ -107,11 +107,21 @@ const canNext = computed(() => {
   return true;
 });
 
+onMounted(async () => {
+  if (!project.projectLibraryDir) {
+    await project.loadRecentProjects();
+  }
+  form.location = project.projectLibraryDir || '';
+});
+
 async function browseLocation() {
-  if (!window.ipcRenderer) return;
   try {
-    const result = await window.ipcRenderer.invoke('dialog-open-directory');
-    if (result) form.location = result;
+    const result = await project.chooseProjectLibrary();
+    if (result?.success) {
+      form.location = result.projectLibraryDir;
+    } else if (result?.error) {
+      alert(result.error);
+    }
   } catch (err) {
     console.error('Failed to open directory dialog:', err);
   }

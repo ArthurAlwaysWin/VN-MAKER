@@ -12,6 +12,14 @@
         <button class="btn-secondary" @click="handleOpen" title="打开已有项目文件夹">📂 打开项目</button>
       </div>
 
+      <div class="project-library" v-if="project.projectLibraryDir">
+        <div>
+          <span class="library-label">项目库</span>
+          <span class="library-path">{{ project.projectLibraryDir }}</span>
+        </div>
+        <button @click="handleChooseLibrary" title="更改默认项目库位置">更改位置</button>
+      </div>
+
       <div class="recent" v-if="project.recentProjects.length > 0">
         <div class="recent-label">最近打开</div>
         <div class="recent-list">
@@ -52,6 +60,13 @@ async function handleOpen() {
     alert(result.error);
   }
 }
+
+async function handleChooseLibrary() {
+  const result = await project.chooseProjectLibrary();
+  if (result && result.error) {
+    alert(result.error);
+  }
+}
 </script>
 
 <style scoped>
@@ -77,6 +92,22 @@ async function handleOpen() {
   border-radius: 8px; font-size: 15px; cursor: pointer;
 }
 .btn-secondary:hover { background: #3c3c3c; }
+
+.project-library {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #252526; border: 1px solid #333; border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 24px; text-align: left;
+}
+.library-label { display: block; color: #777; font-size: 12px; margin-bottom: 2px; }
+.library-path {
+  display: block; color: #b8b8b8; font-size: 12px;
+  max-width: 330px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.project-library button {
+  flex: 0 0 auto; background: #333; color: #ccc; border: 1px solid #555;
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px;
+}
+.project-library button:hover { background: #3c3c3c; }
 
 .recent-label { color: #666; font-size: 13px; margin-bottom: 8px; }
 .recent-list {

@@ -7,7 +7,7 @@ const ALLOWED_CHANNELS = [
   'check-project-file-state', 'read-project-script-for-conflict',
   'read-dir', 'upload-asset', 'select-asset', 'import-assets', 'delete-asset',
   'rename-asset', 'save-processed-image', 'list-assets',
-  'get-recent-projects',
+  'get-recent-projects', 'choose-project-library',
   'save-slot', 'load-slot', 'delete-slot', 'list-saves',
   'save-quickslot', 'load-quickslot',
   'load-player-profile', 'save-player-profile', 'reset-player-data', 'rebuild-player-data',

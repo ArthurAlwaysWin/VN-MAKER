@@ -42,10 +42,18 @@ Resolve or create the target project before inspecting `script.json`:
 ```bash
 npm run vn -- projects list --json
 npm run vn -- projects resolve "Project Name" --json
-npm run vn -- projects create --title "Project Name" --open --launch --json
+npm run vn -- projects recommend-create --title "Project Name" --json
 ```
 
-When creating a new game, prefer omitting `--out` and let the CLI choose the recommended projects directory. Resolution priority is `GALGAME_MAKER_PROJECTS_DIR`, then platform defaults such as `D:/Galgame-Maker/Projects` or the user's Documents folder on Windows, and Documents/home based folders on other platforms. The folder name is generated safely from the title.
+When creating a new game and the user has not already specified a directory, first recommend a path and ask the user to confirm it. Show the project library and full `createPath.projectPath`. After confirmation, create the project explicitly:
+
+```bash
+npm run vn -- projects create --title "Project Name" --out "<confirmedProjectPath>" --open --launch --json
+```
+
+The recommended project library comes from the editor's project library setting, `GALGAME_MAKER_PROJECTS_DIR`, or the user's Documents-based `Galgame Maker/Projects` folder. The folder name is generated safely from the title.
+
+Packaged editor metadata is portable and lives beside the packaged editor under `data/`; game projects should still live in the user-confirmed project library, not inside the editor release directory.
 
 Avoid project locations inside the Galgame Maker source checkout, packaged editor release output, `node_modules`, `dist*`, or temporary directories. Those locations are easy to delete, rebuild, or confuse with app internals.
 

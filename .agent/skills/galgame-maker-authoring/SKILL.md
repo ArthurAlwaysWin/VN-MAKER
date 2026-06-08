@@ -31,10 +31,18 @@ npm run vn -- projects resolve "Project Name" --json
 If the user asks to make a new game, create a separate project directory instead of overwriting `public/game/script.json`:
 
 ```bash
-npm run vn -- projects create --title "Project Name" --open --launch --json
+npm run vn -- projects recommend-create --title "Project Name" --json
 ```
 
-When `--out` is omitted, the CLI creates the project under the recommended projects directory: first `GALGAME_MAKER_PROJECTS_DIR`, then platform defaults such as `D:/Galgame-Maker/Projects` or the user's Documents folder on Windows, and Documents/home based folders elsewhere. The project folder name is generated safely from the title. Do not create projects in the Galgame Maker source checkout, packaged editor release folders, `node_modules`, `dist*`, or temporary folders.
+Tell the user the recommended `createPath.projectPath` and ask for confirmation before creating any project directory. After the user confirms, run:
+
+```bash
+npm run vn -- projects create --title "Project Name" --out "<confirmedProjectPath>" --open --launch --json
+```
+
+The recommended project library comes from the editor's project library setting, `GALGAME_MAKER_PROJECTS_DIR`, or the user's Documents-based `Galgame Maker/Projects` folder. Do not create projects in the Galgame Maker source checkout, packaged editor release folders, `node_modules`, `dist*`, or temporary folders.
+
+Packaged editor metadata is portable and lives beside the packaged editor under `data/`; game projects should still live in the user-confirmed project library, not inside the editor release directory.
 
 `--open` writes the pending editor open request. `--launch` additionally tries to start the packaged editor; if it cannot find the executable, set `GALGAME_MAKER_EDITOR_EXE` or pass `--editor`.
 

@@ -30,10 +30,18 @@ Use the returned `project.scriptPath` for later authoring commands.
 3. If the user asks to create a new game project:
 
 ```bash
-npm run vn -- projects create --title "My Story" --open --launch --json
+npm run vn -- projects recommend-create --title "My Story" --json
 ```
 
-When `--out` is omitted, `projects create` uses a recommended projects directory. The priority is `GALGAME_MAKER_PROJECTS_DIR`, then platform defaults such as `D:/Galgame-Maker/Projects` or the user's Documents folder on Windows, and Documents/home based folders on other platforms. The directory name is generated safely from the title. Avoid creating projects inside this source checkout, packaged editor release folders, `node_modules`, `dist*`, or temporary directories.
+Show the recommended `createPath.projectPath` to the user and ask for confirmation before creating the directory. After the user confirms the location, create and open the project:
+
+```bash
+npm run vn -- projects create --title "My Story" --out "<confirmedProjectPath>" --open --launch --json
+```
+
+The recommended project library is the editor's project library setting, with `GALGAME_MAKER_PROJECTS_DIR` as an override and the user's Documents-based `Galgame Maker/Projects` folder as the default. Avoid creating projects inside this source checkout, packaged editor release folders, `node_modules`, `dist*`, or temporary directories.
+
+Packaged editor metadata is portable: recent projects, project library settings, and pending open requests live beside the packaged editor under `data/`, not under AppData. Game projects themselves should still live in the project library chosen by the user.
 
 4. If the user asks to open or continue a project in the editor:
 

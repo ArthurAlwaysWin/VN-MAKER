@@ -193,7 +193,7 @@ function onKeyDown(e) {
 onMounted(async () => {
   document.addEventListener('keydown', onKeyDown);
   await project.loadRecentProjects();
-  if (window.ipcRenderer) {
+  if (window.ipcRenderer?.on) {
     removeOpenProjectListener = window.ipcRenderer.on('open-project-path', (_event, projectPath) => {
       void openProjectFromExternal(projectPath);
     });

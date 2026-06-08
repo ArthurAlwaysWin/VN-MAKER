@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, net, dialog, shell, screen } fro
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
-import { existsSync, watch as watchFs } from 'node:fs';
+import { existsSync, mkdirSync, watch as watchFs } from 'node:fs';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 import { exportGame } from './exportGame.js';
 import { exportDesktop } from './exportDesktop.js';
@@ -20,8 +20,14 @@ import {
   readProjectOpenRequest,
   readProjectRegistry,
   registerProject,
+  setProjectLibraryDir,
   writeProjectRegistry,
 } from '../src/authoring/projectRegistry.js';
+import {
+  describeUnsafeProjectPath,
+  getRecommendedProjectRootCandidates,
+  sanitizeProjectName as sanitizeScaffoldProjectName,
+} from '../src/authoring/projectScaffold.js';
 import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 
@@ -61,6 +67,37 @@ async function writeRecentProjects(data) {
 
 async function addToRecent(projectPath, name) {
   return registerProject(recentProjectsPath(), projectPath, name);
+}
+
+function getAppRootForProjectSafety() {
+  return process.env.APP_ROOT || path.resolve(__dirname, '..');
+}
+
+function validateProjectLibraryDir(projectLibraryDir) {
+  const unsafe = describeUnsafeProjectPath(projectLibraryDir, {
+    appRoot: getAppRootForProjectSafety(),
+    includeTmp: true,
+  });
+  if (unsafe.unsafe) {
+    throw new Error(`${unsafe.reason}. Choose a normal projects folder outside the app, release output, node_modules, dist, and temporary directories.`);
+  }
+}
+
+async function ensureProjectLibraryDir() {
+  const registry = await readRecentProjects();
+  const [projectLibraryDir] = getRecommendedProjectRootCandidates({
+    projectLibraryDir: registry.projectLibraryDir,
+  });
+  if (!projectLibraryDir) {
+    throw new Error('Could not resolve project library directory');
+  }
+  validateProjectLibraryDir(projectLibraryDir);
+  await fs.mkdir(projectLibraryDir, { recursive: true });
+  if (registry.projectLibraryDir !== projectLibraryDir) {
+    await setProjectLibraryDir(recentProjectsPath(), projectLibraryDir);
+  }
+  rememberDialogDirectoryPath(projectLibraryDir);
+  return projectLibraryDir;
 }
 
 // --- Path Security ---
@@ -164,7 +201,7 @@ function hasProjectGrant(projectPath) {
 }
 
 function sanitizeProjectName(name) {
-  return name.replace(/[<>:"|?*\\/]/g, '_').replace(/\.{2,}/g, '_').trim() || 'untitled';
+  return sanitizeScaffoldProjectName(name);
 }
 
 // --- Atomic File Write (Windows-safe, async) ---
@@ -308,11 +345,13 @@ async function rebuildPlayerData(projectId, projectPath = currentProjectPath) {
 
 ipcMain.handle('create-project', async (event, { name, author, location, resolution, template }) => {
   try {
-    if (!hasDialogDirectoryGrant(location)) {
+    const projectLibraryDir = await ensureProjectLibraryDir();
+    const targetLocation = location || projectLibraryDir;
+    if (!hasDialogDirectoryGrant(targetLocation)) {
       return { success: false, error: 'Invalid project location' };
     }
     const safeName = sanitizeProjectName(name);
-    const projectDir = path.join(location, safeName);
+    const projectDir = path.join(targetLocation, safeName);
     if (existsSync(projectDir)) {
       return { success: false, error: 'Project directory already exists' };
     }
@@ -359,7 +398,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
 
     rememberProjectPath(projectDir);
     await addToRecent(projectDir, name);
-    return { success: true, path: projectDir };
+    return { success: true, path: projectDir, projectLibraryDir: targetLocation };
   } catch (e) {
     console.error('Failed to create project:', e);
     return { success: false, error: e.message };
@@ -853,11 +892,33 @@ ipcMain.handle('list-assets', async (event, { category }) => {
 });
 
 ipcMain.handle('get-recent-projects', async () => {
+  const projectLibraryDir = await ensureProjectLibraryDir();
   const recent = await readRecentProjects();
   for (const project of Array.isArray(recent.projects) ? recent.projects : []) {
     rememberProjectPath(project?.path);
   }
-  return recent;
+  return { ...recent, projectLibraryDir };
+});
+
+ipcMain.handle('choose-project-library', async () => {
+  try {
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      properties: ['openDirectory'],
+      title: '选择项目库位置',
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+    const selectedPath = result.filePaths[0];
+    validateProjectLibraryDir(selectedPath);
+    await fs.mkdir(selectedPath, { recursive: true });
+    rememberDialogDirectoryPath(selectedPath);
+    const projectLibraryDir = await setProjectLibraryDir(recentProjectsPath(), selectedPath);
+    return { success: true, projectLibraryDir };
+  } catch (e) {
+    console.error('choose-project-library error:', e);
+    return { success: false, error: e.message };
+  }
 });
 
 ipcMain.handle('close-project', () => {
@@ -1397,6 +1458,27 @@ export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST;
+
+function configureUserDataPath() {
+  const explicitUserData = process.env.GALGAME_MAKER_USER_DATA;
+  if (explicitUserData) {
+    const resolved = path.resolve(explicitUserData);
+    mkdirSync(resolved, { recursive: true });
+    app.setPath('userData', resolved);
+    return resolved;
+  }
+
+  if (app.isPackaged) {
+    const portableUserData = path.join(path.dirname(process.execPath), 'data');
+    mkdirSync(portableUserData, { recursive: true });
+    app.setPath('userData', portableUserData);
+    return portableUserData;
+  }
+
+  return app.getPath('userData');
+}
+
+configureUserDataPath();
 
 function getProjectPathFromArgv(argv = []) {
   for (let index = 0; index < argv.length; index += 1) {

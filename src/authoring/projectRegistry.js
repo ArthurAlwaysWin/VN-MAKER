@@ -71,7 +71,7 @@ export function getProjectOpenRequestPath(userDataDir) {
 }
 
 export function createEmptyProjectRegistry() {
-  return { hasCreatedProject: false, projects: [] };
+  return { hasCreatedProject: false, projectLibraryDir: null, projects: [] };
 }
 
 export async function readProjectRegistry(registryPath) {
@@ -80,6 +80,9 @@ export async function readProjectRegistry(registryPath) {
     const parsed = JSON.parse(raw);
     return {
       hasCreatedProject: Boolean(parsed?.hasCreatedProject),
+      projectLibraryDir: typeof parsed?.projectLibraryDir === 'string' && parsed.projectLibraryDir.trim()
+        ? path.resolve(parsed.projectLibraryDir)
+        : null,
       projects: Array.isArray(parsed?.projects) ? parsed.projects : [],
     };
   } catch (error) {
@@ -94,8 +97,18 @@ export async function writeProjectRegistry(registryPath, registry) {
   await mkdir(path.dirname(registryPath), { recursive: true });
   await writeFile(registryPath, `${JSON.stringify({
     hasCreatedProject: Boolean(registry?.hasCreatedProject),
+    projectLibraryDir: typeof registry?.projectLibraryDir === 'string' && registry.projectLibraryDir.trim()
+      ? path.resolve(registry.projectLibraryDir)
+      : null,
     projects: Array.isArray(registry?.projects) ? registry.projects : [],
   }, null, 2)}\n`, 'utf8');
+}
+
+export async function setProjectLibraryDir(registryPath, projectLibraryDir) {
+  const registry = await readProjectRegistry(registryPath);
+  registry.projectLibraryDir = path.resolve(projectLibraryDir);
+  await writeProjectRegistry(registryPath, registry);
+  return registry.projectLibraryDir;
 }
 
 async function fileExists(filePath) {
@@ -160,6 +173,7 @@ export async function listRegisteredProjects(registryPath) {
   return {
     registryPath: path.resolve(registryPath),
     hasCreatedProject: registry.hasCreatedProject,
+    projectLibraryDir: registry.projectLibraryDir || null,
     projects,
   };
 }

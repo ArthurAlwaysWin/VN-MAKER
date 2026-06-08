@@ -254,6 +254,36 @@ describe('agent handoff editor integration', () => {
     expect(main).toMatch(/ipcMain\.handle\('load-project'[\s\S]*if \(!hasProjectGrant\(projectPath\)\)/);
   });
 
+  it('wires the editor project library through the main process and welcome screen', () => {
+    const preload = readFileSync(resolve(process.cwd(), 'electron', 'preload.js'), 'utf8');
+    const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
+    const store = readFileSync(resolve(process.cwd(), 'src', 'editor', 'stores', 'project.js'), 'utf8');
+    const welcome = readFileSync(resolve(process.cwd(), 'src', 'editor', 'views', 'WelcomeScreen.vue'), 'utf8');
+    const quickCreate = readFileSync(resolve(process.cwd(), 'src', 'editor', 'views', 'CreateProjectQuick.vue'), 'utf8');
+    const wizard = readFileSync(resolve(process.cwd(), 'src', 'editor', 'views', 'CreateProjectWizard.vue'), 'utf8');
+
+    expect(preload).toContain("'choose-project-library'");
+    expect(main).toContain("ipcMain.handle('choose-project-library'");
+    expect(main).toContain('ensureProjectLibraryDir');
+    expect(main).toContain('getRecommendedProjectRootCandidates');
+    expect(store).toContain('projectLibraryDir');
+    expect(store).toContain('chooseProjectLibrary');
+    expect(welcome).toContain('project-library');
+    expect(welcome).toContain('项目库');
+    expect(quickCreate).toContain('location.value = project.projectLibraryDir');
+    expect(wizard).toContain('form.location = project.projectLibraryDir');
+  });
+
+  it('keeps packaged editor metadata in the portable data directory', () => {
+    const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
+    const cli = readFileSync(resolve(process.cwd(), 'tools', 'vn-author', 'index.js'), 'utf8');
+
+    expect(main).toContain('function configureUserDataPath()');
+    expect(main).toContain("path.join(path.dirname(process.execPath), 'data')");
+    expect(main).toContain("app.setPath('userData', portableUserData)");
+    expect(cli).toContain("path.join(repoRoot, 'release', 'Galgame Maker-win32-x64', 'data')");
+  });
+
   it('tracks external script changes and blocks stale saves in the project store', async () => {
     setActivePinia(createPinia());
     const loadedState = { path: 'E:/demo-project/script.json', mtimeMs: 1000, size: 10 };

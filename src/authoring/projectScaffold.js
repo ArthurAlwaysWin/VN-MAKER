@@ -31,6 +31,13 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function getDocumentsDir({ env = process.env, platform = process.platform, homeDir = os.homedir() } = {}) {
+  if (platform === 'win32') {
+    return path.join(getEnvValue(env, 'USERPROFILE') || homeDir, 'Documents');
+  }
+  return path.join(homeDir, 'Documents');
+}
+
 function isPathInside(parentPath, childPath) {
   const parent = path.resolve(parentPath);
   const child = path.resolve(childPath);
@@ -42,26 +49,18 @@ export function getRecommendedProjectRootCandidates({
   env = process.env,
   platform = process.platform,
   homeDir = os.homedir(),
+  projectLibraryDir = null,
 } = {}) {
   const explicit = getEnvValue(env, 'GALGAME_MAKER_PROJECTS_DIR');
-  const documentsDir = platform === 'win32'
-    ? path.join(getEnvValue(env, 'USERPROFILE') || homeDir, 'Documents')
-    : path.join(homeDir, 'Documents');
-
+  const documentsDir = getDocumentsDir({ env, platform, homeDir });
   const candidates = explicit ? [explicit] : [];
-  if (platform === 'win32') {
-    candidates.push(
-      'D:/Galgame-Maker/Projects',
-      path.join(documentsDir, 'Galgame Maker', 'Projects'),
-    );
-  } else {
-    candidates.push(
-      path.join(documentsDir, 'Galgame Maker', 'Projects'),
-      path.join(homeDir, 'Galgame Maker', 'Projects'),
-    );
-  }
+  candidates.push(
+    projectLibraryDir,
+    path.join(documentsDir, 'Galgame Maker', 'Projects'),
+    path.join(homeDir, 'Galgame Maker', 'Projects'),
+  );
 
-  return uniqueValues(candidates.map((candidate) => path.resolve(candidate)));
+  return uniqueValues(candidates.filter(Boolean).map((candidate) => path.resolve(candidate)));
 }
 
 export function describeUnsafeProjectPath(projectPath, {
@@ -131,6 +130,8 @@ export async function resolveProjectPathForCreate({
   platform = process.platform,
   homeDir = os.homedir(),
   tmpDir = os.tmpdir(),
+  projectLibraryDir = null,
+  createRoot = true,
 } = {}) {
   if (projectPath) {
     const resolvedProjectPath = path.resolve(projectPath);
@@ -147,7 +148,12 @@ export async function resolveProjectPathForCreate({
   }
 
   const safeName = sanitizeProjectName(title || 'Untitled');
-  const candidates = getRecommendedProjectRootCandidates({ env, platform, homeDir });
+  const candidates = getRecommendedProjectRootCandidates({
+    env,
+    platform,
+    homeDir,
+    projectLibraryDir,
+  });
   for (const candidateRoot of candidates) {
     const unsafeRoot = describeUnsafeProjectPath(candidateRoot, { appRoot, tmpDir, includeTmp: true });
     if (unsafeRoot.unsafe) {
@@ -158,7 +164,9 @@ export async function resolveProjectPathForCreate({
     }
 
     try {
-      await mkdir(candidateRoot, { recursive: true });
+      if (createRoot) {
+        await mkdir(candidateRoot, { recursive: true });
+      }
       const resolvedProjectPath = await makeUniqueProjectPath(path.join(candidateRoot, safeName));
       return {
         projectPath: resolvedProjectPath,

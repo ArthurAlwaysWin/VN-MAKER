@@ -104,6 +104,7 @@ async function main() {
     success: true,
     outputPath: targetDir,
     exePath: targetExe,
+    portableDataPath: path.join(targetDir, 'data'),
     zipPath,
   };
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);

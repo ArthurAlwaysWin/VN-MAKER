@@ -3,7 +3,7 @@
 import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
@@ -198,19 +198,11 @@ function getProjectRegistryFileFromArgs(args) {
     return getProjectRegistryPath(path.resolve(repoRoot, userDataDir));
   }
 
-  const userDataCandidates = getProjectRegistryUserDataCandidates();
-  const [defaultUserDataDir] = userDataCandidates;
-  const existingRegistryPath = userDataCandidates
-    .map((candidate) => getProjectRegistryPath(candidate))
-    .find((candidate) => existsSync(candidate));
-  if (existingRegistryPath) {
-    return existingRegistryPath;
-  }
-
-  if (!defaultUserDataDir) {
+  const selectedUserDataDir = getPreferredProjectUserDataDir();
+  if (!selectedUserDataDir) {
     throw new Error('Could not resolve Galgame Maker user data directory. Pass --user-data or --registry.');
   }
-  return getProjectRegistryPath(defaultUserDataDir);
+  return getProjectRegistryPath(selectedUserDataDir);
 }
 
 function getProjectUserDataDirFromArgs(args) {
@@ -224,18 +216,58 @@ function getProjectUserDataDirFromArgs(args) {
     return path.dirname(path.resolve(repoRoot, registryPath));
   }
 
-  const userDataCandidates = getProjectRegistryUserDataCandidates();
-  const existingUserDataDir = userDataCandidates
-    .find((candidate) => existsSync(getProjectRegistryPath(candidate)));
-  if (existingUserDataDir) {
-    return existingUserDataDir;
-  }
-
-  const [defaultUserDataDir] = userDataCandidates;
-  if (!defaultUserDataDir) {
+  const selectedUserDataDir = getPreferredProjectUserDataDir();
+  if (!selectedUserDataDir) {
     throw new Error('Could not resolve Galgame Maker user data directory. Pass --user-data or --registry.');
   }
-  return defaultUserDataDir;
+  return selectedUserDataDir;
+}
+
+function readRegistryPreference(userDataDir) {
+  const registryPath = getProjectRegistryPath(userDataDir);
+  if (!existsSync(registryPath)) {
+    return null;
+  }
+
+  let hasProjectLibraryDir = false;
+  try {
+    const parsed = JSON.parse(readFileSync(registryPath, 'utf8'));
+    hasProjectLibraryDir = typeof parsed?.projectLibraryDir === 'string' && parsed.projectLibraryDir.trim().length > 0;
+  } catch {
+    // A malformed registry should not block trying other candidates.
+  }
+
+  let mtimeMs = 0;
+  try {
+    mtimeMs = statSync(registryPath).mtimeMs;
+  } catch {
+    // Keep zero if stat fails.
+  }
+
+  return { userDataDir, registryPath, hasProjectLibraryDir, mtimeMs };
+}
+
+function getPreferredProjectUserDataDir() {
+  const userDataCandidates = [
+    ...getProjectRegistryUserDataCandidates(),
+    path.join(repoRoot, 'release', 'Galgame Maker-win32-x64', 'data'),
+    path.join(repoRoot, 'release', 'Galgame Maker', 'data'),
+  ];
+  const existing = userDataCandidates
+    .map(readRegistryPreference)
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (left.hasProjectLibraryDir !== right.hasProjectLibraryDir) {
+        return left.hasProjectLibraryDir ? -1 : 1;
+      }
+      return right.mtimeMs - left.mtimeMs;
+    });
+
+  if (existing[0]) {
+    return existing[0].userDataDir;
+  }
+
+  return userDataCandidates[0] || null;
 }
 
 function getProjectsQuery(args) {
@@ -6058,10 +6090,12 @@ async function projectsCommand(args) {
     const title = getArgValue(rest, '--title', null)
       || getArgValue(rest, '--name', null)
       || (outPath ? path.basename(outPath) : 'Untitled');
+    const projectRegistry = await listRegisteredProjects(registryPath);
     const resolvedCreatePath = await resolveProjectPathForCreate({
       projectPath: outPath ? path.resolve(repoRoot, outPath) : null,
       title,
       appRoot: repoRoot,
+      projectLibraryDir: projectRegistry.projectLibraryDir,
     });
     const created = await createGalgameProject({
       projectPath: resolvedCreatePath.projectPath,
@@ -6100,6 +6134,47 @@ async function projectsCommand(args) {
       if (openRequest) {
         process.stdout.write(`Editor open request: ${openRequest.requestPath}\n`);
       }
+    }
+    return 0;
+  }
+
+  if (subcommand === 'recommend-create' || subcommand === 'recommend-dir') {
+    const title = getArgValue(rest, '--title', null)
+      || getArgValue(rest, '--name', null)
+      || getProjectsQuery(rest)
+      || 'Untitled';
+    const projectRegistry = await listRegisteredProjects(registryPath);
+    const createPath = await resolveProjectPathForCreate({
+      projectPath: null,
+      title,
+      appRoot: repoRoot,
+      projectLibraryDir: projectRegistry.projectLibraryDir,
+      createRoot: false,
+    });
+    const output = {
+      ok: true,
+      registryPath,
+      userDataDir,
+      title,
+      createPath,
+      guidance: {
+        askBeforeCreate: true,
+        createCommand: `npm run vn -- projects create --title "${title}" --out "${createPath.projectPath}" --open --launch --json`,
+        avoid: [
+          'source checkout',
+          'release output',
+          'node_modules',
+          'dist',
+          'temporary directories',
+        ],
+      },
+    };
+    if (hasFlag(rest, '--json')) {
+      writeJson(output);
+    } else {
+      process.stdout.write(`Recommended project library: ${createPath.projectRoot}\n`);
+      process.stdout.write(`Recommended project path: ${createPath.projectPath}\n`);
+      process.stdout.write('Ask the user to confirm this location before creating the project.\n');
     }
     return 0;
   }
@@ -6153,6 +6228,7 @@ function printHelp() {
   projects list|resolve|create|open [options] [--json]
     projects list [--registry path|--user-data dir] [--json]
     projects resolve [name] [--project dir] [--registry path|--user-data dir] [--json]
+    projects recommend-create --title title [--registry path|--user-data dir] [--json]
     projects create [--out dir] [--title title] [--author author] [--width px] [--height px] [--open] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
     projects open [name] [--project dir] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
   inspect [--script path] [--json]

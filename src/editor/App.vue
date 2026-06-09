@@ -21,7 +21,7 @@
       <div class="header-actions">
         <button class="icon-btn" title="撤销 (Ctrl+Z)" :disabled="!canUndo" @click="script.undo(); project.markDirty()">↩</button>
         <button class="icon-btn" title="重做 (Ctrl+Y)" :disabled="!canRedo" @click="script.redo(); project.markDirty()">↪</button>
-        <button class="icon-btn save-btn" title="保存 (Ctrl+S)" :disabled="!project.isDirty" @click="manualSave">💾</button>
+        <button class="icon-btn save-btn" title="保存 (Ctrl+S)" :disabled="!project.isDirty || saving" @click="manualSave">💾</button>
         <button class="preview-btn" @click="openPreview" title="在新窗口中预览游戏">▶ 预览</button>
       </div>
     </header>
@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent, onMounted, onBeforeUnmount, watch, markRaw } from 'vue';
+import { ref, computed, defineAsyncComponent, onMounted, onBeforeUnmount, watch, markRaw, nextTick } from 'vue';
 import { useScriptStore } from './stores/script.js';
 import { useProjectStore } from './stores/project.js';
 import { useAssetStore } from './stores/assets.js';
@@ -123,6 +123,8 @@ let removeOpenProjectListener = null;
 let externalOpenInProgress = false;
 let activeExternalOpenRequest = null;
 let queuedExternalOpenRequest = null;
+let activeSavePromise = null;
+const saving = ref(false);
 
 function isAgentLiveModeEnabled() {
   const envValue = import.meta.env?.VITE_AGENT_LIVE_MODE;
@@ -135,14 +137,40 @@ function isAgentLiveModeEnabled() {
   return window.localStorage.getItem('galgame-maker:agent-live-mode') === 'true';
 }
 
+function clearSaveTimer() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+}
+
+function clearSnapshotTimer() {
+  if (!snapshotTimer) return;
+  clearTimeout(snapshotTimer);
+  snapshotTimer = null;
+}
+
+async function flushPendingSnapshotBeforeSave() {
+  clearSnapshotTimer();
+  if (!script.data) return;
+
+  const wasSkipping = script._skipWatch;
+  script._skipWatch = true;
+  try {
+    script.pushState();
+    await nextTick();
+  } finally {
+    script._skipWatch = wasSkipping;
+  }
+}
+
 watch(() => script.data, () => {
   if (!script.data || script._skipWatch) return;
   project.markDirty();
   // Auto-snapshot for undo history
-  if (snapshotTimer) clearTimeout(snapshotTimer);
+  clearSnapshotTimer();
   snapshotTimer = setTimeout(() => script.pushState(), 500);
   // Auto-save to disk
-  if (saveTimer) clearTimeout(saveTimer);
+  clearSaveTimer();
   saveTimer = setTimeout(() => {
     if (script.data && project.projectPath) {
       void attemptSave({ silent: true, source: 'autosave' });
@@ -204,10 +232,20 @@ onMounted(async () => {
   }
   scheduleExternalOpenRequest(await getPendingOpenProjectRequest());
   // Expose for Electron close handler
-  window.__hasDirtyProject = () => project.isDirty && !!script.data;
-  window.__saveCurrentProject = () => script.data
-    ? attemptSave({ source: 'electron-close' })
-    : Promise.resolve(false);
+  window.__hasDirtyProject = async () => {
+    if (activeSavePromise) {
+      await activeSavePromise.catch(() => false);
+    }
+    return project.isDirty && !!script.data;
+  };
+  window.__saveCurrentProject = () => {
+    if (activeSavePromise) {
+      return activeSavePromise;
+    }
+    return script.data
+      ? attemptSave({ source: 'electron-close' })
+      : Promise.resolve(false);
+  };
   externalChangeTimer = setInterval(() => {
     if (currentView.value === 'editing' && project.projectPath) {
       void (async () => {
@@ -223,8 +261,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeyDown);
   removeOpenProjectListener?.();
   removeOpenProjectListener = null;
-  if (saveTimer) clearTimeout(saveTimer);
-  if (snapshotTimer) clearTimeout(snapshotTimer);
+  clearSaveTimer();
+  clearSnapshotTimer();
   if (externalChangeTimer) clearInterval(externalChangeTimer);
 });
 
@@ -380,8 +418,8 @@ async function openProjectFromExternal(projectPath) {
     }
   }
 
-  if (saveTimer) clearTimeout(saveTimer);
-  if (snapshotTimer) clearTimeout(snapshotTimer);
+  clearSaveTimer();
+  clearSnapshotTimer();
   return (await openProject(projectPath)) ? 'opened' : 'failed';
 }
 
@@ -400,8 +438,8 @@ async function goHome() {
       if (!saved) return;
     }
   }
-  if (saveTimer) clearTimeout(saveTimer);
-  if (snapshotTimer) clearTimeout(snapshotTimer);
+  clearSaveTimer();
+  clearSnapshotTimer();
   script.reset();
   project.closeProject();
   currentView.value = 'welcome';
@@ -411,8 +449,8 @@ async function goHome() {
 async function reloadCurrentProject() {
   if (!project.projectPath) return;
   const currentPath = project.projectPath;
-  if (saveTimer) clearTimeout(saveTimer);
-  if (snapshotTimer) clearTimeout(snapshotTimer);
+  clearSaveTimer();
+  clearSnapshotTimer();
   await openProject(currentPath);
 }
 
@@ -423,9 +461,26 @@ function openPreview() {
 }
 
 async function attemptSave({ silent = false, source = 'manual' } = {}) {
+  if (activeSavePromise) {
+    return activeSavePromise;
+  }
+
+  activeSavePromise = runSave({ silent, source });
+  saving.value = true;
+  try {
+    return await activeSavePromise;
+  } finally {
+    activeSavePromise = null;
+    saving.value = false;
+  }
+}
+
+async function runSave({ silent = false, source = 'manual' } = {}) {
   if (!project.projectPath || !script.data) {
     return false;
   }
+
+  clearSaveTimer();
 
   if (!script.canSaveConditionPages) {
     script.requestStorySystemsRepair({
@@ -442,6 +497,8 @@ async function attemptSave({ silent = false, source = 'manual' } = {}) {
     return false;
   }
 
+  await flushPendingSnapshotBeforeSave();
+
   const saved = await project.saveProject(script.data);
   if (!saved && project.externalScriptChange && !silent) {
     alert('检测到 script.json 已被外部工具修改。请先重新载入项目，确认外部 Agent 的更改后再继续保存。');
@@ -449,9 +506,9 @@ async function attemptSave({ silent = false, source = 'manual' } = {}) {
   return saved;
 }
 
-function manualSave() {
+async function manualSave() {
   if (project.projectPath && script.data) {
-    void attemptSave();
+    await attemptSave();
   }
 }
 </script>

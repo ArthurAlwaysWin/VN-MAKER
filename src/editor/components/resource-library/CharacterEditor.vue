@@ -153,6 +153,7 @@ import ContextMenu from './ContextMenu.vue';
 import BgRemovalModal from './BgRemovalModal.vue';
 import HelpTip from '../HelpTip.vue';
 import { HELP_RESOURCE } from '../../helpTexts.js';
+import { assetFilename, toAssetUrl } from '../../utils/assetUrl.js';
 
 const script = useScriptStore();
 const assets = useAssetStore();
@@ -191,7 +192,7 @@ const expressions = computed(() => {
   return Object.entries(selectedChar.value.expressions).map(([name, path]) => ({
     name,
     path,
-    src: `asset://${path}`,
+    src: toAssetUrl(path),
   }));
 });
 
@@ -206,7 +207,7 @@ function getAvatarSrc(character) {
   const exprKeys = Object.keys(character.expressions || {});
   if (exprKeys.length === 0) return null;
   const firstPath = character.expressions[exprKeys[0]];
-  return `asset://${firstPath}`;
+  return toAssetUrl(firstPath);
 }
 
 function selectCharacter(id) {
@@ -329,8 +330,8 @@ function openBgRemoval(exprName) {
   if (!selectedChar.value) return;
   const exprPath = selectedChar.value.expressions[exprName];
   if (!exprPath) return;
-  const filename = exprPath.split('/').pop();
-  bgModalSrc.value = `asset://${exprPath}`;
+  const filename = assetFilename(exprPath);
+  bgModalSrc.value = toAssetUrl(exprPath);
   bgModalFilename.value = filename;
   bgModalVisible.value = true;
 }
@@ -467,7 +468,7 @@ async function deleteExpression(exprName) {
   script.pushState();
 
   if (exprPath) {
-    const filename = exprPath.split('/').pop();
+    const filename = assetFilename(exprPath);
     await assets.deleteAsset('characters', filename);
   }
 }

@@ -1629,7 +1629,7 @@ function createWindow() {
     closeInProgress = true;
     try {
       const hasUnsaved = await win.webContents.executeJavaScript(
-        'window.__hasDirtyProject ? window.__hasDirtyProject() : false'
+        '(async () => (window.__hasDirtyProject ? await window.__hasDirtyProject() : false))()'
       );
       if (hasUnsaved) {
         const { response } = await dialog.showMessageBox(win, {
@@ -1645,7 +1645,9 @@ function createWindow() {
           return;
         }
         if (response === 0) {
-          const saved = await win.webContents.executeJavaScript('window.__saveCurrentProject()');
+          const saved = await win.webContents.executeJavaScript(
+            '(async () => (window.__saveCurrentProject ? await window.__saveCurrentProject() : false))()'
+          );
           if (!saved) {
             closeInProgress = false;
             return;

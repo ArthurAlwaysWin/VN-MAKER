@@ -16,7 +16,9 @@
                 class="bgr-canvas"
                 @click="pickColor"
               />
-              <div v-if="sampleColors.length === 0" class="bgr-hint">点击背景色取样，可多次点击添加阴影或渐变色</div>
+              <div v-if="loading" class="bgr-state">加载图片中...</div>
+              <div v-else-if="loadError" class="bgr-state bgr-state-error">{{ loadError }}</div>
+              <div v-else-if="sampleColors.length === 0" class="bgr-hint">点击背景色取样，可多次点击添加阴影或渐变色</div>
               <div v-else class="bgr-hint">继续点击可添加更多背景取样</div>
             </div>
           </div>
@@ -85,7 +87,7 @@
             <!-- Action buttons -->
             <button
               class="bgr-btn-primary"
-              :disabled="sampleColors.length === 0 || saving"
+              :disabled="!imageReady || sampleColors.length === 0 || saving"
               @click="confirmRemoval"
               title="保存去背景后的透明 PNG"
             >{{ saving ? '保存中...' : '✅ 确认去背景' }}</button>
@@ -132,6 +134,9 @@ const feather = ref(1);
 const sampleColors = ref([]);
 const edgeConnectedOnly = ref(true);
 const saving = ref(false);
+const loading = ref(false);
+const loadError = ref('');
+const imageReady = ref(false);
 const sampleLabel = computed(() => {
   if (sampleColors.value.length === 0) return '未选择';
   if (sampleColors.value.length === 1) return sampleColors.value[0].hex;
@@ -159,57 +164,113 @@ let originalImageData = null;
 let imgWidth = 0;
 let imgHeight = 0;
 let processTimer = null;
+let loadToken = 0;
 
-// Load image when modal opens; clean up on close
-watch(() => props.visible, async (v) => {
-  if (v && props.imageSrc) {
+// Load image when modal opens or switches target; clean up on close.
+watch(() => [props.visible, props.imageSrc], async ([visible, imageSrc]) => {
+  if (visible && imageSrc) {
     sampleColors.value = [];
     tolerance.value = 22;
     feather.value = 1;
     edgeConnectedOnly.value = true;
     saving.value = false;
+    loading.value = false;
+    loadError.value = '';
+    imageReady.value = false;
+    clearCanvas();
     await nextTick();
     loadImage();
   } else {
+    loadToken += 1;
     clearTimeout(processTimer);
     processTimer = null;
     originalImageData = null;
+    loading.value = false;
+    loadError.value = '';
+    imageReady.value = false;
+    clearCanvas();
   }
 });
 
 onBeforeUnmount(() => {
+  loadToken += 1;
   clearTimeout(processTimer);
   originalImageData = null;
 });
 
 function loadImage() {
+  const src = props.imageSrc;
+  if (!src) return;
+
+  const token = ++loadToken;
+  loading.value = true;
+  loadError.value = '';
+  imageReady.value = false;
+  originalImageData = null;
+
   const img = new Image();
-  img.crossOrigin = 'anonymous';
+  if (/^https?:\/\//i.test(src)) {
+    img.crossOrigin = 'anonymous';
+  }
   img.onload = () => {
+    if (token !== loadToken) return;
     const canvas = canvasRef.value;
-    if (!canvas) return;
+    if (!canvas) {
+      loading.value = false;
+      return;
+    }
 
     imgWidth = img.naturalWidth;
     imgHeight = img.naturalHeight;
+    if (!imgWidth || !imgHeight) {
+      loading.value = false;
+      loadError.value = '图片尺寸异常，无法预览。';
+      return;
+    }
 
     // Fit canvas to wrapper while maintaining aspect ratio
     const wrap = canvasWrapRef.value;
-    const maxW = wrap.clientWidth;
-    const maxH = wrap.clientHeight;
-    const scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
+    const maxW = wrap?.clientWidth || imgWidth;
+    const maxH = wrap?.clientHeight || imgHeight;
+    const scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1) || 1;
     canvas.width = imgWidth;
     canvas.height = imgHeight;
     canvas.style.width = `${imgWidth * scale}px`;
     canvas.style.height = `${imgHeight * scale}px`;
 
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    originalImageData = ctx.getImageData(0, 0, imgWidth, imgHeight);
+    try {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, imgWidth, imgHeight);
+      ctx.drawImage(img, 0, 0);
+      originalImageData = ctx.getImageData(0, 0, imgWidth, imgHeight);
+      imageReady.value = true;
+      loading.value = false;
+    } catch (e) {
+      loading.value = false;
+      loadError.value = '无法读取图片像素，请确认图片来自当前项目资源。';
+      console.error('Failed to prepare image for background removal:', e);
+    }
   };
-  img.src = props.imageSrc;
+  img.onerror = () => {
+    if (token !== loadToken) return;
+    loading.value = false;
+    loadError.value = '图片加载失败，请确认文件仍在项目 assets/characters 中。';
+    console.error('Failed to load image for background removal:', src);
+  };
+  img.src = src;
+}
+
+function clearCanvas() {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+  canvas.width = 0;
+  canvas.height = 0;
+  canvas.style.width = '';
+  canvas.style.height = '';
 }
 
 function pickColor(event) {
+  if (!imageReady.value) return;
   const canvas = canvasRef.value;
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
@@ -268,6 +329,7 @@ function clearSamples() {
 }
 
 async function confirmRemoval() {
+  if (!imageReady.value) return;
   const canvas = canvasRef.value;
   if (!canvas || saving.value) return;
   saving.value = true;
@@ -386,6 +448,21 @@ async function confirmRemoval() {
   display: block;
   max-width: 100%;
   max-height: 100%;
+}
+.bgr-state {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #bbb;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+.bgr-state-error {
+  color: #f08a8a;
 }
 .bgr-hint {
   position: absolute;

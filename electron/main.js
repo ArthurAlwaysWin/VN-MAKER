@@ -43,12 +43,27 @@ protocol.registerSchemesAsPrivileged([
 
 let currentProjectPath = null;
 let win;
-let pendingProjectPathToOpen = null;
+let pendingProjectOpenRequest = null;
+let pendingProjectOpenRequestCounter = 0;
 let openRequestWatcher = null;
 let openRequestDebounce = null;
 
 function getMainWindow() {
   return win || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+}
+
+function createPendingProjectOpenRequest(projectPath) {
+  pendingProjectOpenRequestCounter += 1;
+  return {
+    requestId: `${Date.now().toString(36)}-${pendingProjectOpenRequestCounter.toString(36)}`,
+    projectPath,
+  };
+}
+
+function getPendingProjectOpenPayload() {
+  return pendingProjectOpenRequest
+    ? { ...pendingProjectOpenRequest }
+    : null;
 }
 
 // --- Recent Projects ---
@@ -1497,22 +1512,38 @@ function getProjectPathFromArgv(argv = []) {
 }
 
 function flushPendingProjectOpen() {
-  if (!win || win.isDestroyed() || !pendingProjectPathToOpen) {
+  if (!win || win.isDestroyed() || !pendingProjectOpenRequest) {
     return;
   }
 
   setTimeout(() => {
-    if (!win || win.isDestroyed() || !pendingProjectPathToOpen) {
+    const pending = getPendingProjectOpenPayload();
+    if (!win || win.isDestroyed() || !pending) {
       return;
     }
-    win.webContents.send('open-project-path', pendingProjectPathToOpen);
+    win.webContents.send('open-project-path', pending);
   }, 100);
 }
 
-ipcMain.handle('consume-pending-open-project-path', () => {
-  const projectPath = pendingProjectPathToOpen;
-  pendingProjectPathToOpen = null;
-  return projectPath || null;
+ipcMain.handle('get-pending-open-project-path', () => {
+  return getPendingProjectOpenPayload();
+});
+
+ipcMain.handle('ack-pending-open-project-path', (_event, request) => {
+  const requestId = typeof request === 'string' ? request : request?.requestId;
+  if (!pendingProjectOpenRequest) {
+    return { success: true, cleared: false };
+  }
+  if (!requestId || pendingProjectOpenRequest.requestId !== requestId) {
+    return {
+      success: false,
+      cleared: false,
+      stale: true,
+      pending: getPendingProjectOpenPayload(),
+    };
+  }
+  pendingProjectOpenRequest = null;
+  return { success: true, cleared: true };
 });
 
 async function requestEditorOpenProject(projectPath) {
@@ -1531,7 +1562,7 @@ async function requestEditorOpenProject(projectPath) {
 
   rememberProjectPath(described.path);
   await addToRecent(described.path, described.name);
-  pendingProjectPathToOpen = described.path;
+  pendingProjectOpenRequest = createPendingProjectOpenRequest(described.path);
   flushPendingProjectOpen();
   return { success: true, project: described };
 }

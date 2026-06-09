@@ -120,7 +120,9 @@ let saveTimer = null;
 let snapshotTimer = null;
 let externalChangeTimer = null;
 let removeOpenProjectListener = null;
-let openingExternalProjectPath = null;
+let externalOpenInProgress = false;
+let activeExternalOpenRequest = null;
+let queuedExternalOpenRequest = null;
 
 function isAgentLiveModeEnabled() {
   const envValue = import.meta.env?.VITE_AGENT_LIVE_MODE;
@@ -195,15 +197,12 @@ onMounted(async () => {
   document.addEventListener('keydown', onKeyDown);
   await project.loadRecentProjects();
   if (window.ipcRenderer?.on) {
-    removeOpenProjectListener = window.ipcRenderer.on('open-project-path', async (_event, projectPath) => {
-      const pendingProjectPath = await consumePendingOpenProjectPath();
-      void openProjectFromExternal(pendingProjectPath || projectPath);
+    removeOpenProjectListener = window.ipcRenderer.on('open-project-path', async (_event, request) => {
+      const pendingRequest = await getPendingOpenProjectRequest();
+      scheduleExternalOpenRequest(pendingRequest || request);
     });
   }
-  const pendingProjectPath = await consumePendingOpenProjectPath();
-  if (pendingProjectPath) {
-    void openProjectFromExternal(pendingProjectPath);
-  }
+  scheduleExternalOpenRequest(await getPendingOpenProjectRequest());
   // Expose for Electron close handler
   window.__hasDirtyProject = () => project.isDirty && !!script.data;
   window.__saveCurrentProject = () => script.data
@@ -230,12 +229,92 @@ onBeforeUnmount(() => {
 });
 
 // --- Actions ---
-async function consumePendingOpenProjectPath() {
+function normalizePendingOpenRequest(request) {
+  if (!request) {
+    return null;
+  }
+  if (typeof request === 'string') {
+    return { requestId: null, projectPath: request };
+  }
+  if (typeof request.projectPath !== 'string' || !request.projectPath) {
+    return null;
+  }
+  return {
+    requestId: typeof request.requestId === 'string' ? request.requestId : null,
+    projectPath: request.projectPath,
+  };
+}
+
+function isSameOpenRequest(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+  if (a.requestId && b.requestId) {
+    return a.requestId === b.requestId;
+  }
+  return a.projectPath === b.projectPath;
+}
+
+async function getPendingOpenProjectRequest() {
   if (!window.ipcRenderer?.invoke) {
     return null;
   }
 
-  return window.ipcRenderer.invoke('consume-pending-open-project-path');
+  return normalizePendingOpenRequest(await window.ipcRenderer.invoke('get-pending-open-project-path'));
+}
+
+async function ackPendingOpenProjectRequest(request, status) {
+  if (!window.ipcRenderer?.invoke || !request?.requestId) {
+    return;
+  }
+
+  await window.ipcRenderer.invoke('ack-pending-open-project-path', {
+    requestId: request.requestId,
+    status,
+  });
+}
+
+function scheduleExternalOpenRequest(request) {
+  const normalized = normalizePendingOpenRequest(request);
+  if (!normalized) {
+    return;
+  }
+  if (isSameOpenRequest(normalized, activeExternalOpenRequest)
+    || isSameOpenRequest(normalized, queuedExternalOpenRequest)) {
+    return;
+  }
+  if (externalOpenInProgress) {
+    queuedExternalOpenRequest = normalized;
+    return;
+  }
+
+  void drainExternalOpenRequests(normalized);
+}
+
+async function drainExternalOpenRequests(initialRequest) {
+  externalOpenInProgress = true;
+  let request = initialRequest;
+
+  try {
+    while (request) {
+      activeExternalOpenRequest = request;
+      queuedExternalOpenRequest = null;
+      const status = await openProjectFromExternal(request.projectPath);
+      if (status === 'opened' || status === 'cancelled') {
+        await ackPendingOpenProjectRequest(request, status);
+      }
+      activeExternalOpenRequest = null;
+      request = queuedExternalOpenRequest;
+    }
+  } finally {
+    activeExternalOpenRequest = null;
+    externalOpenInProgress = false;
+    if (queuedExternalOpenRequest) {
+      const queued = queuedExternalOpenRequest;
+      queuedExternalOpenRequest = null;
+      scheduleExternalOpenRequest(queued);
+    }
+  }
 }
 
 function showCreateDialog() {
@@ -280,36 +359,30 @@ async function openProject(projectPath) {
 
     currentView.value = 'editing';
     activeTab.value = 'scenes';
+    return true;
   } else if (result && result.error) {
     alert(result.error);
   }
+  return false;
 }
 
 async function openProjectFromExternal(projectPath) {
   if (!projectPath || typeof projectPath !== 'string') {
-    return;
+    return 'ignored';
   }
-  if (openingExternalProjectPath === projectPath) {
-    return;
-  }
-  openingExternalProjectPath = projectPath;
 
-  try {
-    if (project.isDirty && script.data) {
-      const action = await window.ipcRenderer.invoke('show-save-dialog');
-      if (action === 'cancel') return;
-      if (action === 'save') {
-        const saved = await attemptSave({ source: 'external-open-project' });
-        if (!saved) return;
-      }
+  if (project.isDirty && script.data) {
+    const action = await window.ipcRenderer.invoke('show-save-dialog');
+    if (action === 'cancel') return 'cancelled';
+    if (action === 'save') {
+      const saved = await attemptSave({ source: 'external-open-project' });
+      if (!saved) return 'failed';
     }
-
-    if (saveTimer) clearTimeout(saveTimer);
-    if (snapshotTimer) clearTimeout(snapshotTimer);
-    await openProject(projectPath);
-  } finally {
-    openingExternalProjectPath = null;
   }
+
+  if (saveTimer) clearTimeout(saveTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  return (await openProject(projectPath)) ? 'opened' : 'failed';
 }
 
 async function onProjectCreated(projectPath) {

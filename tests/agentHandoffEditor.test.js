@@ -274,17 +274,23 @@ describe('agent handoff editor integration', () => {
     expect(wizard).toContain('form.location = project.projectLibraryDir');
   });
 
-  it('uses a renderer handshake so launch-time project opens are not lost', () => {
+  it('uses an acked renderer handshake so launch-time project opens are not lost', () => {
     const preload = readFileSync(resolve(process.cwd(), 'electron', 'preload.js'), 'utf8');
     const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
     const appSource = readFileSync(resolve(process.cwd(), 'src', 'editor', 'App.vue'), 'utf8');
 
-    expect(preload).toContain("'consume-pending-open-project-path'");
-    expect(main).toContain("ipcMain.handle('consume-pending-open-project-path'");
-    expect(main).not.toContain('pendingProjectPathToOpen = null;\n  setTimeout');
-    expect(appSource).toContain("window.ipcRenderer.invoke('consume-pending-open-project-path')");
-    expect(appSource).toContain('openProjectFromExternal(pendingProjectPath || projectPath)');
-    expect(appSource).toContain('openingExternalProjectPath');
+    expect(preload).toContain("'get-pending-open-project-path'");
+    expect(preload).toContain("'ack-pending-open-project-path'");
+    expect(main).toContain("ipcMain.handle('get-pending-open-project-path'");
+    expect(main).toContain("ipcMain.handle('ack-pending-open-project-path'");
+    expect(main).toContain('requestId');
+    expect(main).toContain('stale: true');
+    expect(main).not.toContain("'consume-pending-open-project-path'");
+    expect(appSource).toContain("window.ipcRenderer.invoke('get-pending-open-project-path')");
+    expect(appSource).toContain("window.ipcRenderer.invoke('ack-pending-open-project-path'");
+    expect(appSource).toContain('scheduleExternalOpenRequest(pendingRequest || request)');
+    expect(appSource).toContain('queuedExternalOpenRequest');
+    expect(appSource).toContain("status === 'opened' || status === 'cancelled'");
   });
 
   it('keeps packaged editor metadata in the portable data directory', () => {

@@ -37,7 +37,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'asset',
-    privileges: { standard: true, supportFetchAPI: true, stream: true, bypassCSP: true },
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      bypassCSP: true,
+      corsEnabled: true,
+    },
   },
 ]);
 
@@ -50,6 +57,23 @@ let openRequestDebounce = null;
 
 function getMainWindow() {
   return win || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+}
+
+function createAssetResponseHeaders(headers = {}) {
+  const nextHeaders = new Headers(headers);
+  nextHeaders.set('Access-Control-Allow-Origin', '*');
+  nextHeaders.set('Access-Control-Allow-Headers', 'Range');
+  nextHeaders.set('Access-Control-Expose-Headers', 'Accept-Ranges, Content-Length, Content-Range');
+  return nextHeaders;
+}
+
+async function fetchAssetFileResponse(fullPath) {
+  const response = await net.fetch(pathToFileURL(fullPath).toString());
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: createAssetResponseHeaders(response.headers),
+  });
 }
 
 function createPendingProjectOpenRequest(projectPath) {
@@ -1706,7 +1730,7 @@ if (gotSingleInstanceLock) {
       if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
         return new Response('Forbidden', { status: 403 });
       }
-      return net.fetch(pathToFileURL(fullPath).toString());
+      return fetchAssetFileResponse(fullPath);
     }
 
     // ─── Existing assets/ resolution (unchanged) ───
@@ -1768,17 +1792,17 @@ if (gotSingleInstanceLock) {
         });
         return new Response(readable, {
           status: 206,
-          headers: {
+          headers: createAssetResponseHeaders({
             'Content-Range': `bytes ${start}-${end}/${total}`,
             'Content-Length': String(chunkSize),
             'Accept-Ranges': 'bytes',
-          },
+          }),
         });
       }
     }
 
     try {
-      return await net.fetch(pathToFileURL(fullPath).toString());
+      return await fetchAssetFileResponse(fullPath);
     } catch {
       return new Response('Not Found', { status: 404 });
     }

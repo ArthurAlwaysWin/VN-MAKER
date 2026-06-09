@@ -82,6 +82,15 @@
               <input type="checkbox" v-model="edgeConnectedOnly" @change="scheduleProcess" />
               <span>仅删除边缘连通背景</span>
             </label>
+            <label class="bgr-check-row" :class="{ disabled: !edgeConnectedOnly }">
+              <input
+                type="checkbox"
+                v-model="removeEnclosedRegions"
+                :disabled="!edgeConnectedOnly"
+                @change="scheduleProcess"
+              />
+              <span>同时删除封闭背景区域</span>
+            </label>
             <!-- Spacer -->
             <div class="bgr-spacer"></div>
             <!-- Action buttons -->
@@ -133,6 +142,7 @@ const tolerance = ref(22);
 const feather = ref(1);
 const sampleColors = ref([]);
 const edgeConnectedOnly = ref(true);
+const removeEnclosedRegions = ref(true);
 const saving = ref(false);
 const loading = ref(false);
 const loadError = ref('');
@@ -173,6 +183,7 @@ watch(() => [props.visible, props.imageSrc], async ([visible, imageSrc]) => {
     tolerance.value = 22;
     feather.value = 1;
     edgeConnectedOnly.value = true;
+    removeEnclosedRegions.value = true;
     saving.value = false;
     loading.value = false;
     loadError.value = '';
@@ -209,7 +220,7 @@ function loadImage() {
   originalImageData = null;
 
   const img = new Image();
-  if (/^https?:\/\//i.test(src)) {
+  if (/^(https?:|asset:)\/\//i.test(src)) {
     img.crossOrigin = 'anonymous';
   }
   img.onload = () => {
@@ -315,6 +326,7 @@ function processPixels() {
     tolerance: tolerance.value,
     feather: feather.value,
     edgeConnectedOnly: edgeConnectedOnly.value,
+    removeEnclosedRegions: edgeConnectedOnly.value && removeEnclosedRegions.value,
   });
   if (!out) return;
 
@@ -570,6 +582,9 @@ async function confirmRemoval() {
 }
 .bgr-check-row input {
   accent-color: #4af;
+}
+.bgr-check-row.disabled {
+  opacity: 0.55;
 }
 .bgr-spacer { flex: 1; }
 .bgr-btn-primary {

@@ -57,7 +57,7 @@ export const HELP_RESOURCE = {
   imageFormats: '支持 PNG、JPG、WebP 格式\n拖拽或点击导入按钮添加',
   audioFormats: '支持 MP3、OGG、WAV 格式\n建议 BGM 使用 MP3 以节省空间',
   fontFormats: '支持 TTF、OTF、WOFF、WOFF2\n导入后可在字体选择器中使用',
-  bgRemoval: '可多次点击背景色取样，适合阴影或轻微渐变背景\n默认只删除与图片边缘连通的背景，避免掏空角色内部相近颜色\n调整容差和羽化值微调边缘',
+  bgRemoval: '可多次点击背景色取样，适合阴影或轻微渐变背景\n默认删除边缘连通背景，并可处理腿间、手臂间等封闭背景区域\n如误删角色内部白色，可关闭封闭背景区域或降低容差',
   characterExpr: '每个角色可添加多个表情差分\n在剧本编辑器中按页面切换表情',
 };
 

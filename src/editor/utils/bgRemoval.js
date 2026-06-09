@@ -129,6 +129,61 @@ function createEdgeConnectedMask(candidate, width, height) {
   return connected;
 }
 
+function createEdgeAndEnclosedMask(candidate, width, height, options = {}) {
+  const editable = createEdgeConnectedMask(candidate, width, height);
+  const visited = new Uint8Array(editable);
+  const queue = new Int32Array(width * height);
+  const component = new Int32Array(width * height);
+  const maxEnclosedPixels = Math.max(
+    1,
+    Math.floor(width * height * clamp(Number(options.maxEnclosedRegionRatio ?? 0.08), 0, 1)),
+  );
+
+  function enqueue(next, writeState) {
+    if (next < 0 || !candidate[next] || visited[next]) {
+      return writeState;
+    }
+    visited[next] = 1;
+    queue[writeState] = next;
+    return writeState + 1;
+  }
+
+  for (let start = 0; start < candidate.length; start += 1) {
+    if (!candidate[start] || visited[start]) {
+      continue;
+    }
+
+    let read = 0;
+    let write = 0;
+    let componentSize = 0;
+    visited[start] = 1;
+    queue[write] = start;
+    write += 1;
+
+    while (read < write) {
+      const pixel = queue[read];
+      read += 1;
+      component[componentSize] = pixel;
+      componentSize += 1;
+
+      const x = pixel % width;
+      const y = Math.floor(pixel / width);
+      if (x > 0) write = enqueue(pixel - 1, write);
+      if (x < width - 1) write = enqueue(pixel + 1, write);
+      if (y > 0) write = enqueue(pixel - width, write);
+      if (y < height - 1) write = enqueue(pixel + width, write);
+    }
+
+    if (componentSize <= maxEnclosedPixels) {
+      for (let index = 0; index < componentSize; index += 1) {
+        editable[component[index]] = 1;
+      }
+    }
+  }
+
+  return editable;
+}
+
 export function sampleBackgroundColor(imageData, x, y, options = {}) {
   if (!imageData?.data || !imageData.width || !imageData.height) {
     return null;
@@ -182,11 +237,16 @@ export function removeSolidBackground(imageData, targetRgb, options = {}) {
   const threshold = thresholdFromTolerance(options.tolerance ?? 22);
   const featherDistance = featherDistanceFromPixels(options.feather ?? 1);
   const edgeConnectedOnly = options.edgeConnectedOnly !== false;
+  const candidateMask = edgeConnectedOnly
+    ? createCandidateMask(src, width, height, targetColors, threshold + featherDistance)
+    : null;
   const editableMask = edgeConnectedOnly
-    ? createEdgeConnectedMask(
-      createCandidateMask(src, width, height, targetColors, threshold + featherDistance),
-      width,
-      height,
+    ? (
+      options.removeEnclosedRegions === true
+        ? createEdgeAndEnclosedMask(candidateMask, width, height, {
+          maxEnclosedRegionRatio: options.maxEnclosedRegionRatio,
+        })
+        : createEdgeConnectedMask(candidateMask, width, height)
     )
     : null;
 

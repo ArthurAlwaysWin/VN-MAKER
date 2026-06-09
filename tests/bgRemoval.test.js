@@ -113,6 +113,46 @@ describe('background removal helpers', () => {
     expect(alphaAt(output, 1, 1)).toBe(255);
   });
 
+  it('removes small enclosed background regions when requested', () => {
+    const background = [245, 245, 245];
+    const subject = [80, 72, 95];
+    const imageData = makeImageData(5, 5, (x, y) => {
+      if (x === 0 || y === 0 || x === 4 || y === 4) return [...background, 255];
+      if (x === 2 && y === 2) return [...background, 255];
+      return [...subject, 255];
+    });
+
+    const output = removeSolidBackground(imageData, background, {
+      tolerance: 22,
+      feather: 0,
+      removeEnclosedRegions: true,
+    });
+
+    expect(alphaAt(output, 0, 0)).toBe(0);
+    expect(alphaAt(output, 2, 2)).toBe(0);
+    expect(alphaAt(output, 1, 1)).toBe(255);
+  });
+
+  it('keeps large enclosed matching regions when the enclosed-region limit is low', () => {
+    const background = [245, 245, 245];
+    const subject = [80, 72, 95];
+    const imageData = makeImageData(7, 7, (x, y) => {
+      if (x === 0 || y === 0 || x === 6 || y === 6) return [...background, 255];
+      if (x >= 2 && x <= 4 && y >= 2 && y <= 4) return [...background, 255];
+      return [...subject, 255];
+    });
+
+    const output = removeSolidBackground(imageData, background, {
+      tolerance: 22,
+      feather: 0,
+      removeEnclosedRegions: true,
+      maxEnclosedRegionRatio: 0.1,
+    });
+
+    expect(alphaAt(output, 0, 0)).toBe(0);
+    expect(alphaAt(output, 3, 3)).toBe(255);
+  });
+
   it('can still remove matching internal regions when edge-connected mode is disabled', () => {
     const background = [245, 245, 245];
     const subject = [80, 72, 95];

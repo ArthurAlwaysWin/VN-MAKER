@@ -15,12 +15,21 @@ describe('background removal modal loading', () => {
     expect(assetFilename('characters\\hero.png')).toBe('hero.png');
   });
 
-  it('keeps local asset images readable by avoiding unconditional CORS mode', () => {
+  it('loads local asset images with CORS mode so canvas pixels stay readable', () => {
     const source = readFileSync('src/editor/components/resource-library/BgRemovalModal.vue', 'utf8');
 
-    expect(source).toContain("if (/^https?:\\/\\//i.test(src))");
-    expect(source).not.toContain("img.crossOrigin = 'anonymous';\n  img.onload");
+    expect(source).toContain("if (/^(https?:|asset:)\\/\\//i.test(src))");
+    expect(source).toContain("img.crossOrigin = 'anonymous'");
     expect(source).toContain('img.onerror = () =>');
     expect(source).toContain('loadError.value');
+  });
+
+  it('offers an enclosed background removal option without disabling edge-connected safety', () => {
+    const source = readFileSync('src/editor/components/resource-library/BgRemovalModal.vue', 'utf8');
+
+    expect(source).toContain('const edgeConnectedOnly = ref(true)');
+    expect(source).toContain('const removeEnclosedRegions = ref(true)');
+    expect(source).toContain('同时删除封闭背景区域');
+    expect(source).toContain('removeEnclosedRegions: edgeConnectedOnly.value && removeEnclosedRegions.value');
   });
 });

@@ -745,6 +745,22 @@ describe('variable registry workspace', () => {
     expect(harness.container.textContent).toContain('审查');
     expect(harness.container.querySelector('[data-test="graph-edges"]').textContent).toContain('missing_route');
 
+    const graphMap = harness.container.querySelector('[data-test="graph-map"]');
+    expect(graphMap).not.toBeNull();
+    expect(graphMap.textContent).toContain('Start');
+    expect(graphMap.textContent).toContain('Orphan');
+    expect(graphMap.textContent).toContain('missing_route');
+    expect(graphMap.querySelector('.flow-edge-label').textContent).toContain('选项 1');
+    expect(graphMap.querySelector('.flow-node[data-node-id="orphan"]').className).toContain('unreachable');
+    expect(graphMap.querySelector('.flow-node[data-node-id="missing_route"]').className).toContain('missing');
+
+    graphMap.querySelector('.flow-node[data-node-id="start"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+    expect(harness.project.sceneNavigationRequest).toMatchObject({
+      sceneId: 'start',
+      pageIndex: null,
+    });
+
     const missingTarget = [...harness.container.querySelectorAll('.issue')]
       .find((item) => item.textContent.includes('缺失目标'));
     missingTarget.dispatchEvent(new MouseEvent('click', { bubbles: true }));

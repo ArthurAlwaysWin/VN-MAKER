@@ -48,6 +48,112 @@
       </button>
     </section>
 
+    <section class="flow-map-section">
+      <div class="section-title-row">
+        <h2>剧情流程图</h2>
+        <div class="legend">
+          <span><i class="legend-dot entry"></i>入口</span>
+          <span><i class="legend-dot unreachable"></i>不可达</span>
+          <span><i class="legend-dot broken"></i>断链</span>
+          <span><i class="legend-dot ending"></i>结局</span>
+        </div>
+      </div>
+      <div class="flow-map" data-test="graph-map">
+        <div
+          class="flow-canvas"
+          :style="{ width: `${graphLayout.width}px`, height: `${graphLayout.height}px` }"
+        >
+          <svg
+            class="flow-edges"
+            :width="graphLayout.width"
+            :height="graphLayout.height"
+            :viewBox="`0 0 ${graphLayout.width} ${graphLayout.height}`"
+            aria-hidden="true"
+          >
+            <defs>
+              <marker
+                id="flow-arrow"
+                markerWidth="8"
+                markerHeight="8"
+                refX="7"
+                refY="4"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M 0 0 L 8 4 L 0 8 z" />
+              </marker>
+              <marker
+                id="flow-arrow-broken"
+                markerWidth="8"
+                markerHeight="8"
+                refX="7"
+                refY="4"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M 0 0 L 8 4 L 0 8 z" />
+              </marker>
+            </defs>
+            <g v-for="edge in graphLayout.edges" :key="edge.key">
+              <path
+                class="flow-edge-hit"
+                :d="edge.path"
+                @click="openMapEdge(edge)"
+              />
+              <path
+                class="flow-edge"
+                :class="{ broken: edge.broken, backward: edge.backward }"
+                :d="edge.path"
+                :marker-end="edge.broken ? 'url(#flow-arrow-broken)' : 'url(#flow-arrow)'"
+              />
+              <g
+                class="flow-edge-label"
+                :class="{ broken: edge.broken }"
+                :transform="`translate(${edge.labelX}, ${edge.labelY})`"
+                @click="openMapEdge(edge)"
+              >
+                <rect x="-38" y="-11" width="76" height="22" rx="4" />
+                <text text-anchor="middle" dominant-baseline="middle">{{ edge.label }}</text>
+              </g>
+            </g>
+          </svg>
+
+          <button
+            v-for="node in graphLayout.nodes"
+            :key="node.key"
+            type="button"
+            class="flow-node"
+            :class="{
+              entry: node.entry,
+              unreachable: node.unreachable,
+              missing: node.missing,
+              dead: node.deadEnd,
+              cycle: node.cycleWithoutExit,
+              ending: node.endingResolved,
+            }"
+            :data-node-id="node.id"
+            :style="{
+              left: `${node.x}px`,
+              top: `${node.y}px`,
+              width: `${graphLayout.nodeWidth}px`,
+              height: `${graphLayout.nodeHeight}px`,
+            }"
+            @click="openMapNode(node)"
+          >
+            <span class="flow-node-kicker">{{ node.kicker }}</span>
+            <strong>{{ node.name }}</strong>
+            <small>{{ node.id }}</small>
+            <span class="flow-node-meta">
+              <i v-if="node.pageCount !== null">{{ node.pageCount }} 页</i>
+              <i v-if="node.incomingEdgeCount">{{ node.incomingEdgeCount }} 入</i>
+              <i v-if="node.outgoingEdgeCount">{{ node.outgoingEdgeCount }} 出</i>
+              <i v-if="node.missing">缺失目标</i>
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section class="nodes">
       <h2>场景节点</h2>
       <button
@@ -112,8 +218,15 @@ const props = defineProps({
 
 const emit = defineEmits(['navigate-scene', 'navigate-path']);
 
+const NODE_WIDTH = 190;
+const NODE_HEIGHT = 94;
+const COLUMN_GAP = 82;
+const ROW_GAP = 42;
+const CANVAS_PADDING = 28;
+
 const report = computed(() => createBranchGraphReport(props.scriptData));
 const mermaid = computed(() => createBranchGraphMermaid(report.value));
+const graphLayout = computed(() => buildGraphLayout(report.value, props.scriptData));
 const assetReviewItems = computed(() => props.reviewItems
   .filter((item) => [
     'missing-asset-reference',
@@ -217,12 +330,243 @@ function reviewCountForScene(sceneId) {
 }
 
 function edgeLabel(edge) {
+  if (edge.kind === 'choice-option') {
+    return edge.optionIndex !== null && edge.optionIndex !== undefined
+      ? `选项 ${edge.optionIndex + 1}`
+      : '选项';
+  }
+
   return {
     'scene-next': '下一场景',
-    'choice-option': '选项',
     'condition-true-target': '条件成立',
     'condition-false-target': '条件不成立',
+    'input-target': '输入跳转',
   }[edge.kind] || edge.kind;
+}
+
+function statusRank(node) {
+  if (node.entry) return 0;
+  if (node.missing) return 4;
+  if (node.unreachable || node.reachable === false) return 3;
+  if (node.deadEnd || node.cycleWithoutExit) return 2;
+  return 1;
+}
+
+function createNodeKicker(node) {
+  if (node.missing) return '断链';
+  if (node.entry) return '入口';
+  if (node.unreachable) return '不可达';
+  if (node.cycleWithoutExit) return '循环';
+  if (node.deadEnd) return '死路';
+  if (node.endingResolved) return '结局';
+  if (node.unlocksCg) return 'CG';
+  return '场景';
+}
+
+function edgePath(from, to) {
+  const fromCenterY = from.y + NODE_HEIGHT / 2;
+  const toCenterY = to.y + NODE_HEIGHT / 2;
+
+  if (from.id === to.id) {
+    const x = from.x + NODE_WIDTH;
+    const y = fromCenterY;
+    return {
+      d: `M ${x} ${y} C ${x + 58} ${y - 46}, ${x + 58} ${y + 46}, ${x} ${y + 34}`,
+      labelX: x + 58,
+      labelY: y,
+      backward: true,
+    };
+  }
+
+  if (to.x <= from.x) {
+    const x1 = from.x;
+    const x2 = to.x + NODE_WIDTH;
+    const curve = 72;
+    return {
+      d: `M ${x1} ${fromCenterY} C ${x1 - curve} ${fromCenterY}, ${x2 + curve} ${toCenterY}, ${x2} ${toCenterY}`,
+      labelX: Math.min(x1, x2) - 30,
+      labelY: (fromCenterY + toCenterY) / 2,
+      backward: true,
+    };
+  }
+
+  const x1 = from.x + NODE_WIDTH;
+  const x2 = to.x;
+  const curve = Math.max(46, (x2 - x1) / 2);
+  return {
+    d: `M ${x1} ${fromCenterY} C ${x1 + curve} ${fromCenterY}, ${x2 - curve} ${toCenterY}, ${x2} ${toCenterY}`,
+    labelX: (x1 + x2) / 2,
+    labelY: (fromCenterY + toCenterY) / 2,
+    backward: false,
+  };
+}
+
+function buildGraphLayout(graphReport = {}, scriptData = {}) {
+  const sceneOrder = new Map((graphReport.nodes ?? []).map((node, index) => [node.id, index]));
+  const scenes = scriptData?.scenes ?? {};
+  const nodeMap = new Map((graphReport.nodes ?? []).map((node) => [node.id, {
+    ...node,
+    key: `scene:${node.id}`,
+    entry: node.id === graphReport.entrySceneId,
+    missing: false,
+    pageCount: Array.isArray(scenes?.[node.id]?.pages) ? scenes[node.id].pages.length : 0,
+    sourcePathString: null,
+    sourceOrder: sceneOrder.get(node.id) ?? 0,
+  }]));
+
+  for (const edge of graphReport.missingTargetEdges ?? []) {
+    if (!nodeMap.has(edge.toSceneId)) {
+      nodeMap.set(edge.toSceneId, {
+        id: edge.toSceneId,
+        name: edge.toSceneId,
+        key: `missing:${edge.toSceneId}`,
+        entry: false,
+        missing: true,
+        reachable: false,
+        unreachable: false,
+        terminal: true,
+        deadEnd: false,
+        cycleWithoutExit: false,
+        unlocksEnding: false,
+        endingResolved: false,
+        unlocksCg: false,
+        incomingEdgeCount: (graphReport.edges ?? []).filter((item) => item.toSceneId === edge.toSceneId).length,
+        outgoingEdgeCount: 0,
+        pageCount: null,
+        sourcePathString: edge.pathString,
+        sourceOrder: sceneOrder.size + nodeMap.size,
+      });
+    }
+  }
+
+  const adjacency = new Map();
+  for (const edge of (graphReport.edges ?? []).filter((item) => item.targetExists)) {
+    if (!adjacency.has(edge.fromSceneId)) {
+      adjacency.set(edge.fromSceneId, []);
+    }
+    adjacency.get(edge.fromSceneId).push(edge.toSceneId);
+  }
+
+  const depthById = new Map();
+  const entrySceneId = graphReport.entrySceneId;
+  if (entrySceneId && nodeMap.has(entrySceneId)) {
+    depthById.set(entrySceneId, 0);
+    const queue = [entrySceneId];
+    while (queue.length) {
+      const sceneId = queue.shift();
+      const nextDepth = (depthById.get(sceneId) ?? 0) + 1;
+      for (const targetId of adjacency.get(sceneId) ?? []) {
+        if (!nodeMap.has(targetId) || depthById.has(targetId)) {
+          continue;
+        }
+        depthById.set(targetId, nextDepth);
+        queue.push(targetId);
+      }
+    }
+  }
+
+  const reachableMaxDepth = Math.max(0, ...[...depthById.values()]);
+  const unreachableDepth = reachableMaxDepth + 1;
+  for (const node of nodeMap.values()) {
+    if (!node.missing && !depthById.has(node.id)) {
+      depthById.set(node.id, unreachableDepth);
+    }
+  }
+
+  for (const edge of graphReport.missingTargetEdges ?? []) {
+    const sourceDepth = depthById.get(edge.fromSceneId) ?? unreachableDepth;
+    const targetDepth = sourceDepth + 1;
+    if (!depthById.has(edge.toSceneId) || targetDepth < depthById.get(edge.toSceneId)) {
+      depthById.set(edge.toSceneId, targetDepth);
+    }
+  }
+
+  const columns = new Map();
+  for (const node of nodeMap.values()) {
+    const depth = depthById.get(node.id) ?? 0;
+    if (!columns.has(depth)) {
+      columns.set(depth, []);
+    }
+    columns.get(depth).push(node);
+  }
+
+  for (const nodes of columns.values()) {
+    nodes.sort((a, b) => (
+      statusRank(a) - statusRank(b)
+      || a.sourceOrder - b.sourceOrder
+      || String(a.id).localeCompare(String(b.id))
+    ));
+  }
+
+  const positionedNodes = [];
+  const positionById = new Map();
+  const sortedDepths = [...columns.keys()].sort((a, b) => a - b);
+  for (const depth of sortedDepths) {
+    const nodes = columns.get(depth);
+    nodes.forEach((node, rowIndex) => {
+      const x = CANVAS_PADDING + depth * (NODE_WIDTH + COLUMN_GAP);
+      const y = CANVAS_PADDING + rowIndex * (NODE_HEIGHT + ROW_GAP);
+      const positioned = {
+        ...node,
+        x,
+        y,
+        depth,
+        rowIndex,
+        unreachable: !node.missing && node.reachable === false,
+        kicker: createNodeKicker({
+          ...node,
+          unreachable: !node.missing && node.reachable === false,
+        }),
+      };
+      positionedNodes.push(positioned);
+      positionById.set(node.id, positioned);
+    });
+  }
+
+  const positionedEdges = (graphReport.edges ?? [])
+    .map((edge, index) => {
+      const from = positionById.get(edge.fromSceneId);
+      const to = positionById.get(edge.toSceneId);
+      if (!from || !to) return null;
+      const path = edgePath(from, to);
+      return {
+        ...edge,
+        key: `${edge.pathString}:${index}`,
+        label: edgeLabel(edge),
+        broken: !edge.targetExists,
+        ...path,
+      };
+    })
+    .filter(Boolean);
+
+  const maxDepth = Math.max(0, ...sortedDepths);
+  const maxRows = Math.max(1, ...[...columns.values()].map((nodes) => nodes.length));
+
+  return {
+    nodes: positionedNodes,
+    edges: positionedEdges,
+    nodeWidth: NODE_WIDTH,
+    nodeHeight: NODE_HEIGHT,
+    width: CANVAS_PADDING * 2 + (maxDepth + 1) * NODE_WIDTH + maxDepth * COLUMN_GAP,
+    height: CANVAS_PADDING * 2 + maxRows * NODE_HEIGHT + (maxRows - 1) * ROW_GAP,
+  };
+}
+
+function openMapNode(node) {
+  if (node.missing) {
+    if (node.sourcePathString) {
+      emit('navigate-path', node.sourcePathString);
+    }
+    return;
+  }
+
+  emit('navigate-scene', node.id);
+}
+
+function openMapEdge(edge) {
+  if (edge?.pathString) {
+    emit('navigate-path', edge.pathString);
+  }
 }
 
 function openReviewItem(item) {
@@ -244,7 +588,7 @@ function openIssue(issue) {
 <style scoped>
 .graph-panel {
   color: #ddd;
-  max-width: 980px;
+  width: 100%;
 }
 
 .graph-header {
@@ -305,6 +649,7 @@ h2 {
 }
 
 .issues,
+.flow-map-section,
 .nodes,
 .edges,
 .mermaid,
@@ -314,6 +659,223 @@ h2 {
   border-radius: 8px;
   margin-top: 16px;
   padding: 18px;
+}
+
+.section-title-row {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.legend {
+  align-items: center;
+  color: #aaa;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 10px;
+}
+
+.legend span {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.legend-dot {
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.legend-dot.entry {
+  background: #60a5fa;
+}
+
+.legend-dot.unreachable {
+  background: #8b8b8b;
+}
+
+.legend-dot.broken {
+  background: #f97373;
+}
+
+.legend-dot.ending {
+  background: #6ee7a8;
+}
+
+.flow-map {
+  background-color: #1c1d20;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 1px solid #333844;
+  border-radius: 6px;
+  max-height: 560px;
+  min-height: 360px;
+  overflow: auto;
+}
+
+.flow-canvas {
+  min-height: 100%;
+  position: relative;
+}
+
+.flow-edges {
+  inset: 0;
+  overflow: visible;
+  position: absolute;
+}
+
+.flow-edge {
+  fill: none;
+  marker-end: url("#flow-arrow");
+  stroke: #62738a;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.flow-edge.backward {
+  stroke-dasharray: 5 5;
+}
+
+.flow-edge.broken {
+  marker-end: url("#flow-arrow-broken");
+  stroke: #d76d6d;
+  stroke-dasharray: 6 5;
+}
+
+.flow-edge-hit {
+  cursor: pointer;
+  fill: none;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 16;
+}
+
+.flow-edge-label {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.flow-edge-label rect {
+  fill: #252a31;
+  stroke: #3b4654;
+}
+
+.flow-edge-label text {
+  fill: #b8c4d2;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.flow-edge-label.broken rect {
+  fill: #3b2323;
+  stroke: #744343;
+}
+
+.flow-edge-label.broken text {
+  fill: #ffd0d0;
+}
+
+.flow-edges marker path {
+  fill: #62738a;
+}
+
+.flow-edges #flow-arrow-broken path {
+  fill: #d76d6d;
+}
+
+.flow-node {
+  background: #292d33;
+  border: 1px solid #46505c;
+  border-left: 3px solid #6b7d92;
+  border-radius: 7px;
+  color: #e8e8e8;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 10px 12px;
+  position: absolute;
+  text-align: left;
+}
+
+.flow-node:hover {
+  border-color: #007acc;
+}
+
+.flow-node.entry {
+  border-left-color: #60a5fa;
+}
+
+.flow-node.unreachable {
+  background: #2a2a2a;
+  border-color: #464646;
+  border-left-color: #888;
+  color: #cfcfcf;
+}
+
+.flow-node.missing {
+  background: #3a2424;
+  border-color: #744343;
+  border-left-color: #f97373;
+}
+
+.flow-node.dead,
+.flow-node.cycle {
+  border-left-color: #f59e5b;
+}
+
+.flow-node.ending {
+  border-left-color: #6ee7a8;
+}
+
+.flow-node-kicker {
+  color: #8ebee8;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.flow-node.missing .flow-node-kicker {
+  color: #ffb4b4;
+}
+
+.flow-node strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-node small {
+  color: #9a9a9a;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-node-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 18px;
+}
+
+.flow-node-meta i {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  color: #bfc7d0;
+  font-size: 10px;
+  font-style: normal;
+  padding: 2px 5px;
 }
 
 .issue,

@@ -16,6 +16,126 @@
       </div>
     </header>
 
+    <section class="flow-map-section">
+      <div class="section-title-row">
+        <h2>剧情流程图</h2>
+      </div>
+      <div class="flow-map-layout">
+        <div class="flow-map" data-test="graph-map">
+          <div
+            class="flow-canvas"
+            :style="{ width: `${graphLayout.width}px`, height: `${graphLayout.height}px` }"
+          >
+            <svg
+              class="flow-edges"
+              :width="graphLayout.width"
+              :height="graphLayout.height"
+              :viewBox="`0 0 ${graphLayout.width} ${graphLayout.height}`"
+              aria-hidden="true"
+            >
+              <defs>
+                <marker
+                  id="flow-arrow"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 8 4 L 0 8 z" />
+                </marker>
+                <marker
+                  id="flow-arrow-broken"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 8 4 L 0 8 z" />
+                </marker>
+              </defs>
+              <g v-for="edge in graphLayout.edges" :key="edge.key">
+                <path
+                  class="flow-edge-hit"
+                  :d="edge.path"
+                  @click="openMapEdge(edge)"
+                />
+                <path
+                  class="flow-edge"
+                  :class="{ broken: edge.broken, backward: edge.backward }"
+                  :d="edge.path"
+                  :marker-end="edge.broken ? 'url(#flow-arrow-broken)' : 'url(#flow-arrow)'"
+                />
+                <g
+                  class="flow-edge-label"
+                  :class="{ broken: edge.broken }"
+                  :transform="`translate(${edge.labelX}, ${edge.labelY})`"
+                  @click="openMapEdge(edge)"
+                >
+                  <rect x="-38" y="-11" width="76" height="22" rx="4" />
+                  <text text-anchor="middle" dominant-baseline="middle">{{ edge.label }}</text>
+                </g>
+              </g>
+            </svg>
+
+            <button
+              v-for="node in graphLayout.nodes"
+              :key="node.key"
+              type="button"
+              class="flow-node"
+              :class="{
+                entry: node.entry,
+                unreachable: node.unreachable,
+                missing: node.missing,
+                dead: node.deadEnd,
+                cycle: node.cycleWithoutExit,
+                ending: node.endingResolved,
+                cg: node.unlocksCg,
+              }"
+              :data-node-id="node.id"
+              :style="{
+                left: `${node.x}px`,
+                top: `${node.y}px`,
+                width: `${graphLayout.nodeWidth}px`,
+                height: `${graphLayout.nodeHeight}px`,
+              }"
+              @click="openMapNode(node)"
+            >
+              <span class="flow-node-kicker">{{ node.kicker }}</span>
+              <strong>{{ node.name }}</strong>
+              <small>{{ node.id }}</small>
+              <span class="flow-node-meta">
+                <i v-if="node.pageCount !== null">{{ node.pageCount }} 页</i>
+                <i v-if="node.incomingEdgeCount">{{ node.incomingEdgeCount }} 入</i>
+                <i v-if="node.outgoingEdgeCount">{{ node.outgoingEdgeCount }} 出</i>
+                <i v-if="node.missing">缺失目标</i>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <aside class="flow-status-panel" data-test="graph-status-panel">
+          <h2>状态</h2>
+          <div
+            v-for="item in statusItems"
+            :key="item.key"
+            class="status-row"
+            :class="item.tone"
+          >
+            <span class="status-dot"></span>
+            <span class="status-main">
+              <strong>{{ item.label }}</strong>
+              <small>{{ item.detail }}</small>
+            </span>
+            <b>{{ item.count }}</b>
+          </div>
+        </aside>
+      </div>
+    </section>
+
     <section v-if="issues.length" class="issues">
       <h2>需要检查</h2>
       <button
@@ -46,112 +166,6 @@
         <strong>{{ item.label }}</strong>
         <span>{{ item.assetPath || item.message }}</span>
       </button>
-    </section>
-
-    <section class="flow-map-section">
-      <div class="section-title-row">
-        <h2>剧情流程图</h2>
-        <div class="legend">
-          <span><i class="legend-dot entry"></i>入口</span>
-          <span><i class="legend-dot unreachable"></i>不可达</span>
-          <span><i class="legend-dot broken"></i>断链</span>
-          <span><i class="legend-dot ending"></i>结局</span>
-        </div>
-      </div>
-      <div class="flow-map" data-test="graph-map">
-        <div
-          class="flow-canvas"
-          :style="{ width: `${graphLayout.width}px`, height: `${graphLayout.height}px` }"
-        >
-          <svg
-            class="flow-edges"
-            :width="graphLayout.width"
-            :height="graphLayout.height"
-            :viewBox="`0 0 ${graphLayout.width} ${graphLayout.height}`"
-            aria-hidden="true"
-          >
-            <defs>
-              <marker
-                id="flow-arrow"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="4"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path d="M 0 0 L 8 4 L 0 8 z" />
-              </marker>
-              <marker
-                id="flow-arrow-broken"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="4"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path d="M 0 0 L 8 4 L 0 8 z" />
-              </marker>
-            </defs>
-            <g v-for="edge in graphLayout.edges" :key="edge.key">
-              <path
-                class="flow-edge-hit"
-                :d="edge.path"
-                @click="openMapEdge(edge)"
-              />
-              <path
-                class="flow-edge"
-                :class="{ broken: edge.broken, backward: edge.backward }"
-                :d="edge.path"
-                :marker-end="edge.broken ? 'url(#flow-arrow-broken)' : 'url(#flow-arrow)'"
-              />
-              <g
-                class="flow-edge-label"
-                :class="{ broken: edge.broken }"
-                :transform="`translate(${edge.labelX}, ${edge.labelY})`"
-                @click="openMapEdge(edge)"
-              >
-                <rect x="-38" y="-11" width="76" height="22" rx="4" />
-                <text text-anchor="middle" dominant-baseline="middle">{{ edge.label }}</text>
-              </g>
-            </g>
-          </svg>
-
-          <button
-            v-for="node in graphLayout.nodes"
-            :key="node.key"
-            type="button"
-            class="flow-node"
-            :class="{
-              entry: node.entry,
-              unreachable: node.unreachable,
-              missing: node.missing,
-              dead: node.deadEnd,
-              cycle: node.cycleWithoutExit,
-              ending: node.endingResolved,
-            }"
-            :data-node-id="node.id"
-            :style="{
-              left: `${node.x}px`,
-              top: `${node.y}px`,
-              width: `${graphLayout.nodeWidth}px`,
-              height: `${graphLayout.nodeHeight}px`,
-            }"
-            @click="openMapNode(node)"
-          >
-            <span class="flow-node-kicker">{{ node.kicker }}</span>
-            <strong>{{ node.name }}</strong>
-            <small>{{ node.id }}</small>
-            <span class="flow-node-meta">
-              <i v-if="node.pageCount !== null">{{ node.pageCount }} 页</i>
-              <i v-if="node.incomingEdgeCount">{{ node.incomingEdgeCount }} 入</i>
-              <i v-if="node.outgoingEdgeCount">{{ node.outgoingEdgeCount }} 出</i>
-              <i v-if="node.missing">缺失目标</i>
-            </span>
-          </button>
-        </div>
-      </div>
     </section>
 
     <section class="nodes">
@@ -218,15 +232,70 @@ const props = defineProps({
 
 const emit = defineEmits(['navigate-scene', 'navigate-path']);
 
-const NODE_WIDTH = 190;
+const NODE_WIDTH = 210;
 const NODE_HEIGHT = 94;
-const COLUMN_GAP = 82;
-const ROW_GAP = 42;
+const SIBLING_GAP = 44;
+const DEPTH_GAP = 76;
 const CANVAS_PADDING = 28;
 
 const report = computed(() => createBranchGraphReport(props.scriptData));
 const mermaid = computed(() => createBranchGraphMermaid(report.value));
 const graphLayout = computed(() => buildGraphLayout(report.value, props.scriptData));
+const statusItems = computed(() => {
+  const endingSceneCount = report.value.nodes.filter((node) => node.endingResolved).length;
+  const cgSceneCount = report.value.nodes.filter((node) => node.unlocksCg).length;
+  return [
+    {
+      key: 'entry',
+      label: '入口',
+      count: report.value.entrySceneId ? 1 : 0,
+      detail: report.value.entrySceneId || '未设置',
+      tone: 'entry',
+    },
+    {
+      key: 'unreachable',
+      label: '不可达',
+      count: report.value.unreachableSceneIds.length,
+      detail: summarizeIds(report.value.unreachableSceneIds),
+      tone: 'unreachable',
+    },
+    {
+      key: 'broken',
+      label: '断链',
+      count: report.value.missingTargetCount,
+      detail: summarizeIds(report.value.missingTargetEdges.map((edge) => edge.toSceneId)),
+      tone: 'broken',
+    },
+    {
+      key: 'dead',
+      label: '死路',
+      count: report.value.deadEndSceneIds.length,
+      detail: summarizeIds(report.value.deadEndSceneIds),
+      tone: 'dead',
+    },
+    {
+      key: 'cycle',
+      label: '循环',
+      count: report.value.cyclesWithoutExit.length,
+      detail: summarizeIds(report.value.cyclesWithoutExit.flatMap((cycle) => cycle.sceneIds)),
+      tone: 'cycle',
+    },
+    {
+      key: 'ending',
+      label: '结局',
+      count: endingSceneCount,
+      detail: `${report.value.endings.entries.length} 个注册结局`,
+      tone: 'ending',
+    },
+    {
+      key: 'cg',
+      label: 'CG',
+      count: cgSceneCount,
+      detail: `${report.value.cgs.entries.length} 个注册 CG`,
+      tone: 'cg',
+    },
+  ];
+});
 const assetReviewItems = computed(() => props.reviewItems
   .filter((item) => [
     'missing-asset-reference',
@@ -329,6 +398,13 @@ function reviewCountForScene(sceneId) {
   return paths.size;
 }
 
+function summarizeIds(ids = []) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (!uniqueIds.length) return '无';
+  if (uniqueIds.length <= 2) return uniqueIds.join(', ');
+  return `${uniqueIds.slice(0, 2).join(', ')} +${uniqueIds.length - 2}`;
+}
+
 function edgeLabel(edge) {
   if (edge.kind === 'choice-option') {
     return edge.optionIndex !== null && edge.optionIndex !== undefined
@@ -364,39 +440,39 @@ function createNodeKicker(node) {
 }
 
 function edgePath(from, to) {
-  const fromCenterY = from.y + NODE_HEIGHT / 2;
-  const toCenterY = to.y + NODE_HEIGHT / 2;
+  const fromCenterX = from.x + NODE_WIDTH / 2;
+  const toCenterX = to.x + NODE_WIDTH / 2;
 
   if (from.id === to.id) {
-    const x = from.x + NODE_WIDTH;
-    const y = fromCenterY;
+    const x = fromCenterX;
+    const y = from.y + NODE_HEIGHT;
     return {
-      d: `M ${x} ${y} C ${x + 58} ${y - 46}, ${x + 58} ${y + 46}, ${x} ${y + 34}`,
-      labelX: x + 58,
-      labelY: y,
+      d: `M ${x} ${y} C ${x + 74} ${y + 22}, ${x + 74} ${y + 76}, ${x + 14} ${y + 82}`,
+      labelX: x + 76,
+      labelY: y + 48,
       backward: true,
     };
   }
 
-  if (to.x <= from.x) {
-    const x1 = from.x;
-    const x2 = to.x + NODE_WIDTH;
-    const curve = 72;
+  if (to.y <= from.y) {
+    const y1 = from.y;
+    const y2 = to.y + NODE_HEIGHT;
+    const curve = 78;
     return {
-      d: `M ${x1} ${fromCenterY} C ${x1 - curve} ${fromCenterY}, ${x2 + curve} ${toCenterY}, ${x2} ${toCenterY}`,
-      labelX: Math.min(x1, x2) - 30,
-      labelY: (fromCenterY + toCenterY) / 2,
+      d: `M ${fromCenterX} ${y1} C ${fromCenterX - curve} ${y1}, ${toCenterX - curve} ${y2}, ${toCenterX} ${y2}`,
+      labelX: (fromCenterX + toCenterX) / 2 - curve,
+      labelY: (y1 + y2) / 2,
       backward: true,
     };
   }
 
-  const x1 = from.x + NODE_WIDTH;
-  const x2 = to.x;
-  const curve = Math.max(46, (x2 - x1) / 2);
+  const y1 = from.y + NODE_HEIGHT;
+  const y2 = to.y;
+  const curve = Math.max(44, (y2 - y1) / 2);
   return {
-    d: `M ${x1} ${fromCenterY} C ${x1 + curve} ${fromCenterY}, ${x2 - curve} ${toCenterY}, ${x2} ${toCenterY}`,
-    labelX: (x1 + x2) / 2,
-    labelY: (fromCenterY + toCenterY) / 2,
+    d: `M ${fromCenterX} ${y1} C ${fromCenterX} ${y1 + curve}, ${toCenterX} ${y2 - curve}, ${toCenterX} ${y2}`,
+    labelX: (fromCenterX + toCenterX) / 2,
+    labelY: (y1 + y2) / 2,
     backward: false,
   };
 }
@@ -481,16 +557,16 @@ function buildGraphLayout(graphReport = {}, scriptData = {}) {
     }
   }
 
-  const columns = new Map();
+  const rows = new Map();
   for (const node of nodeMap.values()) {
     const depth = depthById.get(node.id) ?? 0;
-    if (!columns.has(depth)) {
-      columns.set(depth, []);
+    if (!rows.has(depth)) {
+      rows.set(depth, []);
     }
-    columns.get(depth).push(node);
+    rows.get(depth).push(node);
   }
 
-  for (const nodes of columns.values()) {
+  for (const nodes of rows.values()) {
     nodes.sort((a, b) => (
       statusRank(a) - statusRank(b)
       || a.sourceOrder - b.sourceOrder
@@ -500,12 +576,16 @@ function buildGraphLayout(graphReport = {}, scriptData = {}) {
 
   const positionedNodes = [];
   const positionById = new Map();
-  const sortedDepths = [...columns.keys()].sort((a, b) => a - b);
+  const sortedDepths = [...rows.keys()].sort((a, b) => a - b);
+  const maxRowCount = Math.max(1, ...[...rows.values()].map((nodes) => nodes.length));
+  const maxRowWidth = maxRowCount * NODE_WIDTH + (maxRowCount - 1) * SIBLING_GAP;
   for (const depth of sortedDepths) {
-    const nodes = columns.get(depth);
+    const nodes = rows.get(depth);
+    const rowWidth = nodes.length * NODE_WIDTH + (nodes.length - 1) * SIBLING_GAP;
+    const rowOffset = (maxRowWidth - rowWidth) / 2;
     nodes.forEach((node, rowIndex) => {
-      const x = CANVAS_PADDING + depth * (NODE_WIDTH + COLUMN_GAP);
-      const y = CANVAS_PADDING + rowIndex * (NODE_HEIGHT + ROW_GAP);
+      const x = CANVAS_PADDING + rowOffset + rowIndex * (NODE_WIDTH + SIBLING_GAP);
+      const y = CANVAS_PADDING + depth * (NODE_HEIGHT + DEPTH_GAP);
       const positioned = {
         ...node,
         x,
@@ -540,15 +620,14 @@ function buildGraphLayout(graphReport = {}, scriptData = {}) {
     .filter(Boolean);
 
   const maxDepth = Math.max(0, ...sortedDepths);
-  const maxRows = Math.max(1, ...[...columns.values()].map((nodes) => nodes.length));
 
   return {
     nodes: positionedNodes,
     edges: positionedEdges,
     nodeWidth: NODE_WIDTH,
     nodeHeight: NODE_HEIGHT,
-    width: CANVAS_PADDING * 2 + (maxDepth + 1) * NODE_WIDTH + maxDepth * COLUMN_GAP,
-    height: CANVAS_PADDING * 2 + maxRows * NODE_HEIGHT + (maxRows - 1) * ROW_GAP,
+    width: CANVAS_PADDING * 2 + maxRowWidth,
+    height: CANVAS_PADDING * 2 + (maxDepth + 1) * NODE_HEIGHT + maxDepth * DEPTH_GAP,
   };
 }
 
@@ -669,42 +748,11 @@ h2 {
   margin-bottom: 12px;
 }
 
-.legend {
-  align-items: center;
-  color: #aaa;
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 12px;
-  gap: 10px;
-}
-
-.legend span {
-  align-items: center;
-  display: inline-flex;
-  gap: 5px;
-}
-
-.legend-dot {
-  border-radius: 50%;
-  display: inline-block;
-  height: 8px;
-  width: 8px;
-}
-
-.legend-dot.entry {
-  background: #60a5fa;
-}
-
-.legend-dot.unreachable {
-  background: #8b8b8b;
-}
-
-.legend-dot.broken {
-  background: #f97373;
-}
-
-.legend-dot.ending {
-  background: #6ee7a8;
+.flow-map-layout {
+  align-items: start;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 230px;
 }
 
 .flow-map {
@@ -715,8 +763,8 @@ h2 {
   background-size: 24px 24px;
   border: 1px solid #333844;
   border-radius: 6px;
-  max-height: 560px;
-  min-height: 360px;
+  max-height: 660px;
+  min-height: 520px;
   overflow: auto;
 }
 
@@ -833,6 +881,10 @@ h2 {
   border-left-color: #f59e5b;
 }
 
+.flow-node.cg {
+  border-left-color: #a78bfa;
+}
+
 .flow-node.ending {
   border-left-color: #6ee7a8;
 }
@@ -876,6 +928,91 @@ h2 {
   font-size: 10px;
   font-style: normal;
   padding: 2px 5px;
+}
+
+.flow-status-panel {
+  background: #202226;
+  border: 1px solid #333844;
+  border-radius: 6px;
+  padding: 14px;
+  position: sticky;
+  top: 0;
+}
+
+.flow-status-panel h2 {
+  margin-bottom: 10px;
+}
+
+.status-row {
+  align-items: center;
+  background: #292d33;
+  border: 1px solid #3a414d;
+  border-radius: 6px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  margin-top: 8px;
+  min-height: 50px;
+  padding: 8px 9px;
+}
+
+.status-dot {
+  border-radius: 50%;
+  height: 8px;
+  width: 8px;
+}
+
+.status-main {
+  min-width: 0;
+}
+
+.status-main strong,
+.status-main small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-main strong {
+  color: #ececec;
+  font-size: 12px;
+}
+
+.status-main small {
+  color: #9ca3af;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.status-row b {
+  color: #d9e4ef;
+  font-size: 16px;
+}
+
+.status-row.entry .status-dot {
+  background: #60a5fa;
+}
+
+.status-row.unreachable .status-dot {
+  background: #8b8b8b;
+}
+
+.status-row.broken .status-dot {
+  background: #f97373;
+}
+
+.status-row.dead .status-dot,
+.status-row.cycle .status-dot {
+  background: #f59e5b;
+}
+
+.status-row.ending .status-dot {
+  background: #6ee7a8;
+}
+
+.status-row.cg .status-dot {
+  background: #a78bfa;
 }
 
 .issue,
@@ -999,5 +1136,15 @@ h2 {
   margin: 12px 0 0;
   overflow-x: auto;
   padding: 12px;
+}
+
+@media (max-width: 980px) {
+  .flow-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-status-panel {
+    position: static;
+  }
 }
 </style>

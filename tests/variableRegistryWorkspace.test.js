@@ -745,6 +745,9 @@ describe('variable registry workspace', () => {
     expect(harness.container.textContent).toContain('审查');
     expect(harness.container.querySelector('[data-test="graph-edges"]').textContent).toContain('missing_route');
 
+    const headings = [...harness.container.querySelectorAll('h2')].map((item) => item.textContent.trim());
+    expect(headings[0]).toBe('剧情流程图');
+
     const graphMap = harness.container.querySelector('[data-test="graph-map"]');
     expect(graphMap).not.toBeNull();
     expect(graphMap.textContent).toContain('Start');
@@ -753,6 +756,18 @@ describe('variable registry workspace', () => {
     expect(graphMap.querySelector('.flow-edge-label').textContent).toContain('选项 1');
     expect(graphMap.querySelector('.flow-node[data-node-id="orphan"]').className).toContain('unreachable');
     expect(graphMap.querySelector('.flow-node[data-node-id="missing_route"]').className).toContain('missing');
+    expect(parseFloat(graphMap.querySelector('.flow-node[data-node-id="missing_route"]').style.top))
+      .toBeGreaterThan(parseFloat(graphMap.querySelector('.flow-node[data-node-id="start"]').style.top));
+
+    const statusPanel = harness.container.querySelector('[data-test="graph-status-panel"]');
+    expect(statusPanel).not.toBeNull();
+    expect(statusPanel.textContent).toContain('入口');
+    expect(statusPanel.textContent).toContain('不可达');
+    expect(statusPanel.textContent).toContain('断链');
+    expect(statusPanel.textContent).toContain('死路');
+    expect(statusPanel.textContent).toContain('循环');
+    expect(statusPanel.textContent).toContain('结局');
+    expect(statusPanel.textContent).toContain('CG');
 
     graphMap.querySelector('.flow-node[data-node-id="start"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();

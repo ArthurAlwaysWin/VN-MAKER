@@ -675,9 +675,11 @@ function showInputEvent(data) {
   textInputScreen.show(data);
 }
 
-function playCharacterEvent(type, data) {
+function playCharacterEvent(type, data, { instant = false } = {}) {
+  const shouldSkipTransition = skipMode || instant;
+
   if (type === 'show_character') {
-    if (skipMode) {
+    if (shouldSkipTransition) {
       characters.show({ ...data, duration: 0, transition: 'none', skip: true });
       return;
     }
@@ -686,7 +688,7 @@ function playCharacterEvent(type, data) {
   }
 
   if (type === 'hide_character') {
-    if (skipMode) {
+    if (shouldSkipTransition) {
       characters.hide({ ...data, duration: 0 });
       return;
     }
@@ -694,7 +696,7 @@ function playCharacterEvent(type, data) {
     return;
   }
 
-  if (skipMode) {
+  if (shouldSkipTransition) {
     characters.setExpression({ ...data, skip: true });
     return;
   }
@@ -732,7 +734,7 @@ function flushPageTransitionGate(token = pageTransitionToken) {
   backgroundTransitionPending = false;
 
   for (const event of characterEvents) {
-    playCharacterEvent(event.type, event.data);
+    playCharacterEvent(event.type, event.data, { instant: instantReplayMode });
   }
 
   if (pageEnterData) {
@@ -792,7 +794,7 @@ engine.on('show_character', (data) => {
     return;
   }
 
-  playCharacterEvent('show_character', data);
+  playCharacterEvent('show_character', data, { instant: instantReplayMode });
 });
 
 engine.on('hide_character', (data) => {
@@ -801,11 +803,7 @@ engine.on('hide_character', (data) => {
     return;
   }
 
-  if (skipMode) {
-    characters.hide({ ...data, duration: 0 });
-    return;
-  }
-  characters.hide(data);
+  playCharacterEvent('hide_character', data, { instant: instantReplayMode });
 });
 
 engine.on('set_expression', (data) => {
@@ -814,7 +812,7 @@ engine.on('set_expression', (data) => {
     return;
   }
 
-  playCharacterEvent('set_expression', data);
+  playCharacterEvent('set_expression', data, { instant: instantReplayMode });
 });
 
 engine.on('set_background', async (data) => {

@@ -110,4 +110,25 @@ describe('character motion playback', () => {
     layer.clear();
     expect(document.querySelector('.character-motion')).toBeNull();
   });
+
+  it('honors explicit zero-duration show and hide for instant replay paths', () => {
+    const layer = makeLayer();
+
+    layer.show({
+      id: 'hero',
+      image: 'characters/hero.png',
+      expression: 'normal',
+      position: 'center',
+      transition: 'none',
+      duration: 0,
+    });
+
+    const sprite = document.querySelector('.character-sprite');
+    expect(sprite?.style.transitionDuration).toBe('0ms');
+    expect(sprite?.classList.contains('enter-fade')).toBe(false);
+
+    layer.hide({ id: 'hero', duration: 0 });
+
+    expect(document.querySelector('.character-sprite')).toBeNull();
+  });
 });

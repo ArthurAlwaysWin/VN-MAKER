@@ -64,7 +64,7 @@ describe('PREV-05 cinematic regression gate', () => {
     const restorePreview = sliceBetween(src, 'async function restorePreviewSnapshot(snapshot) {', 'async function cancelActiveEffectPreview(');
 
     expect(src).toMatch(/function handlePageEnterEffects\(data\) \{[\s\S]*if \(skipMode\) \{[\s\S]*camera\.clear\(\);/);
-    expect(src).toMatch(/function playCharacterEvent\(type, data\) \{[\s\S]*if \(type === 'show_character'\) \{[\s\S]*if \(skipMode\) \{[\s\S]*characters\.show\(\{ \.\.\.data, duration: 0, transition: 'none', skip: true \}\);/);
+    expect(src).toMatch(/function playCharacterEvent\(type, data, \{ instant = false \} = \{\}\) \{[\s\S]*const shouldSkipTransition = skipMode \|\| instant;[\s\S]*if \(type === 'show_character'\) \{[\s\S]*if \(shouldSkipTransition\) \{[\s\S]*characters\.show\(\{ \.\.\.data, duration: 0, transition: 'none', skip: true \}\);/);
     expect(src).toMatch(/engine\.on\('set_background', async \(data\) => \{[\s\S]*if \(skipMode\) \{[\s\S]*background\.setBackground\(\{ \.\.\.data, duration: 0, transition: 'cut' \}\);/);
 
     expectOrdered(src, [

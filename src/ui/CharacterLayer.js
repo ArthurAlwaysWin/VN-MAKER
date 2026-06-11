@@ -127,7 +127,7 @@ export class CharacterLayer {
 
     // ─── Container enter transition ───
     const transition = data.transition || 'fade';
-    const duration = data.duration || 500;
+    const duration = data.duration ?? 500;
     entry.container.style.transitionDuration = `${duration}ms`;
 
     if (transition === 'fade') {
@@ -173,9 +173,15 @@ export class CharacterLayer {
 
     this._clearMotion(entry);
 
-    const duration = data.duration || 400;
+    const duration = data.duration ?? 400;
     entry.container.style.transitionDuration = `${duration}ms`;
     entry.container.classList.remove('entered');
+
+    if (duration <= 0) {
+      entry.container.remove();
+      this.characters.delete(data.id);
+      return;
+    }
 
     entry._hideTimer = setTimeout(() => {
       entry._hideTimer = null;

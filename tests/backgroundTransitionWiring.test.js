@@ -31,12 +31,13 @@ describe('background transition wiring', () => {
     expect(src).toContain('function cancelPageTransitionGate(');
   });
 
-  it('queues new-page character and expression work while keeping hide_character immediate', () => {
+  it('queues new-page character and expression work while routing direct character events through the replay-aware helper', () => {
     const src = readProjectFile('src/main.js');
 
     expect(src).toMatch(/engine\.on\('show_character',[\s\S]*if \(pageTransitionGateOpen\) \{[\s\S]*pendingCharacterEvents\.push\(/);
     expect(src).toMatch(/engine\.on\('set_expression',[\s\S]*if \(pageTransitionGateOpen\) \{[\s\S]*pendingCharacterEvents\.push\(/);
-    expect(src).toMatch(/engine\.on\('hide_character',[\s\S]*characters\.hide\(/);
+    expect(src).toMatch(/engine\.on\('hide_character',[\s\S]*playCharacterEvent\('hide_character', data, \{ instant: instantReplayMode \}\)/);
+    expect(src).toMatch(/engine\.on\('show_character',[\s\S]*playCharacterEvent\('show_character', data, \{ instant: instantReplayMode \}\)/);
   });
 
   it('queues dialogue and choice ui until the background gate flushes', () => {
@@ -62,6 +63,7 @@ describe('background transition wiring', () => {
 
     expect(src).toMatch(/engine\.on\('page_enter', \(data\) => \{[\s\S]*if \(instantReplayMode\) \{[\s\S]*handlePageEnterEffects\(data\);[\s\S]*return;/);
     expect(src).toMatch(/engine\.on\('set_background', async \(data\) => \{[\s\S]*if \(instantReplayMode\) \{[\s\S]*background\.setBackground\(\{ \.\.\.data, duration: 0, transition: 'cut' \}\);[\s\S]*return;/);
+    expect(src).toMatch(/function playCharacterEvent\(type, data, \{ instant = false \} = \{\}\) \{[\s\S]*const shouldSkipTransition = skipMode \|\| instant;[\s\S]*characters\.show\(\{ \.\.\.data, duration: 0, transition: 'none', skip: true \}\);/);
     expect(src).toMatch(/function replayCurrentPage\(\{ instant = false \} = \{\}\) \{[\s\S]*instantReplayMode = Boolean\(instant\) \|\| previousInstantReplayMode;[\s\S]*engine\.renderCurrentPage\(\);[\s\S]*instantReplayMode = previousInstantReplayMode;/);
   });
 
@@ -76,7 +78,7 @@ describe('background transition wiring', () => {
   it('flushes deferred work in stable order after the background resolves', () => {
     const src = readProjectFile('src/main.js');
 
-    expect(src).toMatch(/function flushPageTransitionGate\([\s\S]*for \(const event of characterEvents\)[\s\S]*playCharacterEvent\(event\.type, event\.data\);/);
+    expect(src).toMatch(/function flushPageTransitionGate\([\s\S]*for \(const event of characterEvents\)[\s\S]*playCharacterEvent\(event\.type, event\.data, \{ instant: instantReplayMode \}\);/);
     expect(src).toMatch(/function flushPageTransitionGate\([\s\S]*handlePageEnterEffects\(pageEnterData\);/);
     expect(src).toMatch(/function flushPageTransitionGate\([\s\S]*showDialogueEvent\(uiEvent\.data\);/);
     expect(src).toMatch(/function flushPageTransitionGate\([\s\S]*showChoiceEvent\(uiEvent\.data\);/);

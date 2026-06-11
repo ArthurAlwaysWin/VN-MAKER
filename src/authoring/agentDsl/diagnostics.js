@@ -1,6 +1,10 @@
 export const DIAGNOSTIC_CODES = {
   syntaxError: 'dsl-syntax-error',
   invalidIndent: 'dsl-invalid-indent',
+  includeNotFound: 'dsl-include-not-found',
+  includeCycle: 'dsl-include-cycle',
+  invalidIncludePath: 'dsl-invalid-include-path',
+  manifestEntryMissing: 'dsl-manifest-entry-missing',
   duplicateSymbol: 'dsl-duplicate-symbol',
   unknownSceneTarget: 'dsl-unknown-scene-target',
   unknownCharacter: 'dsl-unknown-character',

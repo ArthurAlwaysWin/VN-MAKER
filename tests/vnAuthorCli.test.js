@@ -367,6 +367,52 @@ scene bad "Bad":
     });
   });
 
+  it('converts an agent DSL project manifest into an apply-plan manifest from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      const libDir = path.join(sourceRoot, 'lib');
+      await mkdir(libDir, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      const planPath = path.join(dir, 'project-plan.json');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '.',
+        entry: 'main.gmdsl',
+      }), 'utf8');
+      await writeFile(path.join(libDir, 'characters.gmdsl'), 'character sakura "Sakura"\n', 'utf8');
+      await writeFile(path.join(sourceRoot, 'main.gmdsl'), `
+include "lib/characters.gmdsl"
+namespace chapter_01:
+  scene start "Start":
+    say "Welcome."
+`, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        manifestPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        dslPath: manifestPath,
+        manifestPath,
+        entryPath: path.join(sourceRoot, 'main.gmdsl'),
+        outPath: planPath,
+        operationCount: 3,
+      });
+      expect(plan.operations.map((operation) => operation.id)).toEqual([
+        'dsl-add-character-sakura',
+        'dsl-add-scene-chapter_01_start',
+        'dsl-add-page-chapter_01_start-1',
+      ]);
+    });
+  });
+
   it('returns structured diagnostics for invalid agent DSL from the CLI', async () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'broken.dsl');

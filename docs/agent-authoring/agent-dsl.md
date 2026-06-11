@@ -6,6 +6,7 @@ For the mature target architecture, see [agent-dsl-architecture.md](./agent-dsl-
 
 ```bash
 npm run vn:dsl-plan -- story.dsl --out .tmp/story-plan.json --json
+npm run vn -- dsl-plan agent-src/project.gmdsl.json --out .tmp/story-plan.json --json
 npm run vn:apply-plan -- .tmp/story-plan.json --script public/game/script.json --validate-only --json
 npm run vn:apply-plan -- .tmp/story-plan.json --script public/game/script.json --dry-run --json
 ```
@@ -105,3 +106,35 @@ These diagnostics are reported by `createAgentDslPlan(source)` and `npm run vn:d
 The P1 AST is an internal compiler contract. Node kinds include `File`, declarations, `MacroDeclaration`, `MacroCall`, `SceneDeclaration`, page/staging/dialogue statements, `ChoiceStatement`, `OptionStatement`, `ConditionStatement`, `EffectStatement`, `JumpStatement`, `EndStatement`, `CameraStatement`, and `ParticlesStatement`. Plan output remains compatible with existing `apply-plan --validate-only` gates.
 
 The internal formatter normalizes spacing and indentation to two spaces per block, preserves supported standalone and inline comments, and is idempotent. The public `dsl-format` command remains a later roadmap item; until P6, agents should call `npm run vn:dsl-plan` for plan generation and should not rely on source rewriting as a workflow gate.
+
+## Authoring IR And Multi-File Projects
+
+P2 lowers the parsed, macro-expanded DSL into deterministic Authoring IR before emitting apply-plan operations. The IR is JSON-serializable, keeps source provenance, and contains no raw DSL source text or executable runtime code. Initial IR operation kinds cover declarations, scene creation, normal/choice/condition pages, and scene-next links.
+
+P3 adds a first multi-file project loader for CLI plan generation:
+
+```json
+{
+  "version": 1,
+  "entry": "main.gmdsl",
+  "sourceRoot": ".",
+  "compiler": {
+    "languageVersion": 1,
+    "strict": true
+  }
+}
+```
+
+`include "path/to/file.gmdsl"` is resolved relative to the importing file and must stay inside `sourceRoot`. Missing includes report `dsl-include-not-found`, cycles report `dsl-include-cycle`, traversal or absolute paths report `dsl-invalid-include-path`, and manifests without `entry` report `dsl-manifest-entry-missing`.
+
+Namespaces are compile-time only:
+
+```text
+namespace chapter_01:
+  scene start "Start":
+    jump ending
+  scene ending "Ending":
+    end
+```
+
+The first namespace policy prefixes generated ids, so the example emits scenes `chapter_01_start` and `chapter_01_ending`. Duplicate ids are allowed across different namespaces and rejected inside the same namespace. Namespace support does not add runtime lookup behavior, imports, or hidden project fields.

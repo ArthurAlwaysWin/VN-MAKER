@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentDslPlan } from '../../src/authoring/agentDslPlan.js';
+import { loadAgentDslProject } from '../../src/authoring/agentDsl/project.js';
 import { AgentDslDiagnosticError } from '../../src/authoring/agentDsl/diagnostics.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
 import { createGraphAnalysis, findAssetIssues, findDeadEnds } from '../../src/authoring/branchAnalysis.js';
@@ -3228,10 +3229,10 @@ async function dslPlan(args) {
   }
 
   const dslPath = path.resolve(repoRoot, dslPathArg);
-  const source = await readFile(dslPath, 'utf8');
-  const plan = createAgentDslPlan(source, {
+  const project = await loadAgentDslProject(dslPath);
+  const plan = createAgentDslPlan(project.source, {
     title: getArgValue(args, '--title', undefined),
-    file: dslPath,
+    file: project.entryPath,
   });
   const outPathArg = getArgValue(args, '--out', null);
   const outPath = outPathArg ? path.resolve(repoRoot, outPathArg) : null;
@@ -3242,6 +3243,8 @@ async function dslPlan(args) {
 
   const output = {
     dslPath,
+    entryPath: project.entryPath,
+    manifestPath: project.manifestPath,
     outPath,
     operationCount: plan.operations.length,
     warningCount: plan.warnings.length,

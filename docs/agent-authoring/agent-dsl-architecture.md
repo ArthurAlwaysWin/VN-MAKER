@@ -47,24 +47,26 @@ This document uses the following terms:
 
 ## 4. Current MVP Boundary
 
-The current MVP provides:
+The current implementation provides:
 
 - `src/authoring/agentDslPlan.js`
+- `src/authoring/agentDsl/ir.js`
+- `src/authoring/agentDsl/emitPlan.js`
+- `src/authoring/agentDsl/project.js`
 - `npm run vn:dsl-plan -- story.dsl --out .tmp/plan.json --json`
+- `npm run vn -- dsl-plan agent-src/project.gmdsl.json --out .tmp/plan.json --json`
 - compile-time macros
 - top-level declarations for title, character, variable, ending, and CG
 - scene body statements for page staging, dialogue, choices, simple conditions, effects, jumps, camera, particles, and media
+- first-pass multi-file includes and namespaces
 - plan output that can be passed to `apply-plan`
 
-The MVP does not yet provide:
+The implementation does not yet provide:
 
-- formal AST node types with source spans
 - standalone `dsl-check`
 - source map artifacts
-- multi-file includes
-- namespaces
+- import declarations
 - structured expression grammar
-- formatter
 - incremental rebuild
 - stale-source detection
 - reverse skeleton generation from existing `script.json`
@@ -328,6 +330,9 @@ Rules:
 - Includes MUST be resolved relative to the importing file.
 - Cycles MUST be reported with diagnostic `dsl-include-cycle`.
 - Imported names MUST NOT shadow local names unless explicitly aliased in a future extension.
+- Current P3 namespaces are compile-time only. Generated project ids are prefixed with the namespace path, for example `namespace chapter_01: scene start` emits `chapter_01_start`.
+- Duplicate symbols are rejected after namespace prefixing, so the same local id MAY appear in different namespaces and MUST still be rejected inside one namespace.
+- The P3 implementation does not yet support imports; cross-namespace references should use future explicit imports rather than hidden runtime lookup.
 
 ### 8.4 Declarations
 
@@ -714,6 +719,8 @@ Stable diagnostic codes:
 - `dsl-invalid-indent`
 - `dsl-include-not-found`
 - `dsl-include-cycle`
+- `dsl-invalid-include-path`
+- `dsl-manifest-entry-missing`
 - `dsl-duplicate-symbol`
 - `dsl-unknown-symbol`
 - `dsl-unknown-scene-target`

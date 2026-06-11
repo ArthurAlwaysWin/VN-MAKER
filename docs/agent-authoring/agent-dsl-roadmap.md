@@ -348,7 +348,7 @@ Before implementation, choose one generated id policy:
 1. Namespace prefixes generated scene ids, for example `chapter_01_start`.
 2. Namespace only affects DSL symbol resolution; generated ids must be explicit.
 
-The chosen policy MUST be documented before code is merged.
+Chosen for P3: namespace prefixes generated ids. A declaration inside `namespace chapter_01:` lowers to apply-plan ids such as `chapter_01_start`, and references inside that namespace are rewritten to the same generated ids before binding/analyzing. This keeps namespace behavior compile-time-only, deterministic, and visible to the existing editor/project contract. The first implementation does not add runtime namespace lookup or hidden project fields.
 
 ## 9. P4 - Route Logic And Expressions
 

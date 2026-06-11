@@ -714,16 +714,25 @@ describe('variable registry workspace', () => {
         },
         orphan: {
           name: 'Orphan',
-          pages: [{
-            type: 'choice',
-            options: [{
-              text: 'Unlock',
-              effects: [
-                { type: 'unlock:ending', id: 'secret' },
-                { type: 'unlock:cg', id: 'hidden' },
-              ],
-            }],
-          }],
+          pages: [
+            {
+              type: 'choice',
+              options: [{
+                text: 'Unlock',
+                effects: [
+                  { type: 'unlock:ending', id: 'secret' },
+                  { type: 'unlock:cg', id: 'hidden' },
+                ],
+              }],
+            },
+            {
+              type: 'condition',
+              conditionMode: 'all',
+              conditions: [],
+              trueTarget: 'start',
+              falseTarget: 'missing_route',
+            },
+          ],
         },
       },
     }));
@@ -753,7 +762,12 @@ describe('variable registry workspace', () => {
     expect(graphMap.textContent).toContain('Start');
     expect(graphMap.textContent).toContain('Orphan');
     expect(graphMap.textContent).toContain('missing_route');
-    expect(graphMap.querySelector('.flow-edge-label').textContent).toContain('选项 1');
+    expect(graphMap.textContent).toContain('选项：Broken');
+    expect(graphMap.textContent).toContain('条件：满足');
+    expect(graphMap.textContent).toContain('条件：不满足');
+    expect(graphMap.querySelector('.flow-edge-halo')).not.toBeNull();
+    expect(graphMap.querySelector('.flow-edge-terminal.target')).not.toBeNull();
+    expect(graphMap.querySelector('.flow-edge').getAttribute('d')).toMatch(/^M /);
     expect(graphMap.querySelector('.flow-node[data-node-id="orphan"]').className).toContain('unreachable');
     expect(graphMap.querySelector('.flow-node[data-node-id="missing_route"]').className).toContain('missing');
     expect(parseFloat(graphMap.querySelector('.flow-node[data-node-id="missing_route"]').style.top))

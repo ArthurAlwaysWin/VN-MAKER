@@ -60,22 +60,53 @@
               <g v-for="edge in graphLayout.edges" :key="edge.key">
                 <path
                   class="flow-edge-hit"
-                  :d="edge.path"
+                  :d="edge.d"
                   @click="openMapEdge(edge)"
                 />
                 <path
+                  class="flow-edge-halo"
+                  :class="[
+                    edge.kindClass,
+                    { broken: edge.broken, backward: edge.backward },
+                  ]"
+                  :d="edge.d"
+                />
+                <path
                   class="flow-edge"
-                  :class="{ broken: edge.broken, backward: edge.backward }"
-                  :d="edge.path"
+                  :class="[
+                    edge.kindClass,
+                    { broken: edge.broken, backward: edge.backward },
+                  ]"
+                  :d="edge.d"
                   :marker-end="edge.broken ? 'url(#flow-arrow-broken)' : 'url(#flow-arrow)'"
+                />
+                <circle
+                  class="flow-edge-terminal source"
+                  :class="[edge.kindClass, { broken: edge.broken }]"
+                  :cx="edge.startX"
+                  :cy="edge.startY"
+                  r="4"
+                />
+                <circle
+                  class="flow-edge-terminal target"
+                  :class="[edge.kindClass, { broken: edge.broken }]"
+                  :cx="edge.endX"
+                  :cy="edge.endY"
+                  r="4"
                 />
                 <g
                   class="flow-edge-label"
-                  :class="{ broken: edge.broken }"
+                  :class="[edge.kindClass, { broken: edge.broken }]"
                   :transform="`translate(${edge.labelX}, ${edge.labelY})`"
                   @click="openMapEdge(edge)"
                 >
-                  <rect x="-38" y="-11" width="76" height="22" rx="4" />
+                  <rect
+                    :x="-edge.labelWidth / 2"
+                    y="-12"
+                    :width="edge.labelWidth"
+                    height="24"
+                    rx="5"
+                  />
                   <text text-anchor="middle" dominant-baseline="middle">{{ edge.label }}</text>
                 </g>
               </g>
@@ -201,7 +232,7 @@
         @click="$emit('navigate-path', edge.pathString)"
       >
         <span>{{ edge.fromSceneId }}</span>
-        <small>{{ edgeLabel(edge) }}</small>
+        <small>{{ edgeLabel(edge, scriptData) }}</small>
         <span>{{ edge.toSceneId }}</span>
         <i v-if="!edge.targetExists">缺失</i>
       </button>
@@ -405,19 +436,42 @@ function summarizeIds(ids = []) {
   return `${uniqueIds.slice(0, 2).join(', ')} +${uniqueIds.length - 2}`;
 }
 
-function edgeLabel(edge) {
+function edgeLabel(edge, scriptData = {}) {
   if (edge.kind === 'choice-option') {
+    const optionText = getChoiceOptionText(edge, scriptData);
+    if (optionText) {
+      return `选项：${optionText}`;
+    }
     return edge.optionIndex !== null && edge.optionIndex !== undefined
       ? `选项 ${edge.optionIndex + 1}`
       : '选项';
   }
 
   return {
-    'scene-next': '下一场景',
-    'condition-true-target': '条件成立',
-    'condition-false-target': '条件不成立',
-    'input-target': '输入跳转',
+    'scene-next': '继续',
+    'condition-true-target': '条件：满足',
+    'condition-false-target': '条件：不满足',
+    'input-target': '输入后',
   }[edge.kind] || edge.kind;
+}
+
+function getChoiceOptionText(edge, scriptData = {}) {
+  const page = scriptData?.scenes?.[edge.fromSceneId]?.pages?.[edge.pageIndex];
+  const text = page?.options?.[edge.optionIndex]?.text;
+  if (typeof text !== 'string' || !text.trim()) return '';
+  const compact = text.trim().replace(/\s+/g, ' ');
+  return compact.length > 10 ? `${compact.slice(0, 10)}...` : compact;
+}
+
+function edgeKindClass(edge) {
+  if (edge.kind === 'choice-option') return 'choice';
+  if (edge.kind === 'condition-true-target' || edge.kind === 'condition-false-target') return 'condition';
+  if (edge.kind === 'scene-next') return 'next';
+  return 'route';
+}
+
+function edgeLabelWidth(label = '') {
+  return Math.max(72, Math.min(150, String(label).length * 12 + 24));
 }
 
 function statusRank(node) {
@@ -448,6 +502,10 @@ function edgePath(from, to) {
     const y = from.y + NODE_HEIGHT;
     return {
       d: `M ${x} ${y} C ${x + 74} ${y + 22}, ${x + 74} ${y + 76}, ${x + 14} ${y + 82}`,
+      startX: x,
+      startY: y,
+      endX: x + 14,
+      endY: y + 82,
       labelX: x + 76,
       labelY: y + 48,
       backward: true,
@@ -460,6 +518,10 @@ function edgePath(from, to) {
     const curve = 78;
     return {
       d: `M ${fromCenterX} ${y1} C ${fromCenterX - curve} ${y1}, ${toCenterX - curve} ${y2}, ${toCenterX} ${y2}`,
+      startX: fromCenterX,
+      startY: y1,
+      endX: toCenterX,
+      endY: y2,
       labelX: (fromCenterX + toCenterX) / 2 - curve,
       labelY: (y1 + y2) / 2,
       backward: true,
@@ -471,6 +533,10 @@ function edgePath(from, to) {
   const curve = Math.max(44, (y2 - y1) / 2);
   return {
     d: `M ${fromCenterX} ${y1} C ${fromCenterX} ${y1 + curve}, ${toCenterX} ${y2 - curve}, ${toCenterX} ${y2}`,
+    startX: fromCenterX,
+    startY: y1,
+    endX: toCenterX,
+    endY: y2,
     labelX: (fromCenterX + toCenterX) / 2,
     labelY: (y1 + y2) / 2,
     backward: false,
@@ -609,10 +675,13 @@ function buildGraphLayout(graphReport = {}, scriptData = {}) {
       const to = positionById.get(edge.toSceneId);
       if (!from || !to) return null;
       const path = edgePath(from, to);
+      const label = edgeLabel(edge, scriptData);
       return {
         ...edge,
         key: `${edge.pathString}:${index}`,
-        label: edgeLabel(edge),
+        label,
+        labelWidth: edgeLabelWidth(label),
+        kindClass: edgeKindClass(edge),
         broken: !edge.targetExists,
         ...path,
       };
@@ -779,25 +848,64 @@ h2 {
   position: absolute;
 }
 
-.flow-edge {
+.flow-edges :deep(.flow-edge-halo) {
+  fill: none;
+  pointer-events: none;
+  stroke: rgba(201, 218, 237, 0.22);
+  stroke-linecap: round;
+  stroke-width: 8;
+}
+
+.flow-edges :deep(.flow-edge-halo.choice) {
+  stroke: rgba(122, 190, 255, 0.2);
+}
+
+.flow-edges :deep(.flow-edge-halo.condition) {
+  stroke: rgba(250, 204, 116, 0.2);
+}
+
+.flow-edges :deep(.flow-edge-halo.next) {
+  stroke: rgba(132, 211, 165, 0.2);
+}
+
+.flow-edges :deep(.flow-edge-halo.backward),
+.flow-edges :deep(.flow-edge.backward) {
+  stroke-dasharray: 7 7;
+}
+
+.flow-edges :deep(.flow-edge-halo.broken) {
+  stroke: rgba(255, 128, 128, 0.24);
+}
+
+.flow-edges :deep(.flow-edge) {
   fill: none;
   marker-end: url("#flow-arrow");
-  stroke: #62738a;
+  pointer-events: none;
+  stroke: #b9c7d8;
   stroke-linecap: round;
-  stroke-width: 2;
+  stroke-width: 3;
 }
 
-.flow-edge.backward {
-  stroke-dasharray: 5 5;
+.flow-edges :deep(.flow-edge.choice) {
+  stroke: #8fc8ff;
 }
 
-.flow-edge.broken {
+.flow-edges :deep(.flow-edge.condition) {
+  stroke: #f3c46b;
+}
+
+.flow-edges :deep(.flow-edge.next) {
+  stroke: #9bd7b0;
+}
+
+.flow-edges :deep(.flow-edge.broken) {
   marker-end: url("#flow-arrow-broken");
-  stroke: #d76d6d;
+  stroke: #ff8585;
   stroke-dasharray: 6 5;
+  stroke-width: 3.2;
 }
 
-.flow-edge-hit {
+.flow-edges :deep(.flow-edge-hit) {
   cursor: pointer;
   fill: none;
   pointer-events: stroke;
@@ -805,36 +913,75 @@ h2 {
   stroke-width: 16;
 }
 
-.flow-edge-label {
+.flow-edges :deep(.flow-edge-terminal) {
+  fill: #1c1d20;
+  pointer-events: none;
+  stroke: #b9c7d8;
+  stroke-width: 2;
+}
+
+.flow-edges :deep(.flow-edge-terminal.choice) {
+  stroke: #8fc8ff;
+}
+
+.flow-edges :deep(.flow-edge-terminal.condition) {
+  stroke: #f3c46b;
+}
+
+.flow-edges :deep(.flow-edge-terminal.next) {
+  stroke: #9bd7b0;
+}
+
+.flow-edges :deep(.flow-edge-terminal.broken) {
+  stroke: #ff8585;
+}
+
+.flow-edges :deep(.flow-edge-label) {
   cursor: pointer;
   pointer-events: all;
 }
 
-.flow-edge-label rect {
+.flow-edges :deep(.flow-edge-label rect) {
   fill: #252a31;
   stroke: #3b4654;
 }
 
-.flow-edge-label text {
-  fill: #b8c4d2;
-  font-size: 11px;
+.flow-edges :deep(.flow-edge-label.choice rect) {
+  fill: #1d3040;
+  stroke: #4d7da2;
+}
+
+.flow-edges :deep(.flow-edge-label.condition rect) {
+  fill: #3b3120;
+  stroke: #8a6c32;
+}
+
+.flow-edges :deep(.flow-edge-label.next rect) {
+  fill: #203626;
+  stroke: #4f8a5d;
+}
+
+.flow-edges :deep(.flow-edge-label text) {
+  fill: #d7e3ef;
+  font-size: 12px;
+  font-weight: 600;
   pointer-events: none;
 }
 
-.flow-edge-label.broken rect {
-  fill: #3b2323;
-  stroke: #744343;
+.flow-edges :deep(.flow-edge-label.broken rect) {
+  fill: #4a2626;
+  stroke: #9a5151;
 }
 
-.flow-edge-label.broken text {
+.flow-edges :deep(.flow-edge-label.broken text) {
   fill: #ffd0d0;
 }
 
-.flow-edges marker path {
+.flow-edges :deep(marker path) {
   fill: #62738a;
 }
 
-.flow-edges #flow-arrow-broken path {
+.flow-edges :deep(#flow-arrow-broken path) {
   fill: #d76d6d;
 }
 

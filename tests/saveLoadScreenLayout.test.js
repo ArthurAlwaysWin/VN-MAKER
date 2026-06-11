@@ -658,6 +658,22 @@ describe('SaveLoadScreen.setLayout', () => {
           expect(thumb.style.borderRadius).toBe('8px');
         });
       });
+
+      it('renders inline data URL thumbnails from web exports', async () => {
+        const thumbnail = 'data:image/jpeg;base64,aGVsbG8=';
+        const slotData = [
+          { slot: 1, hasThumbnail: true, thumbnail, previewText: 'Test', date: '2024-01-01' },
+        ];
+        const smWithData = stubSaveManager(slotData);
+        const s = new SaveLoadScreen(document.createElement('div'), smWithData);
+        document.body.appendChild(s.container);
+        s.show('save');
+        await vi.waitFor(() => {
+          const thumb = s.el.querySelector('.save-slot-thumb');
+          expect(thumb).not.toBeNull();
+          expect(thumb.getAttribute('src')).toBe(thumbnail);
+        });
+      });
     });
 
     describe('CSS injection safety', () => {

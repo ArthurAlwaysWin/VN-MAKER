@@ -445,19 +445,120 @@ async function runEffectPreview(request) {
 // ─── Screenshot capture (D-01, D-02, D-03) ─────────────
 let cachedScreenshot = null;
 
-async function captureGameScreenshot() {
-  if (!window.ipcRenderer) return null; // iframe preview guard (D-13)
+function parseCssUrl(value) {
+  const match = String(value || '').match(/^url\(["']?(.*?)["']?\)$/);
+  return match?.[1] || '';
+}
 
+function loadImageForCanvas(src) {
+  return new Promise((resolve, reject) => {
+    if (!src) {
+      reject(new Error('Missing image source'));
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    img.src = src;
+  });
+}
+
+function drawImageCover(ctx, img, x, y, width, height) {
+  const scale = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+  const drawWidth = img.naturalWidth * scale;
+  const drawHeight = img.naturalHeight * scale;
+  ctx.drawImage(
+    img,
+    x + (width - drawWidth) / 2,
+    y + (height - drawHeight) / 2,
+    drawWidth,
+    drawHeight,
+  );
+}
+
+function drawImageContainBottom(ctx, img, x, y, width, height) {
+  const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight);
+  const drawWidth = img.naturalWidth * scale;
+  const drawHeight = img.naturalHeight * scale;
+  ctx.drawImage(
+    img,
+    x + (width - drawWidth) / 2,
+    y + height - drawHeight,
+    drawWidth,
+    drawHeight,
+  );
+}
+
+async function captureWebStageThumbnail() {
+  const stageRect = stageLayer?.getBoundingClientRect?.();
+  if (!stageRect?.width || !stageRect?.height) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 180;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const scaleX = canvas.width / stageRect.width;
+  const scaleY = canvas.height / stageRect.height;
+  const activeBackground = bgLayer?.querySelector?.('.bg-image-layer.active');
+  const backgroundSrc = activeBackground
+    ? parseCssUrl(getComputedStyle(activeBackground).backgroundImage)
+    : '';
+  if (backgroundSrc) {
+    try {
+      const image = await loadImageForCanvas(backgroundSrc);
+      drawImageCover(ctx, image, 0, 0, canvas.width, canvas.height);
+    } catch (error) {
+      console.warn('[GalgameMaker] Web thumbnail background capture skipped:', error.message);
+    }
+  }
+
+  const characterImages = [...(charLayer?.querySelectorAll?.('.character-sprite.entered img.active') ?? [])];
+  for (const imageEl of characterImages) {
+    const src = imageEl.currentSrc || imageEl.src;
+    if (!src) continue;
+
+    try {
+      const image = imageEl.complete && imageEl.naturalWidth
+        ? imageEl
+        : await loadImageForCanvas(src);
+      const rect = imageEl.getBoundingClientRect();
+      drawImageContainBottom(
+        ctx,
+        image,
+        (rect.left - stageRect.left) * scaleX,
+        (rect.top - stageRect.top) * scaleY,
+        rect.width * scaleX,
+        rect.height * scaleY,
+      );
+    } catch (error) {
+      console.warn('[GalgameMaker] Web thumbnail character capture skipped:', error.message);
+    }
+  }
+
+  return canvas.toDataURL('image/jpeg', 0.72);
+}
+
+async function captureGameScreenshot() {
+  const dlgWasVisible = dialogueBox.el?.classList.contains('visible');
   try {
     // Hide dialogue box visually without stopping typewriter (BUG-04 fix)
     // Using visibility:hidden instead of hide() avoids killing the typewriter timer
-    const dlgWasVisible = dialogueBox.el?.classList.contains('visible');
     if (dlgWasVisible) {
       dialogueBox.el.style.visibility = 'hidden';
     }
 
     // Wait one frame for DOM update
     await new Promise(r => requestAnimationFrame(r));
+
+    if (!window.ipcRenderer) {
+      return await captureWebStageThumbnail();
+    }
 
     const result = await window.ipcRenderer.invoke('capture-screenshot');
 
@@ -473,10 +574,13 @@ async function captureGameScreenshot() {
 
     return result.data;
   } catch (e) {
-    // Ensure visibility is restored even on error
-    dialogueBox.el.style.visibility = '';
     console.error('[GalgameMaker] Screenshot error:', e);
     return null;
+  } finally {
+    // Ensure visibility is restored even on error
+    if (dlgWasVisible) {
+      dialogueBox.el.style.visibility = '';
+    }
   }
 }
 

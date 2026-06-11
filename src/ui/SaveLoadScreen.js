@@ -16,6 +16,23 @@ import { sanitizeCssValue, clampField } from './sanitize.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
 import { attachThemeIconFallback, hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
 
+function isInlineThumbnail(value) {
+  return typeof value === 'string' && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(value.trim());
+}
+
+function getSlotThumbnailSrc(slotNum, slotData) {
+  if (isInlineThumbnail(slotData?.thumbnail)) {
+    return slotData.thumbnail.trim();
+  }
+
+  if (!slotData?.hasThumbnail) {
+    return '';
+  }
+
+  const padded = String(slotNum).padStart(3, '0');
+  return resolvePath(`saves/slot_${padded}.jpg`);
+}
+
 
 export class SaveLoadScreen {
   /**
@@ -362,9 +379,9 @@ export class SaveLoadScreen {
 
     if (slotData) {
       // ── Occupied slot ──
-      const padded = String(slotNum).padStart(3, '0');
-      const thumbHtml = slotData.hasThumbnail
-        ? `<img class="save-slot-thumb" src="${resolvePath(`saves/slot_${padded}.jpg`)}" alt="" />`
+      const thumbnailSrc = getSlotThumbnailSrc(slotNum, slotData);
+      const thumbHtml = thumbnailSrc
+        ? '<img class="save-slot-thumb" alt="" />'
         : `<div class="save-slot-no-thumb"></div>`;
 
       const previewSafe = slotData.previewText || '(无预览)';
@@ -379,9 +396,13 @@ export class SaveLoadScreen {
         <button class="save-slot-delete" title="删除">✕</button>
       `;
 
+      const thumb = slotEl.querySelector('.save-slot-thumb');
+      if (thumb && thumbnailSrc) {
+        thumb.src = thumbnailSrc;
+      }
+
       // Apply thumbnail radius from config
       if (cfg && slotCfg.thumbnailRadius != null) {
-        const thumb = slotEl.querySelector('.save-slot-thumb');
         if (thumb) {
           const tr = clampField('borderRadius', slotCfg.thumbnailRadius);
           if (tr !== undefined) thumb.style.borderRadius = tr + 'px';

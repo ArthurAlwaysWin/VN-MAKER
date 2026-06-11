@@ -3,11 +3,16 @@
  *
  * Drop-in replacement for SaveManager with identical async public API.
  * Uses IndexedDB instead of Electron IPC. 108 regular slots + 1 quicksave.
- * No thumbnails in Web mode per D-02 — hasThumbnail is always false.
+ * Stores thumbnail data URLs in Web mode so exported games can show save previews.
  *
  * Per D-01: IndexedDB backend, 108 slots + 1 quicksave, matching Electron version.
- * Per D-02: No thumbnails — text-only preview info (scene, dialogue, timestamp).
  */
+function normalizeThumbnail(thumbnail) {
+  if (typeof thumbnail !== 'string') return null;
+  const trimmed = thumbnail.trim();
+  return /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(trimmed) ? trimmed : null;
+}
+
 export class WebSaveManager {
   constructor(projectId = null) {
     /** @type {number} Maximum save slots */
@@ -43,7 +48,7 @@ export class WebSaveManager {
    * @param {number} slot — slot number (1-108)
    * @param {Object} state — engine state from ScriptEngine.getState()
    * @param {string} previewText — truncated dialogue text for display
-   * @param {Uint8Array|null} [thumbnail=null] — accepted but ignored (D-02)
+   * @param {string|null} [thumbnail=null] — data URL thumbnail from Web screenshot capture
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async save(slot, state, previewText, thumbnail = null) {
@@ -58,6 +63,7 @@ export class WebSaveManager {
     const sceneName = plainState.currentScene || '';
     const timestamp = Date.now();
     const date = new Date().toLocaleString('zh-CN');
+    const thumbnailData = normalizeThumbnail(thumbnail);
 
     const record = {
       slot,
@@ -67,7 +73,8 @@ export class WebSaveManager {
       sceneName,
       timestamp,
       date,
-      hasThumbnail: false,
+      thumbnail: thumbnailData,
+      hasThumbnail: !!thumbnailData,
     };
 
     try {
@@ -79,7 +86,8 @@ export class WebSaveManager {
         sceneName,
         timestamp,
         date,
-        hasThumbnail: false,
+        thumbnail: thumbnailData,
+        hasThumbnail: !!thumbnailData,
       });
       return { success: true };
     } catch (e) {
@@ -101,6 +109,7 @@ export class WebSaveManager {
         console.error('[WebSaveManager] Slot not found:', slot);
         return null;
       }
+      const thumbnail = normalizeThumbnail(record.thumbnail);
       return {
         version: record.version,
         state: record.state,
@@ -108,6 +117,8 @@ export class WebSaveManager {
         sceneName: record.sceneName,
         timestamp: record.timestamp,
         date: record.date,
+        thumbnail,
+        hasThumbnail: !!thumbnail,
       };
     } catch (e) {
       console.error('[WebSaveManager] Load failed:', e.message);
@@ -147,24 +158,30 @@ export class WebSaveManager {
       // Rebuild cache from fresh data
       this._cache.clear();
       for (const r of regular) {
+        const thumbnail = normalizeThumbnail(r.thumbnail);
         this._cache.set(r.slot, {
           slot: r.slot,
           previewText: r.previewText,
           sceneName: r.sceneName,
           timestamp: r.timestamp,
           date: r.date,
-          hasThumbnail: false,
+          thumbnail,
+          hasThumbnail: !!thumbnail,
         });
       }
 
-      return regular.map(r => ({
-        slot: r.slot,
-        previewText: r.previewText,
-        sceneName: r.sceneName,
-        timestamp: r.timestamp,
-        date: r.date,
-        hasThumbnail: false,
-      }));
+      return regular.map((r) => {
+        const thumbnail = normalizeThumbnail(r.thumbnail);
+        return {
+          slot: r.slot,
+          previewText: r.previewText,
+          sceneName: r.sceneName,
+          timestamp: r.timestamp,
+          date: r.date,
+          thumbnail,
+          hasThumbnail: !!thumbnail,
+        };
+      });
     } catch (e) {
       console.error('[WebSaveManager] getAllSlots failed:', e.message);
       return [];
@@ -186,7 +203,7 @@ export class WebSaveManager {
    * Save game state to the quicksave slot (always overwrites)
    * @param {Object} state — engine state from ScriptEngine.getState()
    * @param {string} previewText — truncated dialogue text for display
-   * @param {Uint8Array|null} [thumbnail=null] — accepted but ignored (D-02)
+   * @param {string|null} [thumbnail=null] — data URL thumbnail from Web screenshot capture
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async quickSave(state, previewText, thumbnail = null) {
@@ -201,6 +218,7 @@ export class WebSaveManager {
     const sceneName = plainState.currentScene || '';
     const timestamp = Date.now();
     const date = new Date().toLocaleString('zh-CN');
+    const thumbnailData = normalizeThumbnail(thumbnail);
 
     const record = {
       slot: 'quick',
@@ -210,7 +228,8 @@ export class WebSaveManager {
       sceneName,
       timestamp,
       date,
-      hasThumbnail: false,
+      thumbnail: thumbnailData,
+      hasThumbnail: !!thumbnailData,
     };
 
     try {
@@ -236,6 +255,7 @@ export class WebSaveManager {
         console.error('[WebSaveManager] No quicksave found');
         return null;
       }
+      const thumbnail = normalizeThumbnail(record.thumbnail);
       return {
         version: record.version,
         state: record.state,
@@ -243,6 +263,8 @@ export class WebSaveManager {
         sceneName: record.sceneName,
         timestamp: record.timestamp,
         date: record.date,
+        thumbnail,
+        hasThumbnail: !!thumbnail,
       };
     } catch (e) {
       console.error('[WebSaveManager] Quick load failed:', e.message);

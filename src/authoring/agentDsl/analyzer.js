@@ -1,4 +1,10 @@
 import { createDiagnostic, DIAGNOSTIC_CODES } from './diagnostics.js';
+import {
+  createConditionDiagnostic,
+  lowerConditionExpressionToRows,
+  parseConditionStatement,
+  visitConditionComparisons,
+} from './conditionExpression.js';
 import { agentDslTokenText } from './parser.js';
 
 const VALID_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub', 'unlock:ending', 'unlock:cg']);
@@ -121,6 +127,63 @@ function analyzeVariableReference(diagnostics, symbols, id, token, node) {
   ));
 }
 
+function analyzeConditionVariableReference(diagnostics, symbols, id, token, node) {
+  if (!id || hasSymbol(symbols, 'variables', id)) return;
+  diagnostics.push(diagnosticFromToken(
+    DIAGNOSTIC_CODES.unknownConditionVariable,
+    `Condition variable "${id}" is not declared.`,
+    token,
+    node,
+    {
+      summary: `Declare variable ${id} or change the condition.`,
+      repairHint: {
+        action: 'declare-variable-or-update-condition',
+        variableId: id,
+      },
+    },
+  ));
+}
+
+function variableTypeFor(symbols, id) {
+  const symbol = symbols?.variables?.get(id);
+  const node = symbol?.node;
+  if (!node) return null;
+  if (node.kind === 'AffectionDeclaration') return 'number';
+  const declaredType = node.tokens?.[2];
+  return ['number', 'bool', 'string'].includes(declaredType) ? declaredType : 'number';
+}
+
+function conditionTypesMatch(variableType, comparison) {
+  if (!variableType) return true;
+  if (['>', '>=', '<', '<='].includes(comparison.operator)) {
+    return variableType === 'number' && comparison.valueType === 'number';
+  }
+  if (comparison.operator === '==' || comparison.operator === '!=') {
+    return variableType === comparison.valueType;
+  }
+  return true;
+}
+
+function analyzeConditionType(diagnostics, symbols, comparison, node) {
+  const variableType = variableTypeFor(symbols, comparison.variableId);
+  if (!variableType || conditionTypesMatch(variableType, comparison)) return;
+  diagnostics.push(createConditionDiagnostic(
+    DIAGNOSTIC_CODES.conditionTypeMismatch,
+    `Condition compares ${variableType} variable "${comparison.variableId}" with ${comparison.valueType} value using "${comparison.operator}".`,
+    comparison.valueToken ?? comparison.operatorToken ?? comparison.variableToken,
+    node.line,
+    {
+      summary: 'Use a comparison value that matches the declared variable type.',
+      repairHint: {
+        action: 'fix-condition-type',
+        variableId: comparison.variableId,
+        variableType,
+        valueType: comparison.valueType,
+      },
+    },
+  ));
+}
+
 function analyzeUnlockReference(diagnostics, symbols, kind, id, token, node) {
   const tableName = kind === 'ending' ? 'endings' : 'cgs';
   const code = kind === 'ending' ? DIAGNOSTIC_CODES.unknownEnding : DIAGNOSTIC_CODES.unknownCg;
@@ -142,16 +205,17 @@ function analyzeUnlockReference(diagnostics, symbols, kind, id, token, node) {
 }
 
 function analyzeCondition(diagnostics, symbols, node) {
-  const line = node.line;
-  analyzeVariableReference(diagnostics, symbols, tokenText(tokenAt(line, 1)), tokenAt(line, 1), node);
-  const arrowIndex = indexOfToken(line, '->');
-  if (arrowIndex !== -1) {
-    analyzeSceneTarget(diagnostics, symbols, tokenText(tokenAt(line, arrowIndex + 1)), tokenAt(line, arrowIndex + 1), node);
-  }
-  const elseIndex = indexOfToken(line, 'else');
-  if (elseIndex !== -1) {
-    analyzeSceneTarget(diagnostics, symbols, tokenText(tokenAt(line, elseIndex + 1)), tokenAt(line, elseIndex + 1), node);
-  }
+  const parsed = node.condition ? { condition: node.condition, diagnostics: [] } : parseConditionStatement(node.line);
+  diagnostics.push(...parsed.diagnostics);
+  if (!parsed.condition) return;
+  const lowered = lowerConditionExpressionToRows(parsed.condition.expression, node.line);
+  diagnostics.push(...lowered.diagnostics);
+  visitConditionComparisons(parsed.condition.expression, (comparison) => {
+    analyzeConditionVariableReference(diagnostics, symbols, comparison.variableId, comparison.variableToken, node);
+    analyzeConditionType(diagnostics, symbols, comparison, node);
+  });
+  analyzeSceneTarget(diagnostics, symbols, parsed.condition.trueTarget, parsed.condition.trueTargetToken ?? tokenAfter(node.line, '->'), node);
+  analyzeSceneTarget(diagnostics, symbols, parsed.condition.falseTarget, parsed.condition.falseTargetToken ?? tokenAfter(node.line, 'else'), node);
 }
 
 function analyzeEffect(diagnostics, symbols, node) {

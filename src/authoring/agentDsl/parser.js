@@ -1,4 +1,5 @@
 import { createNode, mergeSpans } from './ast.js';
+import { parseConditionStatement } from './conditionExpression.js';
 import { createDiagnostic, DIAGNOSTIC_CODES, hasErrors } from './diagnostics.js';
 import { lexAgentDsl } from './lexer.js';
 
@@ -231,7 +232,17 @@ class Parser {
     if (command === 'show') return createNode('ShowStatement', line.span, { line });
     if (command === 'say') return createNode('SayStatement', line.span, { line });
     if (command === 'narrate') return createNode('NarrateStatement', line.span, { line });
-    if (command === 'if') return createNode('ConditionStatement', line.span, { line });
+    if (command === 'if') {
+      const parsed = parseConditionStatement(line);
+      this.diagnostics.push(...parsed.diagnostics);
+      return createNode('ConditionStatement', line.span, {
+        condition: parsed.condition,
+        expression: parsed.condition?.expression ?? null,
+        trueTarget: parsed.condition?.trueTarget ?? null,
+        falseTarget: parsed.condition?.falseTarget ?? null,
+        line,
+      });
+    }
     if (command === 'jump') return createNode('JumpStatement', line.span, { target: tokenText(line.tokens[1]), line });
     if (command === 'end') return createNode('EndStatement', line.span, { line });
     if (command === 'camera') return createNode('CameraStatement', line.span, { line });

@@ -59,6 +59,7 @@ The current implementation provides:
 - top-level declarations for title, character, variable, ending, and CG
 - scene body statements for page staging, dialogue, choices, simple conditions, effects, jumps, camera, particles, and media
 - first-pass multi-file includes and namespaces
+- strict first-pass condition expressions for single comparisons, flat `and`, and flat `or`
 - plan output that can be passed to `apply-plan`
 
 The implementation does not yet provide:
@@ -66,7 +67,6 @@ The implementation does not yet provide:
 - standalone `dsl-check`
 - source map artifacts
 - import declarations
-- structured expression grammar
 - incremental rebuild
 - stale-source detection
 - reverse skeleton generation from existing `script.json`
@@ -726,12 +726,14 @@ Stable diagnostic codes:
 - `dsl-unknown-scene-target`
 - `dsl-unknown-character`
 - `dsl-unknown-variable`
+- `dsl-unknown-condition-variable`
 - `dsl-unknown-ending`
 - `dsl-unknown-cg`
 - `dsl-invalid-asset-path`
 - `dsl-invalid-effect`
 - `dsl-invalid-condition-expression`
 - `dsl-nested-condition-unsupported`
+- `dsl-condition-type-mismatch`
 - `dsl-macro-not-found`
 - `dsl-macro-arity-mismatch`
 - `dsl-macro-recursion-limit`

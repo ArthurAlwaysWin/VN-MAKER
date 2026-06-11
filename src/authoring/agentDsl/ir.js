@@ -1,4 +1,5 @@
 import { AgentDslDiagnosticError, createDiagnostic, DIAGNOSTIC_CODES } from './diagnostics.js';
+import { lowerConditionExpressionToRows, parseConditionStatement } from './conditionExpression.js';
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -363,21 +364,21 @@ function parseChoiceBlock(lines, startIndex, choiceLine) {
 }
 
 function parseCondition(line) {
-  const match = line.trimmed.match(/^if\s+([A-Za-z_][\w-]*)\s*(==|!=|>=|<=|>|<)\s*(.+?)\s+->\s+([A-Za-z0-9_\-\u4e00-\u9fa5]+)(?:\s+else\s+([A-Za-z0-9_\-\u4e00-\u9fa5]+))?\s*$/);
-  if (!match) {
-    fail(line, 'condition syntax is: if variable >= value -> true_scene else false_scene');
+  const parsed = parseConditionStatement(line);
+  if (parsed.diagnostics.length > 0 || !parsed.condition) {
+    const diagnostic = parsed.diagnostics[0];
+    fail(line, diagnostic?.message ?? 'condition syntax is: if expression -> true_scene else false_scene', diagnostic?.code ?? DIAGNOSTIC_CODES.invalidConditionExpression);
   }
-  const [, variableId, operator, valueSource, trueTarget, falseTarget = null] = match;
-  const valueTokens = tokenize(valueSource);
+  const lowered = lowerConditionExpressionToRows(parsed.condition.expression, line);
+  if (lowered.diagnostics.length > 0 || !lowered.ok) {
+    const diagnostic = lowered.diagnostics[0];
+    fail(line, diagnostic?.message ?? 'unsupported condition expression', diagnostic?.code ?? DIAGNOSTIC_CODES.nestedConditionUnsupported);
+  }
   return {
-    conditionMode: 'all',
-    conditions: [{
-      variableId,
-      operator,
-      value: parseScalar(valueTokens.length === 1 ? valueTokens[0] : valueSource),
-    }],
-    trueTarget,
-    falseTarget,
+    conditionMode: lowered.conditionMode,
+    conditions: lowered.conditions,
+    trueTarget: parsed.condition.trueTarget,
+    falseTarget: parsed.condition.falseTarget,
   };
 }
 

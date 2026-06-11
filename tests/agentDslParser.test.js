@@ -45,6 +45,35 @@ scene start "Start":
     ]);
   });
 
+  it('parses condition expressions into AST nodes', () => {
+    const result = parseAgentDsl(`
+variable affection number initial 0
+variable saw_letter bool initial false
+scene start "Start":
+  if affection >= 5 and saw_letter == true -> good else normal
+scene good "Good":
+  end
+scene normal "Normal":
+  end
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(true);
+    const scene = result.ast.body.find((node) => node.kind === 'SceneDeclaration' && node.id === 'start');
+    const condition = scene.body.find((node) => node.kind === 'ConditionStatement');
+    expect(condition).toMatchObject({
+      trueTarget: 'good',
+      falseTarget: 'normal',
+      expression: {
+        kind: 'LogicalExpression',
+        operator: 'and',
+        children: [
+          { kind: 'ComparisonExpression', variableId: 'affection', operator: '>=', value: 5, valueType: 'number' },
+          { kind: 'ComparisonExpression', variableId: 'saw_letter', operator: '==', value: true, valueType: 'bool' },
+        ],
+      },
+    });
+  });
+
   it('reports a missing scene colon with dsl-syntax-error', () => {
     const result = parseAgentDsl('scene start "Start"\n  say "Hello."\n', { file: 'story.dsl' });
 
@@ -91,6 +120,22 @@ scene start "Start":
       code: 'dsl-macro-not-found',
       message: 'Unknown macro "missing_macro".',
       source: { line: 2, column: 3 },
+    });
+  });
+
+  it('reports invalid condition expressions with a stable code', () => {
+    const result = parseAgentDsl(`
+scene start "Start":
+  if not affection >= 5 -> good
+scene good "Good":
+  end
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: 'dsl-invalid-condition-expression',
+      message: '"not" is not supported in condition expressions yet.',
+      source: { line: 3, column: 6 },
     });
   });
 

@@ -96,7 +96,8 @@ P2.1 diagnostic coverage includes:
 - `dsl-duplicate-symbol` for duplicate ids inside the same symbol table.
 - `dsl-unknown-scene-target` for unresolved `scene next`, `jump`, `choice option ->`, and `if ->/else` targets.
 - `dsl-unknown-character` for unresolved `show` character ids and `say` speakers.
-- `dsl-unknown-variable` for unresolved condition variables and variable effects.
+- `dsl-unknown-condition-variable` for unresolved condition variables.
+- `dsl-unknown-variable` for unresolved variable effects.
 - `dsl-unknown-ending` and `dsl-unknown-cg` for unresolved unlock targets.
 - `dsl-invalid-effect` for unsupported effect types. Supported effect types are `var:set`, `var:add`, `var:sub`, `unlock:ending`, and `unlock:cg`.
 - `dsl-invalid-asset-path` for absolute asset paths or traversal segments such as `../`.
@@ -138,3 +139,18 @@ namespace chapter_01:
 ```
 
 The first namespace policy prefixes generated ids, so the example emits scenes `chapter_01_start` and `chapter_01_ending`. Duplicate ids are allowed across different namespaces and rejected inside the same namespace. Namespace support does not add runtime lookup behavior, imports, or hidden project fields.
+
+## Condition Expressions
+
+P4 supports strict route condition expressions that lower to the existing editable condition page contract:
+
+```text
+if affection >= 5 and saw_letter == true -> sakura_true else normal
+if affection >= 5 or courage >= 3 -> brave_route else normal
+```
+
+Supported expressions are a single comparison, a flat `and` chain, or a flat `or` chain. `and` lowers to `conditionMode: "all"` and `or` lowers to `conditionMode: "any"`. Comparisons support `==`, `!=`, `>`, `>=`, `<`, and `<=` against declared `number`, `bool`, and `string` variables.
+
+Mixed or nested expressions such as `(affection >= 5 and saw_letter == true) or courage >= 3` are rejected with `dsl-nested-condition-unsupported` until nested condition groups exist in the project contract. `not` is rejected with `dsl-invalid-condition-expression`.
+
+Condition diagnostics include `dsl-unknown-condition-variable` for undeclared variables and `dsl-condition-type-mismatch` for incompatible comparisons, such as comparing a `string` variable with `> 2`.

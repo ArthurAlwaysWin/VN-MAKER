@@ -413,6 +413,67 @@ namespace chapter_01:
     });
   });
 
+  it('validates P4 agent DSL condition expressions from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'conditions.gmdsl');
+      const planPath = path.join(dir, 'conditions-plan.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+variable affection number initial 0
+variable saw_letter bool initial false
+scene start "Start":
+  if affection >= 5 and saw_letter == true -> good else normal
+scene good "Good":
+  say "Good."
+scene normal "Normal":
+  say "Normal."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_conditions',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        outPath: planPath,
+        operationCount: 8,
+      });
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-condition-start-1')).toMatchObject({
+        params: {
+          type: 'condition',
+          conditionMode: 'all',
+          conditions: [
+            { variableId: 'affection', operator: '>=', value: 5 },
+            { variableId: 'saw_letter', operator: '==', value: true },
+          ],
+        },
+      });
+
+      const validated = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--validate-only',
+        '--json',
+      ]);
+      const validatedResult = JSON.parse(validated.stdout);
+      expect(validatedResult.validation.ok).toBe(true);
+    });
+  });
+
   it('returns structured diagnostics for invalid agent DSL from the CLI', async () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'broken.dsl');

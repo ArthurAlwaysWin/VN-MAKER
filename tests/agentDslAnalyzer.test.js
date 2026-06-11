@@ -28,7 +28,7 @@ scene start "Start" next missing_next:
     expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
       'dsl-unknown-scene-target',
       'dsl-unknown-scene-target',
-      'dsl-unknown-variable',
+      'dsl-unknown-condition-variable',
       'dsl-unknown-scene-target',
       'dsl-unknown-scene-target',
       'dsl-unknown-scene-target',
@@ -142,5 +142,48 @@ macro entrance(character):
 scene start "Start":
   call entrance("missing")
 `, { file: 'macro-bad.dsl' })).toThrow(AgentDslDiagnosticError);
+  });
+
+  it('reports P4 condition expression diagnostics before plan emission', () => {
+    const result = analyzeSource(`
+variable affection number initial 0
+variable saw_letter bool initial false
+variable route_name string initial "normal"
+scene start "Start":
+  if affection >= 5 and saw_letter == true -> good else normal
+  if (affection >= 5 and saw_letter == true) or route_name == "good" -> good else normal
+  if route_name > 2 -> good else normal
+scene good "Good":
+  end
+scene normal "Normal":
+  end
+`);
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'dsl-nested-condition-unsupported',
+        message: 'Nested or mixed condition expressions are not supported yet.',
+      }),
+      expect.objectContaining({
+        code: 'dsl-condition-type-mismatch',
+        message: 'Condition compares string variable "route_name" with number value using ">".',
+      }),
+    ]);
+  });
+
+  it('reports unknown variables in conditions with the P4-specific code', () => {
+    const result = analyzeSource(`
+scene start "Start":
+  if missing_flag == true -> start
+`);
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'dsl-unknown-condition-variable',
+        message: 'Condition variable "missing_flag" is not declared.',
+      }),
+    ]);
   });
 });

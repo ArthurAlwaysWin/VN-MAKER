@@ -92,6 +92,7 @@ scene start "Start":
     const ir = createAgentDslIr(`
 character sakura "Sakura"
 variable affection number initial 0
+variable courage number initial 0
 cg first_smile "First Smile" image "backgrounds/cg.png"
 scene start "Start":
   choice "Answer?":
@@ -99,7 +100,7 @@ scene start "Start":
       effect var:add affection 1
       unlock cg first_smile
     option "Stay" -> neutral
-  if affection >= 1 -> good else neutral
+  if affection >= 1 or courage >= 3 -> good else neutral
 scene good "Good":
   end
 scene neutral "Neutral":
@@ -108,6 +109,7 @@ scene neutral "Neutral":
 
     expect(ir.operations.map((operation) => operation.kind)).toEqual([
       'DeclareCharacter',
+      'DeclareVariable',
       'DeclareVariable',
       'DeclareCg',
       'CreateScene',
@@ -136,8 +138,11 @@ scene neutral "Neutral":
     expect(ir.operations.find((operation) => operation.kind === 'CreateConditionPage')).toMatchObject({
       payload: {
         scene: 'start',
-        conditionMode: 'all',
-        conditions: [{ variableId: 'affection', operator: '>=', value: 1 }],
+        conditionMode: 'any',
+        conditions: [
+          { variableId: 'affection', operator: '>=', value: 1 },
+          { variableId: 'courage', operator: '>=', value: 3 },
+        ],
         trueTarget: 'good',
         falseTarget: 'neutral',
       },

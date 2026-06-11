@@ -137,6 +137,13 @@ function rewriteArrowTargets(text, namespace) {
   return text.replace(/->\s*([A-Za-z_][\w:-]*)/g, (_match, id) => `-> ${qualifyIdentifier(id, namespace)}`);
 }
 
+function rewriteConditionVariables(text, namespace) {
+  return text.replace(
+    /(^|[(]\s*|\s+(?:and|or)\s+)([A-Za-z_][\w:-]*)(\s*(?:==|!=|>=|<=|>|<))/g,
+    (_match, prefix, id, suffix) => `${prefix}${qualifyIdentifier(id, namespace)}${suffix}`,
+  );
+}
+
 function rewriteNamespaceLine(raw, namespace) {
   if (!namespace) return raw;
   const indent = raw.match(/^ */)?.[0] ?? '';
@@ -150,7 +157,7 @@ function rewriteNamespaceLine(raw, namespace) {
   body = body.replace(/^say\s+([A-Za-z_][\w:-]*)\s+(['"])/, (_match, id, quote) => `say ${qualifyIdentifier(id, namespace)} ${quote}`);
   body = body.replace(/^call\s+([A-Za-z_][\w:-]*)/, (_match, id) => `call ${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^jump\s+([A-Za-z_][\w:-]*)/, (_match, id) => `jump ${qualifyIdentifier(id, namespace)}`);
-  body = body.replace(/^(if\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
+  body = body.replace(/^(if\s+)(.*?)(\s*->\s*)/, (_match, prefix, expression, suffix) => `${prefix}${rewriteConditionVariables(expression, namespace)}${suffix}`);
   body = body.replace(/(\selse\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^(effect\s+var:(?:set|add|sub)\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^(effect\s+unlock:(?:ending|cg)\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);

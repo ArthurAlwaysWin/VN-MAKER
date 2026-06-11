@@ -115,6 +115,37 @@ namespace chapter_02:
     });
   });
 
+  it('prefixes all condition variables inside namespaces', async () => {
+    await withTempDir(async (dir) => {
+      const mainPath = path.join(dir, 'main.gmdsl');
+      await writeFile(mainPath, `
+namespace chapter_01:
+  variable affection number initial 0
+  variable saw_letter bool initial false
+  scene start "Start":
+    if affection >= 5 and saw_letter == true -> good else normal
+  scene good "Good":
+    end
+  scene normal "Normal":
+    end
+`, 'utf8');
+
+      const plan = await compileProject(mainPath);
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-condition-chapter_01_start-1')).toMatchObject({
+        params: {
+          scene: 'chapter_01_start',
+          conditionMode: 'all',
+          conditions: [
+            { variableId: 'chapter_01_affection', operator: '>=', value: 5 },
+            { variableId: 'chapter_01_saw_letter', operator: '==', value: true },
+          ],
+          trueTarget: 'chapter_01_good',
+          falseTarget: 'chapter_01_normal',
+        },
+      });
+    });
+  });
+
   it('rejects duplicate symbols inside the same namespace', async () => {
     await withTempDir(async (dir) => {
       const mainPath = path.join(dir, 'main.gmdsl');

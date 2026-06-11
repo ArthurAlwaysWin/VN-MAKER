@@ -352,6 +352,8 @@ Chosen for P3: namespace prefixes generated ids. A declaration inside `namespace
 
 ## 9. P4 - Route Logic And Expressions
 
+**Status:** First implementation complete for single comparisons, flat `and`, flat `or`, unknown condition variables, and type mismatch diagnostics. Nested/mixed expressions and `not` remain intentionally rejected.
+
 ### Objective
 
 Replace simple one-row `if` parsing with a strict expression grammar that lowers safely to current condition pages where possible.

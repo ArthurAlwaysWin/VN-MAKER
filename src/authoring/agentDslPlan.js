@@ -1,3 +1,8 @@
+import { AgentDslDiagnosticError, createDiagnostic, DIAGNOSTIC_CODES, throwIfDiagnostics } from './agentDsl/diagnostics.js';
+import { analyzeAgentDsl } from './agentDsl/analyzer.js';
+import { bindAgentDsl } from './agentDsl/binder.js';
+import { astToLineRecords, parseAgentDsl } from './agentDsl/parser.js';
+
 function cloneJsonValue(value) {
   if (value === undefined) {
     return undefined;
@@ -171,8 +176,18 @@ function createOperation(command, params, line, id, provenanceKind, provenance =
   };
 }
 
-function fail(line, message) {
-  throw new Error(`Agent DSL line ${line.number}: ${message}`);
+function fail(line, message, code = DIAGNOSTIC_CODES.syntaxError) {
+  const span = line?.span ?? null;
+  throw new AgentDslDiagnosticError([
+    createDiagnostic({
+      code,
+      message,
+      file: span?.file ?? 'story.dsl',
+      line: span?.start?.line ?? line?.number ?? 1,
+      column: span?.start?.column ?? 1,
+      span,
+    }),
+  ], `Agent DSL line ${line?.number ?? 1}: ${message}`);
 }
 
 function collectIndentedBlock(lines, startIndex, parentIndent) {
@@ -239,7 +254,7 @@ function substituteMacroLine(text, values) {
 
 function expandMacroCalls(lines, macros, depth = 0) {
   if (depth > 8) {
-    throw new Error('Agent DSL macro expansion exceeded the recursion limit');
+    fail(lines[0] ?? { number: 1 }, 'Agent DSL macro expansion exceeded the recursion limit', DIAGNOSTIC_CODES.macroRecursionLimit);
   }
 
   const expanded = [];
@@ -273,6 +288,10 @@ function expandMacroCalls(lines, macros, depth = 0) {
     expanded.push(...expandMacroCalls(materialized, macros, depth + 1));
   }
   return expanded;
+}
+
+function lineRecordsToSource(lines) {
+  return lines.map((line) => line.raw ?? line.text ?? '').join('\n');
 }
 
 function parseCharacter(line) {
@@ -804,9 +823,27 @@ function parseScene(lines, startIndex) {
 }
 
 export function createAgentDslPlan(source, options = {}) {
-  const normalized = normalizeLines(source).filter((line) => line.trimmed);
+  const sourceFile = options.file ?? options.sourceFile ?? 'story.dsl';
+  const parsed = parseAgentDsl(source, { file: sourceFile });
+  throwIfDiagnostics(parsed.diagnostics);
+  const bound = bindAgentDsl(parsed.ast);
+  throwIfDiagnostics(bound.diagnostics);
+  const normalized = astToLineRecords(parsed.ast)
+    .map((line) => {
+      const text = stripComment(line.raw).replace(/\s+$/, '');
+      return {
+        ...line,
+        text,
+        trimmed: text.trim(),
+      };
+    })
+    .filter((line) => line.trimmed);
   const { macros, lines } = collectMacros(normalized);
   const expandedLines = expandMacroCalls(lines, macros);
+  const expanded = parseAgentDsl(lineRecordsToSource(expandedLines), { file: sourceFile });
+  throwIfDiagnostics(expanded.diagnostics);
+  const analyzed = analyzeAgentDsl(expanded.ast, bound.symbols);
+  throwIfDiagnostics(analyzed.diagnostics);
   const operations = [];
   const warnings = [];
   let title = options.title ?? 'Agent DSL plan';

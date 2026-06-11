@@ -80,6 +80,8 @@ Read only the skill needed for the task:
 - `docs/agent-authoring/workflow.md`
 - `docs/agent-authoring/command-reference.md`
 - `docs/agent-authoring/agent-dsl.md`
+- `docs/agent-authoring/agent-dsl-architecture.md`
+- `docs/agent-authoring/agent-dsl-roadmap.md`
 - `docs/agent-authoring/project-contract.md`
 - `docs/agent-authoring/validation-rules.md`
 - `docs/agent-authoring/agent-checklist.md`

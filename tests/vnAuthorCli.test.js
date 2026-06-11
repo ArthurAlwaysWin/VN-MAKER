@@ -367,6 +367,40 @@ scene bad "Bad":
     });
   });
 
+  it('returns structured diagnostics for invalid agent DSL from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'broken.dsl');
+      await writeFile(dslPath, 'scene start "Start"\n  say "Missing colon."\n', 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-plan',
+          dslPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        diagnostics: [
+          {
+            severity: 'error',
+            code: 'dsl-syntax-error',
+            message: 'Expected ":" after scene declaration.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('exports a web build from the CLI after readiness passes', async () => {
     await withTempDir(async (dir) => {
       const { projectDir, appRoot } = await createExportFixture(dir);

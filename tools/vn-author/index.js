@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentDslPlan } from '../../src/authoring/agentDslPlan.js';
+import { AgentDslDiagnosticError } from '../../src/authoring/agentDsl/diagnostics.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
 import { createGraphAnalysis, findAssetIssues, findDeadEnds } from '../../src/authoring/branchAnalysis.js';
 import { createExportReadiness } from '../../src/authoring/exportReadiness.js';
@@ -3230,6 +3231,7 @@ async function dslPlan(args) {
   const source = await readFile(dslPath, 'utf8');
   const plan = createAgentDslPlan(source, {
     title: getArgValue(args, '--title', undefined),
+    file: dslPath,
   });
   const outPathArg = getArgValue(args, '--out', null);
   const outPath = outPathArg ? path.resolve(repoRoot, outPathArg) : null;
@@ -6853,6 +6855,23 @@ async function main() {
     printHelp();
     process.exitCode = command ? 1 : 0;
   } catch (error) {
+    if (error instanceof AgentDslDiagnosticError || Array.isArray(error?.diagnostics)) {
+      if (hasFlag(args, '--json')) {
+        writeJson({
+          success: false,
+          ok: false,
+          error: error.message,
+          diagnostics: error.diagnostics,
+        });
+      } else {
+        process.stderr.write(`${error.message}\n`);
+        for (const diagnostic of error.diagnostics ?? []) {
+          process.stderr.write(`${diagnostic.code}: ${diagnostic.message}\n`);
+        }
+      }
+      process.exitCode = 1;
+      return;
+    }
     if (hasFlag(args, '--json') && error?.readiness) {
       writeJson({
         success: false,

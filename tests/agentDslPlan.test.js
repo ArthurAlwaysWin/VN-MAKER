@@ -30,6 +30,12 @@ scene start "Start":
     option "Look away" -> neutral:
       effect var:sub affection 1
   if affection >= 1 -> good else neutral
+
+scene good "Good":
+  end
+
+scene neutral "Neutral":
+  end
 `);
 
     expect(plan).toMatchObject({
@@ -49,6 +55,8 @@ scene start "Start":
       'add-page',
       'add-page',
       'add-page',
+      'add-scene',
+      'add-scene',
     ]);
 
     const normalPage = plan.operations.find((operation) => operation.id === 'dsl-add-page-start-1');

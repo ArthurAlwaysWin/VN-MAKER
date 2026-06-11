@@ -1,0 +1,99 @@
+import { createDiagnostic, DIAGNOSTIC_CODES } from './diagnostics.js';
+
+const DECLARATION_TABLES = {
+  SceneDeclaration: 'scenes',
+  MacroDeclaration: 'macros',
+  CharacterDeclaration: 'characters',
+  VariableDeclaration: 'variables',
+  AffectionDeclaration: 'variables',
+  EndingDeclaration: 'endings',
+  CgDeclaration: 'cgs',
+};
+
+function createSymbolTables() {
+  return {
+    scenes: new Map(),
+    macros: new Map(),
+    characters: new Map(),
+    variables: new Map(),
+    endings: new Map(),
+    cgs: new Map(),
+  };
+}
+
+function symbolIdFor(node) {
+  if (node.kind === 'AffectionDeclaration') {
+    return node.tokens?.[2] ?? node.id;
+  }
+  return node.id;
+}
+
+function symbolTokenFor(node) {
+  if (node.kind === 'AffectionDeclaration') {
+    return node.line?.tokens?.[2] ?? node.line?.tokens?.[1] ?? null;
+  }
+  return node.line?.tokens?.[1] ?? null;
+}
+
+function symbolLabel(tableName) {
+  if (tableName === 'cgs') return 'CG';
+  return tableName.slice(0, -1);
+}
+
+function createDuplicateDiagnostic(tableName, id, node, existing) {
+  const token = symbolTokenFor(node);
+  const span = token?.span ?? node.span;
+  const existingLine = existing.node?.span?.start?.line;
+  const message = existingLine
+    ? `Duplicate ${symbolLabel(tableName)} symbol "${id}" previously declared on line ${existingLine}.`
+    : `Duplicate ${symbolLabel(tableName)} symbol "${id}".`;
+  return createDiagnostic({
+    code: DIAGNOSTIC_CODES.duplicateSymbol,
+    message,
+    file: span?.file ?? 'story.dsl',
+    line: span?.start?.line ?? 1,
+    column: span?.start?.column ?? 1,
+    span,
+    suggestedAction: {
+      summary: `Rename or remove the duplicate ${symbolLabel(tableName)} "${id}".`,
+      repairHint: {
+        action: 'rename-or-remove-duplicate-symbol',
+        table: tableName,
+        id,
+      },
+    },
+  });
+}
+
+function addSymbol(tables, tableName, id, node, diagnostics) {
+  if (!id) return;
+  const table = tables[tableName];
+  const existing = table.get(id);
+  if (existing) {
+    diagnostics.push(createDuplicateDiagnostic(tableName, id, node, existing));
+    return;
+  }
+  table.set(id, {
+    id,
+    kind: node.kind,
+    node,
+    span: node.span,
+  });
+}
+
+export function bindAgentDsl(ast) {
+  const symbols = createSymbolTables();
+  const diagnostics = [];
+
+  for (const node of ast?.body ?? []) {
+    const tableName = DECLARATION_TABLES[node.kind];
+    if (!tableName) continue;
+    addSymbol(symbols, tableName, symbolIdFor(node), node, diagnostics);
+  }
+
+  return {
+    ok: diagnostics.length === 0,
+    symbols,
+    diagnostics,
+  };
+}

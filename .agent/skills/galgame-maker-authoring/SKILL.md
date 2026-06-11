@@ -86,6 +86,8 @@ Read only the files needed for the task:
 - `../../../docs/agent-authoring/skill.md` for the full authoring rules.
 - `../../../docs/agent-authoring/command-reference.md` for supported commands.
 - `../../../docs/agent-authoring/agent-dsl.md` for agent-facing DSL syntax and compile-to-plan workflow.
+- `../../../docs/agent-authoring/agent-dsl-architecture.md` for mature DSL boundaries, compiler architecture, diagnostics, IR, source maps, and safety rules.
+- `../../../docs/agent-authoring/agent-dsl-roadmap.md` for phase-by-phase implementation tasks and acceptance gates.
 - `../../../docs/agent-authoring/plan-manifest.md` for apply-plan shape.
 - `../../../docs/agent-authoring/structured-draft-contract.md` for draft imports.
 - `../../../docs/agent-authoring/validation-rules.md` for gates and warning meaning.

@@ -277,6 +277,96 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('converts an agent DSL source into an apply-plan manifest from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'story.dsl');
+      const planPath = path.join(dir, 'story-plan.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+title "CLI Agent DSL"
+character sakura "Sakura" expression normal "characters/sakura_normal.png"
+variable affection number initial 0 label "Affection"
+
+macro entrance(character, expression):
+  show $character $expression at center animation fade-in
+
+scene start "Start":
+  bg "backgrounds/classroom.png"
+  call entrance("sakura", "normal")
+  say sakura "Welcome."
+  choice "Answer?":
+    option "Stay" -> good:
+      effect var:add affection 1
+    option "Leave" -> bad
+
+scene good "Good":
+  say sakura "Good choice."
+
+scene bad "Bad":
+  say "The room falls silent."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_plan',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        outPath: planPath,
+        operationCount: 9,
+      });
+      expect(plan.source).toMatchObject({
+        kind: 'agent-dsl',
+        macroCount: 1,
+      });
+      expect(plan.operations.map((operation) => operation.command)).toEqual([
+        'add-character',
+        'add-variable',
+        'add-scene',
+        'add-page',
+        'add-page',
+        'add-scene',
+        'add-page',
+        'add-scene',
+        'add-page',
+      ]);
+
+      const validated = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--validate-only',
+        '--json',
+      ]);
+      const validatedResult = JSON.parse(validated.stdout);
+      expect(validatedResult.transaction).toMatchObject({
+        status: 'validated',
+        wrote: false,
+      });
+      expect(validatedResult.validation.ok).toBe(true);
+      expect(validatedResult.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'characters.sakura',
+        'systems.variables.affection',
+        'scenes.start',
+        'scenes.start.pages.0',
+        'scenes.start.pages.1',
+      ]));
+    });
+  });
+
   it('exports a web build from the CLI after readiness passes', async () => {
     await withTempDir(async (dir) => {
       const { projectDir, appRoot } = await createExportFixture(dir);

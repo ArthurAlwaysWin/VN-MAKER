@@ -66,6 +66,7 @@ Read only the skill needed for the task:
 ## Core Rules
 
 - Prefer `npm run vn -- <command>`, apply-plan manifests, and `src/authoring/*` APIs over raw `script.json` edits.
+- For agent-authored reusable story logic, macros, or route scaffolding, prefer Agent DSL source compiled through `npm run vn:dsl-plan -- story.dsl --out .tmp/plan.json --json`, then run the normal apply-plan validation/dry-run/write gate. Agent DSL is an authoring source format only; `script.json` remains the canonical editable project contract.
 - Preserve user content and unrelated working-tree changes.
 - Keep output editable in the no-code desktop editor.
 - Never create legacy `commands[]`.
@@ -78,6 +79,7 @@ Read only the skill needed for the task:
 - `docs/agent-authoring/skill.md`
 - `docs/agent-authoring/workflow.md`
 - `docs/agent-authoring/command-reference.md`
+- `docs/agent-authoring/agent-dsl.md`
 - `docs/agent-authoring/project-contract.md`
 - `docs/agent-authoring/validation-rules.md`
 - `docs/agent-authoring/agent-checklist.md`
@@ -95,6 +97,7 @@ npm run vn -- export-report --script "<scriptPath>" --json
 Apply a multi-step plan:
 
 ```bash
+npm run vn:dsl-plan -- story.dsl --out .tmp/plan.json --json
 npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --dry-run --json
 npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --force --checkpoint --result-out .tmp/apply-plan-result.json --json

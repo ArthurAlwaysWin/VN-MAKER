@@ -41,6 +41,7 @@ These commands run outside an apply-plan manifest:
 | --- | --- | --- |
 | `review-handoff` | Runs `author-check` and `handoff-report` as one continuous gate, optionally writes the combined result with `--review-out`, and supports `--write-editor-handoff`. | `--capture-preview` captures screenshots; `--require-preview-screenshot` requires captured preview targets to pass quality checks. |
 | `draft-plan` | Converts a structured prose-derived draft into deterministic operations. | `--require-adaptation-preview` requires approved adaptation-preview metadata before conversion. |
+| `dsl-plan` | Converts agent-facing DSL source into a deterministic apply-plan manifest. | Compile-time macros only; output must still pass `apply-plan --validate-only`. |
 | `export-web` | Exports the current project as a static web game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 | `export-desktop` | Exports the current project as a desktop game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 

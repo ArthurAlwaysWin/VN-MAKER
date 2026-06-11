@@ -68,11 +68,14 @@ npm run vn -- validate --script "<scriptPath>" --json
 Prefer this chain for meaningful work:
 
 ```bash
+npm run vn:dsl-plan -- story.dsl --out .tmp/plan.json --json
 npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --validate-only --result-out .tmp/apply-plan-validation.json --json
 npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --dry-run --json
 npm run vn:apply-plan -- .tmp/plan.json --script "<scriptPath>" --force --checkpoint --result-out .tmp/apply-plan-result.json --json
 npm run vn:review-handoff -- --script "<scriptPath>" --transaction .tmp/apply-plan-result.json --write-preview-plan --write-editor-handoff --review-out .tmp/review-handoff.json --json
 ```
+
+Use Agent DSL when the agent needs reusable authoring source, macros, route scaffolding, or a maintainable story layer. Compile it with `vn:dsl-plan`, then apply the generated plan through the same validation gate above. Agent DSL is not a runtime script format; `script.json` remains the canonical project contract and must stay editable in the no-code editor.
 
 For small targeted edits, use `npm run vn -- <command>` from the command reference. Do not invent unsupported fields.
 
@@ -82,6 +85,7 @@ Read only the files needed for the task:
 
 - `../../../docs/agent-authoring/skill.md` for the full authoring rules.
 - `../../../docs/agent-authoring/command-reference.md` for supported commands.
+- `../../../docs/agent-authoring/agent-dsl.md` for agent-facing DSL syntax and compile-to-plan workflow.
 - `../../../docs/agent-authoring/plan-manifest.md` for apply-plan shape.
 - `../../../docs/agent-authoring/structured-draft-contract.md` for draft imports.
 - `../../../docs/agent-authoring/validation-rules.md` for gates and warning meaning.

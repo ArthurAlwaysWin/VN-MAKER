@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
+import { createAgentDslPlan } from '../../src/authoring/agentDslPlan.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
 import { createGraphAnalysis, findAssetIssues, findDeadEnds } from '../../src/authoring/branchAnalysis.js';
 import { createExportReadiness } from '../../src/authoring/exportReadiness.js';
@@ -3219,6 +3220,46 @@ async function draftPlan(args) {
   return 0;
 }
 
+async function dslPlan(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-plan requires an Agent DSL path');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  const source = await readFile(dslPath, 'utf8');
+  const plan = createAgentDslPlan(source, {
+    title: getArgValue(args, '--title', undefined),
+  });
+  const outPathArg = getArgValue(args, '--out', null);
+  const outPath = outPathArg ? path.resolve(repoRoot, outPathArg) : null;
+  if (outPath) {
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  }
+
+  const output = {
+    dslPath,
+    outPath,
+    operationCount: plan.operations.length,
+    warningCount: plan.warnings.length,
+    plan,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL plan: ${dslPath}\n`);
+    process.stdout.write(`Operations: ${output.operationCount}\n`);
+    process.stdout.write(`Warnings: ${output.warningCount}\n`);
+    if (outPath) {
+      process.stdout.write(`Wrote plan: ${outPath}\n`);
+    }
+  }
+
+  return 0;
+}
+
 async function exportReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -6249,6 +6290,7 @@ function printHelp() {
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   draft-plan draft.json [--out plan.json] [--title title] [--require-adaptation-preview] [--json]
+  dsl-plan story.dsl [--out plan.json] [--title title] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -6410,6 +6452,11 @@ async function main() {
 
     if (command === 'draft-plan') {
       process.exitCode = await draftPlan(args);
+      return;
+    }
+
+    if (command === 'dsl-plan') {
+      process.exitCode = await dslPlan(args);
       return;
     }
 

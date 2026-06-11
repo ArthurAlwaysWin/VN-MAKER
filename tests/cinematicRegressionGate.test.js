@@ -34,7 +34,7 @@ describe('PREV-05 cinematic regression gate', () => {
     const normalLoad = sliceBetween(src, 'saveLoadScreen.onLoad = async (slot) => {', 'saveLoadScreen.onDelete = async (slot) => {');
     const quickLoad = sliceBetween(src, 'quickBar.onQuickLoad = async () => {', 'quickBar.onSettings = () => {');
 
-    expect(src).toMatch(/function replayCurrentPage\(\) \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*camera\.clear\(\);[\s\S]*characters\.clear\(\);[\s\S]*background\.clear\(\);[\s\S]*engine\.resetRenderState\(\);[\s\S]*engine\.renderCurrentPage\(\);/);
+    expect(src).toMatch(/function replayCurrentPage\(\{ instant = false \} = \{\}\) \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*dialogueBox\.hide\(\);[\s\S]*camera\.clear\(\);[\s\S]*characters\.clear\(\);[\s\S]*background\.clear\(\);[\s\S]*engine\.resetRenderState\(\);[\s\S]*engine\.renderCurrentPage\(\);/);
 
     expectOrdered(quickLoad, [
       'if (!engine.restoreState(data.state)) {',
@@ -43,7 +43,7 @@ describe('PREV-05 cinematic regression gate', () => {
       'titleScreen.hide();',
       'audio.stopVoice();',
       'isPlaying = true;',
-      'replayCurrentPage();',
+      'replayCurrentPage({ instant: true });',
     ]);
     expectOrdered(normalLoad, [
       'if (!engine.restoreState(data.state)) {',
@@ -52,7 +52,7 @@ describe('PREV-05 cinematic regression gate', () => {
       'titleScreen.hide();',
       'audio.stopVoice();',
       'isPlaying = true;',
-      'replayCurrentPage();',
+      'replayCurrentPage({ instant: true });',
     ]);
   });
 

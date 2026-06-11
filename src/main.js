@@ -117,6 +117,7 @@ let pendingUiEvent = null;
 let pageTransitionGateOpen = false;
 let pageTransitionToken = 0;
 let backgroundTransitionPending = false;
+let instantReplayMode = false;
 let activeEffectPreview = null;
 let previewRestorePending = false;
 let playerDataRepository = null;
@@ -704,7 +705,7 @@ function handlePageEnterEffects(data) {
   if (skipMode) {
     camera.clear();
   } else {
-    camera.play(data.camera);
+    camera.play(data.camera, { immediate: instantReplayMode });
   }
 
   if (!readHistory) return; // Guard for preview mode
@@ -819,6 +820,14 @@ engine.on('set_expression', (data) => {
 engine.on('set_background', async (data) => {
   const token = pageTransitionToken;
   backgroundTransitionPending = true;
+
+  if (instantReplayMode) {
+    await background.setBackground({ ...data, duration: 0, transition: 'cut' });
+    if (token === pageTransitionToken) {
+      backgroundTransitionPending = false;
+    }
+    return;
+  }
 
   if (skipMode) {
     await background.setBackground({ ...data, duration: 0, transition: 'cut' });
@@ -946,6 +955,11 @@ engine.on('scene_enter', (data) => {
 });
 
 engine.on('page_enter', (data) => {
+  if (instantReplayMode) {
+    handlePageEnterEffects(data);
+    return;
+  }
+
   pageTransitionToken += 1;
   pendingPageEnter = data;
   pendingCharacterEvents = [];
@@ -1005,7 +1019,7 @@ saveLoadScreen.onLoad = async (slot) => {
   isPlaying = true;
 
   // Re-render the current page's visual state
-  replayCurrentPage();
+  replayCurrentPage({ instant: true });
 };
 
 saveLoadScreen.onDelete = async (slot) => {
@@ -1023,15 +1037,25 @@ saveLoadScreen.onClose = (source) => {
   // 'title' → no action (title screen still visible underneath)
 };
 
-function replayCurrentPage() {
+function replayCurrentPage({ instant = false } = {}) {
   cancelPageTransitionGate();
+  dialogueBox.hide();
+  choiceMenu.hide();
+  textInputScreen.hide();
   camera.clear();
   characters.clear();
   background.clear();
   particles.clear();
   effectPacks.clear();
   engine.resetRenderState();
-  engine.renderCurrentPage();
+
+  const previousInstantReplayMode = instantReplayMode;
+  instantReplayMode = Boolean(instant) || previousInstantReplayMode;
+  try {
+    engine.renderCurrentPage();
+  } finally {
+    instantReplayMode = previousInstantReplayMode;
+  }
 }
 
 // ─── Settings ───────────────────────────────────────────
@@ -1122,7 +1146,7 @@ quickBar.onQuickLoad = async () => {
   titleScreen.hide();
   audio.stopVoice();
   isPlaying = true;
-  replayCurrentPage();
+  replayCurrentPage({ instant: true });
   showToast('快速读档完成');
 };
 quickBar.onSettings = () => {

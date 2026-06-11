@@ -26,6 +26,7 @@ describe('background transition wiring', () => {
     expect(src).toContain('let pendingCharacterEvents = []');
     expect(src).toContain('let pendingUiEvent = null');
     expect(src).toContain('let pageTransitionGateOpen = false');
+    expect(src).toContain('let instantReplayMode = false');
     expect(src).toContain('function flushPageTransitionGate(');
     expect(src).toContain('function cancelPageTransitionGate(');
   });
@@ -54,6 +55,14 @@ describe('background transition wiring', () => {
     expect(src).toMatch(/engine\.on\('set_background', async \(data\) => \{/);
     expect(src).toMatch(/await background\.setBackground\(/);
     expect(src).toMatch(/engine\.on\('set_background', async \(data\) => \{[\s\S]*flushPageTransitionGate\(/);
+  });
+
+  it('bypasses page-transition gating during instant save-load replay', () => {
+    const src = readProjectFile('src/main.js');
+
+    expect(src).toMatch(/engine\.on\('page_enter', \(data\) => \{[\s\S]*if \(instantReplayMode\) \{[\s\S]*handlePageEnterEffects\(data\);[\s\S]*return;/);
+    expect(src).toMatch(/engine\.on\('set_background', async \(data\) => \{[\s\S]*if \(instantReplayMode\) \{[\s\S]*background\.setBackground\(\{ \.\.\.data, duration: 0, transition: 'cut' \}\);[\s\S]*return;/);
+    expect(src).toMatch(/function replayCurrentPage\(\{ instant = false \} = \{\}\) \{[\s\S]*instantReplayMode = Boolean\(instant\) \|\| previousInstantReplayMode;[\s\S]*engine\.renderCurrentPage\(\);[\s\S]*instantReplayMode = previousInstantReplayMode;/);
   });
 
   it('flushes immediately for skip cut and unchanged-background pages', () => {
@@ -87,7 +96,7 @@ describe('background transition wiring', () => {
   it('cancels pending gate state on replay, title, preview lifecycle, and end flows', () => {
     const src = readProjectFile('src/main.js');
 
-    expect(src).toMatch(/function replayCurrentPage\(\) \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*camera\.clear\(\);[\s\S]*background\.clear\(\);/);
+    expect(src).toMatch(/function replayCurrentPage\(\{ instant = false \} = \{\}\) \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*dialogueBox\.hide\(\);[\s\S]*camera\.clear\(\);[\s\S]*background\.clear\(\);/);
     expect(src).toMatch(/gameMenu\.onTitle = async \(\) => \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*camera\.clear\(\)/);
     expect(src).toMatch(/case 'start': \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*camera\.clear\(\);[\s\S]*background\.clear\(\);/);
     expect(src).toMatch(/case 'stop': \{[\s\S]*cancelPageTransitionGate\(\);[\s\S]*camera\.clear\(\);[\s\S]*background\.clear\(\);/);
@@ -102,11 +111,11 @@ describe('background transition wiring', () => {
 
     expect(quickLoad).toContain('stopAuto();');
     expect(quickLoad).toContain('stopSkip();');
-    expect(quickLoad).toContain('replayCurrentPage();');
+    expect(quickLoad).toContain('replayCurrentPage({ instant: true });');
 
     expect(normalLoad).toContain('stopAuto();');
     expect(normalLoad).toContain('stopSkip();');
-    expect(normalLoad).toContain('replayCurrentPage();');
+    expect(normalLoad).toContain('replayCurrentPage({ instant: true });');
   });
 
   it('restores effect preview snapshots through the same gate cleanup path used by replay and preview lifecycle resets', () => {

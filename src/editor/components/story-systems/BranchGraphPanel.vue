@@ -71,6 +71,13 @@
                   ]"
                   :d="edge.d"
                 />
+                <circle
+                  class="flow-edge-terminal target"
+                  :class="[edge.kindClass, { broken: edge.broken }]"
+                  :cx="edge.endX"
+                  :cy="edge.endY"
+                  r="3"
+                />
                 <path
                   class="flow-edge"
                   :class="[
@@ -87,19 +94,13 @@
                   :cy="edge.startY"
                   r="4"
                 />
-                <circle
-                  class="flow-edge-terminal target"
-                  :class="[edge.kindClass, { broken: edge.broken }]"
-                  :cx="edge.endX"
-                  :cy="edge.endY"
-                  r="4"
-                />
                 <g
                   class="flow-edge-label"
                   :class="[edge.kindClass, { broken: edge.broken }]"
                   :transform="`translate(${edge.labelX}, ${edge.labelY})`"
                   @click="openMapEdge(edge)"
                 >
+                  <title>{{ edge.fullLabel }}</title>
                   <rect
                     :x="-edge.labelWidth / 2"
                     y="-12"
@@ -438,13 +439,14 @@ function summarizeIds(ids = []) {
 
 function edgeLabel(edge, scriptData = {}) {
   if (edge.kind === 'choice-option') {
-    const optionText = getChoiceOptionText(edge, scriptData);
-    if (optionText) {
-      return `选项：${optionText}`;
-    }
-    return edge.optionIndex !== null && edge.optionIndex !== undefined
+    const optionLabel = edge.optionIndex !== null && edge.optionIndex !== undefined
       ? `选项 ${edge.optionIndex + 1}`
       : '选项';
+    const optionText = getChoiceOptionText(edge, scriptData);
+    if (optionText) {
+      return `${optionLabel}：${optionText}`;
+    }
+    return optionLabel;
   }
 
   return {
@@ -459,8 +461,7 @@ function getChoiceOptionText(edge, scriptData = {}) {
   const page = scriptData?.scenes?.[edge.fromSceneId]?.pages?.[edge.pageIndex];
   const text = page?.options?.[edge.optionIndex]?.text;
   if (typeof text !== 'string' || !text.trim()) return '';
-  const compact = text.trim().replace(/\s+/g, ' ');
-  return compact.length > 10 ? `${compact.slice(0, 10)}...` : compact;
+  return text.trim().replace(/\s+/g, ' ');
 }
 
 function edgeKindClass(edge) {
@@ -470,8 +471,28 @@ function edgeKindClass(edge) {
   return 'route';
 }
 
+function estimateLabelTextWidth(label = '') {
+  return [...String(label)].reduce((width, char) => (
+    width + (char.charCodeAt(0) > 255 ? 12 : 7)
+  ), 0);
+}
+
+function truncateGraphEdgeLabel(label = '', maxTextWidth = 138) {
+  const normalized = String(label);
+  if (estimateLabelTextWidth(normalized) <= maxTextWidth) {
+    return normalized;
+  }
+
+  const suffix = '...';
+  const chars = [...normalized];
+  while (chars.length && estimateLabelTextWidth(`${chars.join('')}${suffix}`) > maxTextWidth) {
+    chars.pop();
+  }
+  return `${chars.join('').trimEnd()}${suffix}`;
+}
+
 function edgeLabelWidth(label = '') {
-  return Math.max(72, Math.min(150, String(label).length * 12 + 24));
+  return Math.max(72, Math.min(162, estimateLabelTextWidth(label) + 24));
 }
 
 function statusRank(node) {
@@ -675,11 +696,13 @@ function buildGraphLayout(graphReport = {}, scriptData = {}) {
       const to = positionById.get(edge.toSceneId);
       if (!from || !to) return null;
       const path = edgePath(from, to);
-      const label = edgeLabel(edge, scriptData);
+      const fullLabel = edgeLabel(edge, scriptData);
+      const label = truncateGraphEdgeLabel(fullLabel);
       return {
         ...edge,
         key: `${edge.pathString}:${index}`,
         label,
+        fullLabel,
         labelWidth: edgeLabelWidth(label),
         kindClass: edgeKindClass(edge),
         broken: !edge.targetExists,

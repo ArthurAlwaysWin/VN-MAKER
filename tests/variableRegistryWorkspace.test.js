@@ -762,7 +762,7 @@ describe('variable registry workspace', () => {
     expect(graphMap.textContent).toContain('Start');
     expect(graphMap.textContent).toContain('Orphan');
     expect(graphMap.textContent).toContain('missing_route');
-    expect(graphMap.textContent).toContain('选项：Broken');
+    expect(graphMap.textContent).toContain('选项 1：Broken');
     expect(graphMap.textContent).toContain('条件：满足');
     expect(graphMap.textContent).toContain('条件：不满足');
     expect(graphMap.querySelector('.flow-edge-halo')).not.toBeNull();

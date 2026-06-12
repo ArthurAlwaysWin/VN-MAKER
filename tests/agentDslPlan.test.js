@@ -108,4 +108,37 @@ scene neutral "Neutral":
       conditions: [{ variableId: 'affection', operator: '>=', value: 1 }],
     });
   });
+
+  it('emits mood presets as ordinary add-page data', () => {
+    const plan = createAgentDslPlan(`
+title "Preset Demo"
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+scene start "Start":
+  page opening:
+  preset mood rainy_school
+  say "Rain tapped against the glass."
+`);
+
+    expect(plan.operations.map((operation) => operation.command)).toEqual([
+      'add-scene',
+      'add-page',
+    ]);
+    expect(plan.operations[1]).toMatchObject({
+      id: 'dsl-add-page-start-1',
+      command: 'add-page',
+      params: {
+        scene: 'start',
+        type: 'normal',
+        page: {
+          id: 'opening',
+          transition: { type: 'dissolve', duration: 900 },
+          particles: { preset: 'rain', density: 0.6, opacity: 0.8 },
+          camera: { effect: 'shake', intensity: 'low', durationMs: 450 },
+        },
+      },
+    });
+  });
 });

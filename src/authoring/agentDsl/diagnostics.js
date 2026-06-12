@@ -6,6 +6,8 @@ export const DIAGNOSTIC_CODES = {
   invalidIncludePath: 'dsl-invalid-include-path',
   manifestEntryMissing: 'dsl-manifest-entry-missing',
   duplicateSymbol: 'dsl-duplicate-symbol',
+  invalidPreset: 'dsl-invalid-preset',
+  unknownPreset: 'dsl-unknown-preset',
   unknownSceneTarget: 'dsl-unknown-scene-target',
   unknownCharacter: 'dsl-unknown-character',
   unknownVariable: 'dsl-unknown-variable',

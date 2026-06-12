@@ -151,6 +151,7 @@ function rewriteNamespaceLine(raw, namespace) {
   if (!body.trim() || body.trim().startsWith('#')) return raw;
 
   body = body.replace(/^(character|variable|ending|cg|macro|scene)\s+([A-Za-z_][\w-]*)/, (_match, command, id) => `${command} ${qualifyIdentifier(id, namespace)}`);
+  body = body.replace(/^preset\s+([A-Za-z_][\w-]*)\s+([A-Za-z_][\w:-]*)/, (_match, category, id) => `preset ${category} ${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^affection\s+([A-Za-z_][\w:-]*)\s+([A-Za-z_][\w-]*)/, (_match, characterId, variableId) => `affection ${qualifyIdentifier(characterId, namespace)} ${qualifyIdentifier(variableId, namespace)}`);
   body = body.replace(/^(scene\s+[A-Za-z_][\w-]*(?:\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s:]+))?\s+next\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^show\s+([A-Za-z_][\w:-]*)/, (_match, id) => `show ${qualifyIdentifier(id, namespace)}`);

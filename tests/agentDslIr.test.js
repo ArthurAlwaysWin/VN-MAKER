@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { AgentDslDiagnosticError } from '../src/authoring/agentDsl/diagnostics.js';
 import { createAgentDslIr, createAgentDslPlan } from '../src/authoring/agentDslPlan.js';
 
 describe('agent DSL authoring IR', () => {
@@ -86,6 +87,64 @@ scene start "Start":
     });
     expect(JSON.stringify(ir)).not.toContain('"raw"');
     expect(JSON.stringify(ir)).not.toContain('"trimmed"');
+  });
+
+  it('expands mood presets into ordinary normal page IR', () => {
+    const ir = createAgentDslIr(`
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+scene start "Start":
+  page opening:
+  preset mood rainy_school
+  say "Rain tapped against the glass."
+`);
+
+    expect(ir.source).toMatchObject({
+      kind: 'agent-dsl',
+      languageVersion: 1,
+      macroCount: 0,
+    });
+    expect(ir.operations.map((operation) => operation.kind)).toEqual([
+      'CreateScene',
+      'CreateNormalPage',
+    ]);
+    expect(ir.operations.find((operation) => operation.kind === 'CreateNormalPage')).toMatchObject({
+      stableId: 'dsl-add-page-start-1',
+      payload: {
+        scene: 'start',
+        page: {
+          id: 'opening',
+          transition: { type: 'dissolve', duration: 900 },
+          particles: { preset: 'rain', density: 0.6, opacity: 0.8 },
+          camera: { effect: 'shake', intensity: 'low', durationMs: 450 },
+          dialogues: [
+            { speaker: null, text: 'Rain tapped against the glass.' },
+          ],
+        },
+      },
+    });
+  });
+
+  it('rejects unknown mood presets before IR emission', () => {
+    expect(() => createAgentDslIr(`
+scene start "Start":
+  preset mood missing
+`)).toThrow(AgentDslDiagnosticError);
+    try {
+      createAgentDslIr(`
+scene start "Start":
+  preset mood missing
+`);
+    } catch (error) {
+      expect(error.diagnostics).toEqual([
+        expect.objectContaining({
+          code: 'dsl-unknown-preset',
+          message: 'Preset "mood missing" is not declared.',
+        }),
+      ]);
+    }
   });
 
   it('lowers choices and conditions to dedicated IR operations', () => {

@@ -148,38 +148,58 @@ function collectIndentedBlock(lines, startIndex, parentIndent) {
   return { block, nextIndex: index };
 }
 
-function collectMacros(lines) {
+function normalizeCompileTimeBlock(block) {
+  if (block.length === 0) return [];
+  const minIndent = Math.min(...block.filter((entry) => entry.trimmed).map((entry) => entry.indent));
+  return block.map((entry) => ({
+    ...entry,
+    indent: Math.max(0, entry.indent - minIndent),
+    text: entry.text.slice(Math.min(entry.text.length, minIndent)),
+    trimmed: entry.text.slice(Math.min(entry.text.length, minIndent)).trim(),
+  }));
+}
+
+function collectCompileTimeDeclarations(lines) {
   const macros = new Map();
+  const presets = new Map();
   const remaining = [];
   let index = 0;
   while (index < lines.length) {
     const line = lines[index];
-    const match = line.trimmed.match(/^macro\s+([A-Za-z_][\w-]*)\s*\(([^)]*)\)\s*:$/);
-    if (line.indent !== 0 || !match) {
+    const macroMatch = line.trimmed.match(/^macro\s+([A-Za-z_][\w-]*)\s*\(([^)]*)\)\s*:$/);
+    const presetMatch = line.trimmed.match(/^preset\s+([A-Za-z_][\w-]*)\s+([A-Za-z_][\w-]*)\s*:$/);
+    if (line.indent !== 0 || (!macroMatch && !presetMatch)) {
       remaining.push(line);
       index += 1;
       continue;
     }
 
-    const [, name, paramsSource] = match;
     const { block, nextIndex } = collectIndentedBlock(lines, index + 1, line.indent);
-    if (block.length === 0) {
-      fail(line, `macro "${name}" must contain an indented body`);
+    if (block.length === 0 && macroMatch) {
+      fail(line, `macro "${macroMatch[1]}" must contain an indented body`);
     }
-    const minIndent = Math.min(...block.filter((entry) => entry.trimmed).map((entry) => entry.indent));
-    macros.set(name, {
-      name,
-      params: paramsSource.split(',').map((param) => param.trim()).filter(Boolean),
-      body: block.map((entry) => ({
-        ...entry,
-        indent: Math.max(0, entry.indent - minIndent),
-        text: entry.text.slice(Math.min(entry.text.length, minIndent)),
-        trimmed: entry.text.slice(Math.min(entry.text.length, minIndent)).trim(),
-      })),
-    });
+    if (block.length === 0 && presetMatch) {
+      fail(line, `preset "${presetMatch[1]} ${presetMatch[2]}" must contain an indented body`, DIAGNOSTIC_CODES.invalidPreset);
+    }
+    const body = normalizeCompileTimeBlock(block);
+    if (macroMatch) {
+      const [, name, paramsSource] = macroMatch;
+      macros.set(name, {
+        name,
+        params: paramsSource.split(',').map((param) => param.trim()).filter(Boolean),
+        body,
+      });
+    } else {
+      const [, category, id] = presetMatch;
+      presets.set(`${category}:${id}`, {
+        category,
+        id,
+        body,
+      });
+    }
     index = nextIndex;
   }
-  return { macros, lines: remaining };
+  return { macros, presets, lines: remaining };
 }
 
 function substituteMacroLine(text, values) {
@@ -230,6 +250,41 @@ function expandMacroCalls(lines, macros, depth = 0) {
   return expanded;
 }
 
+function expandPresetUses(lines, presets, depth = 0) {
+  if (depth > 8) {
+    fail(lines[0] ?? { number: 1 }, 'Agent DSL preset expansion exceeded the recursion limit', DIAGNOSTIC_CODES.invalidPreset);
+  }
+
+  const expanded = [];
+  for (const line of lines) {
+    const match = line.trimmed.match(/^preset\s+([A-Za-z_][\w-]*)\s+([A-Za-z_][\w-]*)\s*$/);
+    if (!match) {
+      expanded.push(line);
+      continue;
+    }
+
+    const [, category, id] = match;
+    const preset = presets.get(`${category}:${id}`);
+    if (!preset) {
+      fail(line, `unknown preset "${category} ${id}"`, DIAGNOSTIC_CODES.unknownPreset);
+    }
+    const materialized = preset.body.map((entry) => {
+      const text = `${' '.repeat(line.indent + entry.indent)}${entry.trimmed}`;
+      return {
+        ...entry,
+        number: line.number,
+        indent: line.indent + entry.indent,
+        raw: text,
+        text,
+        trimmed: text.trim(),
+        span: line.span,
+      };
+    });
+    expanded.push(...expandPresetUses(materialized, presets, depth + 1));
+  }
+  return expanded;
+}
+
 function lineRecordsToSource(lines) {
   return lines.map((line) => line.raw ?? line.text ?? '').join('\n');
 }
@@ -240,6 +295,8 @@ export function createAgentDslIr(source, options = {}) {
   throwIfDiagnostics(parsed.diagnostics);
   const bound = bindAgentDsl(parsed.ast);
   throwIfDiagnostics(bound.diagnostics);
+  const preAnalyzed = analyzeAgentDsl(parsed.ast, bound.symbols);
+  throwIfDiagnostics(preAnalyzed.diagnostics);
   const normalized = astToLineRecords(parsed.ast)
     .map((line) => {
       const text = stripComment(line.raw).replace(/\s+$/, '');
@@ -250,8 +307,9 @@ export function createAgentDslIr(source, options = {}) {
       };
     })
     .filter((line) => line.trimmed);
-  const { macros, lines } = collectMacros(normalized);
-  const expandedLines = expandMacroCalls(lines, macros);
+  const { macros, presets, lines } = collectCompileTimeDeclarations(normalized);
+  const macroExpandedLines = expandMacroCalls(lines, macros);
+  const expandedLines = expandPresetUses(macroExpandedLines, presets);
   const expanded = parseAgentDsl(lineRecordsToSource(expandedLines), { file: sourceFile });
   throwIfDiagnostics(expanded.diagnostics);
   const analyzed = analyzeAgentDsl(expanded.ast, bound.symbols);

@@ -186,4 +186,44 @@ scene start "Start":
       }),
     ]);
   });
+
+  it('accepts safe mood presets and reports invalid preset references', () => {
+    const valid = analyzeSource(`
+character sakura "Sakura"
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+  show sakura normal at center animation fade-in
+scene start "Start":
+  preset mood rainy_school
+  say sakura "The rain is here."
+`);
+
+    expect(valid.ok).toBe(true);
+
+    const invalid = analyzeSource(`
+preset weather rainy_school:
+  choice "Unsupported here?":
+    option "Yes" -> start
+scene start "Start":
+  preset mood missing
+`);
+
+    expect(invalid.ok).toBe(false);
+    expect(invalid.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'dsl-invalid-preset',
+        message: 'Unsupported preset kind "weather".',
+      }),
+      expect.objectContaining({
+        code: 'dsl-invalid-preset',
+        message: 'Preset bodies cannot contain ChoiceStatement.',
+      }),
+      expect.objectContaining({
+        code: 'dsl-unknown-preset',
+        message: 'Preset "mood missing" is not declared.',
+      }),
+    ]);
+  });
 });

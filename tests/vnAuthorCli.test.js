@@ -797,6 +797,68 @@ scene normal "Normal":
     });
   });
 
+  it('validates P8.1 agent DSL mood presets from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'preset.gmdsl');
+      const planPath = path.join(dir, 'preset-plan.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+scene start "Start":
+  page opening:
+  preset mood rainy_school
+  say "Rain tapped against the glass."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_preset',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        outPath: planPath,
+        operationCount: 2,
+      });
+      expect(plan.operations[1]).toMatchObject({
+        command: 'add-page',
+        params: {
+          type: 'normal',
+          page: {
+            transition: { type: 'dissolve', duration: 900 },
+            particles: { preset: 'rain', density: 0.6, opacity: 0.8 },
+            camera: { effect: 'shake', intensity: 'low', durationMs: 450 },
+          },
+        },
+      });
+
+      const validated = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--validate-only',
+        '--json',
+      ]);
+      const validatedResult = JSON.parse(validated.stdout);
+      expect(validatedResult.validation.ok).toBe(true);
+    });
+  });
+
   it('returns structured diagnostics for invalid agent DSL from the CLI', async () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'broken.dsl');

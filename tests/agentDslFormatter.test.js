@@ -10,10 +10,15 @@ describe('agent DSL formatter', () => {
 title   "Format Demo"
 character   sakura   "Sakura" expression normal "characters/sakura.png" # inline character note
 
+preset mood rainy_school:
+    particles   rain density 0.6 opacity 0.8
+    transition   dissolve 900
+
 macro entrance(character, expression):
     show   $character $expression at center animation fade-in
 
 scene start "Start":
+    preset   mood rainy_school
     bg "backgrounds/classroom.png"
     choice "Answer?":
       option "Stay" -> good:
@@ -29,10 +34,15 @@ title "Format Demo"
 
 character sakura "Sakura" expression normal "characters/sakura.png" # inline character note
 
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+
 macro entrance(character, expression):
   show $character $expression at center animation fade-in
 
 scene start "Start":
+  preset mood rainy_school
   bg "backgrounds/classroom.png"
   choice "Answer?":
     option "Stay" -> good:

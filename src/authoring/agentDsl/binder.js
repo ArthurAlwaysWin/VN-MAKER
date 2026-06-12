@@ -8,6 +8,7 @@ const DECLARATION_TABLES = {
   AffectionDeclaration: 'variables',
   EndingDeclaration: 'endings',
   CgDeclaration: 'cgs',
+  PresetDeclaration: 'presets',
 };
 
 function createSymbolTables() {
@@ -18,10 +19,14 @@ function createSymbolTables() {
     variables: new Map(),
     endings: new Map(),
     cgs: new Map(),
+    presets: new Map(),
   };
 }
 
 function symbolIdFor(node) {
+  if (node.kind === 'PresetDeclaration') {
+    return `${node.category}:${node.id}`;
+  }
   if (node.kind === 'AffectionDeclaration') {
     return node.tokens?.[2] ?? node.id;
   }
@@ -29,6 +34,9 @@ function symbolIdFor(node) {
 }
 
 function symbolTokenFor(node) {
+  if (node.kind === 'PresetDeclaration') {
+    return node.line?.tokens?.[2] ?? node.line?.tokens?.[1] ?? null;
+  }
   if (node.kind === 'AffectionDeclaration') {
     return node.line?.tokens?.[2] ?? node.line?.tokens?.[1] ?? null;
   }

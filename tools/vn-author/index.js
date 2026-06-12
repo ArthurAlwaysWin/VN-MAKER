@@ -6989,6 +6989,7 @@ function printHelp() {
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   draft-plan draft.json [--out plan.json] [--title title] [--require-adaptation-preview] [--json]
   dsl-plan story.dsl [--out plan.json] [--source-map-out source-map.json] [--title title] [--json]
+    DSL supports compile-time mood presets: preset mood rainy_school: ... then preset mood rainy_school inside scenes.
   dsl-check story.dsl [--script path] [--title title] [--json]
   dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
   dsl-build story.dsl [--script path] [--out plan.json] [--source-map source-map.json] [--source-map-out source-map.json] [--check-out check.json] [--validate-only|--dry-run|--write|--apply] [--force] [--json]

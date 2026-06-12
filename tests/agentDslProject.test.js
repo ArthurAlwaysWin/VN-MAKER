@@ -146,6 +146,32 @@ namespace chapter_01:
     });
   });
 
+  it('prefixes preset declarations and uses inside namespaces', async () => {
+    await withTempDir(async (dir) => {
+      const mainPath = path.join(dir, 'main.gmdsl');
+      await writeFile(mainPath, `
+namespace chapter_01:
+  preset mood rainy_school:
+    particles rain density 0.6
+  scene start "Start":
+    preset mood rainy_school
+    say "Rain."
+`, 'utf8');
+
+      const plan = await compileProject(mainPath);
+      expect(plan.operations).toHaveLength(2);
+      expect(plan.operations[1]).toMatchObject({
+        id: 'dsl-add-page-chapter_01_start-1',
+        params: {
+          scene: 'chapter_01_start',
+          page: {
+            particles: { preset: 'rain', density: 0.6 },
+          },
+        },
+      });
+    });
+  });
+
   it('rejects duplicate symbols inside the same namespace', async () => {
     await withTempDir(async (dir) => {
       const mainPath = path.join(dir, 'main.gmdsl');

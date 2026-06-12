@@ -60,6 +60,7 @@ The current implementation provides:
 - scene body statements for page staging, dialogue, choices, simple conditions, effects, jumps, camera, particles, and media
 - first-pass multi-file includes and namespaces
 - strict first-pass condition expressions for single comparisons, flat `and`, and flat `or`
+- compile-time cinematic mood presets that expand to existing page staging fields
 - P5 source map artifact emission with operation provenance ids, deterministic fingerprints, apply-plan enrichment, and stale generated-region checks
 - plan output that can be passed to `apply-plan`
 
@@ -381,6 +382,23 @@ Rules:
 - Recursive macro expansion MUST be rejected with diagnostic `dsl-macro-recursion-limit`.
 - Macros MUST NOT mutate global compiler state.
 
+### 8.5a Cinematic Presets
+
+```ebnf
+preset_decl      = "preset" , preset_kind , identifier , ":" , preset_body ;
+preset_kind      = "mood" ;
+preset_body      = indented_block { background_stmt | bgm_stmt | se_stmt | show_stmt | transition_stmt | camera_stmt | particles_stmt } ;
+preset_use       = "preset" , preset_kind , identifier ;
+```
+
+Rules:
+
+- Presets are compile-time only.
+- The first implementation supports `mood` presets.
+- Preset uses lower by expanding their body into ordinary page staging statements before IR emission.
+- Presets MUST NOT require runtime DSL interpretation or hidden project fields.
+- Unsupported preset kinds, nested presets, choices, conditions, effects, jumps, or arbitrary code MUST be rejected.
+
 ### 8.6 Scenes
 
 ```ebnf
@@ -399,6 +417,7 @@ scene_statement  = page_stmt
                  | end_stmt
                  | camera_stmt
                  | particles_stmt
+                 | preset_use
                  | macro_call ;
 ```
 
@@ -417,6 +436,7 @@ bgm_stmt         = "bgm" , string , [ "volume" , number ] ;
 se_stmt          = "se" , string ;
 show_stmt        = "show" , identifier , [ identifier ] , [ "at" , position ] , [ "animation" , identifier ] ;
 position         = "left" | "center" | "right" | identifier ;
+transition_stmt  = "transition" , identifier , [ number ] ;
 camera_stmt      = "camera" , identifier , [ identifier ] , [ number ] ;
 particles_stmt   = "particles" , identifier , { particle_field } ;
 ```
@@ -533,6 +553,8 @@ Minimum mature AST node kinds:
 - `CgDeclaration`
 - `MacroDeclaration`
 - `MacroCall`
+- `PresetDeclaration`
+- `PresetUseStatement`
 - `SceneDeclaration`
 - `PageStatement`
 - `BackgroundStatement`
@@ -724,6 +746,8 @@ Stable diagnostic codes:
 - `dsl-invalid-include-path`
 - `dsl-manifest-entry-missing`
 - `dsl-duplicate-symbol`
+- `dsl-invalid-preset`
+- `dsl-unknown-preset`
 - `dsl-unknown-symbol`
 - `dsl-unknown-scene-target`
 - `dsl-unknown-character`

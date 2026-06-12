@@ -74,6 +74,64 @@ scene normal "Normal":
     });
   });
 
+  it('parses cinematic mood presets and scene uses', () => {
+    const result = parseAgentDsl(`
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+scene start "Start":
+  preset mood rainy_school
+  say "Rain tapped against the glass."
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(true);
+    expect(result.ast.body).toMatchObject([
+      {
+        kind: 'PresetDeclaration',
+        category: 'mood',
+        id: 'rainy_school',
+        body: [
+          { kind: 'ParticlesStatement' },
+          { kind: 'TransitionStatement' },
+          { kind: 'CameraStatement' },
+        ],
+      },
+      { kind: 'SceneDeclaration', id: 'start' },
+    ]);
+    const scene = result.ast.body.find((node) => node.kind === 'SceneDeclaration');
+    expect(scene.body[0]).toMatchObject({
+      kind: 'PresetUseStatement',
+      category: 'mood',
+      id: 'rainy_school',
+    });
+  });
+
+  it('reports malformed preset declarations', () => {
+    const result = parseAgentDsl('preset mood rainy_school\n  particles rain\n', { file: 'story.dsl' });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: 'dsl-syntax-error',
+      message: 'Expected ":" after preset declaration.',
+    });
+  });
+
+  it('reports scene preset uses with declaration-style colons', () => {
+    const result = parseAgentDsl(`
+preset mood rainy_school:
+  particles rain
+scene start "Start":
+  preset mood rainy_school:
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: 'dsl-invalid-preset',
+      message: 'Preset uses inside scenes must not end with ":".',
+    });
+  });
+
   it('reports a missing scene colon with dsl-syntax-error', () => {
     const result = parseAgentDsl('scene start "Start"\n  say "Hello."\n', { file: 'story.dsl' });
 

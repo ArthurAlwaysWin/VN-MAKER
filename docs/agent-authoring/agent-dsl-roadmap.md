@@ -58,7 +58,7 @@ And:
 | P5 | Implemented | Source Maps And Rebuild Safety | Source maps, fingerprints, stale output detection |
 | P6 | Implemented | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
 | P7 | Implemented | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
-| P8 | Planned | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
+| P8 | In Progress | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
 | P9 | Planned | Editor And Handoff Integration | Provenance display and review handoff support |
 
 ## 5. P0 - Baseline MVP
@@ -583,6 +583,8 @@ Required tests:
 
 ## 13. P8 - Advanced Authoring Abstractions
 
+**Status:** P8.1 implemented for compile-time cinematic `mood` presets. P8.2 reusable sequences and P8.3 route templates remain planned.
+
 ### Objective
 
 Make DSL more valuable than raw apply-plan by supporting higher-level VN authoring patterns that still lower to editable project data.
@@ -613,6 +615,16 @@ preset mood rainy_school:
   particles rain density 0.6 opacity 0.8
   transition dissolve 900
 ```
+
+Implemented P8.1 syntax applies a preset inside scene bodies:
+
+```text
+scene start "Start":
+  preset mood rainy_school
+  say "Rain tapped against the glass."
+```
+
+The implementation expands preset uses before IR emission and lowers to existing editable page fields such as `particles`, `transition`, `camera`, media, and character staging. It does not add runtime DSL interpretation.
 
 - scene groups and chapter metadata;
 - reusable choice templates;

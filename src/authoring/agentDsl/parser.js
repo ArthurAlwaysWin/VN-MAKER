@@ -3,7 +3,7 @@ import { parseConditionStatement } from './conditionExpression.js';
 import { createDiagnostic, DIAGNOSTIC_CODES, hasErrors } from './diagnostics.js';
 import { lexAgentDsl } from './lexer.js';
 
-const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'scene']);
+const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'preset', 'scene']);
 const SCENE_STATEMENTS = new Set([
   'page',
   'bg',
@@ -20,6 +20,7 @@ const SCENE_STATEMENTS = new Set([
   'end',
   'camera',
   'particles',
+  'preset',
   'call',
 ]);
 const EFFECT_STATEMENTS = new Set(['effect', 'unlock', 'affection', 'call']);
@@ -118,6 +119,7 @@ class Parser {
     if (command === 'ending') return this.parseDeclaration('EndingDeclaration');
     if (command === 'cg') return this.parseDeclaration('CgDeclaration');
     if (command === 'macro') return this.parseMacroDeclaration();
+    if (command === 'preset') return this.parsePresetDeclaration();
     if (command === 'scene') return this.parseSceneDeclaration();
     return null;
   }
@@ -156,6 +158,31 @@ class Parser {
     return createNode('MacroDeclaration', span, {
       id: name,
       params,
+      body,
+      line,
+    });
+  }
+
+  parsePresetDeclaration() {
+    const line = this.current();
+    const tokens = withoutTrailingColon(line.tokens);
+    const category = tokenText(tokens[1]);
+    const id = tokenText(tokens[2]);
+    if (!hasTrailingColon(line)) {
+      this.diagnostics.push(diagnosticForLine(line, 'Expected ":" after preset declaration.'));
+    }
+    if (!category || !id) {
+      this.diagnostics.push(diagnosticForLine(line, 'Preset declarations require a kind and id.', DIAGNOSTIC_CODES.invalidPreset));
+    }
+    this.index += 1;
+    const body = this.parseIndentedBlock(line.indent, (entry) => this.parseSceneStatement(entry, { allowEffects: false }));
+    if (body.length === 0) {
+      this.diagnostics.push(diagnosticForLine(line, `Preset "${category} ${id}" must contain an indented body.`, DIAGNOSTIC_CODES.invalidPreset));
+    }
+    const span = mergeSpans(this.file, line.span, body[body.length - 1]?.span);
+    return createNode('PresetDeclaration', span, {
+      category,
+      id,
       body,
       line,
     });
@@ -247,6 +274,16 @@ class Parser {
     if (command === 'end') return createNode('EndStatement', line.span, { line });
     if (command === 'camera') return createNode('CameraStatement', line.span, { line });
     if (command === 'particles') return createNode('ParticlesStatement', line.span, { line });
+    if (command === 'preset') {
+      if (hasTrailingColon(line)) {
+        this.diagnostics.push(diagnosticForLine(line, 'Preset uses inside scenes must not end with ":".', DIAGNOSTIC_CODES.invalidPreset));
+      }
+      return createNode('PresetUseStatement', line.span, {
+        category: tokenText(line.tokens[1]),
+        id: tokenText(line.tokens[2]),
+        line,
+      });
+    }
     if (EFFECT_STATEMENTS.has(command)) return createNode('EffectStatement', line.span, { line });
     return createNode('Statement', line.span, { line });
   }

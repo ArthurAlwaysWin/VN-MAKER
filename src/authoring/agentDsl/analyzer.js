@@ -8,6 +8,16 @@ import {
 import { agentDslTokenText } from './parser.js';
 
 const VALID_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub', 'unlock:ending', 'unlock:cg']);
+const VALID_PRESET_CATEGORIES = new Set(['mood']);
+const PRESET_BODY_STATEMENT_KINDS = new Set([
+  'BackgroundStatement',
+  'BgmStatement',
+  'SeStatement',
+  'ShowStatement',
+  'TransitionStatement',
+  'CameraStatement',
+  'ParticlesStatement',
+]);
 const CG_FIELD_KEYS = new Set(['image', 'images', 'thumbnail', 'lockedThumbnail', 'locked-thumbnail']);
 const CHARACTER_FIELD_KEYS = new Set(['expression']);
 const MEDIA_STATEMENT_KINDS = new Set(['BackgroundStatement', 'BgmStatement', 'SeStatement']);
@@ -204,6 +214,75 @@ function analyzeUnlockReference(diagnostics, symbols, kind, id, token, node) {
   ));
 }
 
+function presetKey(category, id) {
+  return `${category}:${id}`;
+}
+
+function analyzePresetUse(diagnostics, symbols, node) {
+  if (!node.category || !node.id) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.invalidPreset,
+      'Preset use requires a kind and id.',
+      tokenAt(node.line, 0),
+      node,
+    ));
+    return;
+  }
+  if (hasSymbol(symbols, 'presets', presetKey(node.category, node.id))) return;
+  diagnostics.push(diagnosticFromToken(
+    DIAGNOSTIC_CODES.unknownPreset,
+    `Preset "${node.category} ${node.id}" is not declared.`,
+    tokenAt(node.line, 2) ?? tokenAt(node.line, 1),
+    node,
+    {
+      summary: `Declare preset ${node.category} ${node.id} or change the reference.`,
+      repairHint: {
+        action: 'declare-preset-or-retarget',
+        category: node.category,
+        id: node.id,
+      },
+    },
+  ));
+}
+
+function analyzePresetDeclaration(diagnostics, symbols, node, options) {
+  if (!VALID_PRESET_CATEGORIES.has(node.category)) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.invalidPreset,
+      `Unsupported preset kind "${node.category}".`,
+      tokenAt(node.line, 1),
+      node,
+      {
+        summary: 'Use the supported preset kind: mood.',
+        repairHint: {
+          action: 'replace-preset-kind',
+          supportedKinds: [...VALID_PRESET_CATEGORIES],
+        },
+      },
+    ));
+  }
+
+  for (const child of node.body ?? []) {
+    if (!PRESET_BODY_STATEMENT_KINDS.has(child.kind)) {
+      diagnostics.push(diagnosticFromToken(
+        DIAGNOSTIC_CODES.invalidPreset,
+        `Preset bodies cannot contain ${child.kind}.`,
+        child.line?.tokens?.[0],
+        child,
+        {
+          summary: 'Use existing page staging statements such as transition, particles, camera, show, bg, bgm, or se.',
+          repairHint: {
+            action: 'remove-unsupported-preset-statement',
+            statementKind: child.kind,
+          },
+        },
+      ));
+      continue;
+    }
+    visitNode(child, symbols, diagnostics, options);
+  }
+}
+
 function analyzeCondition(diagnostics, symbols, node) {
   const parsed = node.condition ? { condition: node.condition, diagnostics: [] } : parseConditionStatement(node.line);
   diagnostics.push(...parsed.diagnostics);
@@ -313,8 +392,14 @@ function visitNode(node, symbols, diagnostics, options) {
   if (node.kind === 'MacroDeclaration' && options.skipMacroBodies) {
     return;
   }
+  if (node.kind === 'PresetDeclaration') {
+    analyzePresetDeclaration(diagnostics, symbols, node, options);
+    return;
+  }
   if (node.kind === 'SceneDeclaration') {
     analyzeSceneTarget(diagnostics, symbols, node.next, tokenAfter(node.line, 'next'), node);
+  } else if (node.kind === 'PresetUseStatement') {
+    analyzePresetUse(diagnostics, symbols, node);
   } else if (node.kind === 'OptionStatement') {
     analyzeSceneTarget(diagnostics, symbols, node.target, tokenAfter(node.line, '->'), node);
   } else if (node.kind === 'ConditionStatement') {

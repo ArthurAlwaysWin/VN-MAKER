@@ -33,6 +33,15 @@ macro entrance(character, expression):
   camera shake medium 450
 ```
 
+Cinematic mood presets are compile-time only too. They package reusable atmosphere and lower to ordinary editable page fields:
+
+```text
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+```
+
 Scene bodies support normal page staging, dialogue, choices, simple condition routing, and terminal jumps:
 
 ```text
@@ -40,6 +49,7 @@ scene start "Start":
   page opening:
   bg "backgrounds/classroom.png"
   bgm "audio/theme.ogg" volume 0.7
+  preset mood rainy_school
   call entrance("sakura", "smile")
   say "The classroom grew quiet."
   say sakura "You came." expression smile voice "voices/sakura_001.ogg"
@@ -88,6 +98,7 @@ Current P1 diagnostic coverage includes:
 - `dsl-macro-not-found` for calls to undeclared compile-time macros.
 - `dsl-macro-arity-mismatch` for calls with the wrong number of scalar arguments.
 - `dsl-macro-recursion-limit` for recursive or runaway macro expansion.
+- `dsl-invalid-preset` and `dsl-unknown-preset` for malformed, unsupported, or undeclared cinematic presets.
 
 ## Semantic Binder And Analyzer
 
@@ -141,6 +152,26 @@ namespace chapter_01:
 ```
 
 The first namespace policy prefixes generated ids, so the example emits scenes `chapter_01_start` and `chapter_01_ending`. Duplicate ids are allowed across different namespaces and rejected inside the same namespace. Namespace support does not add runtime lookup behavior, imports, or hidden project fields.
+
+## Cinematic Mood Presets
+
+P8.1 adds reusable `mood` presets for common VN atmosphere:
+
+```text
+preset mood rainy_school:
+  particles rain density 0.6 opacity 0.8
+  transition dissolve 900
+  camera shake low 450
+
+scene start "Start":
+  page opening:
+  preset mood rainy_school
+  say "Rain tapped against the glass."
+```
+
+Preset declarations are removed during compilation. Each `preset mood id` use is expanded before IR lowering into the ordinary statements in the preset body, so the emitted plan still contains regular `add-page` data such as `page.transition`, `page.particles`, and `page.camera`. The runtime never interprets Agent DSL presets.
+
+Preset bodies currently accept existing safe page staging statements: `bg`/`background`, `bgm`, `se`, `show`, `transition`, `camera`, and `particles`. Choices, conditions, effects, jumps, nested presets, and arbitrary code are rejected. Unknown preset references report `dsl-unknown-preset`; unsupported preset kinds or body statements report `dsl-invalid-preset`.
 
 ## Condition Expressions
 

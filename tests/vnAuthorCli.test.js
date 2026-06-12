@@ -859,6 +859,84 @@ scene start "Start":
     });
   });
 
+  it('validates P8.2 agent DSL sequences from the CLI', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'sequence.gmdsl');
+      const planPath = path.join(dir, 'sequence-plan.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+character sakura "Sakura"
+variable affection number initial 0
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+sequence reward(variable, amount):
+  effect var:add $variable $amount
+scene start "Start":
+  sequence dramatic_entrance("sakura", "normal")
+  choice "Answer?":
+    option "Smile" -> start:
+      sequence reward("affection", 2)
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_sequence',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        outPath: planPath,
+        operationCount: 5,
+      });
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-page-start-1')).toMatchObject({
+        params: {
+          page: {
+            characters: [
+              { id: 'sakura', expression: 'normal', position: 'center', animation: 'fade-in' },
+            ],
+            camera: { effect: 'shake', intensity: 'medium', durationMs: 450 },
+          },
+        },
+      });
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-choice-start-2')).toMatchObject({
+        params: {
+          options: [
+            {
+              text: 'Smile',
+              target: 'start',
+              effects: [
+                { type: 'var:add', id: 'affection', value: 2 },
+              ],
+            },
+          ],
+        },
+      });
+
+      const validated = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--validate-only',
+        '--json',
+      ]);
+      const validatedResult = JSON.parse(validated.stdout);
+      expect(validatedResult.validation.ok).toBe(true);
+    });
+  });
+
   it('returns structured diagnostics for invalid agent DSL from the CLI', async () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'broken.dsl');

@@ -42,6 +42,14 @@ preset mood rainy_school:
   camera shake low 450
 ```
 
+Reusable sequences are parameterized compile-time snippets for repeated page staging or choice-option effects:
+
+```text
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+```
+
 Scene bodies support normal page staging, dialogue, choices, simple condition routing, and terminal jumps:
 
 ```text
@@ -50,6 +58,7 @@ scene start "Start":
   bg "backgrounds/classroom.png"
   bgm "audio/theme.ogg" volume 0.7
   preset mood rainy_school
+  sequence dramatic_entrance("sakura", "smile")
   call entrance("sakura", "smile")
   say "The classroom grew quiet."
   say sakura "You came." expression smile voice "voices/sakura_001.ogg"
@@ -99,6 +108,7 @@ Current P1 diagnostic coverage includes:
 - `dsl-macro-arity-mismatch` for calls with the wrong number of scalar arguments.
 - `dsl-macro-recursion-limit` for recursive or runaway macro expansion.
 - `dsl-invalid-preset` and `dsl-unknown-preset` for malformed, unsupported, or undeclared cinematic presets.
+- `dsl-invalid-sequence`, `dsl-unknown-sequence`, `dsl-sequence-arity-mismatch`, and `dsl-sequence-recursion-limit` for malformed or unsafe sequence abstractions.
 
 ## Semantic Binder And Analyzer
 
@@ -172,6 +182,36 @@ scene start "Start":
 Preset declarations are removed during compilation. Each `preset mood id` use is expanded before IR lowering into the ordinary statements in the preset body, so the emitted plan still contains regular `add-page` data such as `page.transition`, `page.particles`, and `page.camera`. The runtime never interprets Agent DSL presets.
 
 Preset bodies currently accept existing safe page staging statements: `bg`/`background`, `bgm`, `se`, `show`, `transition`, `camera`, and `particles`. Choices, conditions, effects, jumps, nested presets, and arbitrary code are rejected. Unknown preset references report `dsl-unknown-preset`; unsupported preset kinds or body statements report `dsl-invalid-preset`.
+
+## Reusable Sequences
+
+P8.2 adds reusable `sequence` declarations:
+
+```text
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+  say $character "You came." expression $expression
+
+scene start "Start":
+  page opening:
+  sequence dramatic_entrance("sakura", "smile")
+```
+
+Sequences are compile-time only. A sequence call substitutes scalar arguments into `$param` or `${param}` placeholders, then expands into normal DSL statements before IR lowering. The emitted plan still contains ordinary `add-page` operations; no runtime interpreter is generated.
+
+Sequences can also package choice-option effects:
+
+```text
+sequence reward(variable, amount):
+  effect var:add $variable $amount
+
+choice "Answer?":
+  option "Smile" -> good:
+    sequence reward("affection", 2)
+```
+
+Sequence bodies currently accept page statements, staging/media/dialogue statements, `preset` uses, `call` macro uses, nested `sequence` uses, and effect statements intended for choice-option bodies. Choices, conditions, jumps, and terminal `end` statements are rejected in sequence bodies. If a sequence expands effect statements into a scene body, or page/dialogue statements into an option body, the normal parser/analyzer rejects the expanded source before plan emission.
 
 ## Condition Expressions
 

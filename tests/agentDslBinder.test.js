@@ -19,6 +19,10 @@ ending good "Good End"
 cg first_smile "First Smile" image "backgrounds/cg.png"
 macro entrance(character):
   show $character
+preset mood rainy_school:
+  particles rain
+sequence dramatic_entrance(character):
+  show $character
 scene start "Start":
   say "Hello."
 `);
@@ -29,6 +33,8 @@ scene start "Start":
     expect([...result.symbols.endings.keys()]).toEqual(['good']);
     expect([...result.symbols.cgs.keys()]).toEqual(['first_smile']);
     expect([...result.symbols.macros.keys()]).toEqual(['entrance']);
+    expect([...result.symbols.presets.keys()]).toEqual(['mood:rainy_school']);
+    expect([...result.symbols.sequences.keys()]).toEqual(['dramatic_entrance']);
     expect([...result.symbols.scenes.keys()]).toEqual(['start']);
   });
 

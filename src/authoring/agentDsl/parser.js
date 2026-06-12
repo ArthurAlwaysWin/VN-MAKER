@@ -3,7 +3,7 @@ import { parseConditionStatement } from './conditionExpression.js';
 import { createDiagnostic, DIAGNOSTIC_CODES, hasErrors } from './diagnostics.js';
 import { lexAgentDsl } from './lexer.js';
 
-const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'preset', 'scene']);
+const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'preset', 'sequence', 'scene']);
 const SCENE_STATEMENTS = new Set([
   'page',
   'bg',
@@ -21,9 +21,10 @@ const SCENE_STATEMENTS = new Set([
   'camera',
   'particles',
   'preset',
+  'sequence',
   'call',
 ]);
-const EFFECT_STATEMENTS = new Set(['effect', 'unlock', 'affection', 'call']);
+const EFFECT_STATEMENTS = new Set(['effect', 'unlock', 'affection', 'call', 'sequence']);
 
 function tokenText(token) {
   if (!token) return '';
@@ -120,6 +121,7 @@ class Parser {
     if (command === 'cg') return this.parseDeclaration('CgDeclaration');
     if (command === 'macro') return this.parseMacroDeclaration();
     if (command === 'preset') return this.parsePresetDeclaration();
+    if (command === 'sequence') return this.parseSequenceDeclaration();
     if (command === 'scene') return this.parseSceneDeclaration();
     return null;
   }
@@ -188,6 +190,35 @@ class Parser {
     });
   }
 
+  parseSequenceDeclaration() {
+    const line = this.current();
+    const tokens = line.tokens;
+    const name = tokenText(tokens[1]);
+    if (!hasTrailingColon(line)) {
+      this.diagnostics.push(diagnosticForLine(line, 'Expected ":" after sequence declaration.'));
+    }
+    const openIndex = tokens.findIndex((token) => token.value === '(');
+    const closeIndex = tokens.findIndex((token) => token.value === ')');
+    if (openIndex === -1 || closeIndex === -1 || closeIndex < openIndex) {
+      this.diagnostics.push(diagnosticForLine(line, 'Expected sequence parameter list in parentheses.', DIAGNOSTIC_CODES.invalidSequence));
+    }
+    const params = openIndex !== -1 && closeIndex !== -1 && closeIndex > openIndex
+      ? tokens.slice(openIndex + 1, closeIndex).filter((token) => token.value !== ',').map(tokenText).filter(Boolean)
+      : [];
+    this.index += 1;
+    const body = this.parseIndentedBlock(line.indent, (entry) => this.parseSceneStatement(entry, { allowEffects: true }));
+    if (body.length === 0) {
+      this.diagnostics.push(diagnosticForLine(line, `Sequence "${name}" must contain an indented body.`, DIAGNOSTIC_CODES.invalidSequence));
+    }
+    const span = mergeSpans(this.file, line.span, body[body.length - 1]?.span);
+    return createNode('SequenceDeclaration', span, {
+      id: name,
+      params,
+      body,
+      line,
+    });
+  }
+
   parseSceneDeclaration() {
     const line = this.current();
     const tokens = withoutTrailingColon(line.tokens);
@@ -241,6 +272,7 @@ class Parser {
       return null;
     }
     if (command === 'call') return this.parseMacroCall(line);
+    if (command === 'sequence') return this.parseSequenceUse(line);
     if (command === 'choice') return this.parseChoiceStatement(line);
     if (command === 'option') {
       this.diagnostics.push(diagnosticForLine(line, 'Option statements must be inside a choice block.'));
@@ -299,6 +331,23 @@ class Parser {
     return createNode('MacroCall', line.span, { id: name, args, line });
   }
 
+  parseSequenceUse(line) {
+    const tokens = line.tokens;
+    const name = tokenText(tokens[1]);
+    const openIndex = tokens.findIndex((token) => token.value === '(');
+    const closeIndex = tokens.findIndex((token) => token.value === ')');
+    if (openIndex === -1 || closeIndex === -1 || closeIndex < openIndex) {
+      this.diagnostics.push(diagnosticForLine(line, 'Expected sequence arguments in parentheses.', DIAGNOSTIC_CODES.invalidSequence));
+    }
+    if (hasTrailingColon(line)) {
+      this.diagnostics.push(diagnosticForLine(line, 'Sequence uses must not end with ":".', DIAGNOSTIC_CODES.invalidSequence));
+    }
+    const args = openIndex !== -1 && closeIndex !== -1 && closeIndex > openIndex
+      ? tokens.slice(openIndex + 1, closeIndex).filter((token) => token.value !== ',').map(scalarFromToken)
+      : [];
+    return createNode('SequenceUseStatement', line.span, { id: name, args, line });
+  }
+
   parseChoiceStatement(line) {
     if (!hasTrailingColon(line)) {
       this.diagnostics.push(diagnosticForLine(line, 'Expected ":" after choice statement.'));
@@ -348,7 +397,13 @@ class Parser {
         this.index += 1;
         continue;
       }
-      body.push(command === 'call' ? this.parseMacroCall(bodyLine) : createNode('EffectStatement', bodyLine.span, { line: bodyLine }));
+      if (command === 'call') {
+        body.push(this.parseMacroCall(bodyLine));
+      } else if (command === 'sequence') {
+        body.push(this.parseSequenceUse(bodyLine));
+      } else {
+        body.push(createNode('EffectStatement', bodyLine.span, { line: bodyLine }));
+      }
       this.index += 1;
     }
     const span = mergeSpans(this.file, line.span, body[body.length - 1]?.span);

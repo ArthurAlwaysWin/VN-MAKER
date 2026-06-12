@@ -31,9 +31,13 @@ preset mood rainy_school:
 macro entrance(character, expression):
   show $character $expression at center animation fade-in
   camera shake medium 450
+sequence flourish(character):
+  show $character smile at right animation pop
+  camera zoom soft 500
 scene start "Start" next fallback:
   page opening:
   preset mood rainy_school
+  sequence flourish("sakura")
   background "backgrounds/classroom.png"
   transition fade 500
   bgm "audio/theme.ogg" volume 0.7
@@ -80,44 +84,55 @@ scene fallback "Fallback":
         ],
       },
       {
-        kind: 'SceneDeclaration',
+        kind: 'SequenceDeclaration',
         line: 14,
-        id: 'start',
+        id: 'flourish',
+        params: ['character'],
         body: [
-          { kind: 'PageStatement', line: 15, id: 'opening' },
-          { kind: 'PresetUseStatement', line: 16, id: 'rainy_school' },
-          { kind: 'BackgroundStatement', line: 17 },
-          { kind: 'TransitionStatement', line: 18 },
-          { kind: 'BgmStatement', line: 19 },
-          { kind: 'SeStatement', line: 20 },
-          { kind: 'MacroCall', line: 21, id: 'entrance' },
-          { kind: 'NarrateStatement', line: 22 },
-          { kind: 'SayStatement', line: 23 },
-          { kind: 'ParticlesStatement', line: 24 },
-          {
-            kind: 'ChoiceStatement',
-            line: 25,
-            options: [
-              {
-                kind: 'OptionStatement',
-                line: 26,
-                body: [
-                  { kind: 'EffectStatement', line: 27 },
-                ],
-              },
-              { kind: 'OptionStatement', line: 28, body: [] },
-            ],
-          },
-          { kind: 'ConditionStatement', line: 29 },
-          { kind: 'JumpStatement', line: 30 },
+          { kind: 'ShowStatement', line: 15 },
+          { kind: 'CameraStatement', line: 16 },
         ],
       },
       {
         kind: 'SceneDeclaration',
-        line: 31,
+        line: 17,
+        id: 'start',
+        body: [
+          { kind: 'PageStatement', line: 18, id: 'opening' },
+          { kind: 'PresetUseStatement', line: 19, id: 'rainy_school' },
+          { kind: 'SequenceUseStatement', line: 20, id: 'flourish' },
+          { kind: 'BackgroundStatement', line: 21 },
+          { kind: 'TransitionStatement', line: 22 },
+          { kind: 'BgmStatement', line: 23 },
+          { kind: 'SeStatement', line: 24 },
+          { kind: 'MacroCall', line: 25, id: 'entrance' },
+          { kind: 'NarrateStatement', line: 26 },
+          { kind: 'SayStatement', line: 27 },
+          { kind: 'ParticlesStatement', line: 28 },
+          {
+            kind: 'ChoiceStatement',
+            line: 29,
+            options: [
+              {
+                kind: 'OptionStatement',
+                line: 30,
+                body: [
+                  { kind: 'EffectStatement', line: 31 },
+                ],
+              },
+              { kind: 'OptionStatement', line: 32, body: [] },
+            ],
+          },
+          { kind: 'ConditionStatement', line: 33 },
+          { kind: 'JumpStatement', line: 34 },
+        ],
+      },
+      {
+        kind: 'SceneDeclaration',
+        line: 35,
         id: 'fallback',
         body: [
-          { kind: 'EndStatement', line: 32 },
+          { kind: 'EndStatement', line: 36 },
         ],
       },
     ]);

@@ -172,6 +172,37 @@ namespace chapter_01:
     });
   });
 
+  it('prefixes sequence declarations and uses inside namespaces', async () => {
+    await withTempDir(async (dir) => {
+      const mainPath = path.join(dir, 'main.gmdsl');
+      await writeFile(mainPath, `
+namespace chapter_01:
+  character sakura "Sakura"
+  sequence entrance():
+    show sakura normal at center animation fade-in
+  scene start "Start":
+    sequence entrance()
+`, 'utf8');
+
+      const plan = await compileProject(mainPath);
+      expect(plan.operations.map((operation) => operation.id)).toEqual([
+        'dsl-add-character-chapter_01_sakura',
+        'dsl-add-scene-chapter_01_start',
+        'dsl-add-page-chapter_01_start-1',
+      ]);
+      expect(plan.operations[2]).toMatchObject({
+        params: {
+          scene: 'chapter_01_start',
+          page: {
+            characters: [
+              { id: 'chapter_01_sakura', expression: 'normal', position: 'center', animation: 'fade-in' },
+            ],
+          },
+        },
+      });
+    });
+  });
+
   it('rejects duplicate symbols inside the same namespace', async () => {
     await withTempDir(async (dir) => {
       const mainPath = path.join(dir, 'main.gmdsl');

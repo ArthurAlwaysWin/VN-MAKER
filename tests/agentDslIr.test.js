@@ -147,6 +147,86 @@ scene start "Start":
     }
   });
 
+  it('expands parameterized sequences into ordinary page IR', () => {
+    const ir = createAgentDslIr(`
+character sakura "Sakura"
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+  say $character "You came." expression $expression
+scene start "Start":
+  page opening:
+  sequence dramatic_entrance("sakura", "smile")
+`);
+
+    expect(ir.operations.map((operation) => operation.kind)).toEqual([
+      'DeclareCharacter',
+      'CreateScene',
+      'CreateNormalPage',
+    ]);
+    expect(ir.operations.find((operation) => operation.kind === 'CreateNormalPage')).toMatchObject({
+      payload: {
+        scene: 'start',
+        page: {
+          id: 'opening',
+          camera: { effect: 'shake', intensity: 'medium', durationMs: 450 },
+          characters: [
+            { id: 'sakura', expression: 'smile', position: 'center', animation: 'fade-in' },
+          ],
+          dialogues: [
+            { speaker: 'sakura', text: 'You came.', expression: 'smile' },
+          ],
+        },
+      },
+    });
+  });
+
+  it('expands option effect sequences into ordinary choice effects', () => {
+    const ir = createAgentDslIr(`
+variable affection number initial 0
+sequence reward(variable, amount):
+  effect var:add $variable $amount
+scene start "Start":
+  choice "Answer?":
+    option "Smile" -> start:
+      sequence reward("affection", 2)
+`);
+
+    expect(ir.operations.find((operation) => operation.kind === 'CreateChoicePage')).toMatchObject({
+      payload: {
+        options: [
+          {
+            text: 'Smile',
+            target: 'start',
+            effects: [
+              { type: 'var:add', id: 'affection', value: 2 },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  it('rejects unknown sequences before IR emission', () => {
+    expect(() => createAgentDslIr(`
+scene start "Start":
+  sequence missing()
+`)).toThrow(AgentDslDiagnosticError);
+    try {
+      createAgentDslIr(`
+scene start "Start":
+  sequence missing()
+`);
+    } catch (error) {
+      expect(error.diagnostics).toEqual([
+        expect.objectContaining({
+          code: 'dsl-unknown-sequence',
+          message: 'Sequence "missing" is not declared.',
+        }),
+      ]);
+    }
+  });
+
   it('lowers choices and conditions to dedicated IR operations', () => {
     const ir = createAgentDslIr(`
 character sakura "Sakura"

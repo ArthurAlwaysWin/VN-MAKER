@@ -14,11 +14,16 @@ preset mood rainy_school:
     particles   rain density 0.6 opacity 0.8
     transition   dissolve 900
 
+sequence dramatic_entrance(character, expression):
+    show   $character $expression at center animation fade-in
+    camera   shake medium 450
+
 macro entrance(character, expression):
     show   $character $expression at center animation fade-in
 
 scene start "Start":
     preset   mood rainy_school
+    sequence   dramatic_entrance("sakura", "normal")
     bg "backgrounds/classroom.png"
     choice "Answer?":
       option "Stay" -> good:
@@ -38,11 +43,16 @@ preset mood rainy_school:
   particles rain density 0.6 opacity 0.8
   transition dissolve 900
 
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+
 macro entrance(character, expression):
   show $character $expression at center animation fade-in
 
 scene start "Start":
   preset mood rainy_school
+  sequence dramatic_entrance("sakura", "normal")
   bg "backgrounds/classroom.png"
   choice "Answer?":
     option "Stay" -> good:

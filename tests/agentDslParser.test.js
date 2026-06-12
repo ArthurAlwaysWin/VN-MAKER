@@ -107,6 +107,57 @@ scene start "Start":
     });
   });
 
+  it('parses reusable sequence declarations and uses', () => {
+    const result = parseAgentDsl(`
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+scene start "Start":
+  sequence dramatic_entrance("sakura", "smile")
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(true);
+    expect(result.ast.body).toMatchObject([
+      {
+        kind: 'SequenceDeclaration',
+        id: 'dramatic_entrance',
+        params: ['character', 'expression'],
+        body: [
+          { kind: 'ShowStatement' },
+          { kind: 'CameraStatement' },
+        ],
+      },
+      { kind: 'SceneDeclaration', id: 'start' },
+    ]);
+    const scene = result.ast.body.find((node) => node.kind === 'SceneDeclaration');
+    expect(scene.body[0]).toMatchObject({
+      kind: 'SequenceUseStatement',
+      id: 'dramatic_entrance',
+      args: ['sakura', 'smile'],
+    });
+  });
+
+  it('reports malformed sequence declarations and uses', () => {
+    const declaration = parseAgentDsl('sequence broken\n  say "Nope."\n', { file: 'story.dsl' });
+    expect(declaration.ok).toBe(false);
+    expect(declaration.diagnostics[0]).toMatchObject({
+      code: 'dsl-syntax-error',
+      message: 'Expected ":" after sequence declaration.',
+    });
+
+    const use = parseAgentDsl(`
+sequence intro():
+  say "Hi."
+scene start "Start":
+  sequence intro:
+`, { file: 'story.dsl' });
+    expect(use.ok).toBe(false);
+    expect(use.diagnostics[0]).toMatchObject({
+      code: 'dsl-invalid-sequence',
+      message: 'Expected sequence arguments in parentheses.',
+    });
+  });
+
   it('reports malformed preset declarations', () => {
     const result = parseAgentDsl('preset mood rainy_school\n  particles rain\n', { file: 'story.dsl' });
 

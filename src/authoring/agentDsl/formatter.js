@@ -100,7 +100,7 @@ export function formatAgentDsl(source, options = {}) {
     if (lines.length > 0) {
       lines.push('');
     }
-    if (node.kind === 'MacroDeclaration' || node.kind === 'PresetDeclaration') {
+    if (node.kind === 'MacroDeclaration' || node.kind === 'PresetDeclaration' || node.kind === 'SequenceDeclaration') {
       lines.push(formatLine(node.line, 0));
       for (const statement of node.body) {
         emitCommentsBefore(statement.line.number);

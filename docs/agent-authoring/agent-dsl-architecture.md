@@ -61,6 +61,7 @@ The current implementation provides:
 - first-pass multi-file includes and namespaces
 - strict first-pass condition expressions for single comparisons, flat `and`, and flat `or`
 - compile-time cinematic mood presets that expand to existing page staging fields
+- compile-time reusable sequences with scalar parameters that expand to page statements or option effects
 - P5 source map artifact emission with operation provenance ids, deterministic fingerprints, apply-plan enrichment, and stale generated-region checks
 - plan output that can be passed to `apply-plan`
 
@@ -297,6 +298,7 @@ top_level_statement
                  | cg_decl
                  | macro_decl
                  | preset_decl
+                 | sequence_decl
                  | scene_decl
                  | route_decl ;
 ```
@@ -382,6 +384,23 @@ Rules:
 - Recursive macro expansion MUST be rejected with diagnostic `dsl-macro-recursion-limit`.
 - Macros MUST NOT mutate global compiler state.
 
+### 8.5b Reusable Sequences
+
+```ebnf
+sequence_decl    = "sequence" , identifier , "(" , [ param_list ] , ")" , ":" , sequence_body ;
+sequence_body    = indented_block { page_stmt | background_stmt | bgm_stmt | se_stmt | show_stmt | say_stmt | narrate_stmt | transition_stmt | camera_stmt | particles_stmt | preset_use | macro_call | sequence_use | effect_stmt } ;
+sequence_use     = "sequence" , identifier , "(" , [ arg_list ] , ")" ;
+```
+
+Rules:
+
+- Sequences are compile-time only.
+- Sequence arguments are scalar values.
+- Sequence uses lower by substituting `$param` and `${param}` placeholders and expanding the sequence body before IR emission.
+- A sequence used in a scene body must expand to valid scene-body statements.
+- A sequence used in a choice option body must expand to valid option effect statements.
+- Choices, conditions, jumps, terminal `end` statements, arbitrary code, or runtime hooks MUST be rejected.
+
 ### 8.5a Cinematic Presets
 
 ```ebnf
@@ -418,6 +437,7 @@ scene_statement  = page_stmt
                  | camera_stmt
                  | particles_stmt
                  | preset_use
+                 | sequence_use
                  | macro_call ;
 ```
 
@@ -555,6 +575,8 @@ Minimum mature AST node kinds:
 - `MacroCall`
 - `PresetDeclaration`
 - `PresetUseStatement`
+- `SequenceDeclaration`
+- `SequenceUseStatement`
 - `SceneDeclaration`
 - `PageStatement`
 - `BackgroundStatement`
@@ -748,6 +770,10 @@ Stable diagnostic codes:
 - `dsl-duplicate-symbol`
 - `dsl-invalid-preset`
 - `dsl-unknown-preset`
+- `dsl-invalid-sequence`
+- `dsl-unknown-sequence`
+- `dsl-sequence-arity-mismatch`
+- `dsl-sequence-recursion-limit`
 - `dsl-unknown-symbol`
 - `dsl-unknown-scene-target`
 - `dsl-unknown-character`
@@ -773,6 +799,7 @@ The binder MUST create these symbol tables:
 
 - scenes
 - macros
+- sequences
 - characters
 - variables
 - endings

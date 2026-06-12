@@ -226,4 +226,45 @@ scene start "Start":
       }),
     ]);
   });
+
+  it('accepts reusable sequences and reports invalid sequence references', () => {
+    const valid = analyzeSource(`
+character sakura "Sakura"
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+scene start "Start":
+  sequence dramatic_entrance("sakura", "normal")
+  say sakura "Welcome."
+`);
+
+    expect(valid.ok).toBe(true);
+
+    const invalid = analyzeSource(`
+sequence bad_choice():
+  choice "Unsupported here?":
+    option "Yes" -> start
+sequence intro(character):
+  say $character "Hi."
+scene start "Start":
+  sequence missing()
+  sequence intro()
+`);
+
+    expect(invalid.ok).toBe(false);
+    expect(invalid.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'dsl-invalid-sequence',
+        message: 'Sequence bodies cannot contain ChoiceStatement.',
+      }),
+      expect.objectContaining({
+        code: 'dsl-unknown-sequence',
+        message: 'Sequence "missing" is not declared.',
+      }),
+      expect.objectContaining({
+        code: 'dsl-sequence-arity-mismatch',
+        message: 'Sequence "intro" expects 1 argument(s), got 0.',
+      }),
+    ]);
+  });
 });

@@ -141,4 +141,35 @@ scene start "Start":
       },
     });
   });
+
+  it('emits reusable sequences as ordinary add-page data', () => {
+    const plan = createAgentDslPlan(`
+character sakura "Sakura"
+sequence dramatic_entrance(character, expression):
+  show $character $expression at center animation fade-in
+  camera shake medium 450
+scene start "Start":
+  sequence dramatic_entrance("sakura", "smile")
+`);
+
+    expect(plan.operations.map((operation) => operation.command)).toEqual([
+      'add-character',
+      'add-scene',
+      'add-page',
+    ]);
+    expect(plan.operations[2]).toMatchObject({
+      id: 'dsl-add-page-start-1',
+      command: 'add-page',
+      params: {
+        scene: 'start',
+        type: 'normal',
+        page: {
+          characters: [
+            { id: 'sakura', expression: 'smile', position: 'center', animation: 'fade-in' },
+          ],
+          camera: { effect: 'shake', intensity: 'medium', durationMs: 450 },
+        },
+      },
+    });
+  });
 });

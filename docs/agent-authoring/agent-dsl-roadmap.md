@@ -583,7 +583,7 @@ Required tests:
 
 ## 13. P8 - Advanced Authoring Abstractions
 
-**Status:** P8.1 implemented for compile-time cinematic `mood` presets. P8.2 reusable sequences and P8.3 route templates remain planned.
+**Status:** P8.1 implemented for compile-time cinematic `mood` presets. P8.2 implemented for reusable compile-time sequences. P8.3 route templates remain planned.
 
 ### Objective
 
@@ -598,6 +598,15 @@ sequence dramatic_entrance(character, expression):
   show $character $expression at center animation fade-in
   camera shake medium 450
 ```
+
+Implemented P8.2 syntax applies a sequence inside scene bodies or choice option bodies:
+
+```text
+scene start "Start":
+  sequence dramatic_entrance("sakura", "smile")
+```
+
+Sequence calls substitute scalar arguments and expand before IR emission. Scene-body calls lower to ordinary page staging/dialogue data; option-body calls can lower to ordinary option effects. No runtime sequence interpreter is generated.
 
 - route templates:
 

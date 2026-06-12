@@ -18,6 +18,22 @@ const PRESET_BODY_STATEMENT_KINDS = new Set([
   'CameraStatement',
   'ParticlesStatement',
 ]);
+const SEQUENCE_BODY_STATEMENT_KINDS = new Set([
+  'PageStatement',
+  'BackgroundStatement',
+  'BgmStatement',
+  'SeStatement',
+  'ShowStatement',
+  'SayStatement',
+  'NarrateStatement',
+  'TransitionStatement',
+  'CameraStatement',
+  'ParticlesStatement',
+  'PresetUseStatement',
+  'SequenceUseStatement',
+  'MacroCall',
+  'EffectStatement',
+]);
 const CG_FIELD_KEYS = new Set(['image', 'images', 'thumbnail', 'lockedThumbnail', 'locked-thumbnail']);
 const CHARACTER_FIELD_KEYS = new Set(['expression']);
 const MEDIA_STATEMENT_KINDS = new Set(['BackgroundStatement', 'BgmStatement', 'SeStatement']);
@@ -283,6 +299,77 @@ function analyzePresetDeclaration(diagnostics, symbols, node, options) {
   }
 }
 
+function analyzeSequenceUse(diagnostics, symbols, node) {
+  if (!node.id) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.invalidSequence,
+      'Sequence use requires an id.',
+      tokenAt(node.line, 0),
+      node,
+    ));
+    return;
+  }
+  const symbol = symbols?.sequences?.get(node.id);
+  if (!symbol) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.unknownSequence,
+      `Sequence "${node.id}" is not declared.`,
+      tokenAt(node.line, 1),
+      node,
+      {
+        summary: `Declare sequence ${node.id} or change the reference.`,
+        repairHint: {
+          action: 'declare-sequence-or-retarget',
+          id: node.id,
+        },
+      },
+    ));
+    return;
+  }
+  const expected = symbol.node?.params?.length ?? 0;
+  if ((node.args ?? []).length !== expected) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.sequenceArityMismatch,
+      `Sequence "${node.id}" expects ${expected} argument(s), got ${(node.args ?? []).length}.`,
+      tokenAt(node.line, 1),
+      node,
+      {
+        summary: 'Pass the declared number of sequence arguments.',
+        repairHint: {
+          action: 'fix-sequence-arity',
+          id: node.id,
+          expected,
+          actual: (node.args ?? []).length,
+        },
+      },
+    ));
+  }
+}
+
+function analyzeSequenceDeclaration(diagnostics, symbols, node, options) {
+  for (const child of node.body ?? []) {
+    if (!SEQUENCE_BODY_STATEMENT_KINDS.has(child.kind)) {
+      diagnostics.push(diagnosticFromToken(
+        DIAGNOSTIC_CODES.invalidSequence,
+        `Sequence bodies cannot contain ${child.kind}.`,
+        child.line?.tokens?.[0],
+        child,
+        {
+          summary: 'Use page staging/dialogue statements, compile-time preset/macro calls, or option effects.',
+          repairHint: {
+            action: 'remove-unsupported-sequence-statement',
+            statementKind: child.kind,
+          },
+        },
+      ));
+      continue;
+    }
+    if (child.kind === 'PresetUseStatement' || child.kind === 'SequenceUseStatement') {
+      visitNode(child, symbols, diagnostics, options);
+    }
+  }
+}
+
 function analyzeCondition(diagnostics, symbols, node) {
   const parsed = node.condition ? { condition: node.condition, diagnostics: [] } : parseConditionStatement(node.line);
   diagnostics.push(...parsed.diagnostics);
@@ -396,10 +483,16 @@ function visitNode(node, symbols, diagnostics, options) {
     analyzePresetDeclaration(diagnostics, symbols, node, options);
     return;
   }
+  if (node.kind === 'SequenceDeclaration') {
+    analyzeSequenceDeclaration(diagnostics, symbols, node, options);
+    return;
+  }
   if (node.kind === 'SceneDeclaration') {
     analyzeSceneTarget(diagnostics, symbols, node.next, tokenAfter(node.line, 'next'), node);
   } else if (node.kind === 'PresetUseStatement') {
     analyzePresetUse(diagnostics, symbols, node);
+  } else if (node.kind === 'SequenceUseStatement') {
+    analyzeSequenceUse(diagnostics, symbols, node);
   } else if (node.kind === 'OptionStatement') {
     analyzeSceneTarget(diagnostics, symbols, node.target, tokenAfter(node.line, '->'), node);
   } else if (node.kind === 'ConditionStatement') {

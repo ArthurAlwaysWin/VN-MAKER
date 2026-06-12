@@ -162,13 +162,15 @@ function normalizeCompileTimeBlock(block) {
 function collectCompileTimeDeclarations(lines) {
   const macros = new Map();
   const presets = new Map();
+  const sequences = new Map();
   const remaining = [];
   let index = 0;
   while (index < lines.length) {
     const line = lines[index];
     const macroMatch = line.trimmed.match(/^macro\s+([A-Za-z_][\w-]*)\s*\(([^)]*)\)\s*:$/);
     const presetMatch = line.trimmed.match(/^preset\s+([A-Za-z_][\w-]*)\s+([A-Za-z_][\w-]*)\s*:$/);
-    if (line.indent !== 0 || (!macroMatch && !presetMatch)) {
+    const sequenceMatch = line.trimmed.match(/^sequence\s+([A-Za-z_][\w-]*)\s*\(([^)]*)\)\s*:$/);
+    if (line.indent !== 0 || (!macroMatch && !presetMatch && !sequenceMatch)) {
       remaining.push(line);
       index += 1;
       continue;
@@ -181,6 +183,9 @@ function collectCompileTimeDeclarations(lines) {
     if (block.length === 0 && presetMatch) {
       fail(line, `preset "${presetMatch[1]} ${presetMatch[2]}" must contain an indented body`, DIAGNOSTIC_CODES.invalidPreset);
     }
+    if (block.length === 0 && sequenceMatch) {
+      fail(line, `sequence "${sequenceMatch[1]}" must contain an indented body`, DIAGNOSTIC_CODES.invalidSequence);
+    }
     const body = normalizeCompileTimeBlock(block);
     if (macroMatch) {
       const [, name, paramsSource] = macroMatch;
@@ -189,17 +194,24 @@ function collectCompileTimeDeclarations(lines) {
         params: paramsSource.split(',').map((param) => param.trim()).filter(Boolean),
         body,
       });
-    } else {
+    } else if (presetMatch) {
       const [, category, id] = presetMatch;
       presets.set(`${category}:${id}`, {
         category,
         id,
         body,
       });
+    } else {
+      const [, name, paramsSource] = sequenceMatch;
+      sequences.set(name, {
+        name,
+        params: paramsSource.split(',').map((param) => param.trim()).filter(Boolean),
+        body,
+      });
     }
     index = nextIndex;
   }
-  return { macros, presets, lines: remaining };
+  return { macros, presets, sequences, lines: remaining };
 }
 
 function substituteMacroLine(text, values) {
@@ -285,6 +297,66 @@ function expandPresetUses(lines, presets, depth = 0) {
   return expanded;
 }
 
+function expandSequenceUses(lines, sequences, depth = 0) {
+  if (depth > 8) {
+    fail(lines[0] ?? { number: 1 }, 'Agent DSL sequence expansion exceeded the recursion limit', DIAGNOSTIC_CODES.sequenceRecursionLimit);
+  }
+
+  const expanded = [];
+  for (const line of lines) {
+    const match = line.trimmed.match(/^sequence\s+([A-Za-z_][\w-]*)\s*(?:\((.*)\))?\s*$/);
+    if (!match) {
+      expanded.push(line);
+      continue;
+    }
+
+    const [, name, argsSource = ''] = match;
+    const sequence = sequences.get(name);
+    if (!sequence) {
+      fail(line, `unknown sequence "${name}"`, DIAGNOSTIC_CODES.unknownSequence);
+    }
+    const args = splitCommaArgs(argsSource);
+    if (args.length !== sequence.params.length) {
+      fail(line, `sequence "${name}" expects ${sequence.params.length} argument(s), got ${args.length}`, DIAGNOSTIC_CODES.sequenceArityMismatch);
+    }
+    const values = Object.fromEntries(sequence.params.map((param, index) => [param, args[index]]));
+    const materialized = sequence.body.map((entry) => {
+      const text = `${' '.repeat(line.indent + entry.indent)}${substituteMacroLine(entry.trimmed, values)}`;
+      return {
+        ...entry,
+        number: line.number,
+        indent: line.indent + entry.indent,
+        raw: text,
+        text,
+        trimmed: text.trim(),
+        span: line.span,
+      };
+    });
+    expanded.push(...expandSequenceUses(materialized, sequences, depth + 1));
+  }
+  return expanded;
+}
+
+function expandCompileTimeUses(lines, macros, presets, sequences) {
+  let expanded = lines;
+  for (let pass = 0; pass < 8; pass += 1) {
+    const before = JSON.stringify(expanded.map((line) => [line.indent, line.trimmed]));
+    const next = expandPresetUses(
+      expandMacroCalls(
+        expandSequenceUses(expanded, sequences),
+        macros,
+      ),
+      presets,
+    );
+    const after = JSON.stringify(next.map((line) => [line.indent, line.trimmed]));
+    expanded = next;
+    if (after === before) {
+      return expanded;
+    }
+  }
+  fail(expanded[0] ?? { number: 1 }, 'Agent DSL compile-time expansion exceeded the recursion limit', DIAGNOSTIC_CODES.sequenceRecursionLimit);
+}
+
 function lineRecordsToSource(lines) {
   return lines.map((line) => line.raw ?? line.text ?? '').join('\n');
 }
@@ -307,9 +379,8 @@ export function createAgentDslIr(source, options = {}) {
       };
     })
     .filter((line) => line.trimmed);
-  const { macros, presets, lines } = collectCompileTimeDeclarations(normalized);
-  const macroExpandedLines = expandMacroCalls(lines, macros);
-  const expandedLines = expandPresetUses(macroExpandedLines, presets);
+  const { macros, presets, sequences, lines } = collectCompileTimeDeclarations(normalized);
+  const expandedLines = expandCompileTimeUses(lines, macros, presets, sequences);
   const expanded = parseAgentDsl(lineRecordsToSource(expandedLines), { file: sourceFile });
   throwIfDiagnostics(expanded.diagnostics);
   const analyzed = analyzeAgentDsl(expanded.ast, bound.symbols);

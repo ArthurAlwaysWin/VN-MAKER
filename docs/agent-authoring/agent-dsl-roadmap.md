@@ -58,7 +58,7 @@ And:
 | P5 | Implemented | Source Maps And Rebuild Safety | Source maps, fingerprints, stale output detection |
 | P6 | Implemented | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
 | P7 | Implemented | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
-| P8 | In Progress | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
+| P8 | Implemented | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
 | P9 | Planned | Editor And Handoff Integration | Provenance display and review handoff support |
 
 ## 5. P0 - Baseline MVP
@@ -583,7 +583,7 @@ Required tests:
 
 ## 13. P8 - Advanced Authoring Abstractions
 
-**Status:** P8.1 implemented for compile-time cinematic `mood` presets. P8.2 implemented for reusable compile-time sequences. P8.3 implemented for basic affection/ending route templates. P8.4 final polish remains planned.
+**Status:** Implemented. P8.1 compile-time cinematic `mood` presets, P8.2 reusable compile-time sequences, P8.3 basic affection/ending route templates, and P8.4 docs/help/invalid/integration polish are complete.
 
 ### Objective
 

@@ -1152,6 +1152,52 @@ scene start "Start":
     });
   });
 
+  it('returns structured dsl-check diagnostics for invalid P8 abstractions', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'broken-p8.gmdsl');
+      await writeFile(dslPath, `
+character sakura "Sakura"
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+scene start "Start":
+  sequence missing()
+`, 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-check',
+          dslPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath,
+        validation: null,
+      });
+      expect(result.diagnostics).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          code: 'dsl-invalid-route-template',
+          message: 'Route "sakura" requires normal_end.',
+        }),
+        expect.objectContaining({
+          code: 'dsl-unknown-sequence',
+          message: 'Sequence "missing" is not declared.',
+        }),
+      ]));
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('rejects unsafe dsl-check project manifest paths', async () => {
     await withTempDir(async (dir) => {
       const sourceRoot = path.join(dir, 'agent-src');

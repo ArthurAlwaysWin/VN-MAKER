@@ -534,6 +534,156 @@ scene normal "Normal":
     });
   });
 
+  it('checks an agent DSL source without writing source, project, or artifact files', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'check.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'should-not-exist-plan.json');
+      const sourceMapPath = path.join(dir, 'should-not-exist-source-map.json');
+      const scriptSource = JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_check',
+        characters: {},
+        scenes: {},
+      });
+      await writeFile(dslPath, `
+title "DSL Check"
+character sakura "Sakura"
+variable affection number initial 0
+scene start "Start":
+  say sakura "Checked."
+`, 'utf8');
+      await writeFile(scriptPath, scriptSource, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-check',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        dslPath,
+        entryPath: dslPath,
+        manifestPath: null,
+        diagnostics: [],
+        operationCount: 4,
+        warningCount: 0,
+        validation: {
+          ok: true,
+          status: 'validated',
+          scriptPath,
+          errorCount: 0,
+        },
+        check: {
+          parsed: true,
+          bound: true,
+          analyzed: true,
+          emittedPlan: true,
+          validated: true,
+          wrote: false,
+        },
+      });
+      expect(result.validation.changedPaths).toEqual(expect.arrayContaining([
+        'characters.sakura',
+        'systems.variables.affection',
+        'scenes.start',
+        'scenes.start.pages.0',
+      ]));
+      expect(await readFile(scriptPath, 'utf8')).toBe(scriptSource);
+      await expect(stat(planPath)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(stat(sourceMapPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+  });
+
+  it('returns a structured dsl-check failure report for invalid agent DSL', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'broken-check.dsl');
+      await writeFile(dslPath, 'scene start "Start"\n  say "Missing colon."\n', 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-check',
+          dslPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath,
+        entryPath: dslPath,
+        manifestPath: null,
+        diagnostics: [
+          {
+            severity: 'error',
+            code: 'dsl-syntax-error',
+            message: 'Expected ":" after scene declaration.',
+          },
+        ],
+        operationCount: 0,
+        validation: null,
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unsafe dsl-check project manifest paths', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      await mkdir(sourceRoot, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '..',
+        entry: 'outside.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-check',
+          manifestPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'sourceRoot ".." must not contain traversal segments.',
+          },
+        ],
+        validation: null,
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('exports a web build from the CLI after readiness passes', async () => {
     await withTempDir(async (dir) => {
       const { projectDir, appRoot } = await createExportFixture(dir);

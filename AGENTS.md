@@ -94,6 +94,7 @@ Inspect and validate a resolved project:
 npm run vn -- inspect --script "<scriptPath>" --json
 npm run vn -- validate --script "<scriptPath>" --json
 npm run vn -- export-report --script "<scriptPath>" --json
+npm run vn -- dsl-check agent-src/main.gmdsl --script "<scriptPath>" --json
 ```
 
 Apply a multi-step plan:

@@ -393,6 +393,303 @@ scene bad "Bad":
     });
   });
 
+  it('creates an Agent DSL starter skeleton from an existing script without a source map', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const dslPath = path.join(dir, 'agent-src', 'main.gmdsl');
+      const reportPath = path.join(dir, 'agent-src', 'skeleton-report.json');
+      const planPath = path.join(dir, 'skeleton-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_skeleton',
+        title: 'Skeleton CLI',
+        characters: {
+          sakura: {
+            name: 'Sakura',
+            expressions: { normal: 'characters/sakura_normal.png' },
+          },
+        },
+        systems: {
+          variables: {
+            affection: { type: 'number', initial: 1, label: 'Affection' },
+          },
+        },
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              {
+                id: 'opening',
+                type: 'normal',
+                dialogues: [{ speaker: 'sakura', text: 'Welcome.', expression: 'normal' }],
+              },
+              {
+                type: 'choice',
+                prompt: 'Continue?',
+                options: [{ text: 'Yes', target: null }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-skeleton',
+        '--script',
+        scriptPath,
+        '--out',
+        dslPath,
+        '--report-out',
+        reportPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const source = await readFile(dslPath, 'utf8');
+      const report = JSON.parse(await readFile(reportPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        scriptPath,
+        outPath: dslPath,
+        reportPath,
+        sourceMapPath: null,
+        sourceMapCreated: false,
+        wrote: true,
+        report: {
+          sourceMapCreated: false,
+          warningCount: 0,
+        },
+        declarations: {
+          characters: 1,
+          variables: 1,
+          scenes: 1,
+          normalPages: 1,
+          choicePages: 1,
+          choiceOptions: 1,
+          dialogues: 1,
+        },
+        warningCount: 0,
+        unsupportedCount: 0,
+        lossyCount: 0,
+      });
+      expect(source).toContain('# This skeleton is a migration aid; it does not claim original DSL provenance.');
+      expect(source).toContain('character sakura "Sakura" expression normal "characters/sakura_normal.png"');
+      expect(source).toContain('  page opening:');
+      expect(source).toContain('  say sakura "Welcome." expression normal');
+      expect(source).toContain('  choice "Continue?":');
+      expect(source).toContain('    option "Yes"');
+      expect(report).toMatchObject({
+        sourceMapCreated: false,
+        unsupported: [],
+        lossy: [],
+      });
+
+      const plan = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const planResult = JSON.parse(plan.stdout);
+      expect(planResult).toMatchObject({
+        dslPath,
+        sourceMapPath: null,
+        operationCount: 5,
+      });
+      await expect(stat(path.join(dir, 'agent-dsl-source-map.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+  });
+
+  it('builds a generated Agent DSL skeleton into an equivalent fresh project slice', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const freshScriptPath = path.join(dir, 'fresh-script.json');
+      const hydratedScriptPath = path.join(dir, 'hydrated-script.json');
+      const dslPath = path.join(dir, 'agent-src', 'main.gmdsl');
+      const planPath = path.join(dir, 'skeleton-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_skeleton_equivalence',
+        title: 'Skeleton Equivalence',
+        characters: {
+          sakura: {
+            name: 'Sakura',
+            color: '#ff99cc',
+            expressions: { smile: 'characters/sakura_smile.png' },
+          },
+        },
+        systems: {
+          variables: {
+            affection: { type: 'number', initial: 0, label: 'Affection' },
+            saw_letter: { type: 'bool', initial: false, label: 'Saw Letter' },
+          },
+          endings: {
+            good: { title: 'Good End', category: 'main', order: 1, description: 'A warm ending.' },
+          },
+          gallery: {
+            cg: {
+              smile: {
+                title: 'Smile',
+                images: ['gallery/smile.png'],
+                thumbnail: 'gallery/smile-thumb.png',
+                category: 'main',
+                order: 1,
+                description: 'Sakura smiles.',
+              },
+            },
+          },
+        },
+        scenes: {
+          start: {
+            name: 'Start',
+            next: 'normal',
+            pages: [
+              {
+                id: 'opening',
+                type: 'normal',
+                background: 'backgrounds/classroom.png',
+                transition: { type: 'fade', duration: 500 },
+                bgm: { file: 'audio/theme.ogg', volume: 0.7 },
+                se: { file: 'audio/bell.ogg' },
+                characters: [{ id: 'sakura', expression: 'smile', position: 'left', animation: 'fade-in' }],
+                camera: { effect: 'shake', intensity: 'high', durationMs: 450 },
+                particles: { preset: 'sakura', density: 0.4, speed: 1.2, wind: -0.2, opacity: 0.8, color: '#ffc6d9', direction: 'down' },
+                dialogues: [{ speaker: 'sakura', text: 'The petals are early.', expression: 'smile' }],
+              },
+              {
+                type: 'choice',
+                prompt: 'Answer?',
+                options: [
+                  { text: 'Smile', target: 'good', effects: [{ type: 'var:add', id: 'affection', value: 1 }, { type: 'unlock:cg', id: 'smile' }] },
+                  { text: 'Stay quiet', target: 'normal', effects: [{ type: 'var:set', id: 'saw_letter', value: true }] },
+                ],
+              },
+              {
+                type: 'condition',
+                conditionMode: 'any',
+                conditions: [
+                  { variableId: 'affection', operator: '>=', value: 1 },
+                  { variableId: 'saw_letter', operator: '==', value: true },
+                ],
+                trueTarget: 'good',
+                falseTarget: 'normal',
+              },
+            ],
+          },
+          good: {
+            name: 'Good',
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Good.' }] }],
+          },
+          normal: {
+            name: 'Normal',
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Normal.' }] }],
+          },
+        },
+      }), 'utf8');
+      await writeFile(freshScriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_skeleton_equivalence_fresh',
+        characters: {},
+        systems: { variables: {}, endings: {}, gallery: { cg: {} } },
+        scenes: {},
+      }), 'utf8');
+
+      const skeleton = await execFileAsync('node', [
+        cliPath,
+        'dsl-skeleton',
+        '--script',
+        scriptPath,
+        '--out',
+        dslPath,
+        '--json',
+      ]);
+      expect(JSON.parse(skeleton.stdout)).toMatchObject({
+        warningCount: 0,
+        unsupportedCount: 0,
+        lossyCount: 0,
+      });
+
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const apply = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        freshScriptPath,
+        '--out',
+        hydratedScriptPath,
+        '--force',
+        '--json',
+      ]);
+      const applyResult = JSON.parse(apply.stdout);
+      const hydrated = JSON.parse(await readFile(hydratedScriptPath, 'utf8'));
+
+      expect(applyResult.validation.ok).toBe(true);
+      expect(hydrated.characters.sakura).toMatchObject({
+        name: 'Sakura',
+        color: '#ff99cc',
+        expressions: { smile: 'characters/sakura_smile.png' },
+      });
+      expect(hydrated.systems.variables).toMatchObject({
+        affection: { type: 'number', initial: 0, label: 'Affection' },
+        saw_letter: { type: 'bool', initial: false, label: 'Saw Letter' },
+      });
+      expect(hydrated.systems.endings.good).toMatchObject({
+        title: 'Good End',
+        category: 'main',
+        order: 1,
+        description: 'A warm ending.',
+      });
+      expect(hydrated.systems.gallery.cg.smile).toMatchObject({
+        title: 'Smile',
+        images: ['gallery/smile.png'],
+        thumbnail: 'gallery/smile-thumb.png',
+        category: 'main',
+        order: 1,
+        description: 'Sakura smiles.',
+      });
+      expect(hydrated.scenes.start.next).toBe('normal');
+      expect(hydrated.scenes.start.pages[0]).toMatchObject({
+        id: 'opening',
+        type: 'normal',
+        background: 'backgrounds/classroom.png',
+        transition: { type: 'fade', duration: 500 },
+        bgm: { file: 'audio/theme.ogg', volume: 0.7 },
+        se: { file: 'audio/bell.ogg' },
+        characters: [{ id: 'sakura', expression: 'smile', position: 'left', animation: 'fade-in' }],
+        camera: { effect: 'shake', intensity: 'high', durationMs: 450 },
+        particles: { preset: 'sakura', density: 0.4, speed: 1.2, wind: -0.2, opacity: 0.8, color: '#ffc6d9', direction: 'down' },
+        dialogues: [{ speaker: 'sakura', text: 'The petals are early.', expression: 'smile' }],
+      });
+      expect(hydrated.scenes.start.pages[1]).toMatchObject({
+        type: 'choice',
+        prompt: 'Answer?',
+        options: [
+          { text: 'Smile', target: 'good', effects: [{ type: 'var:add', id: 'affection', value: 1 }, { type: 'unlock:cg', id: 'smile' }] },
+          { text: 'Stay quiet', target: 'normal', effects: [{ type: 'var:set', id: 'saw_letter', value: true }] },
+        ],
+      });
+      expect(hydrated.scenes.start.pages[2]).toMatchObject({
+        type: 'condition',
+        conditionMode: 'any',
+        conditions: [
+          { variableId: 'affection', operator: '>=', value: 1 },
+          { variableId: 'saw_letter', operator: '==', value: true },
+        ],
+        trueTarget: 'good',
+        falseTarget: 'normal',
+      });
+    });
+  });
+
   it('converts an agent DSL project manifest into an apply-plan manifest from the CLI', async () => {
     await withTempDir(async (dir) => {
       const sourceRoot = path.join(dir, 'agent-src');
@@ -527,6 +824,801 @@ scene normal "Normal":
             severity: 'error',
             code: 'dsl-syntax-error',
             message: 'Expected ":" after scene declaration.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('checks an agent DSL source without writing source, project, or artifact files', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'check.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'should-not-exist-plan.json');
+      const sourceMapPath = path.join(dir, 'should-not-exist-source-map.json');
+      const scriptSource = JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_check',
+        characters: {},
+        scenes: {},
+      });
+      await writeFile(dslPath, `
+title "DSL Check"
+character sakura "Sakura"
+variable affection number initial 0
+scene start "Start":
+  say sakura "Checked."
+`, 'utf8');
+      await writeFile(scriptPath, scriptSource, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-check',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        dslPath,
+        entryPath: dslPath,
+        manifestPath: null,
+        diagnostics: [],
+        operationCount: 4,
+        warningCount: 0,
+        validation: {
+          ok: true,
+          status: 'validated',
+          scriptPath,
+          errorCount: 0,
+        },
+        check: {
+          parsed: true,
+          bound: true,
+          analyzed: true,
+          emittedPlan: true,
+          validated: true,
+          wrote: false,
+        },
+      });
+      expect(result.validation.changedPaths).toEqual(expect.arrayContaining([
+        'characters.sakura',
+        'systems.variables.affection',
+        'scenes.start',
+        'scenes.start.pages.0',
+      ]));
+      expect(await readFile(scriptPath, 'utf8')).toBe(scriptSource);
+      await expect(stat(planPath)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(stat(sourceMapPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+  });
+
+  it('returns a structured dsl-check failure report for invalid agent DSL', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'broken-check.dsl');
+      await writeFile(dslPath, 'scene start "Start"\n  say "Missing colon."\n', 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-check',
+          dslPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath,
+        entryPath: dslPath,
+        manifestPath: null,
+        diagnostics: [
+          {
+            severity: 'error',
+            code: 'dsl-syntax-error',
+            message: 'Expected ":" after scene declaration.',
+          },
+        ],
+        operationCount: 0,
+        validation: null,
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unsafe dsl-check project manifest paths', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      await mkdir(sourceRoot, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '..',
+        entry: 'outside.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-check',
+          manifestPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'sourceRoot ".." must not contain traversal segments.',
+          },
+        ],
+        validation: null,
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('reports safe and stale generated regions from dsl-diff without writing files', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'diff.gmdsl');
+      const planPath = path.join(dir, 'diff-plan.json');
+      const sourceMapPath = path.join(dir, 'agent-dsl-source-map.json');
+      const enrichedSourceMapPath = path.join(dir, 'agent-dsl-source-map.applied.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+character sakura "Sakura"
+scene start "Start":
+  say sakura "Original."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_diff',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--json',
+      ]);
+      await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        sourceMapPath,
+        '--source-map-out',
+        enrichedSourceMapPath,
+        '--force',
+        '--json',
+      ]);
+
+      const generatedScript = await readFile(scriptPath, 'utf8');
+      const safeDiff = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-diff',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        enrichedSourceMapPath,
+        '--json',
+      ])).stdout);
+      expect(safeDiff).toMatchObject({
+        success: true,
+        ok: true,
+        dslPath,
+        scriptPath,
+        sourceMapPath: enrichedSourceMapPath,
+        mappingCount: 3,
+        staleCount: 0,
+        summary: {
+          safe: 3,
+          stale: 0,
+          missing: 0,
+          untracked: 0,
+          changed: 0,
+        },
+      });
+      expect(safeDiff.safeRegions).toHaveLength(3);
+      expect(await readFile(scriptPath, 'utf8')).toBe(generatedScript);
+
+      const edited = JSON.parse(generatedScript);
+      edited.scenes.start.pages[0].dialogues[0].text = 'Human edit.';
+      await writeFile(scriptPath, JSON.stringify(edited, null, 2), 'utf8');
+
+      let staleFailure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-diff',
+          dslPath,
+          '--script',
+          scriptPath,
+          '--source-map',
+          enrichedSourceMapPath,
+          '--json',
+        ]);
+      } catch (error) {
+        staleFailure = error;
+      }
+
+      expect(staleFailure).toBeTruthy();
+      const staleDiff = JSON.parse(staleFailure.stdout);
+      expect(staleDiff).toMatchObject({
+        success: false,
+        ok: false,
+        summary: {
+          safe: 1,
+          stale: 2,
+          missing: 0,
+          untracked: 0,
+          changed: 2,
+        },
+      });
+      expect(staleDiff.staleRegions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          operationId: 'dsl-add-scene-start',
+          status: 'stale',
+          projectPaths: ['scenes.start'],
+        }),
+        expect.objectContaining({
+          operationId: 'dsl-add-page-start-1',
+          status: 'stale',
+          projectPaths: ['scenes.start.pages.0'],
+        }),
+      ]));
+      expect(staleFailure.stderr).toBe('');
+    });
+  });
+
+  it('reports untracked dsl-diff regions when the source map is not enriched', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'untracked.gmdsl');
+      const sourceMapPath = path.join(dir, 'agent-dsl-source-map.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+scene start "Start":
+  say "Untracked."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_untracked',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              {
+                type: 'normal',
+                background: '',
+                characters: [],
+                bgm: null,
+                se: null,
+                dialogues: [{ speaker: null, text: 'Untracked.' }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--json',
+      ]);
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-diff',
+          dslPath,
+          '--script',
+          scriptPath,
+          '--source-map',
+          sourceMapPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        summary: {
+          safe: 0,
+          stale: 0,
+          missing: 0,
+          untracked: 2,
+          changed: 0,
+        },
+      });
+      expect(result.untrackedRegions).toHaveLength(2);
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unsafe dsl-diff project manifest paths', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      const scriptPath = path.join(dir, 'script.json');
+      await mkdir(sourceRoot, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_diff_path_safety',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '..',
+        entry: 'outside.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-diff',
+          manifestPath,
+          '--script',
+          scriptPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        command: 'dsl-diff',
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'sourceRoot ".." must not contain traversal segments.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('builds Agent DSL artifacts and validates without writing the project by default', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'build.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'build-plan.json');
+      const sourceMapPath = path.join(dir, 'build-source-map.json');
+      const checkPath = path.join(dir, 'build-check.json');
+      const scriptSource = JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_validate',
+        characters: {},
+        scenes: {},
+      });
+      await writeFile(dslPath, `
+character sakura "Sakura"
+scene start "Start":
+  say sakura "Build validated."
+`, 'utf8');
+      await writeFile(scriptPath, scriptSource, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--check-out',
+        checkPath,
+        '--validate-only',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+      const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+      const check = JSON.parse(await readFile(checkPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        status: 'validated',
+        dslPath,
+        scriptPath,
+        planPath,
+        sourceMapPath,
+        checkPath,
+        operationCount: 3,
+        validation: {
+          ok: true,
+          status: 'validated',
+        },
+        transaction: {
+          command: 'dsl-build',
+          status: 'validated',
+          wrote: false,
+        },
+      });
+      expect(plan.operations.map((operation) => operation.id)).toEqual([
+        'dsl-add-character-sakura',
+        'dsl-add-scene-start',
+        'dsl-add-page-start-1',
+      ]);
+      expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-page-start-1').fingerprint.generated).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(check.checkPath).toBe(checkPath);
+      expect(await readFile(scriptPath, 'utf8')).toBe(scriptSource);
+    });
+  });
+
+  it('writes a project only when dsl-build is explicitly asked to write', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'write-build.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const sourceMapPath = path.join(dir, 'write-source-map.json');
+      await writeFile(dslPath, `
+scene start "Start":
+  say "Written."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_write',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--write',
+        '--force',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        status: 'written',
+        transaction: {
+          command: 'dsl-build',
+          status: 'written',
+          wrote: true,
+          outPath: scriptPath,
+        },
+      });
+      expect(script.scenes.start.pages[0].dialogues[0].text).toBe('Written.');
+      expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-page-start-1').fingerprint.generated).toMatch(/^sha256:[a-f0-9]{64}$/);
+    });
+  });
+
+  it('blocks dsl-build writes when an enriched source map is stale', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'stale-build.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const sourceMapPath = path.join(dir, 'stale-source-map.json');
+      await writeFile(dslPath, `
+scene start "Start":
+  say "Generated."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_stale',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--write',
+        '--force',
+        '--json',
+      ]);
+      const edited = JSON.parse(await readFile(scriptPath, 'utf8'));
+      edited.scenes.start.pages[0].dialogues[0].text = 'Human polish.';
+      const editedSource = JSON.stringify(edited, null, 2);
+      await writeFile(scriptPath, editedSource, 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-build',
+          dslPath,
+          '--script',
+          scriptPath,
+          '--source-map',
+          sourceMapPath,
+          '--write',
+          '--force',
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        status: 'blocked',
+        blockedBy: 'source-map-stale',
+        transaction: {
+          command: 'dsl-build',
+          status: 'blocked',
+          wrote: false,
+        },
+        rebuildSafety: {
+          ok: false,
+          summary: {
+            safe: 0,
+            stale: 2,
+            missing: 0,
+            untracked: 0,
+            changed: 2,
+          },
+        },
+      });
+      expect(await readFile(scriptPath, 'utf8')).toBe(editedSource);
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unsafe dsl-build project manifest paths', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      const scriptPath = path.join(dir, 'script.json');
+      await mkdir(sourceRoot, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_path_safety',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '..',
+        entry: 'outside.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-build',
+          manifestPath,
+          '--script',
+          scriptPath,
+          '--validate-only',
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        command: 'dsl-build',
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'sourceRoot ".." must not contain traversal segments.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('formats Agent DSL in check-only mode without writing the source file', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'format.gmdsl');
+      const source = `
+title   "Format CLI"
+scene start "Start":
+    say "Spacing."
+`;
+      await writeFile(dslPath, source, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-format',
+        dslPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        dslPath,
+        mode: 'check',
+        changed: true,
+        wrote: false,
+        idempotent: true,
+      });
+      expect(result.formattedSource).toBe(`title "Format CLI"
+
+scene start "Start":
+  say "Spacing."
+`);
+      expect(await readFile(dslPath, 'utf8')).toBe(source);
+    });
+  });
+
+  it('writes Agent DSL formatting only with --write and remains idempotent', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'format-write.dsl');
+      await writeFile(dslPath, `
+scene start "Start":
+    say "Write."
+`, 'utf8');
+
+      const first = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-format',
+        dslPath,
+        '--write',
+        '--json',
+      ])).stdout);
+      const formatted = await readFile(dslPath, 'utf8');
+      const second = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-format',
+        dslPath,
+        '--write',
+        '--json',
+      ])).stdout);
+
+      expect(first).toMatchObject({
+        success: true,
+        ok: true,
+        mode: 'write',
+        changed: true,
+        wrote: true,
+        idempotent: true,
+      });
+      expect(formatted).toBe(`scene start "Start":
+  say "Write."
+`);
+      expect(second).toMatchObject({
+        success: true,
+        ok: true,
+        mode: 'write',
+        changed: false,
+        wrote: false,
+        idempotent: true,
+      });
+    });
+  });
+
+  it('returns structured diagnostics for invalid dsl-format input', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'format-broken.dsl');
+      await writeFile(dslPath, 'scene start "Start"\n  say "Missing colon."\n', 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-format',
+          dslPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        command: 'dsl-format',
+        success: false,
+        ok: false,
+        dslPath,
+        diagnostics: [
+          {
+            severity: 'error',
+            code: 'dsl-syntax-error',
+            message: 'Expected ":" after scene declaration.',
+          },
+        ],
+        changed: false,
+        wrote: false,
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects dsl-format manifest paths until multi-file formatting is defined', async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, 'project.gmdsl.json');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '.',
+        entry: 'main.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-format',
+          manifestPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        changed: false,
+        wrote: false,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'dsl-format only supports direct .dsl or .gmdsl source files.',
           },
         ],
       });

@@ -9,7 +9,12 @@ import { fileURLToPath } from 'node:url';
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentDslBuildArtifacts } from '../../src/authoring/agentDslPlan.js';
-import { enrichAgentDslSourceMapWithApplyResult } from '../../src/authoring/agentDsl/sourceMap.js';
+import { formatAgentDsl } from '../../src/authoring/agentDsl/formatter.js';
+import { createAgentDslSkeleton } from '../../src/authoring/agentDsl/skeleton.js';
+import {
+  checkAgentDslSourceMapStaleness,
+  enrichAgentDslSourceMapWithApplyResult,
+} from '../../src/authoring/agentDsl/sourceMap.js';
 import { loadAgentDslProject } from '../../src/authoring/agentDsl/project.js';
 import { AgentDslDiagnosticError } from '../../src/authoring/agentDsl/diagnostics.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
@@ -3311,6 +3316,648 @@ async function dslPlan(args) {
   return 0;
 }
 
+function createDslValidationFailure(operationResults, operation, index, error) {
+  const command = normalizePlanCommand(operation.command ?? operation.op);
+  const failure = {
+    index,
+    id: operation.id ?? null,
+    command: command || null,
+    status: 'failed',
+    code: error.code ?? 'apply-plan-operation-failed',
+    message: error.message,
+    missingParam: error.missingParam ?? undefined,
+    acceptedParams: error.acceptedParams ?? undefined,
+    supportedCommands: error.supportedCommands ?? undefined,
+  };
+  failure.suggestedAction = createApplyPlanFailureSuggestedAction(failure);
+  return {
+    ok: false,
+    status: 'failed',
+    operations: [
+      ...operationResults,
+      failure,
+    ],
+    operationFailure: failure,
+    changedPaths: uniqueValues(operationResults.flatMap((entry) => entry.changedPaths)),
+    validation: null,
+  };
+}
+
+function validateDslPlanInMemory(plan, script) {
+  const operations = Array.isArray(plan) ? plan : plan.operations;
+  const session = createProjectSession({ script });
+  const operationResults = [];
+  for (const [index, operation] of operations.entries()) {
+    const command = normalizePlanCommand(operation.command ?? operation.op);
+    try {
+      const result = applyPlanOperation(session, operation, index);
+      operationResults.push({
+        index,
+        id: operation.id ?? null,
+        command,
+        status: 'applied',
+        result,
+        changedPaths: getChangedPaths(result),
+      });
+    } catch (error) {
+      return createDslValidationFailure(operationResults, operation, index, error);
+    }
+  }
+
+  const validation = session.validate();
+  return {
+    ok: validation.ok,
+    status: validation.ok ? 'validated' : 'invalid',
+    operations: operationResults,
+    operationFailure: null,
+    changedPaths: uniqueValues(operationResults.flatMap((entry) => entry.changedPaths)),
+    project: session.toJSON(),
+    validation: {
+      ok: validation.ok,
+      errorCount: validation.errors.length,
+      warningCount: validation.warnings.length,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    },
+  };
+}
+
+function createDslCheckFailureOutput({ error, dslPath = null, project = null }) {
+  return {
+    success: false,
+    ok: false,
+    dslPath,
+    entryPath: project?.entryPath ?? null,
+    manifestPath: project?.manifestPath ?? null,
+    diagnostics: error.diagnostics ?? [],
+    operationCount: 0,
+    warningCount: 0,
+    validation: null,
+    error: error.message,
+  };
+}
+
+async function dslCheck(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-check requires an Agent DSL path');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  let project = null;
+  let output;
+  try {
+    project = await loadAgentDslProject(dslPath);
+    const { plan } = createAgentDslBuildArtifacts(project.source, {
+      title: getArgValue(args, '--title', undefined),
+      file: project.entryPath,
+      sourceRoot: project.sourceRoot,
+    });
+    const scriptPathArg = getArgValue(args, '--script', null);
+    let validation = null;
+    let changedPaths = [];
+    let applyOperationCount = 0;
+    if (scriptPathArg) {
+      const { scriptPath, script } = await readScript(args);
+      const validationResult = validateDslPlanInMemory(plan, script);
+      validation = {
+        scriptPath,
+        status: validationResult.status,
+        changedPaths: validationResult.changedPaths,
+        operationFailure: validationResult.operationFailure,
+        operations: validationResult.operations,
+        ...(validationResult.validation ?? {
+          ok: false,
+          errorCount: 0,
+          warningCount: 0,
+          errors: [],
+          warnings: [],
+        }),
+      };
+      changedPaths = validationResult.changedPaths;
+      applyOperationCount = validationResult.operations.length;
+    }
+
+    const ok = validation ? validation.ok : true;
+    output = {
+      success: ok,
+      ok,
+      dslPath,
+      entryPath: project.entryPath,
+      manifestPath: project.manifestPath,
+      diagnostics: [],
+      operationCount: plan.operations.length,
+      warningCount: plan.warnings.length,
+      warnings: plan.warnings,
+      validation,
+      check: {
+        parsed: true,
+        bound: true,
+        analyzed: true,
+        emittedPlan: true,
+        validated: Boolean(validation),
+        applyOperationCount,
+        changedPaths,
+        wrote: false,
+      },
+    };
+  } catch (error) {
+    if (!(error instanceof AgentDslDiagnosticError) && !Array.isArray(error?.diagnostics)) {
+      throw error;
+    }
+    output = createDslCheckFailureOutput({ error, dslPath, project });
+  }
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL check: ${dslPath}\n`);
+    process.stdout.write(`Status: ${output.ok ? 'OK' : 'FAILED'}\n`);
+    process.stdout.write(`Operations: ${output.operationCount}\n`);
+    process.stdout.write(`Warnings: ${output.warningCount}\n`);
+    if (output.validation) {
+      process.stdout.write(`Validation: ${output.validation.ok ? 'OK' : 'FAILED'}\n`);
+    }
+    for (const diagnostic of output.diagnostics ?? []) {
+      process.stdout.write(`[${diagnostic.severity}] ${diagnostic.code} ${diagnostic.message}\n`);
+    }
+    for (const issue of output.validation?.errors ?? []) {
+      printIssue(issue);
+    }
+    for (const issue of output.validation?.warnings ?? []) {
+      printIssue(issue);
+    }
+  }
+
+  return output.ok ? 0 : 1;
+}
+
+function countDslDiffStatuses(mappings = []) {
+  const summary = {
+    safe: 0,
+    stale: 0,
+    missing: 0,
+    untracked: 0,
+    changed: 0,
+  };
+  for (const mapping of mappings) {
+    if (Object.hasOwn(summary, mapping.status)) {
+      summary[mapping.status] += 1;
+    }
+    if (mapping.status === 'stale') {
+      summary.changed += 1;
+    }
+  }
+  return summary;
+}
+
+function filterDslDiffStatus(mappings, status) {
+  return mappings.filter((mapping) => mapping.status === status);
+}
+
+function resolveDslDiffSourceMapPath(args) {
+  const sourceMapPathArg = getArgValue(args, '--source-map', null);
+  return path.resolve(repoRoot, sourceMapPathArg ?? '.tmp/agent-dsl-source-map.applied.json');
+}
+
+async function dslDiff(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-diff requires an Agent DSL path');
+  }
+  if (!getArgValue(args, '--script', null)) {
+    throw new Error('dsl-diff requires --script');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  const sourceMapPath = resolveDslDiffSourceMapPath(args);
+  let project = null;
+  try {
+    project = await loadAgentDslProject(dslPath);
+    createAgentDslBuildArtifacts(project.source, {
+      title: getArgValue(args, '--title', undefined),
+      file: project.entryPath,
+      sourceRoot: project.sourceRoot,
+    });
+  } catch (error) {
+    if (!(error instanceof AgentDslDiagnosticError) && !Array.isArray(error?.diagnostics)) {
+      throw error;
+    }
+    const output = createDslCheckFailureOutput({ error, dslPath, project });
+    output.command = 'dsl-diff';
+    output.sourceMapPath = sourceMapPath;
+    if (hasFlag(args, '--json')) {
+      writeJson(output);
+    } else {
+      process.stdout.write(`Agent DSL diff: ${dslPath}\n`);
+      process.stdout.write('Status: FAILED\n');
+      for (const diagnostic of output.diagnostics ?? []) {
+        process.stdout.write(`[${diagnostic.severity}] ${diagnostic.code} ${diagnostic.message}\n`);
+      }
+    }
+    return 1;
+  }
+
+  const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+  const { scriptPath, script } = await readScript(args);
+  const diff = checkAgentDslSourceMapStaleness(sourceMap, script);
+  const summary = countDslDiffStatuses(diff.mappings);
+  const output = {
+    success: diff.ok,
+    ok: diff.ok,
+    dslPath,
+    entryPath: project.entryPath,
+    manifestPath: project.manifestPath,
+    scriptPath,
+    sourceMapPath,
+    mappingCount: diff.mappingCount,
+    staleCount: diff.staleCount,
+    summary,
+    regions: diff.mappings,
+    safeRegions: filterDslDiffStatus(diff.mappings, 'safe'),
+    staleRegions: filterDslDiffStatus(diff.mappings, 'stale'),
+    missingRegions: filterDslDiffStatus(diff.mappings, 'missing'),
+    untrackedRegions: filterDslDiffStatus(diff.mappings, 'untracked'),
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL diff: ${dslPath}\n`);
+    process.stdout.write(`Source map: ${sourceMapPath}\n`);
+    process.stdout.write(`Status: ${output.ok ? 'OK' : 'STALE'}\n`);
+    process.stdout.write(`Regions: ${output.mappingCount}\n`);
+    process.stdout.write(`Safe: ${summary.safe}\n`);
+    process.stdout.write(`Changed: ${summary.changed}\n`);
+    process.stdout.write(`Missing: ${summary.missing}\n`);
+    process.stdout.write(`Untracked: ${summary.untracked}\n`);
+  }
+
+  return output.ok ? 0 : 1;
+}
+
+async function writeJsonArtifact(args, flag, value) {
+  const outputPathArg = getArgValue(args, flag, null);
+  if (!outputPathArg) {
+    return null;
+  }
+
+  const outputPath = path.resolve(repoRoot, outputPathArg);
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  return outputPath;
+}
+
+async function readDslBuildSafetySourceMap(args) {
+  const explicitSourceMapPath = getArgValue(args, '--source-map', null);
+  const sourceMapPath = explicitSourceMapPath
+    ? path.resolve(repoRoot, explicitSourceMapPath)
+    : resolveDslDiffSourceMapPath(args);
+
+  if (!explicitSourceMapPath && !await pathExists(sourceMapPath)) {
+    return null;
+  }
+
+  return {
+    sourceMapPath,
+    sourceMap: JSON.parse(await readFile(sourceMapPath, 'utf8')),
+  };
+}
+
+function createDslBuildBlockedOutput({ dslPath, project, scriptPath, sourceMapPath, safety }) {
+  const summary = countDslDiffStatuses(safety.mappings);
+  return {
+    success: false,
+    ok: false,
+    dslPath,
+    entryPath: project.entryPath,
+    manifestPath: project.manifestPath,
+    scriptPath,
+    sourceMapPath,
+    status: 'blocked',
+    blockedBy: 'source-map-stale',
+    rebuildSafety: {
+      ok: false,
+      mappingCount: safety.mappingCount,
+      staleCount: safety.staleCount,
+      summary,
+      staleRegions: filterDslDiffStatus(safety.mappings, 'stale'),
+      missingRegions: filterDslDiffStatus(safety.mappings, 'missing'),
+      untrackedRegions: filterDslDiffStatus(safety.mappings, 'untracked'),
+    },
+    transaction: {
+      command: 'dsl-build',
+      status: 'blocked',
+      wrote: false,
+    },
+  };
+}
+
+async function dslBuild(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-build requires an Agent DSL path');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  let project = null;
+  let output;
+  try {
+    project = await loadAgentDslProject(dslPath);
+    const { plan, sourceMap } = createAgentDslBuildArtifacts(project.source, {
+      title: getArgValue(args, '--title', undefined),
+      file: project.entryPath,
+      sourceRoot: project.sourceRoot,
+    });
+
+    const requestedGate = hasFlag(args, '--validate-only')
+      || hasFlag(args, '--dry-run')
+      || hasFlag(args, '--write')
+      || hasFlag(args, '--apply');
+    const wantsWrite = hasFlag(args, '--write') || hasFlag(args, '--apply');
+    if (requestedGate && !getArgValue(args, '--script', null)) {
+      throw new Error('dsl-build requires --script when running validation, dry-run, or write gates');
+    }
+
+    let scriptPath = null;
+    let gate = null;
+    let enrichedSourceMap = sourceMap;
+    let rebuildSafety = null;
+    let writeResult = null;
+    let outPath = null;
+    if (requestedGate) {
+      const scriptInput = await readScript(args);
+      scriptPath = scriptInput.scriptPath;
+      if (wantsWrite) {
+        const safetyInput = await readDslBuildSafetySourceMap(args);
+        if (safetyInput) {
+          const safety = checkAgentDslSourceMapStaleness(safetyInput.sourceMap, scriptInput.script);
+          rebuildSafety = {
+            ok: safety.ok,
+            mappingCount: safety.mappingCount,
+            staleCount: safety.staleCount,
+            summary: countDslDiffStatuses(safety.mappings),
+          };
+          if (!safety.ok) {
+            output = createDslBuildBlockedOutput({
+              dslPath,
+              project,
+              scriptPath,
+              sourceMapPath: safetyInput.sourceMapPath,
+              safety,
+            });
+          }
+        } else {
+          rebuildSafety = {
+            ok: true,
+            checked: false,
+            reason: 'No existing enriched source map was found.',
+          };
+        }
+      }
+
+      if (!output) {
+        gate = validateDslPlanInMemory(plan, scriptInput.script);
+        if (gate.project) {
+          enrichedSourceMap = enrichAgentDslSourceMapWithApplyResult(sourceMap, {
+            operations: gate.operations,
+            project: gate.project,
+          });
+        }
+        if (wantsWrite && gate.validation?.ok) {
+          const outputPath = path.resolve(repoRoot, getArgValue(args, '--script', scriptPath));
+          writeResult = await writeScriptFile(outputPath, gate.project, {
+            force: hasFlag(args, '--force') || outputPath === scriptPath,
+            backup: hasFlag(args, '--backup'),
+            checkpoint: hasFlag(args, '--checkpoint'),
+          });
+          outPath = outputPath;
+        }
+      }
+    }
+
+    if (!output) {
+      const planPath = await writeJsonArtifact(args, '--out', plan);
+      const sourceMapPath = await writeJsonArtifact(args, '--source-map-out', enrichedSourceMap);
+      const validation = gate
+        ? {
+          status: gate.status,
+          operationFailure: gate.operationFailure,
+          operations: gate.operations,
+          changedPaths: gate.changedPaths,
+          ...(gate.validation ?? {
+            ok: false,
+            errorCount: 0,
+            warningCount: 0,
+            errors: [],
+            warnings: [],
+          }),
+        }
+        : null;
+      const ok = gate ? Boolean(gate.validation?.ok) : true;
+      const status = wantsWrite
+        ? (outPath ? 'written' : ok ? 'validated' : 'invalid')
+        : hasFlag(args, '--dry-run')
+          ? (ok ? 'planned' : 'invalid')
+          : hasFlag(args, '--validate-only')
+            ? (ok ? 'validated' : 'invalid')
+            : 'compiled';
+      output = {
+        success: ok,
+        ok,
+        dslPath,
+        entryPath: project.entryPath,
+        manifestPath: project.manifestPath,
+        scriptPath,
+        planPath,
+        sourceMapPath,
+        operationCount: plan.operations.length,
+        warningCount: plan.warnings.length,
+        warnings: plan.warnings,
+        status,
+        validation,
+        rebuildSafety,
+        transaction: {
+          command: 'dsl-build',
+          status,
+          wrote: Boolean(outPath),
+          outPath,
+          checkpointPath: writeResult?.checkpointPath ?? null,
+          backupPath: writeResult?.backupPath ?? null,
+        },
+      };
+    }
+
+    const checkPath = await writeJsonArtifact(args, '--check-out', output);
+    if (checkPath) {
+      output.checkPath = checkPath;
+      await writeFile(checkPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+    }
+  } catch (error) {
+    if (!(error instanceof AgentDslDiagnosticError) && !Array.isArray(error?.diagnostics)) {
+      throw error;
+    }
+    output = createDslCheckFailureOutput({ error, dslPath, project });
+    output.command = 'dsl-build';
+  }
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL build: ${dslPath}\n`);
+    process.stdout.write(`Status: ${output.status ?? (output.ok ? 'compiled' : 'failed')}\n`);
+    process.stdout.write(`Operations: ${output.operationCount ?? 0}\n`);
+    if (output.planPath) {
+      process.stdout.write(`Plan: ${output.planPath}\n`);
+    }
+    if (output.sourceMapPath) {
+      process.stdout.write(`Source map: ${output.sourceMapPath}\n`);
+    }
+    if (output.checkPath) {
+      process.stdout.write(`Check: ${output.checkPath}\n`);
+    }
+  }
+
+  return output.ok ? 0 : 1;
+}
+
+function createDslFormatPathFailure(dslPath, message) {
+  return {
+    success: false,
+    ok: false,
+    dslPath,
+    changed: false,
+    wrote: false,
+    diagnostics: [
+      {
+        severity: 'error',
+        code: 'dsl-invalid-include-path',
+        message,
+        source: {
+          file: dslPath,
+          line: 1,
+          column: 1,
+        },
+      },
+    ],
+    error: message,
+  };
+}
+
+async function dslFormat(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-format requires an Agent DSL source path');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  const extension = path.extname(dslPath);
+  let output;
+  if (!new Set(['.dsl', '.gmdsl']).has(extension)) {
+    output = createDslFormatPathFailure(dslPath, 'dsl-format only supports direct .dsl or .gmdsl source files.');
+  } else {
+    try {
+      const source = await readFile(dslPath, 'utf8');
+      const formattedSource = formatAgentDsl(source, { file: dslPath });
+      const changed = formattedSource !== source;
+      const write = hasFlag(args, '--write');
+      let idempotent = false;
+      if (write && changed) {
+        await writeFile(dslPath, formattedSource, 'utf8');
+      }
+      idempotent = formatAgentDsl(formattedSource, { file: dslPath }) === formattedSource;
+      output = {
+        success: true,
+        ok: true,
+        dslPath,
+        mode: write ? 'write' : 'check',
+        changed,
+        wrote: write && changed,
+        idempotent,
+        formattedSource: write ? undefined : formattedSource,
+      };
+    } catch (error) {
+      if (!(error instanceof AgentDslDiagnosticError) && !Array.isArray(error?.diagnostics)) {
+        throw error;
+      }
+      output = createDslCheckFailureOutput({ error, dslPath });
+      output.command = 'dsl-format';
+      output.changed = false;
+      output.wrote = false;
+    }
+  }
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else if (output.formattedSource !== undefined) {
+    process.stdout.write(output.formattedSource);
+  } else {
+    process.stdout.write(`Agent DSL format: ${dslPath}\n`);
+    process.stdout.write(`Status: ${output.ok ? 'OK' : 'FAILED'}\n`);
+    process.stdout.write(`Changed: ${output.changed ? 'yes' : 'no'}\n`);
+    process.stdout.write(`Wrote: ${output.wrote ? 'yes' : 'no'}\n`);
+  }
+
+  return output.ok ? 0 : 1;
+}
+
+async function dslSkeleton(args) {
+  if (!getArgValue(args, '--script', null)) {
+    throw new Error('dsl-skeleton requires --script');
+  }
+  const outPathArg = getArgValue(args, '--out', null);
+  if (!outPathArg) {
+    throw new Error('dsl-skeleton requires --out');
+  }
+
+  const { scriptPath, script } = await readScript(args);
+  const outPath = path.resolve(repoRoot, outPathArg);
+  if (!hasFlag(args, '--force') && await pathExists(outPath)) {
+    throw new Error(`Refusing to overwrite existing Agent DSL source: ${outPath}. Pass --force to replace it.`);
+  }
+
+  const skeleton = createAgentDslSkeleton(script, {
+    title: getArgValue(args, '--title', undefined),
+  });
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, skeleton.source, 'utf8');
+  const reportPath = await writeJsonArtifact(args, '--report-out', skeleton.report);
+
+  const output = {
+    success: true,
+    ok: true,
+    scriptPath,
+    outPath,
+    reportPath,
+    sourceMapPath: null,
+    sourceMapCreated: false,
+    wrote: true,
+    command: 'dsl-skeleton',
+    report: skeleton.report,
+    declarations: skeleton.report.declarations,
+    warningCount: skeleton.report.warningCount,
+    unsupportedCount: skeleton.report.unsupportedCount,
+    lossyCount: skeleton.report.lossyCount,
+    warnings: skeleton.report.warnings,
+    unsupported: skeleton.report.unsupported,
+    lossy: skeleton.report.lossy,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL skeleton: ${scriptPath}\n`);
+    process.stdout.write(`Wrote source: ${outPath}\n`);
+    if (reportPath) {
+      process.stdout.write(`Wrote report: ${reportPath}\n`);
+    }
+    process.stdout.write(`Warnings: ${output.warningCount}\n`);
+    process.stdout.write('Source map: not created\n');
+  }
+
+  return 0;
+}
+
 async function exportReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -6342,6 +6989,11 @@ function printHelp() {
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   draft-plan draft.json [--out plan.json] [--title title] [--require-adaptation-preview] [--json]
   dsl-plan story.dsl [--out plan.json] [--source-map-out source-map.json] [--title title] [--json]
+  dsl-check story.dsl [--script path] [--title title] [--json]
+  dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
+  dsl-build story.dsl [--script path] [--out plan.json] [--source-map source-map.json] [--source-map-out source-map.json] [--check-out check.json] [--validate-only|--dry-run|--write|--apply] [--force] [--json]
+  dsl-format story.dsl [--write] [--json]
+  dsl-skeleton --script path --out story.gmdsl [--report-out report.json] [--title title] [--force] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--source-map path] [--source-map-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -6508,6 +7160,31 @@ async function main() {
 
     if (command === 'dsl-plan') {
       process.exitCode = await dslPlan(args);
+      return;
+    }
+
+    if (command === 'dsl-check') {
+      process.exitCode = await dslCheck(args);
+      return;
+    }
+
+    if (command === 'dsl-diff') {
+      process.exitCode = await dslDiff(args);
+      return;
+    }
+
+    if (command === 'dsl-build') {
+      process.exitCode = await dslBuild(args);
+      return;
+    }
+
+    if (command === 'dsl-format') {
+      process.exitCode = await dslFormat(args);
+      return;
+    }
+
+    if (command === 'dsl-skeleton') {
+      process.exitCode = await dslSkeleton(args);
       return;
     }
 

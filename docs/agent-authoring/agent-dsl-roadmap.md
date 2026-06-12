@@ -48,18 +48,18 @@ And:
 
 ## 4. Phase Overview
 
-| Phase | Name | Primary Outcome |
-| --- | --- | --- |
-| P0 | Baseline MVP | Current `dsl-plan` compiler exists |
-| P1 | Formal Parser And Diagnostics | Tokenizer, AST, source spans, structured errors |
-| P2 | Semantic Model And Authoring IR | Symbol tables, IR, deterministic lowering |
-| P3 | Multi-File Projects | Includes, manifest, namespaces, macro libraries |
-| P4 | Route Logic And Expressions | Strict expression grammar and DSL-level semantic checks |
-| P5 | Source Maps And Rebuild Safety | Source maps, fingerprints, stale output detection |
-| P6 | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
-| P7 | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
-| P8 | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
-| P9 | Editor And Handoff Integration | Provenance display and review handoff support |
+| Phase | Status | Name | Primary Outcome |
+| --- | --- | --- | --- |
+| P0 | Implemented | Baseline MVP | Current `dsl-plan` compiler exists |
+| P1 | Implemented | Formal Parser And Diagnostics | Tokenizer, AST, source spans, structured errors |
+| P2 | Implemented | Semantic Model And Authoring IR | Symbol tables, IR, deterministic lowering |
+| P3 | Implemented | Multi-File Projects | Includes, manifest, namespaces, macro libraries |
+| P4 | Implemented | Route Logic And Expressions | Strict expression grammar and DSL-level semantic checks |
+| P5 | Implemented | Source Maps And Rebuild Safety | Source maps, fingerprints, stale output detection |
+| P6 | Planned | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
+| P7 | Planned | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
+| P8 | Planned | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
+| P9 | Planned | Editor And Handoff Integration | Provenance display and review handoff support |
 
 ## 5. P0 - Baseline MVP
 
@@ -410,6 +410,8 @@ Required fixtures:
 
 ## 10. P5 - Source Maps And Rebuild Safety
 
+**Status:** Implemented. Source map emission, operation provenance ids, apply-plan changed path enrichment, deterministic source/emitted/generated fingerprints, and stale generated-region detection API are complete. Full `dsl-diff`, incremental rebuild, and two-way sync remain later phases.
+
 ### Objective
 
 Map DSL source ranges to generated plan operations and project paths, then detect when editor-polished output has diverged from the generated source.
@@ -428,29 +430,29 @@ Use the architecture document's canonical shape.
 
 ### Implementation Tasks
 
-1. Emit source map from compiler.
-2. Include source map ids in operation provenance.
-3. After apply-plan dry-run or write, enrich mappings with changed paths.
-4. Compute emitted payload fingerprints.
-5. Implement stale check against current `script.json`.
-6. Add CLI-hidden internal helper first if full `dsl-diff` is P6.
+1. [x] Emit source map from compiler.
+2. [x] Include source map ids in operation provenance.
+3. [x] After apply-plan dry-run or write, enrich mappings with changed paths.
+4. [x] Compute emitted payload fingerprints.
+5. [x] Implement stale check against current `script.json`.
+6. [x] Add CLI-hidden internal helper first if full `dsl-diff` is P6.
 
 ### Tests
 
 Required tests:
 
-- source span maps to operation id;
-- operation id maps to changed path;
-- unchanged project path is not stale;
-- edited generated page is stale;
-- deleted generated scene is stale;
-- unrelated human edit outside generated paths is not stale.
+- [x] source span maps to operation id;
+- [x] operation id maps to changed path;
+- [x] unchanged project path is not stale;
+- [x] edited generated page is stale;
+- [x] deleted generated scene is stale;
+- [x] unrelated human edit outside generated paths is not stale.
 
 ### Acceptance Criteria
 
-- Rebuild tooling can identify whether a generated region is safe to replace.
-- Source map paths are project-relative.
-- Fingerprints are deterministic.
+- [x] Rebuild tooling can identify whether a generated region is safe to replace.
+- [x] Source map paths are project-relative.
+- [x] Fingerprints are deterministic.
 
 ### Do Not
 

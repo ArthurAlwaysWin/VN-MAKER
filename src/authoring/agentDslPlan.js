@@ -4,6 +4,7 @@ import { bindAgentDsl } from './agentDsl/binder.js';
 import { emitAgentDslPlan } from './agentDsl/emitPlan.js';
 import { lowerAgentDslToIr } from './agentDsl/ir.js';
 import { astToLineRecords, parseAgentDsl } from './agentDsl/parser.js';
+import { createAgentDslSourceMap } from './agentDsl/sourceMap.js';
 
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -263,8 +264,21 @@ export function createAgentDslIr(source, options = {}) {
 }
 
 export function createAgentDslPlan(source, options = {}) {
+  return createAgentDslBuildArtifacts(source, options).plan;
+}
+
+export function createAgentDslBuildArtifacts(source, options = {}) {
   const ir = createAgentDslIr(source, options);
-  return emitAgentDslPlan(ir, { title: ir.title });
+  const plan = emitAgentDslPlan(ir, { title: ir.title });
+  const sourceMap = createAgentDslSourceMap(ir, plan, {
+    sourceRoot: options.sourceRoot,
+    sourceText: source,
+  });
+  return {
+    ir,
+    plan,
+    sourceMap,
+  };
 }
 
 export function createAgentDslPlanFromJson(value = {}, options = {}) {

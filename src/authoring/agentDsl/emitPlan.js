@@ -1,3 +1,5 @@
+import { agentDslSourceMapIdForIndex } from './sourceMap.js';
+
 function cloneJsonValue(value) {
   if (value === undefined) {
     return undefined;
@@ -5,7 +7,7 @@ function cloneJsonValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function createProvenance(irOperation) {
+function createProvenance(irOperation, index) {
   const source = irOperation.source ?? {};
   return {
     kind: source.provenanceKind ?? 'agent-dsl',
@@ -13,45 +15,46 @@ function createProvenance(irOperation) {
     ...(source.file ? { file: source.file } : {}),
     ...(source.column ? { column: source.column } : {}),
     ...(irOperation.sourceId ? { sourceId: irOperation.sourceId } : {}),
+    sourceMapId: agentDslSourceMapIdForIndex(index),
     ...(source.details ?? {}),
   };
 }
 
-function createOperation(irOperation, command, params) {
+function createOperation(irOperation, command, params, index) {
   return {
     id: irOperation.stableId,
     command,
-    provenance: createProvenance(irOperation),
+    provenance: createProvenance(irOperation, index),
     params: cloneJsonValue(params),
   };
 }
 
-function emitOperation(irOperation) {
+function emitOperation(irOperation, index) {
   const payload = irOperation.payload ?? {};
   if (irOperation.kind === 'DeclareCharacter') {
-    return createOperation(irOperation, 'add-character', payload);
+    return createOperation(irOperation, 'add-character', payload, index);
   }
   if (irOperation.kind === 'DeclareVariable') {
     return createOperation(irOperation, payload.affection ? 'add-affection-variable' : 'add-variable', payload.affection ? {
       characterId: payload.characterId,
       id: payload.id,
-    } : payload);
+    } : payload, index);
   }
   if (irOperation.kind === 'DeclareEnding') {
-    return createOperation(irOperation, 'add-ending', payload);
+    return createOperation(irOperation, 'add-ending', payload, index);
   }
   if (irOperation.kind === 'DeclareCg') {
-    return createOperation(irOperation, 'add-cg', payload);
+    return createOperation(irOperation, 'add-cg', payload, index);
   }
   if (irOperation.kind === 'CreateScene') {
-    return createOperation(irOperation, 'add-scene', payload);
+    return createOperation(irOperation, 'add-scene', payload, index);
   }
   if (irOperation.kind === 'CreateNormalPage') {
     return createOperation(irOperation, 'add-page', {
       scene: payload.scene,
       type: 'normal',
       page: payload.page,
-    });
+    }, index);
   }
   if (irOperation.kind === 'CreateChoicePage') {
     return createOperation(irOperation, 'add-page', {
@@ -59,7 +62,7 @@ function emitOperation(irOperation) {
       type: 'choice',
       prompt: payload.prompt,
       options: payload.options,
-    });
+    }, index);
   }
   if (irOperation.kind === 'CreateConditionPage') {
     return createOperation(irOperation, 'add-page', {
@@ -69,13 +72,13 @@ function emitOperation(irOperation) {
       conditions: payload.conditions,
       trueTarget: payload.trueTarget,
       falseTarget: payload.falseTarget,
-    });
+    }, index);
   }
   if (irOperation.kind === 'SetSceneNext') {
     return createOperation(irOperation, 'set-scene-next', {
       scene: payload.scene,
       next: payload.next ?? null,
-    });
+    }, index);
   }
   throw new Error(`Unsupported Agent DSL IR operation kind: ${irOperation.kind}`);
 }

@@ -6,8 +6,10 @@ For the mature target architecture, see [agent-dsl-architecture.md](./agent-dsl-
 
 ```bash
 npm run vn:dsl-plan -- story.dsl --out .tmp/story-plan.json --json
+npm run vn:dsl-plan -- story.dsl --out .tmp/story-plan.json --source-map-out .tmp/agent-dsl-source-map.json --json
 npm run vn -- dsl-plan agent-src/project.gmdsl.json --out .tmp/story-plan.json --json
 npm run vn:apply-plan -- .tmp/story-plan.json --script public/game/script.json --validate-only --json
+npm run vn:apply-plan -- .tmp/story-plan.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.json --source-map-out .tmp/agent-dsl-source-map.applied.json --dry-run --json
 npm run vn:apply-plan -- .tmp/story-plan.json --script public/game/script.json --dry-run --json
 ```
 
@@ -154,3 +156,21 @@ Supported expressions are a single comparison, a flat `and` chain, or a flat `or
 Mixed or nested expressions such as `(affection >= 5 and saw_letter == true) or courage >= 3` are rejected with `dsl-nested-condition-unsupported` until nested condition groups exist in the project contract. `not` is rejected with `dsl-invalid-condition-expression`.
 
 Condition diagnostics include `dsl-unknown-condition-variable` for undeclared variables and `dsl-condition-type-mismatch` for incompatible comparisons, such as comparing a `string` variable with `> 2`.
+
+## Source Map Artifact
+
+P5 starts the rebuild-safety toolchain with an optional source map artifact:
+
+```bash
+npm run vn:dsl-plan -- agent-src/main.gmdsl --out .tmp/agent-dsl-plan.json --source-map-out .tmp/agent-dsl-source-map.json --json
+```
+
+The emitted `agent-dsl-source-map.json` records DSL source entries, source spans, plan operation ids, inferred project paths, and deterministic source/emitted fingerprints. Plan operation provenance includes `sourceMapId`, which matches the corresponding source map `mappings[].id`.
+
+After `apply-plan`, pass `--source-map` and `--source-map-out` to enrich mappings from operation result `changedPaths` and record `fingerprint.generated` from the applied project regions:
+
+```bash
+npm run vn:apply-plan -- .tmp/agent-dsl-plan.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.json --source-map-out .tmp/agent-dsl-source-map.applied.json --dry-run --json
+```
+
+The P5 stale-check API compares those generated-region fingerprints with the current `script.json` paths. Unchanged generated paths are safe, edited or deleted generated paths are stale, and unrelated human edits outside mapped generated paths do not make the source map stale. This is rebuild safety metadata only; full `dsl-diff` and incremental rebuild commands remain later tooling work.

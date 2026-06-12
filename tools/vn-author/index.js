@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
-import { createAgentDslPlan } from '../../src/authoring/agentDslPlan.js';
+import { createAgentDslBuildArtifacts } from '../../src/authoring/agentDslPlan.js';
+import { enrichAgentDslSourceMapWithApplyResult } from '../../src/authoring/agentDsl/sourceMap.js';
 import { loadAgentDslProject } from '../../src/authoring/agentDsl/project.js';
 import { AgentDslDiagnosticError } from '../../src/authoring/agentDsl/diagnostics.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
@@ -2678,6 +2679,28 @@ async function writeApplyPlanResultOut(args, output) {
   return resultOutPath;
 }
 
+async function writeApplyPlanSourceMap(args, applyPlanResult, project) {
+  const sourceMapPathArg = getArgValue(args, '--source-map', null);
+  if (!sourceMapPathArg) {
+    return null;
+  }
+
+  const sourceMapPath = path.resolve(repoRoot, sourceMapPathArg);
+  const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+  const enrichedSourceMap = enrichAgentDslSourceMapWithApplyResult(sourceMap, {
+    ...applyPlanResult,
+    project,
+  });
+  const outPath = path.resolve(repoRoot, getArgValue(args, '--source-map-out', sourceMapPathArg));
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, `${JSON.stringify(enrichedSourceMap, null, 2)}\n`, 'utf8');
+  return {
+    sourceMapPath,
+    sourceMapOutPath: outPath,
+    sourceMap: enrichedSourceMap,
+  };
+}
+
 const HANDOFF_SCREEN_IDS = new Set([
   'titleScreen',
   'settingsScreen',
@@ -2896,6 +2919,14 @@ async function applyPlan(args) {
     validation,
     ...(handoff ? { handoff } : {}),
   };
+  if (validation.ok || (!validateOnly && allowInvalid)) {
+    const sourceMapResult = await writeApplyPlanSourceMap(args, output, nextScript);
+    if (sourceMapResult) {
+      output.sourceMapPath = sourceMapResult.sourceMapPath;
+      output.sourceMapOutPath = sourceMapResult.sourceMapOutPath;
+      output.sourceMap = sourceMapResult.sourceMap;
+    }
+  }
   await writeApplyPlanResultOut(args, output);
 
   if (hasFlag(args, '--json')) {
@@ -2911,6 +2942,9 @@ async function applyPlan(args) {
     }
     if (output.resultOutPath) {
       process.stdout.write(`Result: ${output.resultOutPath}\n`);
+    }
+    if (output.sourceMapOutPath) {
+      process.stdout.write(`Source map: ${output.sourceMapOutPath}\n`);
     }
     if (changedPaths.length) {
       process.stdout.write(`Changed: ${changedPaths.join(', ')}\n`);
@@ -3230,9 +3264,10 @@ async function dslPlan(args) {
 
   const dslPath = path.resolve(repoRoot, dslPathArg);
   const project = await loadAgentDslProject(dslPath);
-  const plan = createAgentDslPlan(project.source, {
+  const { plan, sourceMap } = createAgentDslBuildArtifacts(project.source, {
     title: getArgValue(args, '--title', undefined),
     file: project.entryPath,
+    sourceRoot: project.sourceRoot,
   });
   const outPathArg = getArgValue(args, '--out', null);
   const outPath = outPathArg ? path.resolve(repoRoot, outPathArg) : null;
@@ -3240,15 +3275,23 @@ async function dslPlan(args) {
     await mkdir(path.dirname(outPath), { recursive: true });
     await writeFile(outPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
   }
+  const sourceMapOutPathArg = getArgValue(args, '--source-map-out', null);
+  const sourceMapPath = sourceMapOutPathArg ? path.resolve(repoRoot, sourceMapOutPathArg) : null;
+  if (sourceMapPath) {
+    await mkdir(path.dirname(sourceMapPath), { recursive: true });
+    await writeFile(sourceMapPath, `${JSON.stringify(sourceMap, null, 2)}\n`, 'utf8');
+  }
 
   const output = {
     dslPath,
     entryPath: project.entryPath,
     manifestPath: project.manifestPath,
     outPath,
+    sourceMapPath,
     operationCount: plan.operations.length,
     warningCount: plan.warnings.length,
     plan,
+    sourceMap,
   };
 
   if (hasFlag(args, '--json')) {
@@ -3259,6 +3302,9 @@ async function dslPlan(args) {
     process.stdout.write(`Warnings: ${output.warningCount}\n`);
     if (outPath) {
       process.stdout.write(`Wrote plan: ${outPath}\n`);
+    }
+    if (sourceMapPath) {
+      process.stdout.write(`Wrote source map: ${sourceMapPath}\n`);
     }
   }
 
@@ -6295,8 +6341,8 @@ function printHelp() {
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]
   draft-plan draft.json [--out plan.json] [--title title] [--require-adaptation-preview] [--json]
-  dsl-plan story.dsl [--out plan.json] [--title title] [--json]
-  apply-plan plan.json [--script path] [--out path] [--result-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
+  dsl-plan story.dsl [--out plan.json] [--source-map-out source-map.json] [--title title] [--json]
+  apply-plan plan.json [--script path] [--out path] [--result-out path] [--source-map path] [--source-map-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   scene-references --scene scene_id|--all [--script path] [--json]

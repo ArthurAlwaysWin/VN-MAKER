@@ -281,6 +281,8 @@ describe('vn-author CLI', () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'story.dsl');
       const planPath = path.join(dir, 'story-plan.json');
+      const sourceMapPath = path.join(dir, 'agent-dsl-source-map.json');
+      const enrichedSourceMapPath = path.join(dir, 'agent-dsl-source-map.applied.json');
       const scriptPath = path.join(dir, 'script.json');
       await writeFile(dslPath, `
 title "CLI Agent DSL"
@@ -317,13 +319,17 @@ scene bad "Bad":
         dslPath,
         '--out',
         planPath,
+        '--source-map-out',
+        sourceMapPath,
         '--json',
       ]);
       const result = JSON.parse(stdout);
       const plan = JSON.parse(await readFile(planPath, 'utf8'));
+      const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
 
       expect(result).toMatchObject({
         outPath: planPath,
+        sourceMapPath,
         operationCount: 9,
       });
       expect(plan.source).toMatchObject({
@@ -341,6 +347,16 @@ scene bad "Bad":
         'add-scene',
         'add-page',
       ]);
+      expect(plan.operations[0].provenance.sourceMapId).toBe('map-00001');
+      expect(sourceMap.compiler).toBe('agent-dsl');
+      expect(sourceMap.mappings[0]).toMatchObject({
+        id: 'map-00001',
+        operationId: 'dsl-add-character-sakura',
+        projectPaths: ['characters.sakura'],
+      });
+      expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-choice-start-2')).toMatchObject({
+        projectPaths: ['scenes.start.pages.1'],
+      });
 
       const validated = await execFileAsync('node', [
         cliPath,
@@ -348,14 +364,24 @@ scene bad "Bad":
         planPath,
         '--script',
         scriptPath,
+        '--source-map',
+        sourceMapPath,
+        '--source-map-out',
+        enrichedSourceMapPath,
         '--validate-only',
         '--json',
       ]);
       const validatedResult = JSON.parse(validated.stdout);
+      const enrichedSourceMap = JSON.parse(await readFile(enrichedSourceMapPath, 'utf8'));
       expect(validatedResult.transaction).toMatchObject({
         status: 'validated',
         wrote: false,
       });
+      expect(validatedResult.sourceMapOutPath).toBe(enrichedSourceMapPath);
+      expect(enrichedSourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-choice-start-2')).toMatchObject({
+        projectPaths: ['scenes.start.pages.1'],
+      });
+      expect(enrichedSourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-choice-start-2').fingerprint.generated).toMatch(/^sha256:[a-f0-9]{64}$/);
       expect(validatedResult.validation.ok).toBe(true);
       expect(validatedResult.changeSummary.changedPaths).toEqual(expect.arrayContaining([
         'characters.sakura',

@@ -60,15 +60,14 @@ The current implementation provides:
 - scene body statements for page staging, dialogue, choices, simple conditions, effects, jumps, camera, particles, and media
 - first-pass multi-file includes and namespaces
 - strict first-pass condition expressions for single comparisons, flat `and`, and flat `or`
+- P5 source map artifact emission with operation provenance ids, deterministic fingerprints, apply-plan enrichment, and stale generated-region checks
 - plan output that can be passed to `apply-plan`
 
 The implementation does not yet provide:
 
 - standalone `dsl-check`
-- source map artifacts
 - import declarations
 - incremental rebuild
-- stale-source detection
 - reverse skeleton generation from existing `script.json`
 - editor UI for DSL provenance
 
@@ -142,6 +141,8 @@ agent-src/
 ```
 
 Generated artifacts SHOULD NOT be treated as canonical source unless explicitly committed for review.
+
+The P5 implementation can emit `agent-dsl-source-map.json` from `dsl-plan --source-map-out`, then enrich it from `apply-plan --source-map --source-map-out`. It records source entries, mapping ids, operation ids, inferred or applied project paths, source/emitted fingerprints, and generated-region fingerprints for stale checks.
 
 ## 6. Compilation Pipeline
 
@@ -661,7 +662,8 @@ Canonical shape:
       ],
       "fingerprint": {
         "source": "sha256:...",
-        "emitted": "sha256:..."
+        "emitted": "sha256:...",
+        "generated": "sha256:..."
       }
     }
   ]
@@ -673,8 +675,8 @@ Rules:
 - Source map paths MUST be project-relative.
 - The map MUST support source-to-project lookup.
 - The map SHOULD support project-to-source lookup.
-- Fingerprints MUST be computed from normalized source and emitted payloads.
-- If a mapped project path changes in the editor, a future rebuild MUST report stale output instead of blindly overwriting it.
+- Fingerprints MUST be computed from normalized source, emitted payloads, and enriched generated project regions.
+- If a mapped project path changes in the editor, stale-check APIs MUST report stale output instead of blindly overwriting it.
 
 ## 13. Diagnostics Contract
 

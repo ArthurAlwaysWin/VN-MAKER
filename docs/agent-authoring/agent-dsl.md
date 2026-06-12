@@ -108,7 +108,7 @@ These diagnostics are reported by `createAgentDslPlan(source)` and `npm run vn:d
 
 The P1 AST is an internal compiler contract. Node kinds include `File`, declarations, `MacroDeclaration`, `MacroCall`, `SceneDeclaration`, page/staging/dialogue statements, `ChoiceStatement`, `OptionStatement`, `ConditionStatement`, `EffectStatement`, `JumpStatement`, `EndStatement`, `CameraStatement`, and `ParticlesStatement`. Plan output remains compatible with existing `apply-plan --validate-only` gates.
 
-The internal formatter normalizes spacing and indentation to two spaces per block, preserves supported standalone and inline comments, and is idempotent. The public `dsl-format` command remains a later roadmap item; until P6, agents should call `npm run vn:dsl-plan` for plan generation and should not rely on source rewriting as a workflow gate.
+The formatter normalizes spacing and indentation to two spaces per block, preserves supported standalone and inline comments, and is idempotent. Use `npm run vn -- dsl-format agent-src/main.gmdsl --json` for check-only formatting output, or add `--write` to update a single `.dsl`/`.gmdsl` source file.
 
 ## Authoring IR And Multi-File Projects
 

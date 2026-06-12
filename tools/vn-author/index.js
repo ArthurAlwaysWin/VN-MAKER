@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentDslBuildArtifacts } from '../../src/authoring/agentDslPlan.js';
+import { formatAgentDsl } from '../../src/authoring/agentDsl/formatter.js';
 import {
   checkAgentDslSourceMapStaleness,
   enrichAgentDslSourceMapWithApplyResult,
@@ -3819,6 +3820,86 @@ async function dslBuild(args) {
   return output.ok ? 0 : 1;
 }
 
+function createDslFormatPathFailure(dslPath, message) {
+  return {
+    success: false,
+    ok: false,
+    dslPath,
+    changed: false,
+    wrote: false,
+    diagnostics: [
+      {
+        severity: 'error',
+        code: 'dsl-invalid-include-path',
+        message,
+        source: {
+          file: dslPath,
+          line: 1,
+          column: 1,
+        },
+      },
+    ],
+    error: message,
+  };
+}
+
+async function dslFormat(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-format requires an Agent DSL source path');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  const extension = path.extname(dslPath);
+  let output;
+  if (!new Set(['.dsl', '.gmdsl']).has(extension)) {
+    output = createDslFormatPathFailure(dslPath, 'dsl-format only supports direct .dsl or .gmdsl source files.');
+  } else {
+    try {
+      const source = await readFile(dslPath, 'utf8');
+      const formattedSource = formatAgentDsl(source, { file: dslPath });
+      const changed = formattedSource !== source;
+      const write = hasFlag(args, '--write');
+      let idempotent = false;
+      if (write && changed) {
+        await writeFile(dslPath, formattedSource, 'utf8');
+      }
+      idempotent = formatAgentDsl(formattedSource, { file: dslPath }) === formattedSource;
+      output = {
+        success: true,
+        ok: true,
+        dslPath,
+        mode: write ? 'write' : 'check',
+        changed,
+        wrote: write && changed,
+        idempotent,
+        formattedSource: write ? undefined : formattedSource,
+      };
+    } catch (error) {
+      if (!(error instanceof AgentDslDiagnosticError) && !Array.isArray(error?.diagnostics)) {
+        throw error;
+      }
+      output = createDslCheckFailureOutput({ error, dslPath });
+      output.command = 'dsl-format';
+      output.changed = false;
+      output.wrote = false;
+    }
+  }
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else if (output.formattedSource !== undefined) {
+    process.stdout.write(output.formattedSource);
+  } else {
+    process.stdout.write(`Agent DSL format: ${dslPath}\n`);
+    process.stdout.write(`Status: ${output.ok ? 'OK' : 'FAILED'}\n`);
+    process.stdout.write(`Changed: ${output.changed ? 'yes' : 'no'}\n`);
+    process.stdout.write(`Wrote: ${output.wrote ? 'yes' : 'no'}\n`);
+  }
+
+  return output.ok ? 0 : 1;
+}
+
 async function exportReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -6853,6 +6934,7 @@ function printHelp() {
   dsl-check story.dsl [--script path] [--title title] [--json]
   dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
   dsl-build story.dsl [--script path] [--out plan.json] [--source-map source-map.json] [--source-map-out source-map.json] [--check-out check.json] [--validate-only|--dry-run|--write|--apply] [--force] [--json]
+  dsl-format story.dsl [--write] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--source-map path] [--source-map-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -7034,6 +7116,11 @@ async function main() {
 
     if (command === 'dsl-build') {
       process.exitCode = await dslBuild(args);
+      return;
+    }
+
+    if (command === 'dsl-format') {
+      process.exitCode = await dslFormat(args);
       return;
     }
 

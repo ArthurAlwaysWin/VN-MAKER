@@ -27,6 +27,7 @@
     "vn:dsl-check": "node tools/vn-author/index.js dsl-check",
     "vn:dsl-diff": "node tools/vn-author/index.js dsl-diff",
     "vn:dsl-build": "node tools/vn-author/index.js dsl-build",
+    "vn:dsl-format": "node tools/vn-author/index.js dsl-format",
     "vn:apply-plan": "node tools/vn-author/index.js apply-plan",
     "vn:restore-checkpoint": "node tools/vn-author/index.js restore-checkpoint",
     "vn:scene-references": "node tools/vn-author/index.js scene-references",

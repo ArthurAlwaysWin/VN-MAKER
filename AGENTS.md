@@ -97,6 +97,7 @@ npm run vn -- export-report --script "<scriptPath>" --json
 npm run vn -- dsl-check agent-src/main.gmdsl --script "<scriptPath>" --json
 npm run vn -- dsl-diff agent-src/main.gmdsl --script "<scriptPath>" --source-map .tmp/agent-dsl-source-map.applied.json --json
 npm run vn -- dsl-build agent-src/project.gmdsl.json --script "<scriptPath>" --validate-only --json
+npm run vn -- dsl-format agent-src/main.gmdsl --write --json
 ```
 
 Apply a multi-step plan:

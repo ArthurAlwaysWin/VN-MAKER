@@ -1169,6 +1169,166 @@ scene start "Start":
     });
   });
 
+  it('formats Agent DSL in check-only mode without writing the source file', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'format.gmdsl');
+      const source = `
+title   "Format CLI"
+scene start "Start":
+    say "Spacing."
+`;
+      await writeFile(dslPath, source, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-format',
+        dslPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        dslPath,
+        mode: 'check',
+        changed: true,
+        wrote: false,
+        idempotent: true,
+      });
+      expect(result.formattedSource).toBe(`title "Format CLI"
+
+scene start "Start":
+  say "Spacing."
+`);
+      expect(await readFile(dslPath, 'utf8')).toBe(source);
+    });
+  });
+
+  it('writes Agent DSL formatting only with --write and remains idempotent', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'format-write.dsl');
+      await writeFile(dslPath, `
+scene start "Start":
+    say "Write."
+`, 'utf8');
+
+      const first = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-format',
+        dslPath,
+        '--write',
+        '--json',
+      ])).stdout);
+      const formatted = await readFile(dslPath, 'utf8');
+      const second = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-format',
+        dslPath,
+        '--write',
+        '--json',
+      ])).stdout);
+
+      expect(first).toMatchObject({
+        success: true,
+        ok: true,
+        mode: 'write',
+        changed: true,
+        wrote: true,
+        idempotent: true,
+      });
+      expect(formatted).toBe(`scene start "Start":
+  say "Write."
+`);
+      expect(second).toMatchObject({
+        success: true,
+        ok: true,
+        mode: 'write',
+        changed: false,
+        wrote: false,
+        idempotent: true,
+      });
+    });
+  });
+
+  it('returns structured diagnostics for invalid dsl-format input', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'format-broken.dsl');
+      await writeFile(dslPath, 'scene start "Start"\n  say "Missing colon."\n', 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-format',
+          dslPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        command: 'dsl-format',
+        success: false,
+        ok: false,
+        dslPath,
+        diagnostics: [
+          {
+            severity: 'error',
+            code: 'dsl-syntax-error',
+            message: 'Expected ":" after scene declaration.',
+          },
+        ],
+        changed: false,
+        wrote: false,
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects dsl-format manifest paths until multi-file formatting is defined', async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, 'project.gmdsl.json');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '.',
+        entry: 'main.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-format',
+          manifestPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        changed: false,
+        wrote: false,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'dsl-format only supports direct .dsl or .gmdsl source files.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('exports a web build from the CLI after readiness passes', async () => {
     await withTempDir(async (dir) => {
       const { projectDir, appRoot } = await createExportFixture(dir);

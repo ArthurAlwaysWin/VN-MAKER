@@ -10,6 +10,7 @@ import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentDslBuildArtifacts } from '../../src/authoring/agentDslPlan.js';
 import { formatAgentDsl } from '../../src/authoring/agentDsl/formatter.js';
+import { createAgentDslSkeleton } from '../../src/authoring/agentDsl/skeleton.js';
 import {
   checkAgentDslSourceMapStaleness,
   enrichAgentDslSourceMapWithApplyResult,
@@ -3900,6 +3901,57 @@ async function dslFormat(args) {
   return output.ok ? 0 : 1;
 }
 
+async function dslSkeleton(args) {
+  if (!getArgValue(args, '--script', null)) {
+    throw new Error('dsl-skeleton requires --script');
+  }
+  const outPathArg = getArgValue(args, '--out', null);
+  if (!outPathArg) {
+    throw new Error('dsl-skeleton requires --out');
+  }
+
+  const { scriptPath, script } = await readScript(args);
+  const outPath = path.resolve(repoRoot, outPathArg);
+  if (!hasFlag(args, '--force') && await pathExists(outPath)) {
+    throw new Error(`Refusing to overwrite existing Agent DSL source: ${outPath}. Pass --force to replace it.`);
+  }
+
+  const skeleton = createAgentDslSkeleton(script, {
+    title: getArgValue(args, '--title', undefined),
+  });
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, skeleton.source, 'utf8');
+
+  const output = {
+    success: true,
+    ok: true,
+    scriptPath,
+    outPath,
+    sourceMapPath: null,
+    sourceMapCreated: false,
+    wrote: true,
+    command: 'dsl-skeleton',
+    declarations: skeleton.report.declarations,
+    warningCount: skeleton.report.warningCount,
+    unsupportedCount: skeleton.report.unsupportedCount,
+    lossyCount: skeleton.report.lossyCount,
+    warnings: skeleton.report.warnings,
+    unsupported: skeleton.report.unsupported,
+    lossy: skeleton.report.lossy,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL skeleton: ${scriptPath}\n`);
+    process.stdout.write(`Wrote source: ${outPath}\n`);
+    process.stdout.write(`Warnings: ${output.warningCount}\n`);
+    process.stdout.write('Source map: not created\n');
+  }
+
+  return 0;
+}
+
 async function exportReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -6935,6 +6987,7 @@ function printHelp() {
   dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
   dsl-build story.dsl [--script path] [--out plan.json] [--source-map source-map.json] [--source-map-out source-map.json] [--check-out check.json] [--validate-only|--dry-run|--write|--apply] [--force] [--json]
   dsl-format story.dsl [--write] [--json]
+  dsl-skeleton --script path --out story.gmdsl [--title title] [--force] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--source-map path] [--source-map-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -7121,6 +7174,11 @@ async function main() {
 
     if (command === 'dsl-format') {
       process.exitCode = await dslFormat(args);
+      return;
+    }
+
+    if (command === 'dsl-skeleton') {
+      process.exitCode = await dslSkeleton(args);
       return;
     }
 

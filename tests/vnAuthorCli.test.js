@@ -393,6 +393,99 @@ scene bad "Bad":
     });
   });
 
+  it('creates an Agent DSL starter skeleton from an existing script without a source map', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const dslPath = path.join(dir, 'agent-src', 'main.gmdsl');
+      const planPath = path.join(dir, 'skeleton-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_skeleton',
+        title: 'Skeleton CLI',
+        characters: {
+          sakura: {
+            name: 'Sakura',
+            expressions: { normal: 'characters/sakura_normal.png' },
+          },
+        },
+        systems: {
+          variables: {
+            affection: { type: 'number', initial: 1, label: 'Affection' },
+          },
+        },
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              {
+                id: 'opening',
+                type: 'normal',
+                dialogues: [{ speaker: 'sakura', text: 'Welcome.', expression: 'normal' }],
+              },
+              {
+                type: 'choice',
+                prompt: 'Continue?',
+                options: [{ text: 'Yes', target: null }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-skeleton',
+        '--script',
+        scriptPath,
+        '--out',
+        dslPath,
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const source = await readFile(dslPath, 'utf8');
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        scriptPath,
+        outPath: dslPath,
+        sourceMapPath: null,
+        sourceMapCreated: false,
+        wrote: true,
+        declarations: {
+          characters: 1,
+          variables: 1,
+          scenes: 1,
+          normalPages: 1,
+          dialogues: 1,
+        },
+        warningCount: 1,
+        unsupportedCount: 1,
+        lossyCount: 0,
+      });
+      expect(source).toContain('# This skeleton is a migration aid; it does not claim original DSL provenance.');
+      expect(source).toContain('character sakura "Sakura" expression normal "characters/sakura_normal.png"');
+      expect(source).toContain('  page opening:');
+      expect(source).toContain('  say sakura "Welcome." expression normal');
+      expect(source).toContain('# P7.1 skeleton did not convert choice page at scenes.start.pages.1.');
+
+      const plan = await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const planResult = JSON.parse(plan.stdout);
+      expect(planResult).toMatchObject({
+        dslPath,
+        sourceMapPath: null,
+        operationCount: 4,
+      });
+      await expect(stat(path.join(dir, 'agent-dsl-source-map.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+  });
+
   it('converts an agent DSL project manifest into an apply-plan manifest from the CLI', async () => {
     await withTempDir(async (dir) => {
       const sourceRoot = path.join(dir, 'agent-src');

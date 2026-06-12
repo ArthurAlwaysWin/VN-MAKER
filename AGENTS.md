@@ -95,6 +95,7 @@ npm run vn -- inspect --script "<scriptPath>" --json
 npm run vn -- validate --script "<scriptPath>" --json
 npm run vn -- export-report --script "<scriptPath>" --json
 npm run vn -- dsl-check agent-src/main.gmdsl --script "<scriptPath>" --json
+npm run vn -- dsl-diff agent-src/main.gmdsl --script "<scriptPath>" --source-map .tmp/agent-dsl-source-map.applied.json --json
 ```
 
 Apply a multi-step plan:

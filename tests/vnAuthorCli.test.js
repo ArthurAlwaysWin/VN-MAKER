@@ -684,6 +684,247 @@ scene start "Start":
     });
   });
 
+  it('reports safe and stale generated regions from dsl-diff without writing files', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'diff.gmdsl');
+      const planPath = path.join(dir, 'diff-plan.json');
+      const sourceMapPath = path.join(dir, 'agent-dsl-source-map.json');
+      const enrichedSourceMapPath = path.join(dir, 'agent-dsl-source-map.applied.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+character sakura "Sakura"
+scene start "Start":
+  say sakura "Original."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_diff',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--json',
+      ]);
+      await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        sourceMapPath,
+        '--source-map-out',
+        enrichedSourceMapPath,
+        '--force',
+        '--json',
+      ]);
+
+      const generatedScript = await readFile(scriptPath, 'utf8');
+      const safeDiff = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-diff',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        enrichedSourceMapPath,
+        '--json',
+      ])).stdout);
+      expect(safeDiff).toMatchObject({
+        success: true,
+        ok: true,
+        dslPath,
+        scriptPath,
+        sourceMapPath: enrichedSourceMapPath,
+        mappingCount: 3,
+        staleCount: 0,
+        summary: {
+          safe: 3,
+          stale: 0,
+          missing: 0,
+          untracked: 0,
+          changed: 0,
+        },
+      });
+      expect(safeDiff.safeRegions).toHaveLength(3);
+      expect(await readFile(scriptPath, 'utf8')).toBe(generatedScript);
+
+      const edited = JSON.parse(generatedScript);
+      edited.scenes.start.pages[0].dialogues[0].text = 'Human edit.';
+      await writeFile(scriptPath, JSON.stringify(edited, null, 2), 'utf8');
+
+      let staleFailure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-diff',
+          dslPath,
+          '--script',
+          scriptPath,
+          '--source-map',
+          enrichedSourceMapPath,
+          '--json',
+        ]);
+      } catch (error) {
+        staleFailure = error;
+      }
+
+      expect(staleFailure).toBeTruthy();
+      const staleDiff = JSON.parse(staleFailure.stdout);
+      expect(staleDiff).toMatchObject({
+        success: false,
+        ok: false,
+        summary: {
+          safe: 1,
+          stale: 2,
+          missing: 0,
+          untracked: 0,
+          changed: 2,
+        },
+      });
+      expect(staleDiff.staleRegions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          operationId: 'dsl-add-scene-start',
+          status: 'stale',
+          projectPaths: ['scenes.start'],
+        }),
+        expect.objectContaining({
+          operationId: 'dsl-add-page-start-1',
+          status: 'stale',
+          projectPaths: ['scenes.start.pages.0'],
+        }),
+      ]));
+      expect(staleFailure.stderr).toBe('');
+    });
+  });
+
+  it('reports untracked dsl-diff regions when the source map is not enriched', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'untracked.gmdsl');
+      const sourceMapPath = path.join(dir, 'agent-dsl-source-map.json');
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(dslPath, `
+scene start "Start":
+  say "Untracked."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_untracked',
+        characters: {},
+        scenes: {
+          start: {
+            name: 'Start',
+            pages: [
+              {
+                type: 'normal',
+                background: '',
+                characters: [],
+                bgm: null,
+                se: null,
+                dialogues: [{ speaker: null, text: 'Untracked.' }],
+              },
+            ],
+          },
+        },
+      }), 'utf8');
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--json',
+      ]);
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-diff',
+          dslPath,
+          '--script',
+          scriptPath,
+          '--source-map',
+          sourceMapPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        summary: {
+          safe: 0,
+          stale: 0,
+          missing: 0,
+          untracked: 2,
+          changed: 0,
+        },
+      });
+      expect(result.untrackedRegions).toHaveLength(2);
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unsafe dsl-diff project manifest paths', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      const scriptPath = path.join(dir, 'script.json');
+      await mkdir(sourceRoot, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_diff_path_safety',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '..',
+        entry: 'outside.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-diff',
+          manifestPath,
+          '--script',
+          scriptPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        command: 'dsl-diff',
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'sourceRoot ".." must not contain traversal segments.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('exports a web build from the CLI after readiness passes', async () => {
     await withTempDir(async (dir) => {
       const { projectDir, appRoot } = await createExportFixture(dir);

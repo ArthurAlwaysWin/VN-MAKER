@@ -9,7 +9,10 @@ import { fileURLToPath } from 'node:url';
 import { importNovelDraft } from '../../src/authoring/novelDraftImport.js';
 import { createNovelDraftPlan } from '../../src/authoring/novelDraftPlan.js';
 import { createAgentDslBuildArtifacts } from '../../src/authoring/agentDslPlan.js';
-import { enrichAgentDslSourceMapWithApplyResult } from '../../src/authoring/agentDsl/sourceMap.js';
+import {
+  checkAgentDslSourceMapStaleness,
+  enrichAgentDslSourceMapWithApplyResult,
+} from '../../src/authoring/agentDsl/sourceMap.js';
 import { loadAgentDslProject } from '../../src/authoring/agentDsl/project.js';
 import { AgentDslDiagnosticError } from '../../src/authoring/agentDsl/diagnostics.js';
 import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
@@ -3486,6 +3489,110 @@ async function dslCheck(args) {
   return output.ok ? 0 : 1;
 }
 
+function countDslDiffStatuses(mappings = []) {
+  const summary = {
+    safe: 0,
+    stale: 0,
+    missing: 0,
+    untracked: 0,
+    changed: 0,
+  };
+  for (const mapping of mappings) {
+    if (Object.hasOwn(summary, mapping.status)) {
+      summary[mapping.status] += 1;
+    }
+    if (mapping.status === 'stale') {
+      summary.changed += 1;
+    }
+  }
+  return summary;
+}
+
+function filterDslDiffStatus(mappings, status) {
+  return mappings.filter((mapping) => mapping.status === status);
+}
+
+function resolveDslDiffSourceMapPath(args) {
+  const sourceMapPathArg = getArgValue(args, '--source-map', null);
+  return path.resolve(repoRoot, sourceMapPathArg ?? '.tmp/agent-dsl-source-map.applied.json');
+}
+
+async function dslDiff(args) {
+  const dslPathArg = args.find((arg) => !arg.startsWith('--'));
+  if (!dslPathArg) {
+    throw new Error('dsl-diff requires an Agent DSL path');
+  }
+  if (!getArgValue(args, '--script', null)) {
+    throw new Error('dsl-diff requires --script');
+  }
+
+  const dslPath = path.resolve(repoRoot, dslPathArg);
+  const sourceMapPath = resolveDslDiffSourceMapPath(args);
+  let project = null;
+  try {
+    project = await loadAgentDslProject(dslPath);
+    createAgentDslBuildArtifacts(project.source, {
+      title: getArgValue(args, '--title', undefined),
+      file: project.entryPath,
+      sourceRoot: project.sourceRoot,
+    });
+  } catch (error) {
+    if (!(error instanceof AgentDslDiagnosticError) && !Array.isArray(error?.diagnostics)) {
+      throw error;
+    }
+    const output = createDslCheckFailureOutput({ error, dslPath, project });
+    output.command = 'dsl-diff';
+    output.sourceMapPath = sourceMapPath;
+    if (hasFlag(args, '--json')) {
+      writeJson(output);
+    } else {
+      process.stdout.write(`Agent DSL diff: ${dslPath}\n`);
+      process.stdout.write('Status: FAILED\n');
+      for (const diagnostic of output.diagnostics ?? []) {
+        process.stdout.write(`[${diagnostic.severity}] ${diagnostic.code} ${diagnostic.message}\n`);
+      }
+    }
+    return 1;
+  }
+
+  const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+  const { scriptPath, script } = await readScript(args);
+  const diff = checkAgentDslSourceMapStaleness(sourceMap, script);
+  const summary = countDslDiffStatuses(diff.mappings);
+  const output = {
+    success: diff.ok,
+    ok: diff.ok,
+    dslPath,
+    entryPath: project.entryPath,
+    manifestPath: project.manifestPath,
+    scriptPath,
+    sourceMapPath,
+    mappingCount: diff.mappingCount,
+    staleCount: diff.staleCount,
+    summary,
+    regions: diff.mappings,
+    safeRegions: filterDslDiffStatus(diff.mappings, 'safe'),
+    staleRegions: filterDslDiffStatus(diff.mappings, 'stale'),
+    missingRegions: filterDslDiffStatus(diff.mappings, 'missing'),
+    untrackedRegions: filterDslDiffStatus(diff.mappings, 'untracked'),
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Agent DSL diff: ${dslPath}\n`);
+    process.stdout.write(`Source map: ${sourceMapPath}\n`);
+    process.stdout.write(`Status: ${output.ok ? 'OK' : 'STALE'}\n`);
+    process.stdout.write(`Regions: ${output.mappingCount}\n`);
+    process.stdout.write(`Safe: ${summary.safe}\n`);
+    process.stdout.write(`Changed: ${summary.changed}\n`);
+    process.stdout.write(`Missing: ${summary.missing}\n`);
+    process.stdout.write(`Untracked: ${summary.untracked}\n`);
+  }
+
+  return output.ok ? 0 : 1;
+}
+
 async function exportReport(args) {
   const { scriptPath, script } = await readScript(args);
   const validationOptions = await getValidationOptions(args, scriptPath);
@@ -6518,6 +6625,7 @@ function printHelp() {
   draft-plan draft.json [--out plan.json] [--title title] [--require-adaptation-preview] [--json]
   dsl-plan story.dsl [--out plan.json] [--source-map-out source-map.json] [--title title] [--json]
   dsl-check story.dsl [--script path] [--title title] [--json]
+  dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--source-map path] [--source-map-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -6689,6 +6797,11 @@ async function main() {
 
     if (command === 'dsl-check') {
       process.exitCode = await dslCheck(args);
+      return;
+    }
+
+    if (command === 'dsl-diff') {
+      process.exitCode = await dslDiff(args);
       return;
     }
 

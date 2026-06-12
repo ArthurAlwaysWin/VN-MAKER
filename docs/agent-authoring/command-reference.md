@@ -44,6 +44,7 @@ These commands run outside an apply-plan manifest:
 | `draft-plan` | Converts a structured prose-derived draft into deterministic operations. | `--require-adaptation-preview` requires approved adaptation-preview metadata before conversion. |
 | `dsl-plan` | Converts agent-facing DSL source or `project.gmdsl.json` into a deterministic apply-plan manifest. | Compile-time macros/includes/namespaces only; output must still pass `apply-plan --validate-only`. Pass `--source-map-out path` to also write the first P5 source map artifact. |
 | `dsl-check` | Checks agent-facing DSL source or `project.gmdsl.json` without writing source, plan, source-map, or project files. | Parses, binds, analyzes, emits the plan in memory, and when `--script` is present applies the generated operations to an in-memory project session for validate-only reporting. |
+| `dsl-diff` | Compares a P5 enriched Agent DSL source map against the current `script.json` without writing files. | Pass `--source-map` to select the enriched map; otherwise the command reads `.tmp/agent-dsl-source-map.applied.json`. Reports safe, changed/stale, missing, and untracked generated regions. |
 | `export-web` | Exports the current project as a static web game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 | `export-desktop` | Exports the current project as a desktop game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 
@@ -53,6 +54,7 @@ These commands run outside an apply-plan manifest:
 npm run vn -- dsl-plan agent-src/project.gmdsl.json --out .tmp/plan.json --json
 npm run vn -- dsl-plan agent-src/project.gmdsl.json --out .tmp/plan.json --source-map-out .tmp/agent-dsl-source-map.json --json
 npm run vn -- dsl-check agent-src/project.gmdsl.json --script public/game/script.json --json
+npm run vn -- dsl-diff agent-src/project.gmdsl.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.applied.json --json
 npm run vn -- apply-plan .tmp/plan.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.json --source-map-out .tmp/agent-dsl-source-map.applied.json --dry-run --json
 ```
 

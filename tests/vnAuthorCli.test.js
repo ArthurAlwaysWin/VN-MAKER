@@ -925,6 +925,250 @@ scene start "Start":
     });
   });
 
+  it('builds Agent DSL artifacts and validates without writing the project by default', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'build.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'build-plan.json');
+      const sourceMapPath = path.join(dir, 'build-source-map.json');
+      const checkPath = path.join(dir, 'build-check.json');
+      const scriptSource = JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_validate',
+        characters: {},
+        scenes: {},
+      });
+      await writeFile(dslPath, `
+character sakura "Sakura"
+scene start "Start":
+  say sakura "Build validated."
+`, 'utf8');
+      await writeFile(scriptPath, scriptSource, 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--check-out',
+        checkPath,
+        '--validate-only',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+      const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+      const check = JSON.parse(await readFile(checkPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        status: 'validated',
+        dslPath,
+        scriptPath,
+        planPath,
+        sourceMapPath,
+        checkPath,
+        operationCount: 3,
+        validation: {
+          ok: true,
+          status: 'validated',
+        },
+        transaction: {
+          command: 'dsl-build',
+          status: 'validated',
+          wrote: false,
+        },
+      });
+      expect(plan.operations.map((operation) => operation.id)).toEqual([
+        'dsl-add-character-sakura',
+        'dsl-add-scene-start',
+        'dsl-add-page-start-1',
+      ]);
+      expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-page-start-1').fingerprint.generated).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(check.checkPath).toBe(checkPath);
+      expect(await readFile(scriptPath, 'utf8')).toBe(scriptSource);
+    });
+  });
+
+  it('writes a project only when dsl-build is explicitly asked to write', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'write-build.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const sourceMapPath = path.join(dir, 'write-source-map.json');
+      await writeFile(dslPath, `
+scene start "Start":
+  say "Written."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_write',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const { stdout } = await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--write',
+        '--force',
+        '--json',
+      ]);
+      const result = JSON.parse(stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+
+      expect(result).toMatchObject({
+        success: true,
+        ok: true,
+        status: 'written',
+        transaction: {
+          command: 'dsl-build',
+          status: 'written',
+          wrote: true,
+          outPath: scriptPath,
+        },
+      });
+      expect(script.scenes.start.pages[0].dialogues[0].text).toBe('Written.');
+      expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-page-start-1').fingerprint.generated).toMatch(/^sha256:[a-f0-9]{64}$/);
+    });
+  });
+
+  it('blocks dsl-build writes when an enriched source map is stale', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'stale-build.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const sourceMapPath = path.join(dir, 'stale-source-map.json');
+      await writeFile(dslPath, `
+scene start "Start":
+  say "Generated."
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_stale',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--write',
+        '--force',
+        '--json',
+      ]);
+      const edited = JSON.parse(await readFile(scriptPath, 'utf8'));
+      edited.scenes.start.pages[0].dialogues[0].text = 'Human polish.';
+      const editedSource = JSON.stringify(edited, null, 2);
+      await writeFile(scriptPath, editedSource, 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-build',
+          dslPath,
+          '--script',
+          scriptPath,
+          '--source-map',
+          sourceMapPath,
+          '--write',
+          '--force',
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        success: false,
+        ok: false,
+        status: 'blocked',
+        blockedBy: 'source-map-stale',
+        transaction: {
+          command: 'dsl-build',
+          status: 'blocked',
+          wrote: false,
+        },
+        rebuildSafety: {
+          ok: false,
+          summary: {
+            safe: 0,
+            stale: 2,
+            missing: 0,
+            untracked: 0,
+            changed: 2,
+          },
+        },
+      });
+      expect(await readFile(scriptPath, 'utf8')).toBe(editedSource);
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unsafe dsl-build project manifest paths', async () => {
+    await withTempDir(async (dir) => {
+      const sourceRoot = path.join(dir, 'agent-src');
+      const scriptPath = path.join(dir, 'script.json');
+      await mkdir(sourceRoot, { recursive: true });
+      const manifestPath = path.join(sourceRoot, 'project.gmdsl.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_build_path_safety',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(manifestPath, JSON.stringify({
+        version: 1,
+        sourceRoot: '..',
+        entry: 'outside.gmdsl',
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'dsl-build',
+          manifestPath,
+          '--script',
+          scriptPath,
+          '--validate-only',
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      const result = JSON.parse(failure.stdout);
+      expect(result).toMatchObject({
+        command: 'dsl-build',
+        success: false,
+        ok: false,
+        dslPath: manifestPath,
+        diagnostics: [
+          {
+            code: 'dsl-invalid-include-path',
+            message: 'sourceRoot ".." must not contain traversal segments.',
+          },
+        ],
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('exports a web build from the CLI after readiness passes', async () => {
     await withTempDir(async (dir) => {
       const { projectDir, appRoot } = await createExportFixture(dir);

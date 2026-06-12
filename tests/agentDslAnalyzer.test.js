@@ -267,4 +267,51 @@ scene start "Start":
       }),
     ]);
   });
+
+  it('accepts route templates and exposes generated route targets', () => {
+    const result = analyzeSource(`
+character sakura "Sakura"
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+scene start "Start":
+  choice "Route?":
+    option "Good" -> sakura_good
+    option "Normal" -> sakura_normal
+`);
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('reports invalid route templates before plan emission', () => {
+    const result = analyzeSource(`
+route sakura:
+  affection score sakura_affection
+  good_end same_end
+  normal_end normal_end
+  bonus maybe
+character sakura "Sakura"
+`);
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'dsl-invalid-route-template',
+        message: 'Route "sakura" must be declared after character "sakura".',
+      }),
+      expect.objectContaining({
+        code: 'dsl-invalid-route-template',
+        message: 'Route affection field syntax is: affection variable <variable_id>.',
+      }),
+      expect.objectContaining({
+        code: 'dsl-invalid-route-template',
+        message: 'Unsupported route field "bonus".',
+      }),
+      expect.objectContaining({
+        code: 'dsl-invalid-route-template',
+        message: 'Route "sakura" requires affection variable.',
+      }),
+    ]);
+  });
 });

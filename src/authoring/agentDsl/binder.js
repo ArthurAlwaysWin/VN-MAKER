@@ -10,6 +10,7 @@ const DECLARATION_TABLES = {
   CgDeclaration: 'cgs',
   PresetDeclaration: 'presets',
   SequenceDeclaration: 'sequences',
+  RouteDeclaration: 'routes',
 };
 
 function createSymbolTables() {
@@ -22,6 +23,7 @@ function createSymbolTables() {
     cgs: new Map(),
     presets: new Map(),
     sequences: new Map(),
+    routes: new Map(),
   };
 }
 
@@ -30,6 +32,9 @@ function symbolIdFor(node) {
     return `${node.category}:${node.id}`;
   }
   if (node.kind === 'SequenceDeclaration') {
+    return node.id;
+  }
+  if (node.kind === 'RouteDeclaration') {
     return node.id;
   }
   if (node.kind === 'AffectionDeclaration') {
@@ -44,6 +49,9 @@ function symbolTokenFor(node) {
   }
   if (node.kind === 'SequenceDeclaration') {
     return node.line?.tokens?.[1] ?? null;
+  }
+  if (node.symbolToken) {
+    return node.symbolToken;
   }
   if (node.kind === 'AffectionDeclaration') {
     return node.line?.tokens?.[2] ?? node.line?.tokens?.[1] ?? null;
@@ -97,6 +105,54 @@ function addSymbol(tables, tableName, id, node, diagnostics) {
   });
 }
 
+function routeFieldValue(node, field) {
+  const entry = (node.body ?? []).find((child) => child.field === field);
+  if (!entry) return null;
+  if (field === 'affection') {
+    return entry.tokens?.[1] === 'variable' ? entry.tokens?.[2] : null;
+  }
+  return entry.tokens?.[1] ?? null;
+}
+
+function routeFieldToken(node, field) {
+  const entry = (node.body ?? []).find((child) => child.field === field);
+  if (!entry) return null;
+  if (field === 'affection') {
+    return entry.line?.tokens?.[2] ?? entry.line?.tokens?.[1] ?? null;
+  }
+  return entry.line?.tokens?.[1] ?? null;
+}
+
+function addRouteGeneratedSymbols(tables, node, diagnostics) {
+  const affectionVariable = routeFieldValue(node, 'affection');
+  const goodEnd = routeFieldValue(node, 'good_end');
+  const normalEnd = routeFieldValue(node, 'normal_end');
+  if (affectionVariable) {
+    addSymbol(tables, 'variables', affectionVariable, {
+      ...node,
+      kind: 'RouteGeneratedVariable',
+      id: affectionVariable,
+      symbolToken: routeFieldToken(node, 'affection'),
+    }, diagnostics);
+  }
+  for (const [field, id] of [['good_end', goodEnd], ['normal_end', normalEnd]]) {
+    if (!id) continue;
+    const symbolToken = routeFieldToken(node, field);
+    addSymbol(tables, 'endings', id, {
+      ...node,
+      kind: 'RouteGeneratedEnding',
+      id,
+      symbolToken,
+    }, diagnostics);
+    addSymbol(tables, 'scenes', id, {
+      ...node,
+      kind: 'RouteGeneratedScene',
+      id,
+      symbolToken,
+    }, diagnostics);
+  }
+}
+
 export function bindAgentDsl(ast) {
   const symbols = createSymbolTables();
   const diagnostics = [];
@@ -105,6 +161,9 @@ export function bindAgentDsl(ast) {
     const tableName = DECLARATION_TABLES[node.kind];
     if (!tableName) continue;
     addSymbol(symbols, tableName, symbolIdFor(node), node, diagnostics);
+    if (node.kind === 'RouteDeclaration') {
+      addRouteGeneratedSymbols(symbols, node, diagnostics);
+    }
   }
 
   return {

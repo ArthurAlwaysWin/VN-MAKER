@@ -227,6 +227,46 @@ scene start "Start":
     }
   });
 
+  it('lowers route templates to variables, endings, and ending scenes', () => {
+    const ir = createAgentDslIr(`
+character sakura "Sakura"
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+scene start "Start":
+  jump sakura_good
+`);
+
+    expect(ir.operations.map((operation) => operation.kind)).toEqual([
+      'DeclareCharacter',
+      'DeclareVariable',
+      'DeclareEnding',
+      'DeclareEnding',
+      'CreateScene',
+      'CreateNormalPage',
+      'CreateScene',
+      'CreateNormalPage',
+      'CreateScene',
+      'SetSceneNext',
+    ]);
+    expect(ir.operations.find((operation) => operation.stableId === 'dsl-add-route-affection-sakura')).toMatchObject({
+      payload: { affection: true, characterId: 'sakura', id: 'sakura_affection' },
+    });
+    expect(ir.operations.find((operation) => operation.stableId === 'dsl-add-route-ending-sakura_good')).toMatchObject({
+      payload: { id: 'sakura_good', title: 'Sakura Good End', category: 'route', hiddenUntilUnlocked: true },
+    });
+    expect(ir.operations.find((operation) => operation.stableId === 'dsl-add-route-page-sakura_good')).toMatchObject({
+      payload: {
+        scene: 'sakura_good',
+        page: {
+          dialogues: [{ speaker: null, text: 'Sakura Good End', expression: null, voice: null }],
+          effects: [{ type: 'unlock:ending', id: 'sakura_good' }],
+        },
+      },
+    });
+  });
+
   it('lowers choices and conditions to dedicated IR operations', () => {
     const ir = createAgentDslIr(`
 character sakura "Sakura"

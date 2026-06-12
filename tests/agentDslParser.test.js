@@ -158,6 +158,36 @@ scene start "Start":
     });
   });
 
+  it('parses route templates', () => {
+    const result = parseAgentDsl(`
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(true);
+    expect(result.ast.body[0]).toMatchObject({
+      kind: 'RouteDeclaration',
+      id: 'sakura',
+      body: [
+        { kind: 'RouteFieldStatement', field: 'affection', tokens: ['affection', 'variable', 'sakura_affection'] },
+        { kind: 'RouteFieldStatement', field: 'good_end', tokens: ['good_end', 'sakura_good'] },
+        { kind: 'RouteFieldStatement', field: 'normal_end', tokens: ['normal_end', 'sakura_normal'] },
+      ],
+    });
+  });
+
+  it('reports malformed route templates', () => {
+    const result = parseAgentDsl('route sakura\n  affection variable sakura_affection\n', { file: 'story.dsl' });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: 'dsl-syntax-error',
+      message: 'Expected ":" after route declaration.',
+    });
+  });
+
   it('reports malformed preset declarations', () => {
     const result = parseAgentDsl('preset mood rainy_school\n  particles rain\n', { file: 'story.dsl' });
 

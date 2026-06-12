@@ -18,6 +18,11 @@ sequence dramatic_entrance(character, expression):
     show   $character $expression at center animation fade-in
     camera   shake medium 450
 
+route sakura:
+    affection   variable sakura_affection
+    good_end   sakura_good
+    normal_end sakura_normal
+
 macro entrance(character, expression):
     show   $character $expression at center animation fade-in
 
@@ -46,6 +51,11 @@ preset mood rainy_school:
 sequence dramatic_entrance(character, expression):
   show $character $expression at center animation fade-in
   camera shake medium 450
+
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
 
 macro entrance(character, expression):
   show $character $expression at center animation fade-in

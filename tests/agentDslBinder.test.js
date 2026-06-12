@@ -23,19 +23,24 @@ preset mood rainy_school:
   particles rain
 sequence dramatic_entrance(character):
   show $character
+route sakura:
+  affection variable route_affection
+  good_end route_good
+  normal_end route_normal
 scene start "Start":
   say "Hello."
 `);
 
     expect(result.ok).toBe(true);
     expect([...result.symbols.characters.keys()]).toEqual(['sakura']);
-    expect([...result.symbols.variables.keys()]).toEqual(['affection', 'sakura_affection']);
-    expect([...result.symbols.endings.keys()]).toEqual(['good']);
+    expect([...result.symbols.variables.keys()]).toEqual(['affection', 'sakura_affection', 'route_affection']);
+    expect([...result.symbols.endings.keys()]).toEqual(['good', 'route_good', 'route_normal']);
     expect([...result.symbols.cgs.keys()]).toEqual(['first_smile']);
     expect([...result.symbols.macros.keys()]).toEqual(['entrance']);
     expect([...result.symbols.presets.keys()]).toEqual(['mood:rainy_school']);
     expect([...result.symbols.sequences.keys()]).toEqual(['dramatic_entrance']);
-    expect([...result.symbols.scenes.keys()]).toEqual(['start']);
+    expect([...result.symbols.routes.keys()]).toEqual(['sakura']);
+    expect([...result.symbols.scenes.keys()]).toEqual(['route_good', 'route_normal', 'start']);
   });
 
   it('reports duplicate symbols inside the same symbol table', () => {

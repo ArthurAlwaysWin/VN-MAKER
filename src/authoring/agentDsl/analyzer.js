@@ -37,6 +37,7 @@ const SEQUENCE_BODY_STATEMENT_KINDS = new Set([
 const CG_FIELD_KEYS = new Set(['image', 'images', 'thumbnail', 'lockedThumbnail', 'locked-thumbnail']);
 const CHARACTER_FIELD_KEYS = new Set(['expression']);
 const MEDIA_STATEMENT_KINDS = new Set(['BackgroundStatement', 'BgmStatement', 'SeStatement']);
+const ROUTE_FIELDS = new Set(['affection', 'good_end', 'normal_end']);
 
 function tokenText(token) {
   return agentDslTokenText(token);
@@ -370,6 +371,93 @@ function analyzeSequenceDeclaration(diagnostics, symbols, node, options) {
   }
 }
 
+function routeFieldNode(node, field) {
+  return (node.body ?? []).find((child) => child.field === field) ?? null;
+}
+
+function routeFieldValue(node, field) {
+  const entry = routeFieldNode(node, field);
+  if (!entry) return null;
+  if (field === 'affection') {
+    return entry.tokens?.[1] === 'variable' ? entry.tokens?.[2] : null;
+  }
+  return entry.tokens?.[1] ?? null;
+}
+
+function analyzeRouteDeclaration(diagnostics, symbols, node) {
+  analyzeCharacterReference(diagnostics, symbols, node.id, tokenAt(node.line, 1), node);
+  const characterSymbol = symbols?.characters?.get(node.id);
+  if (characterSymbol?.span?.start?.line > node.span?.start?.line) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.invalidRouteTemplate,
+      `Route "${node.id}" must be declared after character "${node.id}".`,
+      tokenAt(node.line, 1),
+      node,
+      {
+        summary: 'Move the route template below its character declaration so generated affection variables can be applied.',
+        repairHint: {
+          action: 'move-route-after-character',
+          characterId: node.id,
+        },
+      },
+    ));
+  }
+  for (const child of node.body ?? []) {
+    if (!ROUTE_FIELDS.has(child.field)) {
+      diagnostics.push(diagnosticFromToken(
+        DIAGNOSTIC_CODES.invalidRouteTemplate,
+        `Unsupported route field "${child.field}".`,
+        child.line?.tokens?.[0],
+        child,
+        {
+          summary: 'Use affection variable, good_end, or normal_end.',
+          repairHint: {
+            action: 'replace-route-field',
+            supportedFields: [...ROUTE_FIELDS],
+          },
+        },
+      ));
+      continue;
+    }
+    if (child.field === 'affection' && (child.tokens?.[1] !== 'variable' || !child.tokens?.[2])) {
+      diagnostics.push(diagnosticFromToken(
+        DIAGNOSTIC_CODES.invalidRouteTemplate,
+        'Route affection field syntax is: affection variable <variable_id>.',
+        child.line?.tokens?.[0],
+        child,
+      ));
+    } else if ((child.field === 'good_end' || child.field === 'normal_end') && !child.tokens?.[1]) {
+      diagnostics.push(diagnosticFromToken(
+        DIAGNOSTIC_CODES.invalidRouteTemplate,
+        `Route ${child.field} field requires an ending/scene id.`,
+        child.line?.tokens?.[0],
+        child,
+      ));
+    }
+  }
+
+  for (const field of ROUTE_FIELDS) {
+    if (routeFieldValue(node, field)) continue;
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.invalidRouteTemplate,
+      `Route "${node.id}" requires ${field === 'affection' ? 'affection variable' : field}.`,
+      tokenAt(node.line, 0),
+      node,
+    ));
+  }
+
+  const goodEnd = routeFieldValue(node, 'good_end');
+  const normalEnd = routeFieldValue(node, 'normal_end');
+  if (goodEnd && normalEnd && goodEnd === normalEnd) {
+    diagnostics.push(diagnosticFromToken(
+      DIAGNOSTIC_CODES.invalidRouteTemplate,
+      `Route "${node.id}" good_end and normal_end must be different ids.`,
+      routeFieldNode(node, 'normal_end')?.line?.tokens?.[1],
+      routeFieldNode(node, 'normal_end') ?? node,
+    ));
+  }
+}
+
 function analyzeCondition(diagnostics, symbols, node) {
   const parsed = node.condition ? { condition: node.condition, diagnostics: [] } : parseConditionStatement(node.line);
   diagnostics.push(...parsed.diagnostics);
@@ -485,6 +573,10 @@ function visitNode(node, symbols, diagnostics, options) {
   }
   if (node.kind === 'SequenceDeclaration') {
     analyzeSequenceDeclaration(diagnostics, symbols, node, options);
+    return;
+  }
+  if (node.kind === 'RouteDeclaration') {
+    analyzeRouteDeclaration(diagnostics, symbols, node);
     return;
   }
   if (node.kind === 'SceneDeclaration') {

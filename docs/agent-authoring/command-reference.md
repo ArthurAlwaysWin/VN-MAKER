@@ -42,7 +42,7 @@ These commands run outside an apply-plan manifest:
 | --- | --- | --- |
 | `review-handoff` | Runs `author-check` and `handoff-report` as one continuous gate, optionally writes the combined result with `--review-out`, and supports `--write-editor-handoff`. | `--capture-preview` captures screenshots; `--require-preview-screenshot` requires captured preview targets to pass quality checks. |
 | `draft-plan` | Converts a structured prose-derived draft into deterministic operations. | `--require-adaptation-preview` requires approved adaptation-preview metadata before conversion. |
-| `dsl-plan` | Converts agent-facing DSL source or `project.gmdsl.json` into a deterministic apply-plan manifest. | Compile-time macros/includes/namespaces, P8.1 `mood` presets, and P8.2 reusable sequences only; output must still pass `apply-plan --validate-only`. Pass `--source-map-out path` to also write the first P5 source map artifact. |
+| `dsl-plan` | Converts agent-facing DSL source or `project.gmdsl.json` into a deterministic apply-plan manifest. | Compile-time macros/includes/namespaces, P8.1 `mood` presets, P8.2 reusable sequences, and P8.3 route templates only; output must still pass `apply-plan --validate-only`. Pass `--source-map-out path` to also write the first P5 source map artifact. |
 | `dsl-check` | Checks agent-facing DSL source or `project.gmdsl.json` without writing source, plan, source-map, or project files. | Parses, binds, analyzes, emits the plan in memory, and when `--script` is present applies the generated operations to an in-memory project session for validate-only reporting. |
 | `dsl-diff` | Compares a P5 enriched Agent DSL source map against the current `script.json` without writing files. | Pass `--source-map` to select the enriched map; otherwise the command reads `.tmp/agent-dsl-source-map.applied.json`. Reports safe, changed/stale, missing, and untracked generated regions. |
 | `dsl-build` | Runs the DSL compile pipeline and optional apply-plan gates without writing project data by default. | `--out`, `--source-map-out`, and `--check-out` write artifacts. `--validate-only` and `--dry-run` run in memory. Project writes require explicit `--write` or `--apply`; when `--source-map` is provided, stale generated regions block the write. |
@@ -91,6 +91,19 @@ scene start "Start":
 ```
 
 `dsl-plan` expands the sequence before emitting the plan. Scene-body sequences become ordinary page data; option-body sequences can become ordinary choice effects.
+
+P8.3 route template example:
+
+```text
+character sakura "Sakura"
+
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+```
+
+`dsl-plan` lowers the route to ordinary `add-affection-variable`, `add-ending`, `add-scene`, and `add-page` operations.
 
 ## Read-Only Project Commands
 

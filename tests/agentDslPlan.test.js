@@ -172,4 +172,35 @@ scene start "Start":
       },
     });
   });
+
+  it('emits route templates as existing apply-plan operations', () => {
+    const plan = createAgentDslPlan(`
+character sakura "Sakura"
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+`);
+
+    expect(plan.operations.map((operation) => operation.command)).toEqual([
+      'add-character',
+      'add-affection-variable',
+      'add-ending',
+      'add-ending',
+      'add-scene',
+      'add-page',
+      'add-scene',
+      'add-page',
+    ]);
+    expect(plan.operations.find((operation) => operation.id === 'dsl-add-route-page-sakura_good')).toMatchObject({
+      command: 'add-page',
+      params: {
+        scene: 'sakura_good',
+        type: 'normal',
+        page: {
+          effects: [{ type: 'unlock:ending', id: 'sakura_good' }],
+        },
+      },
+    });
+  });
 });

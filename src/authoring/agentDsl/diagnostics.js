@@ -12,6 +12,7 @@ export const DIAGNOSTIC_CODES = {
   unknownSequence: 'dsl-unknown-sequence',
   sequenceArityMismatch: 'dsl-sequence-arity-mismatch',
   sequenceRecursionLimit: 'dsl-sequence-recursion-limit',
+  invalidRouteTemplate: 'dsl-invalid-route-template',
   unknownSceneTarget: 'dsl-unknown-scene-target',
   unknownCharacter: 'dsl-unknown-character',
   unknownVariable: 'dsl-unknown-variable',

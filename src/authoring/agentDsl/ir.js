@@ -462,6 +462,116 @@ function createEmptyPage(id = null) {
   };
 }
 
+function titleFromId(value) {
+  return String(value ?? '')
+    .split(/[_\-\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function routeFieldValue(block, field) {
+  const line = block.find((entry) => tokenize(entry.trimmed)[0] === field);
+  if (!line) return null;
+  const tokens = tokenize(line.trimmed);
+  if (field === 'affection') {
+    return tokens[1] === 'variable' ? tokens[2] : null;
+  }
+  return tokens[1] ?? null;
+}
+
+function createRouteEndingPage(endingId, title) {
+  return {
+    type: 'normal',
+    background: '',
+    characters: [],
+    bgm: null,
+    se: null,
+    dialogues: [{ speaker: null, text: title, expression: null, voice: null }],
+    transition: { type: 'fade', duration: 800 },
+    effects: [{ type: 'unlock:ending', id: endingId }],
+  };
+}
+
+function lowerRoute(lines, startIndex) {
+  const line = lines[startIndex];
+  const tokens = tokenize(line.trimmed.replace(/:\s*$/, ''));
+  const routeId = slugifyId(tokens[1], `route_${line.number}`);
+  if (!routeId) {
+    fail(line, 'route requires an id', DIAGNOSTIC_CODES.invalidRouteTemplate);
+  }
+  const { block, nextIndex } = collectIndentedBlock(lines, startIndex + 1, line.indent);
+  const affectionVariable = routeFieldValue(block, 'affection');
+  const goodEnd = routeFieldValue(block, 'good_end');
+  const normalEnd = routeFieldValue(block, 'normal_end');
+  if (!affectionVariable || !goodEnd || !normalEnd) {
+    fail(line, 'route requires affection variable, good_end, and normal_end fields', DIAGNOSTIC_CODES.invalidRouteTemplate);
+  }
+
+  const routeLabel = titleFromId(routeId);
+  const goodTitle = `${routeLabel} Good End`;
+  const normalTitle = `${routeLabel} Normal End`;
+  const operations = [
+    createIrOperation(
+      'DeclareVariable',
+      { affection: true, characterId: routeId, id: affectionVariable },
+      line,
+      `dsl-add-route-affection-${routeId}`,
+      'route-template',
+      { routeId, variableId: affectionVariable },
+    ),
+    createIrOperation(
+      'DeclareEnding',
+      { id: goodEnd, title: goodTitle, category: 'route', hiddenUntilUnlocked: true },
+      line,
+      `dsl-add-route-ending-${goodEnd}`,
+      'route-template',
+      { routeId, endingId: goodEnd },
+    ),
+    createIrOperation(
+      'DeclareEnding',
+      { id: normalEnd, title: normalTitle, category: 'route', hiddenUntilUnlocked: true },
+      line,
+      `dsl-add-route-ending-${normalEnd}`,
+      'route-template',
+      { routeId, endingId: normalEnd },
+    ),
+    createIrOperation(
+      'CreateScene',
+      { id: goodEnd, name: goodTitle },
+      line,
+      `dsl-add-route-scene-${goodEnd}`,
+      'route-template',
+      { routeId, sceneId: goodEnd },
+    ),
+    createIrOperation(
+      'CreateNormalPage',
+      { scene: goodEnd, page: createRouteEndingPage(goodEnd, goodTitle) },
+      line,
+      `dsl-add-route-page-${goodEnd}`,
+      'route-template',
+      { routeId, sceneId: goodEnd, pageIndex: 0 },
+    ),
+    createIrOperation(
+      'CreateScene',
+      { id: normalEnd, name: normalTitle },
+      line,
+      `dsl-add-route-scene-${normalEnd}`,
+      'route-template',
+      { routeId, sceneId: normalEnd },
+    ),
+    createIrOperation(
+      'CreateNormalPage',
+      { scene: normalEnd, page: createRouteEndingPage(normalEnd, normalTitle) },
+      line,
+      `dsl-add-route-page-${normalEnd}`,
+      'route-template',
+      { routeId, sceneId: normalEnd, pageIndex: 0 },
+    ),
+  ];
+  return { nextIndex, operations };
+}
+
 function pageHasContent(page) {
   return Boolean(
     page.id
@@ -713,6 +823,12 @@ export function lowerAgentDslToIr(ast, options = {}) {
     if (command === 'cg') {
       operations.push(parseCg(line));
       index += 1;
+      continue;
+    }
+    if (command === 'route') {
+      const loweredRoute = lowerRoute(lines, index);
+      operations.push(...loweredRoute.operations);
+      index = loweredRoute.nextIndex;
       continue;
     }
     if (command === 'scene') {

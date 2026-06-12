@@ -50,6 +50,15 @@ sequence dramatic_entrance(character, expression):
   camera shake medium 450
 ```
 
+Route templates create the common affection/ending/scaffold pattern for a character route:
+
+```text
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+```
+
 Scene bodies support normal page staging, dialogue, choices, simple condition routing, and terminal jumps:
 
 ```text
@@ -109,6 +118,7 @@ Current P1 diagnostic coverage includes:
 - `dsl-macro-recursion-limit` for recursive or runaway macro expansion.
 - `dsl-invalid-preset` and `dsl-unknown-preset` for malformed, unsupported, or undeclared cinematic presets.
 - `dsl-invalid-sequence`, `dsl-unknown-sequence`, `dsl-sequence-arity-mismatch`, and `dsl-sequence-recursion-limit` for malformed or unsafe sequence abstractions.
+- `dsl-invalid-route-template` for malformed route templates.
 
 ## Semantic Binder And Analyzer
 
@@ -212,6 +222,37 @@ choice "Answer?":
 ```
 
 Sequence bodies currently accept page statements, staging/media/dialogue statements, `preset` uses, `call` macro uses, nested `sequence` uses, and effect statements intended for choice-option bodies. Choices, conditions, jumps, and terminal `end` statements are rejected in sequence bodies. If a sequence expands effect statements into a scene body, or page/dialogue statements into an option body, the normal parser/analyzer rejects the expanded source before plan emission.
+
+## Route Templates
+
+P8.3 adds character route templates:
+
+```text
+character sakura "Sakura"
+
+route sakura:
+  affection variable sakura_affection
+  good_end sakura_good
+  normal_end sakura_normal
+```
+
+The route id must match an already declared character id. Compilation emits existing editable project data only:
+
+- an affection variable through `add-affection-variable`;
+- two hidden ending registry entries through `add-ending`;
+- two basic ending scenes through `add-scene`;
+- one normal page in each ending scene through `add-page`, with page-enter `unlock:ending` effects.
+
+Generated scene ids and ending ids use the `good_end` and `normal_end` values. Other DSL route targets can point at those generated scenes:
+
+```text
+scene start "Start":
+  choice "Route?":
+    option "Good" -> sakura_good
+    option "Normal" -> sakura_normal
+```
+
+Route templates do not create runtime route logic, hidden metadata, or custom script fields. Branching remains ordinary choice, jump, and condition pages.
 
 ## Condition Expressions
 

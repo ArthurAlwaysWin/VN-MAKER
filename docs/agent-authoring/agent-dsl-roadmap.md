@@ -583,7 +583,7 @@ Required tests:
 
 ## 13. P8 - Advanced Authoring Abstractions
 
-**Status:** P8.1 implemented for compile-time cinematic `mood` presets. P8.2 implemented for reusable compile-time sequences. P8.3 route templates remain planned.
+**Status:** P8.1 implemented for compile-time cinematic `mood` presets. P8.2 implemented for reusable compile-time sequences. P8.3 implemented for basic affection/ending route templates. P8.4 final polish remains planned.
 
 ### Objective
 
@@ -616,6 +616,8 @@ route sakura:
   good_end good
   normal_end normal
 ```
+
+Implemented P8.3 route templates generate an affection variable, hidden good/normal ending registry entries, and editable good/normal ending scenes with page-enter `unlock:ending` effects. They do not generate runtime route logic or hidden metadata; normal choices, jumps, and conditions still drive branching.
 
 - cinematic presets:
 

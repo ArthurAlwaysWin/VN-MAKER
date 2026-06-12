@@ -62,6 +62,7 @@ The current implementation provides:
 - strict first-pass condition expressions for single comparisons, flat `and`, and flat `or`
 - compile-time cinematic mood presets that expand to existing page staging fields
 - compile-time reusable sequences with scalar parameters that expand to page statements or option effects
+- compile-time route templates that emit affection variables, ending registry entries, and editable ending scenes
 - P5 source map artifact emission with operation provenance ids, deterministic fingerprints, apply-plan enrichment, and stale generated-region checks
 - plan output that can be passed to `apply-plan`
 
@@ -401,6 +402,28 @@ Rules:
 - A sequence used in a choice option body must expand to valid option effect statements.
 - Choices, conditions, jumps, terminal `end` statements, arbitrary code, or runtime hooks MUST be rejected.
 
+### 8.5c Route Templates
+
+```ebnf
+route_decl       = "route" , identifier , ":" , route_body ;
+route_body       = indented_block , affection_route_field , good_end_route_field , normal_end_route_field ;
+affection_route_field
+                 = "affection" , "variable" , identifier ;
+good_end_route_field
+                 = "good_end" , identifier ;
+normal_end_route_field
+                 = "normal_end" , identifier ;
+```
+
+Rules:
+
+- Route templates are compile-time only.
+- The route id MUST match a declared character id and SHOULD appear after that character declaration.
+- `affection variable` lowers to `add-affection-variable`.
+- `good_end` and `normal_end` lower to `add-ending`, `add-scene`, and a normal `add-page` with page-enter `unlock:ending`.
+- Generated scene ids and ending ids are the `good_end` and `normal_end` values.
+- Route templates MUST NOT create runtime route logic, hidden metadata, arbitrary code, or custom project fields.
+
 ### 8.5a Cinematic Presets
 
 ```ebnf
@@ -577,6 +600,8 @@ Minimum mature AST node kinds:
 - `PresetUseStatement`
 - `SequenceDeclaration`
 - `SequenceUseStatement`
+- `RouteDeclaration`
+- `RouteFieldStatement`
 - `SceneDeclaration`
 - `PageStatement`
 - `BackgroundStatement`
@@ -774,6 +799,7 @@ Stable diagnostic codes:
 - `dsl-unknown-sequence`
 - `dsl-sequence-arity-mismatch`
 - `dsl-sequence-recursion-limit`
+- `dsl-invalid-route-template`
 - `dsl-unknown-symbol`
 - `dsl-unknown-scene-target`
 - `dsl-unknown-character`
@@ -800,6 +826,7 @@ The binder MUST create these symbol tables:
 - scenes
 - macros
 - sequences
+- routes
 - characters
 - variables
 - endings

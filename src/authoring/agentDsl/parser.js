@@ -3,7 +3,7 @@ import { parseConditionStatement } from './conditionExpression.js';
 import { createDiagnostic, DIAGNOSTIC_CODES, hasErrors } from './diagnostics.js';
 import { lexAgentDsl } from './lexer.js';
 
-const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'preset', 'sequence', 'scene']);
+const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'preset', 'sequence', 'route', 'scene']);
 const SCENE_STATEMENTS = new Set([
   'page',
   'bg',
@@ -122,6 +122,7 @@ class Parser {
     if (command === 'macro') return this.parseMacroDeclaration();
     if (command === 'preset') return this.parsePresetDeclaration();
     if (command === 'sequence') return this.parseSequenceDeclaration();
+    if (command === 'route') return this.parseRouteDeclaration();
     if (command === 'scene') return this.parseSceneDeclaration();
     return null;
   }
@@ -215,6 +216,34 @@ class Parser {
       id: name,
       params,
       body,
+      line,
+    });
+  }
+
+  parseRouteDeclaration() {
+    const line = this.current();
+    const tokens = withoutTrailingColon(line.tokens);
+    const id = tokenText(tokens[1]);
+    if (!hasTrailingColon(line)) {
+      this.diagnostics.push(diagnosticForLine(line, 'Expected ":" after route declaration.'));
+    }
+    this.index += 1;
+    const body = this.parseIndentedBlock(line.indent, (entry) => this.parseRouteField(entry));
+    if (body.length === 0) {
+      this.diagnostics.push(diagnosticForLine(line, `Route "${id}" must contain an indented body.`, DIAGNOSTIC_CODES.invalidRouteTemplate));
+    }
+    const span = mergeSpans(this.file, line.span, body[body.length - 1]?.span);
+    return createNode('RouteDeclaration', span, {
+      id,
+      body,
+      line,
+    });
+  }
+
+  parseRouteField(line) {
+    return createNode('RouteFieldStatement', line.span, {
+      field: tokenText(line.tokens[0]),
+      tokens: line.tokens.map(tokenText),
       line,
     });
   }

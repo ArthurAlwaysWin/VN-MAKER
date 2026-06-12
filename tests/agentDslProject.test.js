@@ -203,6 +203,38 @@ namespace chapter_01:
     });
   });
 
+  it('prefixes route templates inside namespaces', async () => {
+    await withTempDir(async (dir) => {
+      const mainPath = path.join(dir, 'main.gmdsl');
+      await writeFile(mainPath, `
+namespace chapter_01:
+  character sakura "Sakura"
+  route sakura:
+    affection variable affection
+    good_end good
+    normal_end normal
+`, 'utf8');
+
+      const plan = await compileProject(mainPath);
+      expect(plan.operations.map((operation) => operation.id)).toEqual([
+        'dsl-add-character-chapter_01_sakura',
+        'dsl-add-route-affection-chapter_01_sakura',
+        'dsl-add-route-ending-chapter_01_good',
+        'dsl-add-route-ending-chapter_01_normal',
+        'dsl-add-route-scene-chapter_01_good',
+        'dsl-add-route-page-chapter_01_good',
+        'dsl-add-route-scene-chapter_01_normal',
+        'dsl-add-route-page-chapter_01_normal',
+      ]);
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-route-affection-chapter_01_sakura')).toMatchObject({
+        params: {
+          characterId: 'chapter_01_sakura',
+          id: 'chapter_01_affection',
+        },
+      });
+    });
+  });
+
   it('rejects duplicate symbols inside the same namespace', async () => {
     await withTempDir(async (dir) => {
       const mainPath = path.join(dir, 'main.gmdsl');

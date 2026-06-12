@@ -6991,6 +6991,7 @@ function printHelp() {
   dsl-plan story.dsl [--out plan.json] [--source-map-out source-map.json] [--title title] [--json]
     DSL supports compile-time mood presets: preset mood rainy_school: ... then preset mood rainy_school inside scenes.
     DSL supports compile-time sequences: sequence entrance(character): ... then sequence entrance("sakura") inside scenes/options.
+    DSL supports route templates: route sakura: affection variable sakura_affection; good_end sakura_good; normal_end sakura_normal.
   dsl-check story.dsl [--script path] [--title title] [--json]
   dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
   dsl-build story.dsl [--script path] [--out plan.json] [--source-map source-map.json] [--source-map-out source-map.json] [--check-out check.json] [--validate-only|--dry-run|--write|--apply] [--force] [--json]

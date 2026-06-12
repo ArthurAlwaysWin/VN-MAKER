@@ -397,6 +397,7 @@ scene bad "Bad":
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
       const dslPath = path.join(dir, 'agent-src', 'main.gmdsl');
+      const reportPath = path.join(dir, 'agent-src', 'skeleton-report.json');
       const planPath = path.join(dir, 'skeleton-plan.json');
       await writeFile(scriptPath, JSON.stringify({
         projectId: 'gm_cli_agent_dsl_skeleton',
@@ -438,19 +439,27 @@ scene bad "Bad":
         scriptPath,
         '--out',
         dslPath,
+        '--report-out',
+        reportPath,
         '--json',
       ]);
       const result = JSON.parse(stdout);
       const source = await readFile(dslPath, 'utf8');
+      const report = JSON.parse(await readFile(reportPath, 'utf8'));
 
       expect(result).toMatchObject({
         success: true,
         ok: true,
         scriptPath,
         outPath: dslPath,
+        reportPath,
         sourceMapPath: null,
         sourceMapCreated: false,
         wrote: true,
+        report: {
+          sourceMapCreated: false,
+          warningCount: 0,
+        },
         declarations: {
           characters: 1,
           variables: 1,
@@ -470,6 +479,11 @@ scene bad "Bad":
       expect(source).toContain('  say sakura "Welcome." expression normal');
       expect(source).toContain('  choice "Continue?":');
       expect(source).toContain('    option "Yes"');
+      expect(report).toMatchObject({
+        sourceMapCreated: false,
+        unsupported: [],
+        lossy: [],
+      });
 
       const plan = await execFileAsync('node', [
         cliPath,
@@ -486,6 +500,193 @@ scene bad "Bad":
         operationCount: 5,
       });
       await expect(stat(path.join(dir, 'agent-dsl-source-map.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+  });
+
+  it('builds a generated Agent DSL skeleton into an equivalent fresh project slice', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const freshScriptPath = path.join(dir, 'fresh-script.json');
+      const hydratedScriptPath = path.join(dir, 'hydrated-script.json');
+      const dslPath = path.join(dir, 'agent-src', 'main.gmdsl');
+      const planPath = path.join(dir, 'skeleton-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_skeleton_equivalence',
+        title: 'Skeleton Equivalence',
+        characters: {
+          sakura: {
+            name: 'Sakura',
+            color: '#ff99cc',
+            expressions: { smile: 'characters/sakura_smile.png' },
+          },
+        },
+        systems: {
+          variables: {
+            affection: { type: 'number', initial: 0, label: 'Affection' },
+            saw_letter: { type: 'bool', initial: false, label: 'Saw Letter' },
+          },
+          endings: {
+            good: { title: 'Good End', category: 'main', order: 1, description: 'A warm ending.' },
+          },
+          gallery: {
+            cg: {
+              smile: {
+                title: 'Smile',
+                images: ['gallery/smile.png'],
+                thumbnail: 'gallery/smile-thumb.png',
+                category: 'main',
+                order: 1,
+                description: 'Sakura smiles.',
+              },
+            },
+          },
+        },
+        scenes: {
+          start: {
+            name: 'Start',
+            next: 'normal',
+            pages: [
+              {
+                id: 'opening',
+                type: 'normal',
+                background: 'backgrounds/classroom.png',
+                transition: { type: 'fade', duration: 500 },
+                bgm: { file: 'audio/theme.ogg', volume: 0.7 },
+                se: { file: 'audio/bell.ogg' },
+                characters: [{ id: 'sakura', expression: 'smile', position: 'left', animation: 'fade-in' }],
+                camera: { effect: 'shake', intensity: 'high', durationMs: 450 },
+                particles: { preset: 'sakura', density: 0.4, speed: 1.2, wind: -0.2, opacity: 0.8, color: '#ffc6d9', direction: 'down' },
+                dialogues: [{ speaker: 'sakura', text: 'The petals are early.', expression: 'smile' }],
+              },
+              {
+                type: 'choice',
+                prompt: 'Answer?',
+                options: [
+                  { text: 'Smile', target: 'good', effects: [{ type: 'var:add', id: 'affection', value: 1 }, { type: 'unlock:cg', id: 'smile' }] },
+                  { text: 'Stay quiet', target: 'normal', effects: [{ type: 'var:set', id: 'saw_letter', value: true }] },
+                ],
+              },
+              {
+                type: 'condition',
+                conditionMode: 'any',
+                conditions: [
+                  { variableId: 'affection', operator: '>=', value: 1 },
+                  { variableId: 'saw_letter', operator: '==', value: true },
+                ],
+                trueTarget: 'good',
+                falseTarget: 'normal',
+              },
+            ],
+          },
+          good: {
+            name: 'Good',
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Good.' }] }],
+          },
+          normal: {
+            name: 'Normal',
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Normal.' }] }],
+          },
+        },
+      }), 'utf8');
+      await writeFile(freshScriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_skeleton_equivalence_fresh',
+        characters: {},
+        systems: { variables: {}, endings: {}, gallery: { cg: {} } },
+        scenes: {},
+      }), 'utf8');
+
+      const skeleton = await execFileAsync('node', [
+        cliPath,
+        'dsl-skeleton',
+        '--script',
+        scriptPath,
+        '--out',
+        dslPath,
+        '--json',
+      ]);
+      expect(JSON.parse(skeleton.stdout)).toMatchObject({
+        warningCount: 0,
+        unsupportedCount: 0,
+        lossyCount: 0,
+      });
+
+      await execFileAsync('node', [
+        cliPath,
+        'dsl-plan',
+        dslPath,
+        '--out',
+        planPath,
+        '--json',
+      ]);
+      const apply = await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        freshScriptPath,
+        '--out',
+        hydratedScriptPath,
+        '--force',
+        '--json',
+      ]);
+      const applyResult = JSON.parse(apply.stdout);
+      const hydrated = JSON.parse(await readFile(hydratedScriptPath, 'utf8'));
+
+      expect(applyResult.validation.ok).toBe(true);
+      expect(hydrated.characters.sakura).toMatchObject({
+        name: 'Sakura',
+        color: '#ff99cc',
+        expressions: { smile: 'characters/sakura_smile.png' },
+      });
+      expect(hydrated.systems.variables).toMatchObject({
+        affection: { type: 'number', initial: 0, label: 'Affection' },
+        saw_letter: { type: 'bool', initial: false, label: 'Saw Letter' },
+      });
+      expect(hydrated.systems.endings.good).toMatchObject({
+        title: 'Good End',
+        category: 'main',
+        order: 1,
+        description: 'A warm ending.',
+      });
+      expect(hydrated.systems.gallery.cg.smile).toMatchObject({
+        title: 'Smile',
+        images: ['gallery/smile.png'],
+        thumbnail: 'gallery/smile-thumb.png',
+        category: 'main',
+        order: 1,
+        description: 'Sakura smiles.',
+      });
+      expect(hydrated.scenes.start.next).toBe('normal');
+      expect(hydrated.scenes.start.pages[0]).toMatchObject({
+        id: 'opening',
+        type: 'normal',
+        background: 'backgrounds/classroom.png',
+        transition: { type: 'fade', duration: 500 },
+        bgm: { file: 'audio/theme.ogg', volume: 0.7 },
+        se: { file: 'audio/bell.ogg' },
+        characters: [{ id: 'sakura', expression: 'smile', position: 'left', animation: 'fade-in' }],
+        camera: { effect: 'shake', intensity: 'high', durationMs: 450 },
+        particles: { preset: 'sakura', density: 0.4, speed: 1.2, wind: -0.2, opacity: 0.8, color: '#ffc6d9', direction: 'down' },
+        dialogues: [{ speaker: 'sakura', text: 'The petals are early.', expression: 'smile' }],
+      });
+      expect(hydrated.scenes.start.pages[1]).toMatchObject({
+        type: 'choice',
+        prompt: 'Answer?',
+        options: [
+          { text: 'Smile', target: 'good', effects: [{ type: 'var:add', id: 'affection', value: 1 }, { type: 'unlock:cg', id: 'smile' }] },
+          { text: 'Stay quiet', target: 'normal', effects: [{ type: 'var:set', id: 'saw_letter', value: true }] },
+        ],
+      });
+      expect(hydrated.scenes.start.pages[2]).toMatchObject({
+        type: 'condition',
+        conditionMode: 'any',
+        conditions: [
+          { variableId: 'affection', operator: '>=', value: 1 },
+          { variableId: 'saw_letter', operator: '==', value: true },
+        ],
+        trueTarget: 'good',
+        falseTarget: 'normal',
+      });
     });
   });
 

@@ -65,11 +65,11 @@ The current implementation provides:
 
 The implementation does not yet provide:
 
-- standalone `dsl-check`
 - import declarations
 - incremental rebuild
-- reverse skeleton generation from existing `script.json`
 - editor UI for DSL provenance
+
+Reverse skeleton generation is available as a migration aid through `dsl-skeleton`; it emits starter source plus unsupported/lossy reports, but it does not claim provenance over existing editor-authored `script.json` paths.
 
 All future work must preserve the MVP's compile-to-plan safety model.
 

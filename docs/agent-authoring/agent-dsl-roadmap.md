@@ -56,8 +56,8 @@ And:
 | P3 | Implemented | Multi-File Projects | Includes, manifest, namespaces, macro libraries |
 | P4 | Implemented | Route Logic And Expressions | Strict expression grammar and DSL-level semantic checks |
 | P5 | Implemented | Source Maps And Rebuild Safety | Source maps, fingerprints, stale output detection |
-| P6 | Planned | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
-| P7 | Planned | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
+| P6 | Implemented | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
+| P7 | Implemented | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
 | P8 | Planned | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
 | P9 | Planned | Editor And Handoff Integration | Provenance display and review handoff support |
 
@@ -541,6 +541,8 @@ Required CLI tests for every command:
 
 ## 12. P7 - Reverse Skeleton And Migration
 
+**Status:** Implemented.
+
 ### Objective
 
 Create a starter DSL file from an existing `script.json` without pretending it can perfectly recover original source.
@@ -548,8 +550,10 @@ Create a starter DSL file from an existing `script.json` without pretending it c
 ### Required Command
 
 ```bash
-npm run vn -- dsl-skeleton --script public/game/script.json --out agent-src/main.gmdsl --json
+npm run vn -- dsl-skeleton --script public/game/script.json --out agent-src/main.gmdsl --report-out .tmp/agent-dsl-skeleton-report.json --json
 ```
+
+The command writes only the requested DSL source and optional JSON report. It does not create a source map or claim ownership of existing editor-authored project data.
 
 ### Required Behavior
 

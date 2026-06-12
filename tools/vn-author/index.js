@@ -3921,16 +3921,19 @@ async function dslSkeleton(args) {
   });
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, skeleton.source, 'utf8');
+  const reportPath = await writeJsonArtifact(args, '--report-out', skeleton.report);
 
   const output = {
     success: true,
     ok: true,
     scriptPath,
     outPath,
+    reportPath,
     sourceMapPath: null,
     sourceMapCreated: false,
     wrote: true,
     command: 'dsl-skeleton',
+    report: skeleton.report,
     declarations: skeleton.report.declarations,
     warningCount: skeleton.report.warningCount,
     unsupportedCount: skeleton.report.unsupportedCount,
@@ -3945,6 +3948,9 @@ async function dslSkeleton(args) {
   } else {
     process.stdout.write(`Agent DSL skeleton: ${scriptPath}\n`);
     process.stdout.write(`Wrote source: ${outPath}\n`);
+    if (reportPath) {
+      process.stdout.write(`Wrote report: ${reportPath}\n`);
+    }
     process.stdout.write(`Warnings: ${output.warningCount}\n`);
     process.stdout.write('Source map: not created\n');
   }
@@ -6987,7 +6993,7 @@ function printHelp() {
   dsl-diff story.dsl --script path [--source-map source-map.json] [--title title] [--json]
   dsl-build story.dsl [--script path] [--out plan.json] [--source-map source-map.json] [--source-map-out source-map.json] [--check-out check.json] [--validate-only|--dry-run|--write|--apply] [--force] [--json]
   dsl-format story.dsl [--write] [--json]
-  dsl-skeleton --script path --out story.gmdsl [--title title] [--force] [--json]
+  dsl-skeleton --script path --out story.gmdsl [--report-out report.json] [--title title] [--force] [--json]
   apply-plan plan.json [--script path] [--out path] [--result-out path] [--source-map path] [--source-map-out path] [--dry-run] [--validate-only] [--force] [--backup] [--checkpoint] [--allow-invalid] [--json]
   restore-checkpoint checkpoint.json [--script path] [--force] [--backup] [--checkpoint-current] [--json]
   add-scene --id scene_id [--name name] [--next scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]

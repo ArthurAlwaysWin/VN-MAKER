@@ -47,7 +47,7 @@ These commands run outside an apply-plan manifest:
 | `dsl-diff` | Compares a P5 enriched Agent DSL source map against the current `script.json` without writing files. | Pass `--source-map` to select the enriched map; otherwise the command reads `.tmp/agent-dsl-source-map.applied.json`. Reports safe, changed/stale, missing, and untracked generated regions. |
 | `dsl-build` | Runs the DSL compile pipeline and optional apply-plan gates without writing project data by default. | `--out`, `--source-map-out`, and `--check-out` write artifacts. `--validate-only` and `--dry-run` run in memory. Project writes require explicit `--write` or `--apply`; when `--source-map` is provided, stale generated regions block the write. |
 | `dsl-format` | Formats one `.dsl` or `.gmdsl` source file with the deterministic Agent DSL formatter. | Check-only mode is the default and does not write. Pass `--write` to update the source file; manifest formatting is intentionally rejected until multi-file formatting semantics are defined. |
-| `dsl-skeleton` | Creates starter Agent DSL source from an existing `script.json`. | Requires `--script` and `--out`; writes only the requested DSL file, creates no source map, and refuses to overwrite an existing output unless `--force` is passed. Current P7 coverage includes declarations, scene shells, scene next routes, basic normal dialogue pages, choices, option targets, and supported option effects; unsupported/lossy data is reported in comments and JSON output. |
+| `dsl-skeleton` | Creates starter Agent DSL source from an existing `script.json`. | Requires `--script` and `--out`; writes only the requested DSL file, creates no source map, and refuses to overwrite an existing output unless `--force` is passed. Pass `--report-out` to write the unsupported/lossy conversion report. Current P7 coverage includes declarations, scene shells, scene next routes, normal dialogue/media/staging/camera/particle pages, choices, option targets/effects, and flat condition pages. Unsupported/lossy data is reported in comments and JSON output. |
 | `export-web` | Exports the current project as a static web game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 | `export-desktop` | Exports the current project as a desktop game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 
@@ -60,7 +60,7 @@ npm run vn -- dsl-check agent-src/project.gmdsl.json --script public/game/script
 npm run vn -- dsl-diff agent-src/project.gmdsl.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.applied.json --json
 npm run vn -- dsl-build agent-src/project.gmdsl.json --script public/game/script.json --out .tmp/plan.json --source-map-out .tmp/agent-dsl-source-map.json --validate-only --json
 npm run vn -- dsl-format agent-src/main.gmdsl --write --json
-npm run vn -- dsl-skeleton --script public/game/script.json --out agent-src/main.gmdsl --json
+npm run vn -- dsl-skeleton --script public/game/script.json --out agent-src/main.gmdsl --report-out .tmp/agent-dsl-skeleton-report.json --json
 npm run vn -- apply-plan .tmp/plan.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.json --source-map-out .tmp/agent-dsl-source-map.applied.json --dry-run --json
 ```
 

@@ -2,6 +2,7 @@ import { normalizeCgRegistry } from '../../shared/cgRegistry.js';
 import { normalizeEndingRegistry } from '../../shared/endingRegistry.js';
 import { normalizeEffects } from '../../shared/effectDsl.js';
 import { ensureGalgameContract } from '../../shared/galgameContract.js';
+import { PARTICLE_FIELD_SCHEMA } from '../../shared/particleContract.js';
 import { normalizeVariableRegistry } from '../../shared/variableRegistry.js';
 
 function isPlainObject(value) {
@@ -35,9 +36,14 @@ function createReport() {
       scenes: 0,
       normalPages: 0,
       choicePages: 0,
+      conditionPages: 0,
       choiceOptions: 0,
       effects: 0,
       sceneNext: 0,
+      mediaStatements: 0,
+      stagingStatements: 0,
+      cameraStatements: 0,
+      particleStatements: 0,
       dialogues: 0,
     },
     unsupported: [],
@@ -143,6 +149,83 @@ function effectToDsl(effect) {
   return null;
 }
 
+function conditionValueToDsl(value) {
+  return scalarToDsl(value);
+}
+
+function conditionRowsToExpression(conditions, conditionMode) {
+  const joiner = conditionMode === 'any' ? ' or ' : ' and ';
+  return conditions
+    .map((condition) => `${condition.variableId} ${condition.operator} ${conditionValueToDsl(condition.value)}`)
+    .join(joiner);
+}
+
+function canEmitConditionPage(page) {
+  const conditions = Array.isArray(page?.conditions) ? page.conditions : [];
+  const conditionMode = page?.conditionMode ?? 'all';
+  if (!['all', 'any'].includes(conditionMode)) {
+    return false;
+  }
+  if (conditions.length === 0) {
+    return false;
+  }
+  if (typeof page?.trueTarget !== 'string' || !page.trueTarget.trim()) {
+    return false;
+  }
+  return conditions.every((condition) => (
+    condition
+    && typeof condition.variableId === 'string'
+    && condition.variableId.trim()
+    && ['==', '!=', '>', '>=', '<', '<='].includes(condition.operator)
+    && (
+      typeof condition.value === 'string'
+      || typeof condition.value === 'number'
+      || typeof condition.value === 'boolean'
+      || condition.value === null
+    )
+  ));
+}
+
+function emitConditionPage(lines, sceneId, page, pageIndex, report) {
+  if (!canEmitConditionPage(page)) {
+    addUnsupported(report, lines, 2, {
+      code: 'agent-dsl-skeleton-condition-unsupported',
+      path: `scenes.${sceneId}.pages.${pageIndex}`,
+      message: `P7.3 skeleton did not convert condition page at scenes.${sceneId}.pages.${pageIndex}.`,
+      pageType: page?.type ?? null,
+    });
+    return;
+  }
+
+  const conditionMode = page.conditionMode ?? 'all';
+  const expression = conditionRowsToExpression(page.conditions, conditionMode);
+  const falseTarget = typeof page.falseTarget === 'string' && page.falseTarget.trim()
+    ? ` else ${page.falseTarget.trim()}`
+    : '';
+  lines.push(`  if ${expression} -> ${page.trueTarget.trim()}${falseTarget}`);
+  report.declarations.conditionPages += 1;
+
+  const unsupportedFields = [];
+  if (page?.id) unsupportedFields.push('id');
+  if (page?.target) unsupportedFields.push('target');
+  if (page?.background) unsupportedFields.push('background');
+  if (Array.isArray(page?.characters) && page.characters.length > 0) unsupportedFields.push('characters');
+  if (page?.bgm) unsupportedFields.push('bgm');
+  if (page?.se) unsupportedFields.push('se');
+  if (page?.camera) unsupportedFields.push('camera');
+  if (page?.particles) unsupportedFields.push('particles');
+  if (Array.isArray(page?.effectPacks) && page.effectPacks.length > 0) unsupportedFields.push('effectPacks');
+
+  if (unsupportedFields.length > 0) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-condition-fields-deferred',
+      path: `scenes.${sceneId}.pages.${pageIndex}`,
+      message: `P7.3 skeleton omitted condition page fields at scenes.${sceneId}.pages.${pageIndex}: ${unsupportedFields.join(', ')}.`,
+      fields: unsupportedFields,
+    });
+  }
+}
+
 function normalizedEffectsForOption(option, report, lines, sceneId, pageIndex, optionIndex) {
   try {
     return normalizeEffects(option);
@@ -222,10 +305,206 @@ function emitChoicePage(lines, sceneId, page, pageIndex, report) {
   }
 }
 
+function emitPageMedia(lines, sceneId, page, pageIndex, report) {
+  if (typeof page?.background === 'string' && page.background) {
+    lines.push(`  bg ${quoteDslString(page.background)}`);
+    report.declarations.mediaStatements += 1;
+  }
+
+  if (isPlainObject(page?.transition)) {
+    const transitionType = typeof page.transition.type === 'string' && page.transition.type.trim()
+      ? page.transition.type.trim()
+      : 'fade';
+    const duration = Number.isFinite(Number(page.transition.duration)) ? Number(page.transition.duration) : 800;
+    if (transitionType !== 'fade' || duration !== 800) {
+      lines.push(`  transition ${transitionType} ${duration}`);
+      report.declarations.mediaStatements += 1;
+    }
+    const extraTransitionFields = Object.keys(page.transition).filter((key) => !['type', 'duration'].includes(key));
+    if (extraTransitionFields.length > 0) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-transition-fields-deferred',
+        path: `scenes.${sceneId}.pages.${pageIndex}.transition`,
+        message: `P7.3 skeleton omitted transition fields at scenes.${sceneId}.pages.${pageIndex}.transition: ${extraTransitionFields.join(', ')}.`,
+        fields: extraTransitionFields,
+      });
+    }
+  } else if (page?.transition != null) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-transition-unsupported',
+      path: `scenes.${sceneId}.pages.${pageIndex}.transition`,
+      message: `P7.3 skeleton did not convert non-object transition at scenes.${sceneId}.pages.${pageIndex}.transition.`,
+    });
+  }
+
+  if (isPlainObject(page?.bgm) && typeof page.bgm.file === 'string' && page.bgm.file) {
+    const tokens = ['  bgm', quoteDslString(page.bgm.file)];
+    if (page.bgm.volume !== undefined) {
+      tokens.push('volume', scalarToDsl(page.bgm.volume));
+    }
+    lines.push(tokens.join(' '));
+    report.declarations.mediaStatements += 1;
+    const extraBgmFields = Object.keys(page.bgm).filter((key) => !['file', 'volume'].includes(key));
+    if (extraBgmFields.length > 0) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-bgm-fields-deferred',
+        path: `scenes.${sceneId}.pages.${pageIndex}.bgm`,
+        message: `P7.3 skeleton omitted BGM fields at scenes.${sceneId}.pages.${pageIndex}.bgm: ${extraBgmFields.join(', ')}.`,
+        fields: extraBgmFields,
+      });
+    }
+  } else if (page?.bgm != null) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-bgm-unsupported',
+      path: `scenes.${sceneId}.pages.${pageIndex}.bgm`,
+      message: `P7.3 skeleton did not convert BGM at scenes.${sceneId}.pages.${pageIndex}.bgm.`,
+    });
+  }
+
+  if (isPlainObject(page?.se) && typeof page.se.file === 'string' && page.se.file) {
+    lines.push(`  se ${quoteDslString(page.se.file)}`);
+    report.declarations.mediaStatements += 1;
+    const extraSeFields = Object.keys(page.se).filter((key) => key !== 'file');
+    if (extraSeFields.length > 0) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-se-fields-deferred',
+        path: `scenes.${sceneId}.pages.${pageIndex}.se`,
+        message: `P7.3 skeleton omitted sound effect fields at scenes.${sceneId}.pages.${pageIndex}.se: ${extraSeFields.join(', ')}.`,
+        fields: extraSeFields,
+      });
+    }
+  } else if (page?.se != null) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-se-unsupported',
+      path: `scenes.${sceneId}.pages.${pageIndex}.se`,
+      message: `P7.3 skeleton did not convert sound effect at scenes.${sceneId}.pages.${pageIndex}.se.`,
+    });
+  }
+}
+
+function emitPageStaging(lines, sceneId, page, pageIndex, report) {
+  const characters = Array.isArray(page?.characters) ? page.characters : [];
+  for (const [characterIndex, character] of characters.entries()) {
+    if (!character?.id) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-character-staging-unsupported',
+        path: `scenes.${sceneId}.pages.${pageIndex}.characters.${characterIndex}`,
+        message: `P7.3 skeleton did not convert character staging without id at scenes.${sceneId}.pages.${pageIndex}.characters.${characterIndex}.`,
+      });
+      continue;
+    }
+
+    const tokens = ['  show', character.id];
+    if (typeof character.expression === 'string' && character.expression.trim()) {
+      tokens.push(character.expression.trim());
+    }
+    if (typeof character.position === 'string' && character.position.trim()) {
+      tokens.push('at', character.position.trim());
+    }
+    if (typeof character.animation === 'string' && character.animation.trim() && character.animation !== 'none') {
+      tokens.push('animation', character.animation.trim());
+    }
+    lines.push(tokens.join(' '));
+    report.declarations.stagingStatements += 1;
+
+    const extraCharacterFields = Object.keys(character).filter((key) => !['id', 'expression', 'position', 'animation'].includes(key));
+    if (extraCharacterFields.length > 0) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-character-staging-fields-deferred',
+        path: `scenes.${sceneId}.pages.${pageIndex}.characters.${characterIndex}`,
+        message: `P7.3 skeleton omitted character staging fields at scenes.${sceneId}.pages.${pageIndex}.characters.${characterIndex}: ${extraCharacterFields.join(', ')}.`,
+        fields: extraCharacterFields,
+      });
+    }
+  }
+}
+
+function emitPageCamera(lines, sceneId, page, pageIndex, report) {
+  if (!isPlainObject(page?.camera)) {
+    if (page?.camera != null) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-camera-unsupported',
+        path: `scenes.${sceneId}.pages.${pageIndex}.camera`,
+        message: `P7.3 skeleton did not convert camera at scenes.${sceneId}.pages.${pageIndex}.camera.`,
+      });
+    }
+    return;
+  }
+
+  const effect = typeof page.camera.effect === 'string' && page.camera.effect.trim()
+    ? page.camera.effect.trim()
+    : 'shake';
+  const intensity = typeof page.camera.intensity === 'string' && page.camera.intensity.trim()
+    ? page.camera.intensity.trim()
+    : 'medium';
+  const durationMs = Number.isFinite(Number(page.camera.durationMs)) ? Number(page.camera.durationMs) : 800;
+  lines.push(`  camera ${effect} ${intensity} ${durationMs}`);
+  report.declarations.cameraStatements += 1;
+
+  const extraCameraFields = Object.keys(page.camera).filter((key) => !['effect', 'intensity', 'durationMs'].includes(key));
+  if (extraCameraFields.length > 0) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-camera-fields-deferred',
+      path: `scenes.${sceneId}.pages.${pageIndex}.camera`,
+      message: `P7.3 skeleton omitted camera fields at scenes.${sceneId}.pages.${pageIndex}.camera: ${extraCameraFields.join(', ')}.`,
+      fields: extraCameraFields,
+    });
+  }
+}
+
+function emitPageParticles(lines, sceneId, page, pageIndex, report) {
+  if (!isPlainObject(page?.particles)) {
+    if (page?.particles != null) {
+      addLossy(report, lines, 2, {
+        code: 'agent-dsl-skeleton-particles-unsupported',
+        path: `scenes.${sceneId}.pages.${pageIndex}.particles`,
+        message: `P7.3 skeleton did not convert particles at scenes.${sceneId}.pages.${pageIndex}.particles.`,
+      });
+    }
+    return;
+  }
+
+  const preset = typeof page.particles.preset === 'string' && page.particles.preset.trim()
+    ? page.particles.preset.trim()
+    : 'dust';
+  const tokens = ['  particles', preset];
+  const supportedKeys = Object.keys(PARTICLE_FIELD_SCHEMA).filter((key) => key !== 'preset');
+  const omittedFields = [];
+  for (const key of supportedKeys) {
+    if (page.particles[key] === undefined) {
+      continue;
+    }
+    const value = page.particles[key];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+      tokens.push(key, scalarToDsl(value));
+    } else {
+      omittedFields.push(key);
+    }
+  }
+  const extraParticleFields = Object.keys(page.particles).filter((key) => !Object.hasOwn(PARTICLE_FIELD_SCHEMA, key));
+  omittedFields.push(...extraParticleFields);
+  lines.push(tokens.join(' '));
+  report.declarations.particleStatements += 1;
+
+  if (omittedFields.length > 0) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-particles-fields-deferred',
+      path: `scenes.${sceneId}.pages.${pageIndex}.particles`,
+      message: `P7.3 skeleton omitted particle fields at scenes.${sceneId}.pages.${pageIndex}.particles: ${omittedFields.join(', ')}.`,
+      fields: omittedFields,
+    });
+  }
+}
+
 function emitNormalPage(lines, sceneId, page, pageIndex, report) {
   if (page?.id) {
     lines.push(`  page ${page.id}:`);
   }
+
+  emitPageMedia(lines, sceneId, page, pageIndex, report);
+  emitPageStaging(lines, sceneId, page, pageIndex, report);
+  emitPageCamera(lines, sceneId, page, pageIndex, report);
+  emitPageParticles(lines, sceneId, page, pageIndex, report);
 
   for (const dialogue of Array.isArray(page?.dialogues) ? page.dialogues : []) {
     emitDialogue(lines, dialogue, report);
@@ -234,23 +513,14 @@ function emitNormalPage(lines, sceneId, page, pageIndex, report) {
   report.declarations.normalPages += 1;
 
   const unsupportedFields = [];
-  if (page?.background) unsupportedFields.push('background');
-  if (Array.isArray(page?.characters) && page.characters.length > 0) unsupportedFields.push('characters');
-  if (page?.bgm) unsupportedFields.push('bgm');
-  if (page?.se) unsupportedFields.push('se');
-  if (page?.camera) unsupportedFields.push('camera');
-  if (page?.particles) unsupportedFields.push('particles');
   if (Array.isArray(page?.effects) && page.effects.length > 0) unsupportedFields.push('effects');
   if (Array.isArray(page?.effectPacks) && page.effectPacks.length > 0) unsupportedFields.push('effectPacks');
-  if (page?.transition && (page.transition.type !== 'fade' || page.transition.duration !== 800)) {
-    unsupportedFields.push('transition');
-  }
 
   if (unsupportedFields.length > 0) {
     addLossy(report, lines, 2, {
       code: 'agent-dsl-skeleton-page-fields-deferred',
       path: `scenes.${sceneId}.pages.${pageIndex}`,
-      message: `P7.1 skeleton omitted supported-later normal page fields at scenes.${sceneId}.pages.${pageIndex}: ${unsupportedFields.join(', ')}.`,
+      message: `P7.3 skeleton omitted normal page fields at scenes.${sceneId}.pages.${pageIndex}: ${unsupportedFields.join(', ')}.`,
       fields: unsupportedFields,
     });
   }
@@ -284,6 +554,10 @@ function emitScene(lines, sceneId, scene, report) {
     }
     if (page?.type === 'choice') {
       emitChoicePage(lines, sceneId, page, pageIndex, report);
+      continue;
+    }
+    if (page?.type === 'condition') {
+      emitConditionPage(lines, sceneId, page, pageIndex, report);
       continue;
     }
     addUnsupported(report, lines, 2, {

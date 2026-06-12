@@ -148,7 +148,8 @@ describe('agent DSL skeleton generator', () => {
     });
 
     expect(source).toContain('scene start "Start" next ending:');
-    expect(source).toContain('# P7.1 skeleton omitted supported-later normal page fields at scenes.start.pages.0: background, effects.');
+    expect(source).toContain('  bg "backgrounds/room.png"');
+    expect(source).toContain('# P7.3 skeleton omitted normal page fields at scenes.start.pages.0: effects.');
     expect(source).toContain('  choice "Go?":');
     expect(source).toContain('    option "Yes" -> ending:');
     expect(source).toContain('      effect var:add affection 1');
@@ -207,6 +208,128 @@ describe('agent DSL skeleton generator', () => {
     });
   });
 
+  it('creates P7.3 condition pages plus safe media, staging, camera, and particles', () => {
+    const { source, report } = createAgentDslSkeleton({
+      title: 'Cinematic Branch',
+      characters: {
+        sakura: { name: 'Sakura', expressions: { smile: 'characters/sakura_smile.png' } },
+      },
+      systems: {
+        variables: {
+          affection: { type: 'number', initial: 0 },
+          saw_letter: { type: 'bool', initial: false },
+        },
+      },
+      scenes: {
+        start: {
+          name: 'Start',
+          pages: [
+            {
+              id: 'opening',
+              type: 'normal',
+              background: 'backgrounds/classroom.png',
+              transition: { type: 'fade', duration: 500 },
+              bgm: { file: 'audio/theme.ogg', volume: 0.7 },
+              se: { file: 'audio/bell.ogg' },
+              characters: [
+                { id: 'sakura', expression: 'smile', position: 'left', animation: 'fade-in' },
+              ],
+              camera: { effect: 'shake', intensity: 'high', durationMs: 450 },
+              particles: {
+                preset: 'sakura',
+                density: 0.4,
+                speed: 1.2,
+                wind: -0.2,
+                opacity: 0.8,
+                color: '#ffc6d9',
+                direction: 'down',
+              },
+              dialogues: [
+                { speaker: 'sakura', text: 'The petals are early.', expression: 'smile' },
+              ],
+            },
+            {
+              type: 'condition',
+              conditionMode: 'all',
+              conditions: [
+                { variableId: 'affection', operator: '>=', value: 1 },
+                { variableId: 'saw_letter', operator: '==', value: true },
+              ],
+              trueTarget: 'good',
+              falseTarget: 'normal',
+            },
+          ],
+        },
+        good: {
+          name: 'Good',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Good.' }] }],
+        },
+        normal: {
+          name: 'Normal',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Normal.' }] }],
+        },
+      },
+    });
+
+    expect(source).toContain('  page opening:');
+    expect(source).toContain('  bg "backgrounds/classroom.png"');
+    expect(source).toContain('  transition fade 500');
+    expect(source).toContain('  bgm "audio/theme.ogg" volume 0.7');
+    expect(source).toContain('  se "audio/bell.ogg"');
+    expect(source).toContain('  show sakura smile at left animation fade-in');
+    expect(source).toContain('  camera shake high 450');
+    expect(source).toContain('  particles sakura density 0.4 speed 1.2 wind -0.2 opacity 0.8 color "#ffc6d9" direction "down"');
+    expect(source).toContain('  if affection >= 1 and saw_letter == true -> good else normal');
+    expect(report).toMatchObject({
+      declarations: {
+        normalPages: 3,
+        conditionPages: 1,
+        mediaStatements: 4,
+        stagingStatements: 1,
+        cameraStatements: 1,
+        particleStatements: 1,
+      },
+      warningCount: 0,
+      unsupportedCount: 0,
+      lossyCount: 0,
+    });
+
+    const plan = createAgentDslPlan(source);
+    const normalPage = plan.operations.find((operation) => operation.id === 'dsl-add-page-start-1');
+    expect(normalPage.params.page).toMatchObject({
+      id: 'opening',
+      background: 'backgrounds/classroom.png',
+      transition: { type: 'fade', duration: 500 },
+      bgm: { file: 'audio/theme.ogg', volume: 0.7 },
+      se: { file: 'audio/bell.ogg' },
+      characters: [{ id: 'sakura', expression: 'smile', position: 'left', animation: 'fade-in' }],
+      camera: { effect: 'shake', intensity: 'high', durationMs: 450 },
+      particles: {
+        preset: 'sakura',
+        density: 0.4,
+        speed: 1.2,
+        wind: -0.2,
+        opacity: 0.8,
+        color: '#ffc6d9',
+        direction: 'down',
+      },
+      dialogues: [{ speaker: 'sakura', text: 'The petals are early.', expression: 'smile' }],
+    });
+    expect(plan.operations.find((operation) => operation.id === 'dsl-add-condition-start-2')).toMatchObject({
+      command: 'add-page',
+      params: {
+        type: 'condition',
+        conditionMode: 'all',
+        trueTarget: 'good',
+        falseTarget: 'normal',
+        conditions: [
+          { variableId: 'affection', operator: '>=', value: 1 },
+          { variableId: 'saw_letter', operator: '==', value: true },
+        ],
+      },
+    });
+  });
+
   it('reports unsupported and lossy project data as comments', () => {
     const { source, report } = createAgentDslSkeleton({
       title: 'Deferred Data',
@@ -238,8 +361,9 @@ describe('agent DSL skeleton generator', () => {
       },
     });
 
-    expect(source).toContain('# P7.1 skeleton omitted supported-later normal page fields at scenes.start.pages.0: background, effects.');
-    expect(source).toContain('# P7.2 skeleton did not convert condition page at scenes.start.pages.1.');
+    expect(source).toContain('  bg "backgrounds/room.png"');
+    expect(source).toContain('# P7.3 skeleton omitted normal page fields at scenes.start.pages.0: effects.');
+    expect(source).toContain('# P7.3 skeleton did not convert condition page at scenes.start.pages.1.');
     expect(source).toContain('# P7.2 skeleton did not convert empty choice page at scenes.start.pages.2.');
     expect(report).toMatchObject({
       warningCount: 3,

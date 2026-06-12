@@ -456,17 +456,20 @@ scene bad "Bad":
           variables: 1,
           scenes: 1,
           normalPages: 1,
+          choicePages: 1,
+          choiceOptions: 1,
           dialogues: 1,
         },
-        warningCount: 1,
-        unsupportedCount: 1,
+        warningCount: 0,
+        unsupportedCount: 0,
         lossyCount: 0,
       });
       expect(source).toContain('# This skeleton is a migration aid; it does not claim original DSL provenance.');
       expect(source).toContain('character sakura "Sakura" expression normal "characters/sakura_normal.png"');
       expect(source).toContain('  page opening:');
       expect(source).toContain('  say sakura "Welcome." expression normal');
-      expect(source).toContain('# P7.1 skeleton did not convert choice page at scenes.start.pages.1.');
+      expect(source).toContain('  choice "Continue?":');
+      expect(source).toContain('    option "Yes"');
 
       const plan = await execFileAsync('node', [
         cliPath,
@@ -480,7 +483,7 @@ scene bad "Bad":
       expect(planResult).toMatchObject({
         dslPath,
         sourceMapPath: null,
-        operationCount: 4,
+        operationCount: 5,
       });
       await expect(stat(path.join(dir, 'agent-dsl-source-map.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     });

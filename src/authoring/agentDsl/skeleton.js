@@ -1,5 +1,6 @@
 import { normalizeCgRegistry } from '../../shared/cgRegistry.js';
 import { normalizeEndingRegistry } from '../../shared/endingRegistry.js';
+import { normalizeEffects } from '../../shared/effectDsl.js';
 import { ensureGalgameContract } from '../../shared/galgameContract.js';
 import { normalizeVariableRegistry } from '../../shared/variableRegistry.js';
 
@@ -33,6 +34,10 @@ function createReport() {
       cgs: 0,
       scenes: 0,
       normalPages: 0,
+      choicePages: 0,
+      choiceOptions: 0,
+      effects: 0,
+      sceneNext: 0,
       dialogues: 0,
     },
     unsupported: [],
@@ -125,6 +130,98 @@ function emitDialogue(lines, dialogue, report) {
   report.declarations.dialogues += 1;
 }
 
+function effectToDsl(effect) {
+  if (effect?.type === 'var:set' || effect?.type === 'var:add' || effect?.type === 'var:sub') {
+    return `effect ${effect.type} ${effect.id} ${scalarToDsl(effect.value)}`;
+  }
+  if (effect?.type === 'unlock:ending') {
+    return `unlock ending ${effect.id}`;
+  }
+  if (effect?.type === 'unlock:cg') {
+    return `unlock cg ${effect.id}`;
+  }
+  return null;
+}
+
+function normalizedEffectsForOption(option, report, lines, sceneId, pageIndex, optionIndex) {
+  try {
+    return normalizeEffects(option);
+  } catch (error) {
+    addUnsupported(report, lines, 6, {
+      code: 'agent-dsl-skeleton-choice-effects-invalid',
+      path: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects`,
+      message: `P7.2 skeleton could not convert invalid choice effects at scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects: ${error.message}.`,
+    });
+    return [];
+  }
+}
+
+function emitChoicePage(lines, sceneId, page, pageIndex, report) {
+  const options = Array.isArray(page?.options) ? page.options : [];
+  if (options.length === 0) {
+    addUnsupported(report, lines, 2, {
+      code: 'agent-dsl-skeleton-empty-choice-unsupported',
+      path: `scenes.${sceneId}.pages.${pageIndex}`,
+      message: `P7.2 skeleton did not convert empty choice page at scenes.${sceneId}.pages.${pageIndex}.`,
+      pageType: page?.type ?? null,
+    });
+    return;
+  }
+
+  lines.push(`  choice ${quoteDslString(page?.prompt ?? '')}:`);
+  report.declarations.choicePages += 1;
+
+  for (const [optionIndex, option] of options.entries()) {
+    const effects = normalizedEffectsForOption(option, report, lines, sceneId, pageIndex, optionIndex);
+    const target = typeof option?.target === 'string' && option.target.trim()
+      ? option.target.trim()
+      : null;
+    const hasEffectBlock = effects.length > 0;
+    const optionHeader = [
+      '    option',
+      quoteDslString(option?.text ?? ''),
+      target ? `-> ${target}` : null,
+    ].filter(Boolean).join(' ');
+    lines.push(`${optionHeader}${hasEffectBlock ? ':' : ''}`);
+    report.declarations.choiceOptions += 1;
+
+    for (const [effectIndex, effect] of effects.entries()) {
+      const effectLine = effectToDsl(effect);
+      if (effectLine) {
+        lines.push(`      ${effectLine}`);
+        report.declarations.effects += 1;
+        continue;
+      }
+      addUnsupported(report, lines, 6, {
+        code: 'agent-dsl-skeleton-choice-effect-unsupported',
+        path: `scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects.${effectIndex}`,
+        message: `P7.2 skeleton did not convert unsupported choice effect at scenes.${sceneId}.pages.${pageIndex}.options.${optionIndex}.effects.${effectIndex}.`,
+        effectType: effect?.type ?? null,
+      });
+    }
+  }
+
+  const unsupportedFields = [];
+  if (page?.target) unsupportedFields.push('target');
+  if (page?.variableId) unsupportedFields.push('variableId');
+  if (page?.background) unsupportedFields.push('background');
+  if (Array.isArray(page?.characters) && page.characters.length > 0) unsupportedFields.push('characters');
+  if (page?.bgm) unsupportedFields.push('bgm');
+  if (page?.se) unsupportedFields.push('se');
+  if (page?.camera) unsupportedFields.push('camera');
+  if (page?.particles) unsupportedFields.push('particles');
+  if (Array.isArray(page?.effectPacks) && page.effectPacks.length > 0) unsupportedFields.push('effectPacks');
+
+  if (unsupportedFields.length > 0) {
+    addLossy(report, lines, 2, {
+      code: 'agent-dsl-skeleton-choice-fields-deferred',
+      path: `scenes.${sceneId}.pages.${pageIndex}`,
+      message: `P7.2 skeleton omitted choice page fields at scenes.${sceneId}.pages.${pageIndex}: ${unsupportedFields.join(', ')}.`,
+      fields: unsupportedFields,
+    });
+  }
+}
+
 function emitNormalPage(lines, sceneId, page, pageIndex, report) {
   if (page?.id) {
     lines.push(`  page ${page.id}:`);
@@ -160,14 +257,16 @@ function emitNormalPage(lines, sceneId, page, pageIndex, report) {
 }
 
 function emitScene(lines, sceneId, scene, report) {
-  lines.push(`scene ${sceneId} ${quoteDslString(scene?.name ?? sceneId)}:`);
+  const next = typeof scene?.next === 'string' && scene.next.trim() ? scene.next.trim() : null;
+  lines.push(`scene ${sceneId} ${quoteDslString(scene?.name ?? sceneId)}${next ? ` next ${next}` : ''}:`);
   report.declarations.scenes += 1;
-
-  if (scene?.next !== undefined && scene.next !== null) {
+  if (next) {
+    report.declarations.sceneNext += 1;
+  } else if (scene?.next !== undefined && scene.next !== null) {
     addLossy(report, lines, 2, {
-      code: 'agent-dsl-skeleton-scene-next-deferred',
+      code: 'agent-dsl-skeleton-scene-next-invalid',
       path: `scenes.${sceneId}.next`,
-      message: `P7.1 skeleton omitted scene next target at scenes.${sceneId}.next.`,
+      message: `P7.2 skeleton omitted non-string scene next target at scenes.${sceneId}.next.`,
       target: scene.next,
     });
   }
@@ -183,10 +282,14 @@ function emitScene(lines, sceneId, scene, report) {
       emitNormalPage(lines, sceneId, page, pageIndex, report);
       continue;
     }
+    if (page?.type === 'choice') {
+      emitChoicePage(lines, sceneId, page, pageIndex, report);
+      continue;
+    }
     addUnsupported(report, lines, 2, {
       code: 'agent-dsl-skeleton-page-type-unsupported',
       path: `scenes.${sceneId}.pages.${pageIndex}`,
-      message: `P7.1 skeleton did not convert ${page?.type ?? 'unknown'} page at scenes.${sceneId}.pages.${pageIndex}.`,
+      message: `P7.2 skeleton did not convert ${page?.type ?? 'unknown'} page at scenes.${sceneId}.pages.${pageIndex}.`,
       pageType: page?.type ?? null,
     });
   }

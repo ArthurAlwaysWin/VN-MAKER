@@ -86,10 +86,26 @@ describe('agent DSL skeleton generator', () => {
     ]);
   });
 
-  it('reports P7.1 unsupported and lossy project data as comments', () => {
+  it('creates P7.2 choice pages, option effects, and scene next routes', () => {
     const { source, report } = createAgentDslSkeleton({
-      title: 'Deferred Data',
-      characters: {},
+      title: 'Branching Data',
+      characters: {
+        sakura: { name: 'Sakura' },
+      },
+      systems: {
+        variables: {
+          affection: { type: 'number', initial: 0 },
+          route_locked: { type: 'bool', initial: false },
+        },
+        endings: {
+          good: { title: 'Good End' },
+        },
+        gallery: {
+          cg: {
+            smile: { title: 'Smile', images: ['gallery/smile.png'] },
+          },
+        },
+      },
       scenes: {
         start: {
           name: 'Start',
@@ -104,26 +120,137 @@ describe('agent DSL skeleton generator', () => {
             {
               type: 'choice',
               prompt: 'Go?',
-              options: [{ text: 'Yes', target: 'ending' }],
+              options: [
+                {
+                  text: 'Yes',
+                  target: 'ending',
+                  effects: [
+                    { type: 'var:add', id: 'affection', value: 1 },
+                    { type: 'var:set', id: 'route_locked', value: true },
+                    { type: 'unlock:ending', id: 'good' },
+                    { type: 'unlock:cg', id: 'smile' },
+                  ],
+                },
+                {
+                  text: 'Wait',
+                  target: null,
+                  setVariable: { affection: -1 },
+                },
+              ],
+            },
+          ],
+        },
+        ending: {
+          name: 'Ending',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'Done.' }] }],
+        },
+      },
+    });
+
+    expect(source).toContain('scene start "Start" next ending:');
+    expect(source).toContain('# P7.1 skeleton omitted supported-later normal page fields at scenes.start.pages.0: background, effects.');
+    expect(source).toContain('  choice "Go?":');
+    expect(source).toContain('    option "Yes" -> ending:');
+    expect(source).toContain('      effect var:add affection 1');
+    expect(source).toContain('      effect var:set route_locked true');
+    expect(source).toContain('      unlock ending good');
+    expect(source).toContain('      unlock cg smile');
+    expect(source).toContain('    option "Wait":');
+    expect(source).toContain('      effect var:sub affection 1');
+    expect(report).toMatchObject({
+      declarations: {
+        choicePages: 1,
+        choiceOptions: 2,
+        effects: 5,
+        sceneNext: 1,
+      },
+      warningCount: 1,
+      unsupportedCount: 0,
+      lossyCount: 1,
+      sourceMapCreated: false,
+    });
+    const plan = createAgentDslPlan(source);
+    expect(plan.operations.map((operation) => operation.command)).toEqual([
+      'add-character',
+      'add-variable',
+      'add-variable',
+      'add-ending',
+      'add-cg',
+      'add-scene',
+      'add-page',
+      'add-page',
+      'set-scene-next',
+      'add-scene',
+      'add-page',
+    ]);
+    expect(plan.operations.find((operation) => operation.id === 'dsl-add-choice-start-2')).toMatchObject({
+      params: {
+        prompt: 'Go?',
+        options: [
+          {
+            text: 'Yes',
+            target: 'ending',
+            effects: [
+              { type: 'var:add', id: 'affection', value: 1 },
+              { type: 'var:set', id: 'route_locked', value: true },
+              { type: 'unlock:ending', id: 'good' },
+              { type: 'unlock:cg', id: 'smile' },
+            ],
+          },
+          {
+            text: 'Wait',
+            target: null,
+            effects: [{ type: 'var:sub', id: 'affection', value: 1 }],
+          },
+        ],
+      },
+    });
+  });
+
+  it('reports unsupported and lossy project data as comments', () => {
+    const { source, report } = createAgentDslSkeleton({
+      title: 'Deferred Data',
+      characters: {},
+      scenes: {
+        start: {
+          name: 'Start',
+          pages: [
+            {
+              type: 'normal',
+              background: 'backgrounds/room.png',
+              dialogues: [{ speaker: null, text: 'Look around.' }],
+              effects: [{ type: 'unlock:ending', id: 'good' }],
+            },
+            {
+              type: 'condition',
+              conditionMode: 'all',
+              conditions: [],
+              trueTarget: null,
+              falseTarget: null,
+            },
+            {
+              type: 'choice',
+              prompt: 'Empty?',
+              options: [],
             },
           ],
         },
       },
     });
 
-    expect(source).toContain('# P7.1 skeleton omitted scene next target at scenes.start.next.');
     expect(source).toContain('# P7.1 skeleton omitted supported-later normal page fields at scenes.start.pages.0: background, effects.');
-    expect(source).toContain('# P7.1 skeleton did not convert choice page at scenes.start.pages.1.');
+    expect(source).toContain('# P7.2 skeleton did not convert condition page at scenes.start.pages.1.');
+    expect(source).toContain('# P7.2 skeleton did not convert empty choice page at scenes.start.pages.2.');
     expect(report).toMatchObject({
       warningCount: 3,
-      unsupportedCount: 1,
-      lossyCount: 2,
+      unsupportedCount: 2,
+      lossyCount: 1,
       sourceMapCreated: false,
     });
     expect(report.warnings.map((warning) => warning.path)).toEqual([
-      'scenes.start.next',
       'scenes.start.pages.0',
       'scenes.start.pages.1',
+      'scenes.start.pages.2',
     ]);
     expect(() => createAgentDslPlan(source)).not.toThrow();
   });

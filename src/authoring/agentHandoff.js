@@ -37,6 +37,140 @@ function summarizeTransaction(transaction = null) {
   };
 }
 
+function createSourceLookup(sourceMap = null) {
+  return new Map((sourceMap?.sources ?? []).map((source) => [source.id, source]));
+}
+
+function sourceForMapping(mapping = {}, sourceLookup = new Map()) {
+  const source = sourceLookup.get(mapping.sourceId) ?? {};
+  return {
+    file: source.path ?? 'story.dsl',
+    line: mapping.span?.start?.line ?? 1,
+    column: mapping.span?.start?.column ?? 1,
+    mappingId: mapping.id,
+    operationId: mapping.operationId,
+    astKind: mapping.astKind,
+  };
+}
+
+function pathMatchesGeneratedPath(changedPath = '', generatedPath = '') {
+  const changed = String(changedPath ?? '');
+  const generated = String(generatedPath ?? '');
+  return Boolean(
+    changed
+    && generated
+    && (changed === generated || changed.startsWith(`${generated}.`) || generated.startsWith(`${changed}.`))
+  );
+}
+
+export function createDslProvenanceIndex(sourceMap = null) {
+  const sourceLookup = createSourceLookup(sourceMap);
+  const entries = [];
+  for (const mapping of sourceMap?.mappings ?? []) {
+    const source = sourceForMapping(mapping, sourceLookup);
+    for (const projectPath of mapping.projectPaths ?? []) {
+      entries.push({
+        pathString: projectPath,
+        source,
+      });
+    }
+  }
+  return entries;
+}
+
+export function findDslProvenanceForPath(provenanceEntries = [], pathString = '') {
+  return provenanceEntries
+    .filter((entry) => pathMatchesGeneratedPath(pathString, entry.pathString))
+    .sort((left, right) => right.pathString.length - left.pathString.length)
+    .map((entry) => entry.source);
+}
+
+function previewTargetPathString(target = {}) {
+  if (target.pathString) return target.pathString;
+  if (target.type === 'scene' && target.sceneId && Number.isInteger(target.pageIndex)) {
+    return `scenes.${target.sceneId}.pages.${target.pageIndex}`;
+  }
+  if (target.type === 'scene' && target.sceneId) {
+    return `scenes.${target.sceneId}`;
+  }
+  if (target.type === 'screen' && target.screenId) {
+    return `ui.${target.screenId}`;
+  }
+  return '';
+}
+
+function enrichPreviewTargetsWithDslProvenance(previewTargets = [], provenanceEntries = []) {
+  if (!provenanceEntries.length) return previewTargets;
+  return previewTargets.map((target) => {
+    const source = findDslProvenanceForPath(provenanceEntries, previewTargetPathString(target))[0] ?? null;
+    return source
+      ? { ...target, source: { kind: 'agent-dsl', ...source } }
+      : target;
+  });
+}
+
+function collectAgentDslGeneratedReviewItems(transactionSummary = null, provenanceEntries = []) {
+  const changedPaths = transactionSummary?.changedPaths ?? [];
+  const items = [];
+  const seen = new Set();
+  for (const changedPath of changedPaths) {
+    for (const entry of provenanceEntries) {
+      if (!pathMatchesGeneratedPath(changedPath, entry.pathString)) continue;
+      const key = `${changedPath}:${entry.source.mappingId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push({
+        source: 'agent-dsl',
+        severity: 'info',
+        category: 'agent-dsl',
+        code: 'dsl-generated-change',
+        pathString: String(changedPath),
+        message: `Generated from ${entry.source.file}:${entry.source.line}.`,
+        sourceLocation: {
+          kind: 'agent-dsl',
+          ...entry.source,
+        },
+        suggestedAction: {
+          summary: 'Review the generated editor data and keep script.json as the canonical project contract.',
+        },
+      });
+    }
+  }
+  return items;
+}
+
+function collectAgentDslStaleReviewItems(dslStaleness = null, sourceMap = null) {
+  const sourceLookup = createSourceLookup(sourceMap);
+  return (dslStaleness?.mappings ?? [])
+    .filter((mapping) => mapping.status !== 'safe')
+    .map((mapping) => {
+      const source = sourceForMapping(mapping, sourceLookup);
+      const pathString = mapping.projectPaths?.[0] ?? '';
+      const code = mapping.status === 'missing'
+        ? 'dsl-generated-region-missing'
+        : mapping.status === 'untracked'
+          ? 'dsl-generated-region-untracked'
+          : 'dsl-generated-region-stale';
+      return {
+        source: 'agent-dsl',
+        severity: 'warning',
+        category: 'agent-dsl',
+        code,
+        pathString,
+        message: `Generated region ${mapping.status} for ${source.file}:${source.line}.`,
+        status: mapping.status,
+        missingPaths: mapping.missingPaths ?? [],
+        sourceLocation: {
+          kind: 'agent-dsl',
+          ...source,
+        },
+        suggestedAction: {
+          summary: 'Run dsl-diff or inspect the editor-polished region before rebuilding from DSL source.',
+        },
+      };
+    });
+}
+
 const PREVIEW_SCREEN_PATHS = new Map([
   ['ui.titleScreen', 'titleScreen'],
   ['ui.settingsScreen', 'settingsScreen'],
@@ -774,7 +908,7 @@ function collectAssetNameReviewItems(script = {}) {
   return items;
 }
 
-function collectReviewItems({ script, validation, layout, readiness, referenceDiagnostics, previewTargets, transaction }) {
+function collectReviewItems({ script, validation, layout, readiness, referenceDiagnostics, previewTargets, transaction, dslSourceMap, dslStaleness, dslProvenanceEntries }) {
   return [
     ...(validation.errors ?? []).map((issue) => createReviewItem('validation', 'error', issue)),
     ...(validation.warnings ?? []).map((issue) => createReviewItem('validation', 'warning', issue)),
@@ -782,6 +916,8 @@ function collectReviewItems({ script, validation, layout, readiness, referenceDi
     ...(readiness.blockers ?? []).map((issue) => createReviewItem('readiness', 'error', issue)),
     ...(readiness.warnings ?? []).map((issue) => createReviewItem('readiness', 'warning', issue)),
     ...collectPreviewReviewItems(previewTargets),
+    ...collectAgentDslGeneratedReviewItems(summarizeTransaction(transaction), dslProvenanceEntries),
+    ...collectAgentDslStaleReviewItems(dslStaleness, dslSourceMap),
     ...collectReferenceScreenshotReviewItems(transaction),
     ...collectAssetNameReviewItems(script),
     ...(referenceDiagnostics ?? []),
@@ -801,7 +937,11 @@ export function createAgentHandoff(script = {}, options = {}) {
   const readiness = projectReport.readiness ?? createExportReadiness(script, readinessOptions);
   const checkpoints = (options.checkpoints ?? []).map(summarizeCheckpoint);
   const transactionSummary = summarizeTransaction(options.transaction);
-  const previewTargets = previewTargetsFromChangedPaths(transactionSummary?.changedPaths ?? []);
+  const dslProvenanceEntries = createDslProvenanceIndex(options.dslSourceMap);
+  const previewTargets = enrichPreviewTargetsWithDslProvenance(
+    previewTargetsFromChangedPaths(transactionSummary?.changedPaths ?? []),
+    dslProvenanceEntries,
+  );
   const referenceDiagnostics = collectSceneReferenceDiagnostics(script, {
     changedPaths: transactionSummary?.changedPaths ?? [],
   });
@@ -813,6 +953,9 @@ export function createAgentHandoff(script = {}, options = {}) {
     referenceDiagnostics,
     previewTargets,
     transaction: options.transaction,
+    dslSourceMap: options.dslSourceMap,
+    dslStaleness: options.dslStaleness,
+    dslProvenanceEntries,
   });
   const gates = {
     validation: validation.ok,
@@ -834,6 +977,18 @@ export function createAgentHandoff(script = {}, options = {}) {
     checkpoints,
     latestCheckpointPath: checkpoints[0]?.path ?? null,
     transactionSummary,
+    dslSourceMap: options.dslSourceMap
+      ? {
+        path: options.dslSourceMapPath ?? null,
+        mappingCount: options.dslSourceMap.mappings?.length ?? 0,
+        stale: options.dslStaleness
+          ? {
+            ok: options.dslStaleness.ok,
+            staleCount: options.dslStaleness.staleCount,
+          }
+          : null,
+      }
+      : null,
     previewTargets,
     reviewItems,
     reviewItemCount: reviewItems.length,

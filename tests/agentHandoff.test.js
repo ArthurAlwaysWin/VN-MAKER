@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { createAgentHandoff } from '../src/authoring/agentHandoff.js';
+import {
+  createAgentHandoff,
+  createDslProvenanceIndex,
+  findDslProvenanceForPath,
+} from '../src/authoring/agentHandoff.js';
+import { checkAgentDslSourceMapStaleness } from '../src/authoring/agentDsl/sourceMap.js';
 
 describe('agent handoff report', () => {
   it('summarizes gates, checkpoints, and editor review items', () => {
@@ -157,6 +162,121 @@ describe('agent handoff report', () => {
         pathString: 'analysis.sceneGraph',
       }),
     ]));
+  });
+
+  it('adds Agent DSL provenance and stale warnings to handoff artifacts', () => {
+    const script = {
+      projectId: 'gm_handoff_agent_dsl',
+      characters: {},
+      scenes: {
+        start: {
+          pages: [
+            { type: 'normal', background: 'bg/room.png', dialogues: [{ text: 'Ready.' }] },
+          ],
+        },
+      },
+    };
+    const sourceMap = {
+      version: 1,
+      compiler: 'agent-dsl',
+      languageVersion: 1,
+      sources: [{ id: 'src-00001', path: 'agent-src/main.gmdsl' }],
+      mappings: [
+        {
+          id: 'map-00001',
+          sourceId: 'src-00001',
+          span: { start: { line: 4, column: 3 }, end: { line: 5, column: 1 } },
+          astKind: 'page',
+          operationId: 'dsl-add-page-start-1',
+          projectPaths: ['scenes.start.pages.0'],
+          fingerprint: {},
+        },
+      ],
+    };
+    const handoff = createAgentHandoff(script, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: ['scenes.start.pages.0'],
+        },
+      },
+      dslSourceMap: sourceMap,
+      dslSourceMapPath: '.tmp/agent-dsl-source-map.applied.json',
+      dslStaleness: checkAgentDslSourceMapStaleness(sourceMap, script),
+    });
+
+    expect(handoff.dslSourceMap).toMatchObject({
+      path: '.tmp/agent-dsl-source-map.applied.json',
+      mappingCount: 1,
+      stale: {
+        ok: false,
+        staleCount: 1,
+      },
+    });
+    expect(handoff.previewTargets[0]).toMatchObject({
+      type: 'scene',
+      sceneId: 'start',
+      pageIndex: 0,
+      source: {
+        kind: 'agent-dsl',
+        file: 'agent-src/main.gmdsl',
+        line: 4,
+        mappingId: 'map-00001',
+      },
+    });
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'agent-dsl',
+        severity: 'info',
+        code: 'dsl-generated-change',
+        pathString: 'scenes.start.pages.0',
+        message: 'Generated from agent-src/main.gmdsl:4.',
+      }),
+      expect.objectContaining({
+        source: 'agent-dsl',
+        severity: 'warning',
+        code: 'dsl-generated-region-untracked',
+        pathString: 'scenes.start.pages.0',
+        status: 'untracked',
+      }),
+    ]));
+  });
+
+  it('matches Agent DSL provenance across generated path parents and children', () => {
+    const provenanceEntries = createDslProvenanceIndex({
+      sources: [{ id: 'src-00001', path: 'agent-src/main.gmdsl' }],
+      mappings: [
+        {
+          id: 'map-scene',
+          sourceId: 'src-00001',
+          span: { start: { line: 3, column: 1 } },
+          operationId: 'dsl-add-scene-start',
+          projectPaths: ['scenes.start'],
+        },
+        {
+          id: 'map-page',
+          sourceId: 'src-00001',
+          span: { start: { line: 6, column: 3 } },
+          operationId: 'dsl-add-page-start-1',
+          projectPaths: ['scenes.start.pages.0'],
+        },
+        {
+          id: 'map-sibling-prefix',
+          sourceId: 'src-00001',
+          span: { start: { line: 12, column: 1 } },
+          operationId: 'dsl-add-scene-start-bonus',
+          projectPaths: ['scenes.start_bonus'],
+        },
+      ],
+    });
+
+    expect(findDslProvenanceForPath(provenanceEntries, 'scenes.start')
+      .map((source) => source.mappingId)).toEqual(['map-page', 'map-scene']);
+    expect(findDslProvenanceForPath(provenanceEntries, 'scenes.start.pages.0.dialogues.0.text')
+      .map((source) => source.mappingId)).toEqual(['map-page', 'map-scene']);
+    expect(findDslProvenanceForPath(provenanceEntries, 'scenes.start_bonus.pages.0')
+      .map((source) => source.mappingId)).toEqual(['map-sibling-prefix']);
   });
 
   it('adds particle preview review items for changed page particle paths', () => {

@@ -62,6 +62,7 @@
                 · Resolved {{ agentReviewStatusCounts.resolved }}
               </span>
               <span v-if="project.agentHandoff.latestCheckpointPath" class="agent-path">{{ project.agentHandoff.latestCheckpointPath }}</span>
+              <span v-if="getAgentDslSourceMapLabel()" class="agent-path">{{ getAgentDslSourceMapLabel() }}</span>
             </div>
             <div class="agent-preview-targets" v-if="agentPreviewTargets.length">
               <h5>视觉预览目标</h5>
@@ -71,7 +72,12 @@
                   :key="getPreviewTargetKey(target)"
                 >
                   <span class="agent-review-code">{{ getPreviewTargetKindLabel(target) }}</span>
-                  <span class="agent-review-text">{{ getPreviewTargetLabel(target) }}</span>
+                  <span class="agent-review-text">
+                    {{ getPreviewTargetLabel(target) }}
+                    <small v-if="getAgentDslSourceLabel(target.source)" class="agent-dsl-source">
+                      {{ getAgentDslSourceLabel(target.source) }}
+                    </small>
+                  </span>
                   <button
                     class="agent-locate-btn"
                     @click="openPreviewTarget(target)"
@@ -106,7 +112,12 @@
                     :class="`review-status-${getAgentReviewStatus(item)}`"
                   >
                     <span class="agent-review-code">{{ getAgentReviewItemLabel(item) }}</span>
-                    <span class="agent-review-text" :title="getAgentReviewItemTitle(item)">{{ getAgentReviewItemText(item) }}</span>
+                    <span class="agent-review-text" :title="getAgentReviewItemTitle(item)">
+                      {{ getAgentReviewItemText(item) }}
+                      <small v-if="getAgentDslReviewLabel(item)" class="agent-dsl-source">
+                        {{ getAgentDslReviewLabel(item) }}
+                      </small>
+                    </span>
                     <span class="agent-review-status">{{ getAgentReviewStatusLabel(item) }}</span>
                     <button
                       v-if="canNavigateAgentPath(item.pathString)"
@@ -382,6 +393,7 @@ function getAgentReviewStatusLabel(item) {
 
 function getAgentReviewItemLabel(item) {
   const labels = {
+    'agent-dsl': 'agent DSL',
     'missing-asset': 'missing asset',
     'unused-asset': 'unused asset',
     'asset-check': 'asset check',
@@ -394,6 +406,32 @@ function getAgentReviewItemLabel(item) {
     'reference-screenshot-fidelity': 'reference fidelity',
   };
   return labels[item?.category] ?? item?.code ?? item?.source ?? 'review';
+}
+
+function getAgentDslSourceLabel(source) {
+  if (source?.kind !== 'agent-dsl') return '';
+  const file = source.file ?? 'story.dsl';
+  const line = source.line ? `:${source.line}` : '';
+  const status = source.status ? ` · ${source.status}` : '';
+  return `DSL ${file}${line}${status}`;
+}
+
+function getAgentDslReviewLabel(item) {
+  const source = item?.sourceLocation ?? item?.source;
+  const label = getAgentDslSourceLabel(source);
+  if (!label) return '';
+  return item?.status ? `${label} · ${item.status}` : label;
+}
+
+function getAgentDslSourceMapLabel() {
+  const sourceMap = project.agentHandoff?.dslSourceMap;
+  if (!sourceMap) return '';
+  const stale = sourceMap.stale
+    ? sourceMap.stale.ok
+      ? 'safe'
+      : `${sourceMap.stale.staleCount ?? 0} stale`
+    : 'unchecked';
+  return `Agent DSL source map · ${sourceMap.mappingCount ?? 0} mappings · ${stale}`;
 }
 
 function getAgentReviewItemText(item) {
@@ -887,6 +925,15 @@ onBeforeUnmount(() => {
 }
 .agent-review-text {
   color: #aaa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-dsl-source {
+  display: block;
+  margin-top: 2px;
+  color: #83c6e6;
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

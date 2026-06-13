@@ -40,7 +40,7 @@ These commands run outside an apply-plan manifest:
 
 | Command | Purpose | Strict options |
 | --- | --- | --- |
-| `review-handoff` | Runs `author-check` and `handoff-report` as one continuous gate, optionally writes the combined result with `--review-out`, and supports `--write-editor-handoff`. | `--capture-preview` captures screenshots; `--require-preview-screenshot` requires captured preview targets to pass quality checks. |
+| `review-handoff` | Runs `author-check` and `handoff-report` as one continuous gate, optionally writes the combined result with `--review-out`, and supports `--write-editor-handoff`. | `--capture-preview` captures screenshots; `--require-preview-screenshot` requires captured preview targets to pass quality checks. Pass `--source-map .tmp/agent-dsl-source-map.applied.json` to include Agent DSL provenance and stale generated-region warnings in author-check and handoff output. |
 | `draft-plan` | Converts a structured prose-derived draft into deterministic operations. | `--require-adaptation-preview` requires approved adaptation-preview metadata before conversion. |
 | `dsl-plan` | Converts agent-facing DSL source or `project.gmdsl.json` into a deterministic apply-plan manifest. | Compile-time macros/includes/namespaces, P8.1 `mood` presets, P8.2 reusable sequences, and P8.3 route templates only; output must still pass `apply-plan --validate-only`. Pass `--source-map-out path` to also write the first P5 source map artifact. |
 | `dsl-check` | Checks agent-facing DSL source or `project.gmdsl.json` without writing source, plan, source-map, or project files. | Parses, binds, analyzes, emits the plan in memory, and when `--script` is present applies the generated operations to an in-memory project session for validate-only reporting. |
@@ -51,7 +51,7 @@ These commands run outside an apply-plan manifest:
 | `export-web` | Exports the current project as a static web game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 | `export-desktop` | Exports the current project as a desktop game through the same export contract as the editor. | Requires `--out`; runs readiness first and blocks on blockers unless `--allow-readiness-blockers` is passed. |
 
-`review-handoff` preserves the existing individual `author-check` and `handoff-report` commands for scripts that need separate artifacts.
+`review-handoff` preserves the existing individual `author-check` and `handoff-report` commands for scripts that need separate artifacts. `author-check --source-map` is optional P9 metadata: it reads an enriched Agent DSL source map, adds source file/line/mapping ids to focused preview targets, carries the same metadata into written preview plans, and reports source-map staleness in JSON output. `handoff-report --source-map` adds `agent-dsl` review items for generated changes, annotates handoff preview targets, and reports stale/missing/untracked generated regions without writing DSL data into `script.json`.
 
 ```bash
 npm run vn -- dsl-plan agent-src/project.gmdsl.json --out .tmp/plan.json --json
@@ -62,6 +62,8 @@ npm run vn -- dsl-build agent-src/project.gmdsl.json --script public/game/script
 npm run vn -- dsl-format agent-src/main.gmdsl --write --json
 npm run vn -- dsl-skeleton --script public/game/script.json --out agent-src/main.gmdsl --report-out .tmp/agent-dsl-skeleton-report.json --json
 npm run vn -- apply-plan .tmp/plan.json --script public/game/script.json --source-map .tmp/agent-dsl-source-map.json --source-map-out .tmp/agent-dsl-source-map.applied.json --dry-run --json
+npm run vn -- author-check --script public/game/script.json --transaction .tmp/apply-plan-result.json --source-map .tmp/agent-dsl-source-map.applied.json --write-preview-plan --json
+npm run vn -- handoff-report --script public/game/script.json --transaction .tmp/apply-plan-result.json --source-map .tmp/agent-dsl-source-map.applied.json --write-editor-handoff --json
 ```
 
 P8.1 mood preset example:

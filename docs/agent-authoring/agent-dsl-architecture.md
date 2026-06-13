@@ -64,13 +64,14 @@ The current implementation provides:
 - compile-time reusable sequences with scalar parameters that expand to page statements or option effects
 - compile-time route templates that emit affection variables, ending registry entries, and editable ending scenes
 - P5 source map artifact emission with operation provenance ids, deterministic fingerprints, apply-plan enrichment, and stale generated-region checks
+- P9 optional handoff provenance from enriched source maps, including generated-change review items, preview target source metadata, and stale generated-region warnings
 - plan output that can be passed to `apply-plan`
 
 The implementation does not yet provide:
 
 - import declarations
 - incremental rebuild
-- editor UI for DSL provenance
+- dedicated editor UI for DSL provenance beyond existing handoff artifact display
 
 Reverse skeleton generation is available as a migration aid through `dsl-skeleton`; it emits starter source plus unsupported/lossy reports, but it does not claim provenance over existing editor-authored `script.json` paths.
 

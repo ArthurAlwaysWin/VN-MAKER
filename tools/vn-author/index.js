@@ -17,7 +17,11 @@ import {
 } from '../../src/authoring/agentDsl/sourceMap.js';
 import { loadAgentDslProject } from '../../src/authoring/agentDsl/project.js';
 import { AgentDslDiagnosticError } from '../../src/authoring/agentDsl/diagnostics.js';
-import { createAgentHandoff } from '../../src/authoring/agentHandoff.js';
+import {
+  createAgentHandoff,
+  createDslProvenanceIndex,
+  findDslProvenanceForPath,
+} from '../../src/authoring/agentHandoff.js';
 import { createGraphAnalysis, findAssetIssues, findDeadEnds } from '../../src/authoring/branchAnalysis.js';
 import { createExportReadiness } from '../../src/authoring/exportReadiness.js';
 import { lintProjectLayout } from '../../src/authoring/layoutLint.js';
@@ -1041,6 +1045,57 @@ function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction,
   }
 
   return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
+}
+
+function authorCheckPreviewTargetPathString(target = {}) {
+  if (target.pathString) return target.pathString;
+  if (target.type === 'scene' && target.sceneId && Number.isInteger(target.pageIndex)) {
+    return `scenes.${target.sceneId}.pages.${target.pageIndex}`;
+  }
+  if (target.type === 'scene' && target.sceneId) {
+    return `scenes.${target.sceneId}`;
+  }
+  if (target.type === 'screen' && target.screenId) {
+    return `ui.${target.screenId}`;
+  }
+  if (target.type === 'ending-list' || target.kind === 'ending-list') {
+    return 'systems.endings';
+  }
+  if (target.type === 'gallery' || target.kind === 'gallery') {
+    return 'systems.gallery.cg';
+  }
+  return '';
+}
+
+function enrichAuthorCheckPreviewTargetsWithDslProvenance(previewTargets = [], dslProvenanceEntries = []) {
+  if (!dslProvenanceEntries.length) return previewTargets;
+  return previewTargets.map((target) => {
+    const source = findDslProvenanceForPath(
+      dslProvenanceEntries,
+      authorCheckPreviewTargetPathString(target),
+    )[0] ?? null;
+    return source
+      ? { ...target, source: { kind: 'agent-dsl', ...source } }
+      : target;
+  });
+}
+
+function enrichAuthorCheckFocusWithDslProvenance(focus = {}, sourceMap = null) {
+  const dslProvenanceEntries = createDslProvenanceIndex(sourceMap);
+  if (!dslProvenanceEntries.length) return focus;
+  const previewTargets = enrichAuthorCheckPreviewTargetsWithDslProvenance(
+    focus.previewTargets ?? [],
+    dslProvenanceEntries,
+  );
+  return {
+    ...focus,
+    previewTargets,
+    previewTarget: previewTargets[0] ?? focus.previewTarget,
+  };
+}
+
+function withPreviewTargetSource(result = {}, target = {}) {
+  return target.source ? { ...result, source: target.source } : result;
 }
 
 function createAuthorCheckFocus({ args, script, transaction }) {
@@ -3624,6 +3679,39 @@ async function readDslBuildSafetySourceMap(args) {
   };
 }
 
+async function readOptionalAgentDslSourceMap(args, script) {
+  const sourceMapArg = getArgValue(args, '--source-map', null);
+  if (!sourceMapArg) {
+    return {
+      sourceMapPath: null,
+      sourceMap: null,
+      staleness: null,
+    };
+  }
+
+  const sourceMapPath = path.resolve(repoRoot, sourceMapArg);
+  const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+  return {
+    sourceMapPath,
+    sourceMap,
+    staleness: checkAgentDslSourceMapStaleness(sourceMap, script),
+  };
+}
+
+function summarizeOptionalAgentDslSourceMap({ sourceMapPath, sourceMap, staleness } = {}) {
+  if (!sourceMap) return null;
+  return {
+    path: sourceMapPath ?? null,
+    mappingCount: sourceMap.mappings?.length ?? 0,
+    stale: staleness
+      ? {
+        ok: staleness.ok,
+        staleCount: staleness.staleCount,
+      }
+      : null,
+  };
+}
+
 function createDslBuildBlockedOutput({ dslPath, project, scriptPath, sourceMapPath, safety }) {
   const summary = countDslDiffStatuses(safety.mappings);
   return {
@@ -4085,6 +4173,7 @@ async function findUnusedAssets(args) {
 
 async function handoffReport(args, { emit = true } = {}) {
   const { scriptPath, script } = await readScript(args);
+  const dslSourceMap = await readOptionalAgentDslSourceMap(args, script);
   const validationOptions = await getValidationOptions(args, scriptPath);
   const knownAssets = hasFlag(args, '--skip-asset-check')
     ? null
@@ -4108,6 +4197,9 @@ async function handoffReport(args, { emit = true } = {}) {
     checkpoints: await collectCheckpointEntries(checkpointDir, checkpointLimit),
     transaction,
     notes: getArgValues(args, '--note'),
+    dslSourceMap: dslSourceMap.sourceMap,
+    dslSourceMapPath: dslSourceMap.sourceMapPath,
+    dslStaleness: dslSourceMap.staleness,
   });
   const outPathArg = getArgValue(
     args,
@@ -4457,7 +4549,11 @@ async function renderPreview(args) {
 async function authorCheck(args, { emit = true } = {}) {
   const { scriptPath, script } = await readScript(args);
   const transaction = await readTransactionArg(args);
-  const focus = createAuthorCheckFocus({ args, script, transaction });
+  const dslSourceMap = await readOptionalAgentDslSourceMap(args, script);
+  const focus = enrichAuthorCheckFocusWithDslProvenance(
+    createAuthorCheckFocus({ args, script, transaction }),
+    dslSourceMap.sourceMap,
+  );
   const validationOptions = await getValidationOptions(args, scriptPath);
   const knownAssets = hasFlag(args, '--skip-asset-check')
     ? null
@@ -4495,7 +4591,7 @@ async function authorCheck(args, { emit = true } = {}) {
     for (const [index, target] of previewTargets.entries()) {
       const targetOutPath = previewOutPathForTarget(outPath, target, index);
       try {
-        previews.push(await renderPreviewScreenshot({
+        previews.push(withPreviewTargetSource(await renderPreviewScreenshot({
           repoRoot,
           script,
           sceneId: target.sceneId,
@@ -4505,7 +4601,7 @@ async function authorCheck(args, { emit = true } = {}) {
           width,
           height,
           dryRun: !capturePreview,
-        }));
+        }), target));
       } catch (error) {
         if (!capturePreview || ![
           PREVIEW_BROWSER_UNAVAILABLE,
@@ -4520,7 +4616,7 @@ async function authorCheck(args, { emit = true } = {}) {
           message: error.message,
           pathString: target.pathString ?? '',
         });
-        previews.push({
+        previews.push(withPreviewTargetSource({
           dryRun: false,
           sceneId: target.sceneId,
           pageIndex: target.pageIndex,
@@ -4530,7 +4626,7 @@ async function authorCheck(args, { emit = true } = {}) {
           height,
           quality: error.quality ?? { ok: false },
           error: { code: error.code, message: error.message },
-        });
+        }, target));
       }
     }
 
@@ -4588,6 +4684,7 @@ async function authorCheck(args, { emit = true } = {}) {
         changedPathCount: focus.changedPaths.length,
       }
       : null,
+    dslSourceMap: summarizeOptionalAgentDslSourceMap(dslSourceMap),
     focus,
     gates,
     summary: {
@@ -6978,12 +7075,12 @@ function printHelp() {
   find-dead-ends [--script path] [--entry scene_id] [--json]
   find-missing-assets [--script path] [--asset-root path] [--json]
   find-unused-assets [--script path] [--asset-root path] [--json]
-  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--capture-preview] [--require-preview-screenshot] [--scene scene_id] [--page index] [--transaction result.json] [--preview-out path] [--write-preview-plan] [--json]
+  author-check [--script path] [--asset-root path] [--skip-asset-check] [--skip-preview] [--capture-preview] [--require-preview-screenshot] [--scene scene_id] [--page index] [--transaction result.json] [--source-map source-map.json] [--preview-out path] [--write-preview-plan] [--json]
   lint-layout [--script path] [--json]
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
   export-web --out dir [--project dir|--script path] [--asset-root path] [--title title] [--favicon path] [--zip] [--skip-build] [--app-root path] [--skip-asset-check] [--allow-readiness-blockers] [--json]
   export-desktop --out dir [--project dir|--script path] [--asset-root path] [--title title] [--icon path] [--width px] [--height px] [--zip] [--skip-build] [--app-root path] [--electron-runtime-dir path] [--skip-asset-check] [--allow-readiness-blockers] [--json]
-  handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
+  handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--source-map source-map.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   review-handoff [author-check/handoff-report options] [--review-out path] [--capture-preview] [--require-preview-screenshot] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]

@@ -664,7 +664,7 @@ Each abstraction requires:
 
 ## 14. P9 - Editor And Handoff Integration
 
-**Status:** In Progress. `handoff-report --source-map` and `review-handoff --source-map` now read enriched Agent DSL source maps, add `agent-dsl` review items for generated changes, attach source provenance to handoff preview targets, and surface stale/missing/untracked generated-region warnings. The Project Settings handoff panel shows the available DSL source map summary and source file/line metadata. This is optional handoff metadata only; the editor and runtime do not depend on DSL source files.
+**Status:** In Progress. `author-check --source-map`, `handoff-report --source-map`, and `review-handoff --source-map` now read enriched Agent DSL source maps, add source provenance to focused preview targets and preview plans, add `agent-dsl` handoff review items for generated changes, and surface stale/missing/untracked generated-region warnings. The Project Settings handoff panel shows the available DSL source map summary and source file/line metadata. This is optional review metadata only; the editor and runtime do not depend on DSL source files.
 
 ### Objective
 

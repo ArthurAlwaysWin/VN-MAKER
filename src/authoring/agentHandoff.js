@@ -63,7 +63,7 @@ function pathMatchesGeneratedPath(changedPath = '', generatedPath = '') {
   );
 }
 
-function createDslProvenanceIndex(sourceMap = null) {
+export function createDslProvenanceIndex(sourceMap = null) {
   const sourceLookup = createSourceLookup(sourceMap);
   const entries = [];
   for (const mapping of sourceMap?.mappings ?? []) {
@@ -78,7 +78,7 @@ function createDslProvenanceIndex(sourceMap = null) {
   return entries;
 }
 
-function findDslProvenanceForPath(provenanceEntries = [], pathString = '') {
+export function findDslProvenanceForPath(provenanceEntries = [], pathString = '') {
   return provenanceEntries
     .filter((entry) => pathMatchesGeneratedPath(pathString, entry.pathString))
     .sort((left, right) => right.pathString.length - left.pathString.length)

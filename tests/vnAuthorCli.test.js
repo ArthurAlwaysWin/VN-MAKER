@@ -285,6 +285,7 @@ describe('vn-author CLI', () => {
       const enrichedSourceMapPath = path.join(dir, 'agent-dsl-source-map.applied.json');
       const resultOutPath = path.join(dir, 'apply-result.json');
       const handoffPath = path.join(dir, 'agent-handoff.json');
+      const previewPath = path.join(dir, 'author-check-preview.png');
       const scriptPath = path.join(dir, 'script.json');
       const dslSourcePath = 'story.dsl';
       await writeFile(dslPath, `
@@ -409,6 +410,55 @@ scene bad "Bad":
         '--force',
         '--json',
       ]);
+
+      let authorCheckRun = null;
+      let authorCheckFailure = null;
+      try {
+        authorCheckRun = await execFileAsync('node', [
+          cliPath,
+          'author-check',
+          '--script',
+          scriptPath,
+          '--transaction',
+          resultOutPath,
+          '--source-map',
+          enrichedSourceMapPath,
+          '--preview-out',
+          previewPath,
+          '--write-preview-plan',
+          '--skip-asset-check',
+          '--json',
+        ]);
+      } catch (error) {
+        authorCheckFailure = error;
+      }
+      const authorCheckResult = JSON.parse(authorCheckFailure?.stdout ?? authorCheckRun.stdout);
+      const previewPlan = JSON.parse(await readFile(`${previewPath}.json`, 'utf8'));
+      expect(authorCheckResult.dslSourceMap).toMatchObject({
+        path: enrichedSourceMapPath,
+        mappingCount: plan.operations.length,
+        stale: {
+          ok: true,
+          staleCount: 0,
+        },
+      });
+      expect(authorCheckResult.focus.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: expect.objectContaining({
+            kind: 'agent-dsl',
+            file: dslSourcePath,
+            mappingId: expect.stringMatching(/^map-/),
+          }),
+        }),
+      ]));
+      expect(previewPlan.targets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: expect.objectContaining({
+            kind: 'agent-dsl',
+            file: dslSourcePath,
+          }),
+        }),
+      ]));
 
       let handoffFailure = null;
       try {

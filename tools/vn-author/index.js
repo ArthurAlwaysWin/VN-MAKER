@@ -3624,6 +3624,25 @@ async function readDslBuildSafetySourceMap(args) {
   };
 }
 
+async function readOptionalAgentDslSourceMap(args, script) {
+  const sourceMapArg = getArgValue(args, '--source-map', null);
+  if (!sourceMapArg) {
+    return {
+      sourceMapPath: null,
+      sourceMap: null,
+      staleness: null,
+    };
+  }
+
+  const sourceMapPath = path.resolve(repoRoot, sourceMapArg);
+  const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+  return {
+    sourceMapPath,
+    sourceMap,
+    staleness: checkAgentDslSourceMapStaleness(sourceMap, script),
+  };
+}
+
 function createDslBuildBlockedOutput({ dslPath, project, scriptPath, sourceMapPath, safety }) {
   const summary = countDslDiffStatuses(safety.mappings);
   return {
@@ -4085,6 +4104,7 @@ async function findUnusedAssets(args) {
 
 async function handoffReport(args, { emit = true } = {}) {
   const { scriptPath, script } = await readScript(args);
+  const dslSourceMap = await readOptionalAgentDslSourceMap(args, script);
   const validationOptions = await getValidationOptions(args, scriptPath);
   const knownAssets = hasFlag(args, '--skip-asset-check')
     ? null
@@ -4108,6 +4128,9 @@ async function handoffReport(args, { emit = true } = {}) {
     checkpoints: await collectCheckpointEntries(checkpointDir, checkpointLimit),
     transaction,
     notes: getArgValues(args, '--note'),
+    dslSourceMap: dslSourceMap.sourceMap,
+    dslSourceMapPath: dslSourceMap.sourceMapPath,
+    dslStaleness: dslSourceMap.staleness,
   });
   const outPathArg = getArgValue(
     args,
@@ -6983,7 +7006,7 @@ function printHelp() {
   export-readiness [--script path] [--asset-root path] [--skip-asset-check] [--json]
   export-web --out dir [--project dir|--script path] [--asset-root path] [--title title] [--favicon path] [--zip] [--skip-build] [--app-root path] [--skip-asset-check] [--allow-readiness-blockers] [--json]
   export-desktop --out dir [--project dir|--script path] [--asset-root path] [--title title] [--icon path] [--width px] [--height px] [--zip] [--skip-build] [--app-root path] [--electron-runtime-dir path] [--skip-asset-check] [--allow-readiness-blockers] [--json]
-  handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
+  handoff-report [--script path] [--out path] [--write-editor-handoff] [--transaction result.json] [--source-map source-map.json] [--checkpoint-dir path] [--checkpoint-limit count] [--skip-asset-check] [--note text] [--json]
   review-handoff [author-check/handoff-report options] [--review-out path] [--capture-preview] [--require-preview-screenshot] [--json]
   render-preview [--script path] [--scene scene_id] [--page index] [--out path] [--width px] [--height px] [--dry-run] [--write-plan] [--json]
   import-draft draft.json [--script base-script.json] [--out script.json] [--fresh] [--force] [--backup] [--checkpoint] [--json]

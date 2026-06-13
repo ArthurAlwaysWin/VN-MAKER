@@ -59,7 +59,7 @@ And:
 | P6 | Implemented | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
 | P7 | Implemented | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
 | P8 | Implemented | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
-| P9 | Planned | Editor And Handoff Integration | Provenance display and review handoff support |
+| P9 | Implemented | Editor And Handoff Integration | Provenance display and review handoff support |
 
 ## 5. P0 - Baseline MVP
 
@@ -664,6 +664,8 @@ Each abstraction requires:
 
 ## 14. P9 - Editor And Handoff Integration
 
+**Status:** Implemented. `handoff-report --source-map` and `review-handoff --source-map` now read enriched Agent DSL source maps, add `agent-dsl` review items for generated changes, attach source provenance to handoff preview targets, and surface stale/missing/untracked generated-region warnings. This is optional handoff metadata only; the editor and runtime do not depend on DSL source files.
+
 ### Objective
 
 Expose DSL provenance and generated-region status to human review workflows without making the editor dependent on DSL source.
@@ -671,7 +673,7 @@ Expose DSL provenance and generated-region status to human review workflows with
 ### Deliverables
 
 - handoff review items for DSL-generated changes;
-- optional editor panel metadata;
+- optional editor panel metadata through existing handoff artifacts;
 - preview targets enriched with source provenance;
 - stale generated-region warnings.
 
@@ -683,15 +685,19 @@ Handoff artifacts SHOULD include:
 {
   "category": "agent-dsl",
   "severity": "info",
-  "code": "dsl-generated-page",
+  "code": "dsl-generated-change",
   "pathString": "scenes.start.pages.0",
-  "summary": "Generated from agent-src/main.gmdsl:12.",
-  "source": {
+  "message": "Generated from agent-src/main.gmdsl:12.",
+  "sourceLocation": {
+    "kind": "agent-dsl",
     "file": "agent-src/main.gmdsl",
-    "line": 12
+    "line": 12,
+    "mappingId": "map-00004"
   }
 }
 ```
+
+Stale generated regions are reported as `agent-dsl` warning review items with codes `dsl-generated-region-stale`, `dsl-generated-region-missing`, or `dsl-generated-region-untracked`.
 
 Editor support MAY show:
 
@@ -703,9 +709,9 @@ Editor support MAY show:
 
 ### Acceptance Criteria
 
-- Human review can identify DSL-generated changes.
-- Editor can ignore DSL metadata without breaking gameplay.
-- Stale generated regions are visible in handoff or check output.
+- [x] Human review can identify DSL-generated changes.
+- [x] Editor can ignore DSL metadata without breaking gameplay.
+- [x] Stale generated regions are visible in handoff or check output.
 
 ## 15. Cross-Phase Test Matrix
 

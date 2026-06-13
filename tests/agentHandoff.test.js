@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createAgentHandoff } from '../src/authoring/agentHandoff.js';
+import { checkAgentDslSourceMapStaleness } from '../src/authoring/agentDsl/sourceMap.js';
 
 describe('agent handoff report', () => {
   it('summarizes gates, checkpoints, and editor review items', () => {
@@ -155,6 +156,85 @@ describe('agent handoff report', () => {
         category: 'branch-graph-preview',
         code: 'branch-graph-preview-required',
         pathString: 'analysis.sceneGraph',
+      }),
+    ]));
+  });
+
+  it('adds Agent DSL provenance and stale warnings to handoff artifacts', () => {
+    const script = {
+      projectId: 'gm_handoff_agent_dsl',
+      characters: {},
+      scenes: {
+        start: {
+          pages: [
+            { type: 'normal', background: 'bg/room.png', dialogues: [{ text: 'Ready.' }] },
+          ],
+        },
+      },
+    };
+    const sourceMap = {
+      version: 1,
+      compiler: 'agent-dsl',
+      languageVersion: 1,
+      sources: [{ id: 'src-00001', path: 'agent-src/main.gmdsl' }],
+      mappings: [
+        {
+          id: 'map-00001',
+          sourceId: 'src-00001',
+          span: { start: { line: 4, column: 3 }, end: { line: 5, column: 1 } },
+          astKind: 'page',
+          operationId: 'dsl-add-page-start-1',
+          projectPaths: ['scenes.start.pages.0'],
+          fingerprint: {},
+        },
+      ],
+    };
+    const handoff = createAgentHandoff(script, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: ['scenes.start.pages.0'],
+        },
+      },
+      dslSourceMap: sourceMap,
+      dslSourceMapPath: '.tmp/agent-dsl-source-map.applied.json',
+      dslStaleness: checkAgentDslSourceMapStaleness(sourceMap, script),
+    });
+
+    expect(handoff.dslSourceMap).toMatchObject({
+      path: '.tmp/agent-dsl-source-map.applied.json',
+      mappingCount: 1,
+      stale: {
+        ok: false,
+        staleCount: 1,
+      },
+    });
+    expect(handoff.previewTargets[0]).toMatchObject({
+      type: 'scene',
+      sceneId: 'start',
+      pageIndex: 0,
+      source: {
+        kind: 'agent-dsl',
+        file: 'agent-src/main.gmdsl',
+        line: 4,
+        mappingId: 'map-00001',
+      },
+    });
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'agent-dsl',
+        severity: 'info',
+        code: 'dsl-generated-change',
+        pathString: 'scenes.start.pages.0',
+        message: 'Generated from agent-src/main.gmdsl:4.',
+      }),
+      expect.objectContaining({
+        source: 'agent-dsl',
+        severity: 'warning',
+        code: 'dsl-generated-region-untracked',
+        pathString: 'scenes.start.pages.0',
+        status: 'untracked',
       }),
     ]));
   });

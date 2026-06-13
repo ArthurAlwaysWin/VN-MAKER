@@ -283,7 +283,10 @@ describe('vn-author CLI', () => {
       const planPath = path.join(dir, 'story-plan.json');
       const sourceMapPath = path.join(dir, 'agent-dsl-source-map.json');
       const enrichedSourceMapPath = path.join(dir, 'agent-dsl-source-map.applied.json');
+      const resultOutPath = path.join(dir, 'apply-result.json');
+      const handoffPath = path.join(dir, 'agent-handoff.json');
       const scriptPath = path.join(dir, 'script.json');
+      const dslSourcePath = 'story.dsl';
       await writeFile(dslPath, `
 title "CLI Agent DSL"
 character sakura "Sakura" expression normal "characters/sakura_normal.png"
@@ -389,6 +392,71 @@ scene bad "Bad":
         'scenes.start',
         'scenes.start.pages.0',
         'scenes.start.pages.1',
+      ]));
+
+      await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        sourceMapPath,
+        '--source-map-out',
+        enrichedSourceMapPath,
+        '--result-out',
+        resultOutPath,
+        '--force',
+        '--json',
+      ]);
+
+      let handoffFailure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'handoff-report',
+          '--script',
+          scriptPath,
+          '--transaction',
+          resultOutPath,
+          '--source-map',
+          enrichedSourceMapPath,
+          '--out',
+          handoffPath,
+          '--skip-asset-check',
+          '--json',
+        ]);
+      } catch (error) {
+        handoffFailure = error;
+      }
+      const handoffResult = JSON.parse(handoffFailure?.stdout ?? await readFile(handoffPath, 'utf8'));
+      const handoffArtifact = JSON.parse(await readFile(handoffPath, 'utf8'));
+      expect(handoffResult.dslSourceMap).toMatchObject({
+        path: enrichedSourceMapPath,
+        mappingCount: plan.operations.length,
+        stale: {
+          ok: true,
+          staleCount: 0,
+        },
+      });
+      expect(handoffArtifact.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: expect.objectContaining({
+            kind: 'agent-dsl',
+            file: dslSourcePath,
+            mappingId: expect.stringMatching(/^map-/),
+          }),
+        }),
+      ]));
+      expect(handoffArtifact.reviewItems).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'agent-dsl',
+          code: 'dsl-generated-change',
+          sourceLocation: expect.objectContaining({
+            kind: 'agent-dsl',
+            file: dslSourcePath,
+          }),
+        }),
       ]));
     });
   });

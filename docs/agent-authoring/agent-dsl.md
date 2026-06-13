@@ -286,3 +286,21 @@ npm run vn:apply-plan -- .tmp/agent-dsl-plan.json --script public/game/script.js
 ```
 
 The P5 stale-check API compares those generated-region fingerprints with the current `script.json` paths. Unchanged generated paths are safe, edited or deleted generated paths are stale, and unrelated human edits outside mapped generated paths do not make the source map stale. This is rebuild safety metadata only; full `dsl-diff` and incremental rebuild commands remain later tooling work.
+
+## Handoff Provenance
+
+P9 exposes Agent DSL provenance in review handoff artifacts without making gameplay or the editor depend on DSL source files:
+
+```bash
+npm run vn -- handoff-report --script public/game/script.json --transaction .tmp/apply-plan-result.json --source-map .tmp/agent-dsl-source-map.applied.json --write-editor-handoff --json
+npm run vn -- review-handoff --script public/game/script.json --transaction .tmp/apply-plan-result.json --source-map .tmp/agent-dsl-source-map.applied.json --write-preview-plan --write-editor-handoff --json
+```
+
+When `--source-map` points at an enriched source map, the handoff includes:
+
+- `agent-dsl` review items for generated project paths changed by the transaction;
+- source file, line, mapping id, operation id, and AST kind on those review items;
+- preview targets annotated with matching source provenance;
+- stale/missing/untracked generated-region warnings from the current `script.json`.
+
+This metadata is optional and safe to ignore. It is not written into `script.json`, does not introduce runtime interpretation, and does not change the canonical project contract.

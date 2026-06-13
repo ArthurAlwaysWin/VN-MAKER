@@ -436,6 +436,11 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('agentReviewStatusCounts');
     expect(source).toContain('agentPreviewTargets');
     expect(source).toContain('视觉预览目标');
+    expect(source).toContain('getAgentDslSourceLabel');
+    expect(source).toContain('getAgentDslReviewLabel');
+    expect(source).toContain('getAgentDslSourceMapLabel');
+    expect(source).toContain('agent-dsl-source');
+    expect(source).toContain('Agent DSL source map');
     expect(source).toContain('openPreviewTarget');
     expect(source).toContain('showPreviewScreen');
     expect(source).toContain('getAgentReviewItemLabel');

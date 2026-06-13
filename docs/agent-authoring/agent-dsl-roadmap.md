@@ -59,7 +59,7 @@ And:
 | P6 | Implemented | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
 | P7 | Implemented | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
 | P8 | Implemented | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
-| P9 | Implemented | Editor And Handoff Integration | Provenance display and review handoff support |
+| P9 | In Progress | Editor And Handoff Integration | Handoff provenance implemented; editor UI provenance in progress |
 
 ## 5. P0 - Baseline MVP
 
@@ -664,7 +664,7 @@ Each abstraction requires:
 
 ## 14. P9 - Editor And Handoff Integration
 
-**Status:** Implemented. `handoff-report --source-map` and `review-handoff --source-map` now read enriched Agent DSL source maps, add `agent-dsl` review items for generated changes, attach source provenance to handoff preview targets, and surface stale/missing/untracked generated-region warnings. This is optional handoff metadata only; the editor and runtime do not depend on DSL source files.
+**Status:** In Progress. `handoff-report --source-map` and `review-handoff --source-map` now read enriched Agent DSL source maps, add `agent-dsl` review items for generated changes, attach source provenance to handoff preview targets, and surface stale/missing/untracked generated-region warnings. The Project Settings handoff panel shows the available DSL source map summary and source file/line metadata. This is optional handoff metadata only; the editor and runtime do not depend on DSL source files.
 
 ### Objective
 

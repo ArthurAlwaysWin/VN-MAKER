@@ -76,15 +76,13 @@ Read only the skill needed for the task:
 
 ## Key References
 
-- `docs/agent-authoring/skill.md`
-- `docs/agent-authoring/workflow.md`
-- `docs/agent-authoring/command-reference.md`
-- `docs/agent-authoring/agent-dsl.md`
-- `docs/agent-authoring/agent-dsl-architecture.md`
-- `docs/agent-authoring/agent-dsl-roadmap.md`
-- `docs/agent-authoring/project-contract.md`
-- `docs/agent-authoring/validation-rules.md`
-- `docs/agent-authoring/agent-checklist.md`
+Start with `docs/agent-authoring/README.md`, then open only the task-specific references it points to. Common next reads:
+
+- `docs/agent-authoring/agent-checklist.md` for compact command order.
+- `docs/agent-authoring/workflow.md` for the full lifecycle.
+- `docs/agent-authoring/command-reference.md` for CLI and apply-plan parameters.
+- `docs/agent-authoring/agent-dsl.md` for Agent DSL syntax and compile-to-plan workflow.
+- `docs/agent-authoring/project-contract.md` and `docs/agent-authoring/validation-rules.md` for canonical data and gates.
 
 ## Common Commands
 

@@ -83,11 +83,11 @@ For small targeted edits, use `npm run vn -- <command>` from the command referen
 
 Read only the files needed for the task:
 
+- `../../../docs/agent-authoring/README.md` for the documentation map and current vs historical references.
 - `../../../docs/agent-authoring/skill.md` for the full authoring rules.
 - `../../../docs/agent-authoring/command-reference.md` for supported commands.
 - `../../../docs/agent-authoring/agent-dsl.md` for agent-facing DSL syntax and compile-to-plan workflow.
-- `../../../docs/agent-authoring/agent-dsl-architecture.md` for mature DSL boundaries, compiler architecture, diagnostics, IR, source maps, and safety rules.
-- `../../../docs/agent-authoring/agent-dsl-roadmap.md` for phase-by-phase implementation tasks and acceptance gates.
+- `../../../docs/agent-authoring/agent-dsl-architecture.md` for DSL compiler internals and safety boundaries when changing DSL implementation.
 - `../../../docs/agent-authoring/plan-manifest.md` for apply-plan shape.
 - `../../../docs/agent-authoring/structured-draft-contract.md` for draft imports.
 - `../../../docs/agent-authoring/validation-rules.md` for gates and warning meaning.

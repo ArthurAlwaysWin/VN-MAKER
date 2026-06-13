@@ -154,15 +154,17 @@ npm install
 ```
 
 7. If this agent supports custom skills, install the skills stored under `.agent/skills/` into the agent's skills directory.
-8. Read `README.md`, `.agent/skills/galgame-maker-authoring/SKILL.md`, `docs/agent-authoring/workflow.md`, and `docs/agent-authoring/command-reference.md`.
+8. Read `README.md`, `.agent/skills/galgame-maker-authoring/SKILL.md`, and `docs/agent-authoring/README.md`. Then open only the task-specific references linked from that index.
 9. Tell the user that future agent sessions should be opened from inside the `VN-MAKER` source directory. The actual game projects should live under `Projects/`, not inside the editor folder.
 10. Do not edit the portable editor folder, especially `Galgame Maker-win32-x64/resources/app`.
 11. If the user wants to turn prose into a visual novel, first show an adaptation preview that includes characters, scenes, pages, dialogue, choices, variables, conditions, endings, CG, and missing assets. Wait for the user's approval before generating a plan or running `npm run vn:apply-plan`.
 
 ## AI Agent 文档入口
 
+- [Agent 创作文档索引](docs/agent-authoring/README.md)
 - [Agent 创作工作流](docs/agent-authoring/workflow.md)
 - [Agent 命令参考](docs/agent-authoring/command-reference.md)
+- [Agent DSL 语法与工作流](docs/agent-authoring/agent-dsl.md)
 - [项目契约](docs/agent-authoring/project-contract.md)
 - [脚本格式参考](docs/script-format.md)
 - [改编预览示例](docs/agent-authoring/example-adaptation-preview.md)

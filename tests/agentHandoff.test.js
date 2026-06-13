@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { createAgentHandoff } from '../src/authoring/agentHandoff.js';
+import {
+  createAgentHandoff,
+  createDslProvenanceIndex,
+  findDslProvenanceForPath,
+} from '../src/authoring/agentHandoff.js';
 import { checkAgentDslSourceMapStaleness } from '../src/authoring/agentDsl/sourceMap.js';
 
 describe('agent handoff report', () => {
@@ -237,6 +241,42 @@ describe('agent handoff report', () => {
         status: 'untracked',
       }),
     ]));
+  });
+
+  it('matches Agent DSL provenance across generated path parents and children', () => {
+    const provenanceEntries = createDslProvenanceIndex({
+      sources: [{ id: 'src-00001', path: 'agent-src/main.gmdsl' }],
+      mappings: [
+        {
+          id: 'map-scene',
+          sourceId: 'src-00001',
+          span: { start: { line: 3, column: 1 } },
+          operationId: 'dsl-add-scene-start',
+          projectPaths: ['scenes.start'],
+        },
+        {
+          id: 'map-page',
+          sourceId: 'src-00001',
+          span: { start: { line: 6, column: 3 } },
+          operationId: 'dsl-add-page-start-1',
+          projectPaths: ['scenes.start.pages.0'],
+        },
+        {
+          id: 'map-sibling-prefix',
+          sourceId: 'src-00001',
+          span: { start: { line: 12, column: 1 } },
+          operationId: 'dsl-add-scene-start-bonus',
+          projectPaths: ['scenes.start_bonus'],
+        },
+      ],
+    });
+
+    expect(findDslProvenanceForPath(provenanceEntries, 'scenes.start')
+      .map((source) => source.mappingId)).toEqual(['map-page', 'map-scene']);
+    expect(findDslProvenanceForPath(provenanceEntries, 'scenes.start.pages.0.dialogues.0.text')
+      .map((source) => source.mappingId)).toEqual(['map-page', 'map-scene']);
+    expect(findDslProvenanceForPath(provenanceEntries, 'scenes.start_bonus.pages.0')
+      .map((source) => source.mappingId)).toEqual(['map-sibling-prefix']);
   });
 
   it('adds particle preview review items for changed page particle paths', () => {

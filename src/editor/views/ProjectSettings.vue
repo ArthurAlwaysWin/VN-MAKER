@@ -425,13 +425,15 @@ function getAgentDslReviewLabel(item) {
 
 function getAgentDslSourceMapLabel() {
   const sourceMap = project.agentHandoff?.dslSourceMap;
-  if (!sourceMap) return '';
-  const stale = sourceMap.stale
-    ? sourceMap.stale.ok
+  if (!sourceMap || typeof sourceMap !== 'object' || Array.isArray(sourceMap)) return '';
+  const mappingCount = Number.isFinite(sourceMap.mappingCount) ? sourceMap.mappingCount : 0;
+  const staleInfo = sourceMap.stale;
+  const stale = staleInfo && typeof staleInfo === 'object' && !Array.isArray(staleInfo)
+    ? staleInfo.ok === true
       ? 'safe'
-      : `${sourceMap.stale.staleCount ?? 0} stale`
+      : `${Number.isFinite(staleInfo.staleCount) ? staleInfo.staleCount : 0} stale`
     : 'unchecked';
-  return `Agent DSL source map · ${sourceMap.mappingCount ?? 0} mappings · ${stale}`;
+  return `Agent DSL source map · ${mappingCount} mappings · ${stale}`;
 }
 
 function getAgentReviewItemText(item) {

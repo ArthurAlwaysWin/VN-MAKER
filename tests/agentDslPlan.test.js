@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { createAgentDslPlan } from '../src/authoring/agentDslPlan.js';
 
+const DSL_ALLOWED_APPLY_PLAN_COMMANDS = new Set([
+  'add-character',
+  'add-variable',
+  'add-affection-variable',
+  'add-ending',
+  'add-cg',
+  'add-scene',
+  'set-scene-next',
+  'add-page',
+]);
+
 describe('agent DSL plan compiler', () => {
   it('compiles macro-based agent authoring text into an apply-plan manifest', () => {
     const plan = createAgentDslPlan(`
@@ -202,5 +213,34 @@ route sakura:
         },
       },
     });
+  });
+
+  it('emits only apply-plan operation fields and whitelisted commands', () => {
+    const plan = createAgentDslPlan(`
+title "Whitelist Demo"
+character sakura "Sakura" expression normal "characters/sakura_normal.png"
+variable affection number initial 0
+ending good "Good End"
+cg smile "Smile" image "backgrounds/smile.png"
+scene start "Start":
+  say sakura "Welcome."
+  if affection >= 1 -> good else start
+scene good "Good":
+  end
+`);
+
+    for (const operation of plan.operations) {
+      expect(Object.keys(operation).sort()).toEqual(['command', 'id', 'params', 'provenance']);
+      expect(DSL_ALLOWED_APPLY_PLAN_COMMANDS.has(operation.command)).toBe(true);
+      expect(operation.provenance.sourceMapId).toMatch(/^map-\d{5}$/);
+      expect(operation).not.toHaveProperty('script');
+      expect(operation).not.toHaveProperty('sourceMap');
+      expect(operation).not.toHaveProperty('runtime');
+      expect(operation).not.toHaveProperty('js');
+      expect(operation).not.toHaveProperty('css');
+      expect(operation).not.toHaveProperty('html');
+      expect(operation).not.toHaveProperty('shader');
+      expect(operation).not.toHaveProperty('plugin');
+    }
   });
 });

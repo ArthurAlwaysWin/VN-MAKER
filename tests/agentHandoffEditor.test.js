@@ -175,6 +175,40 @@ describe('agent handoff editor integration', () => {
     });
   });
 
+  it('keeps Agent DSL review status keys distinct by source mapping id', () => {
+    const first = {
+      source: 'agent-dsl',
+      code: 'dsl-generated-change',
+      pathString: 'scenes.start.pages.0',
+      message: 'Generated from agent-src/main.gmdsl:12.',
+      sourceLocation: {
+        kind: 'agent-dsl',
+        file: 'agent-src/main.gmdsl',
+        line: 12,
+        mappingId: 'map-00001',
+      },
+    };
+    const second = {
+      ...first,
+      sourceLocation: {
+        ...first.sourceLocation,
+        mappingId: 'map-00002',
+      },
+    };
+
+    expect(createHandoffReviewItemKey(first)).not.toBe(createHandoffReviewItemKey(second));
+    expect(countHandoffReviewStatuses({
+      reviewItems: [first, second],
+    }, {
+      [createHandoffReviewItemKey(first)]: { status: 'acknowledged' },
+      [createHandoffReviewItemKey(second)]: { status: 'resolved' },
+    })).toEqual({
+      open: 0,
+      acknowledged: 1,
+      resolved: 1,
+    });
+  });
+
   it('creates scene navigation requests from handoff paths', () => {
     setActivePinia(createPinia());
     const project = useProjectStore();
@@ -439,6 +473,9 @@ describe('agent handoff editor integration', () => {
     expect(source).toContain('getAgentDslSourceLabel');
     expect(source).toContain('getAgentDslReviewLabel');
     expect(source).toContain('getAgentDslSourceMapLabel');
+    expect(source).toContain("typeof sourceMap !== 'object'");
+    expect(source).toContain('Number.isFinite(sourceMap.mappingCount)');
+    expect(source).toContain('Number.isFinite(staleInfo.staleCount)');
     expect(source).toContain('agent-dsl-source');
     expect(source).toContain('Agent DSL source map');
     expect(source).toContain('openPreviewTarget');

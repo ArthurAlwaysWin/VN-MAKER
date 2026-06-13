@@ -213,4 +213,45 @@ scene good "Good":
       missingPaths: ['scenes.start'],
     });
   });
+
+  it('marks source maps without generated fingerprints as untracked', () => {
+    const { sourceMap } = createAgentDslBuildArtifacts(`
+character sakura "Sakura"
+scene start "Start":
+  say sakura "Welcome."
+`, { file: 'agent-src/main.gmdsl' });
+
+    const untracked = checkAgentDslSourceMapStaleness(sourceMap, {
+      projectId: 'gm_agent_dsl_untracked_source_map',
+      characters: {
+        sakura: { name: 'Sakura', expressions: {} },
+      },
+      scenes: {
+        start: {
+          name: 'Start',
+          pages: [
+            {
+              type: 'normal',
+              dialogues: [{ speaker: 'sakura', text: 'Welcome.' }],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(untracked.ok).toBe(false);
+    expect(untracked.staleCount).toBe(sourceMap.mappings.length);
+    expect(untracked.staleMappings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        operationId: 'dsl-add-character-sakura',
+        status: 'untracked',
+        stale: true,
+      }),
+      expect.objectContaining({
+        operationId: 'dsl-add-page-start-1',
+        status: 'untracked',
+        stale: true,
+      }),
+    ]));
+  });
 });

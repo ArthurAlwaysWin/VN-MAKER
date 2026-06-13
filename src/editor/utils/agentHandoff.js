@@ -3,6 +3,7 @@ function uniqueValues(values = []) {
 }
 
 export function createHandoffReviewItemKey(item = {}) {
+  const mappingId = item.sourceLocation?.mappingId ?? item.source?.mappingId ?? '';
   return JSON.stringify([
     item.source ?? '',
     item.code ?? '',
@@ -10,6 +11,7 @@ export function createHandoffReviewItemKey(item = {}) {
     item.sceneId ?? '',
     item.pageIndex ?? '',
     item.message ?? '',
+    mappingId,
   ]);
 }
 

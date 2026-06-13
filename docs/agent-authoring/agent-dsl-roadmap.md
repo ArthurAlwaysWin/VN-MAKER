@@ -59,7 +59,7 @@ And:
 | P6 | Implemented | Tooling Commands | `dsl-check`, `dsl-format`, `dsl-build`, `dsl-diff` |
 | P7 | Implemented | Reverse Skeleton And Migration | Generate maintainable DSL starter source from `script.json` |
 | P8 | Implemented | Advanced Authoring Abstractions | Cinematic presets, reusable sequences, route templates |
-| P9 | In Progress | Editor And Handoff Integration | Handoff provenance implemented; editor UI provenance in progress |
+| P9 | Implemented | Editor And Handoff Integration | Handoff provenance, editor panel metadata, preview provenance, and generated-region warnings |
 
 ## 5. P0 - Baseline MVP
 

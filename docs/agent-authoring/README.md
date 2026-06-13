@@ -47,6 +47,14 @@ Use the roadmap as historical implementation context, not as a daily operating m
 | Visual polish, transitions, particles, effect packs | [visual-polish-skill.md](./visual-polish-skill.md) |
 | Human editor review | [human-review-tutorial.md](./human-review-tutorial.md) |
 
+## Proposed Feature Plans
+
+These documents describe planned larger features before their contracts are active.
+
+| Feature | Read |
+| --- | --- |
+| OP, ED, and story video support | [video-op-ed-plan.md](./video-op-ed-plan.md) |
+
 ## Examples
 
 | Example | Use |

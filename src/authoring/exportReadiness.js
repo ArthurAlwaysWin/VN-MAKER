@@ -68,7 +68,7 @@ function isAssetLikePath(assetPath) {
   const normalized = assetPath.replace(/\\/g, '/');
   if (!normalized || normalized.endsWith('/')) return false;
   if (normalized === 'script.json' || normalized.endsWith('.json')) return false;
-  return /^(backgrounds|characters|audio|fonts|ui|voices|effects)\//.test(normalized);
+  return /^(backgrounds|characters|audio|fonts|ui|voices|effects|videos)\//.test(normalized);
 }
 
 function createReferencedAssetSet(assets) {
@@ -222,7 +222,8 @@ export function createExportReadiness(script = {}, options = {}) {
   const warnings = [];
 
   for (const error of validation.errors) {
-    blockers.push(createReadinessIssue('validation', error, 'error'));
+    const source = error.code === 'missing-video-asset-reference' ? 'assets' : 'validation';
+    blockers.push(createReadinessIssue(source, error, 'error'));
   }
 
   for (const warning of validation.warnings) {
@@ -303,7 +304,7 @@ export function createExportReadiness(script = {}, options = {}) {
       referenced: assets,
       unused: unusedAssets,
       missing: blockers
-        .filter((issue) => issue.code === 'missing-asset-reference')
+        .filter((issue) => issue.code === 'missing-asset-reference' || issue.code === 'missing-video-asset-reference')
         .map((issue) => ({
           assetKind: issue.assetKind,
           assetPath: issue.assetPath,

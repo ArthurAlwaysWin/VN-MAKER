@@ -1,6 +1,6 @@
 /**
  * Asset Store — Pinia store for cached asset file lists and IPC wrappers.
- * Manages file lists for all asset categories (backgrounds, characters, audio, fonts, ui)
+ * Manages file lists for all asset categories (backgrounds, characters, audio, fonts, ui, videos)
  * and handles font metadata synchronization with script data.
  * @module stores/assets
  */
@@ -16,6 +16,7 @@ export const useAssetStore = defineStore('assets', () => {
     audio: [],
     fonts: [],
     ui: [],
+    videos: [],
   });
   const fontMeta = ref([]);
   const isLoading = ref(false);
@@ -29,7 +30,7 @@ export const useAssetStore = defineStore('assets', () => {
 
   /**
    * Load file list for a single asset category.
-   * @param {string} category - One of: backgrounds, characters, audio, fonts, ui
+   * @param {string} category - One of: backgrounds, characters, audio, fonts, ui, videos
    */
   async function loadCategory(category) {
     if (!window.ipcRenderer) return;
@@ -43,13 +44,13 @@ export const useAssetStore = defineStore('assets', () => {
   }
 
   /**
-   * Load file lists for all 5 asset categories in parallel.
+   * Load file lists for all asset categories in parallel.
    */
   async function loadAll() {
     isLoading.value = true;
     try {
       await Promise.all(
-        ['backgrounds', 'characters', 'audio', 'fonts', 'ui'].map(c => loadCategory(c))
+        ['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'videos'].map(c => loadCategory(c))
       );
     } finally {
       isLoading.value = false;

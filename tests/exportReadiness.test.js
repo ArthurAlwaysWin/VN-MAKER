@@ -208,6 +208,88 @@ describe('export readiness', () => {
     ]);
   });
 
+  it('counts referenced videos and reports unused video files', () => {
+    const script = createReadyScript();
+    script.assets = {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          poster: 'videos/op_main.poster.png',
+        },
+      },
+    };
+    script.ui = {
+      titleScreen: {
+        openingVideo: { videoId: 'op_main' },
+      },
+    };
+
+    const report = createExportReadiness(script, {
+      knownAssets: [
+        'characters/sakura_normal.svg',
+        'backgrounds/school.svg',
+        'videos/op_main.mp4',
+        'videos/op_main.poster.png',
+        'videos/unused.mp4',
+      ],
+    });
+
+    expect(report.ready).toBe(true);
+    expect(report.assets.counts.byKind.videos).toBe(2);
+    expect(report.assets.referenced.videos).toEqual([
+      'videos/op_main.mp4',
+      'videos/op_main.poster.png',
+    ]);
+    expect(report.assets.unused).toEqual(['videos/unused.mp4']);
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'assets',
+        code: 'unused-asset',
+        assetPath: 'videos/unused.mp4',
+      }),
+    ]));
+  });
+
+  it('blocks readiness when referenced video files are missing', () => {
+    const script = createReadyScript();
+    script.assets = {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          poster: 'videos/op_main.poster.png',
+        },
+      },
+    };
+    script.ui = {
+      titleScreen: {
+        openingVideo: { videoId: 'op_main' },
+      },
+    };
+
+    const report = createExportReadiness(script, {
+      knownAssets: [
+        'characters/sakura_normal.svg',
+        'backgrounds/school.svg',
+        'videos/op_main.poster.png',
+      ],
+    });
+
+    expect(report.ready).toBe(false);
+    expect(report.blockers).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'assets',
+        code: 'missing-video-asset-reference',
+        assetPath: 'videos/op_main.mp4',
+      }),
+    ]));
+    expect(report.assets.missing).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        assetKind: 'video',
+        assetPath: 'videos/op_main.mp4',
+      }),
+    ]));
+  });
+
   it('blocks explicit ending projects with unresolved dead ends and closed cycles', () => {
     const report = createExportReadiness(createReadyScript({
       systems: {

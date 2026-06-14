@@ -486,6 +486,155 @@ describe('project validator', () => {
     ]));
   });
 
+  it('accepts canonical registered and direct video references', () => {
+    const script = createValidScript();
+    script.assets = {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          poster: 'videos/op_main.poster.png',
+          kind: 'op',
+        },
+        ed_good: {
+          file: 'videos/ed_good.webm',
+          kind: 'ed',
+        },
+      },
+    };
+    script.ui = {
+      titleScreen: {
+        openingVideo: {
+          videoId: ' op_main ',
+          play: 'after-start',
+          oncePerProfile: true,
+        },
+      },
+    };
+    script.systems.endings.good_end.endingVideo = {
+      videoId: 'ed_good',
+      play: 'after-unlock',
+    };
+    script.scenes.start.pages.unshift({
+      id: 'video_prelude',
+      type: 'video',
+      video: {
+        file: 'videos/story_intro.webm',
+        poster: 'videos/story_intro.poster.png',
+        fit: 'contain',
+        audioMode: 'duck',
+        volume: 0.8,
+        skippable: true,
+        controls: false,
+      },
+      autoAdvance: true,
+      target: 'good',
+    });
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(true);
+    expect(report.errors).toEqual([]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('reports invalid video registry, references, and video page routing', () => {
+    const script = createValidScript();
+    script.assets = {
+      videos: {
+        'bad id': { file: 'videos/bad.mp4' },
+        trailer: { file: 'videos/trailer.avi' },
+        absolute: { file: '/videos/absolute.mp4' },
+        no_file: { label: 'No File' },
+      },
+    };
+    script.ui = {
+      titleScreen: {
+        openingVideo: {
+          videoId: 'missing_video',
+          play: 'somewhere',
+        },
+      },
+    };
+    script.systems.endings.good_end.endingVideo = {
+      file: 'https://example.test/ed.mp4',
+      play: 'before-unlock',
+    };
+    script.scenes.start.pages[0] = {
+      id: 'bad_video',
+      type: 'video',
+      video: {
+        file: 'videos/story_intro.mov',
+        volume: 2,
+        audioMode: 'solo',
+        fit: 'stretch',
+        play: 'manual',
+        skippable: 'yes',
+      },
+      autoAdvance: true,
+      loop: true,
+      target: 'missing_scene',
+    };
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(codes(report)).toEqual(expect.arrayContaining([
+      'invalid-video-id',
+      'missing-video-file',
+      'unsupported-video-extension',
+      'unknown-video-id',
+      'invalid-video-play-mode',
+      'unsafe-video-path',
+      'invalid-video-volume',
+      'invalid-video-audio-mode',
+      'invalid-video-fit',
+      'invalid-video-boolean',
+      'missing-scene-target',
+      'video-loop-auto-advance-conflict',
+    ]));
+  });
+
+  it('treats missing video files as validation errors while poster gaps stay warnings', () => {
+    const script = createValidScript();
+    script.assets = {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          poster: 'videos/op_main.poster.png',
+        },
+      },
+    };
+    script.ui = {
+      titleScreen: {
+        openingVideo: { videoId: 'op_main' },
+      },
+    };
+
+    const report = validateProject(script, {
+      knownAssets: [
+        'characters/sakura_normal.svg',
+        'characters/sakura_smile.svg',
+        'backgrounds/school.svg',
+        'gallery/cg_001.png',
+      ],
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'missing-video-asset-reference',
+        assetPath: 'videos/op_main.mp4',
+      }),
+    ]));
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'missing-asset-reference',
+        assetKind: 'video-poster',
+        assetPath: 'videos/op_main.poster.png',
+      }),
+    ]));
+  });
+
   it('warns about unsupported advanced staging values while preserving runtime fallback', () => {
     const script = createValidScript();
     script.scenes.start.pages[0].camera = { effect: 'spin', durationMs: 50000, intensity: 'extreme' };

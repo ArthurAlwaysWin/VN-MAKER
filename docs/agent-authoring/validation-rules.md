@@ -35,7 +35,7 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `invalid-script` | Script root is not an object. |
 | `invalid-scenes` | Top-level `scenes` is not an object. |
 | `invalid-scene-pages` | Scene `pages` is not an array. |
-| `unknown-page-type` | Page type is not `normal`, `choice`, or `condition`. |
+| `unknown-page-type` | Page type is not `normal`, `choice`, `input`, `condition`, or `video`. |
 | `missing-scene-target` | A scene, choice, or condition target does not exist. |
 | `missing-page-character` | A staged character id is not registered. |
 | `missing-dialogue-speaker` | A dialogue speaker id is not registered. |
@@ -54,6 +54,27 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `invalid-effects` | A choice or normal page entry effect cannot normalize. |
 | `unsupported-effect` | Effect type is outside the shared DSL. |
 | `unsupported-page-enter-effect` | A normal page entry effect is not `unlock:ending`; page-enter effects are intentionally limited to ending progression. |
+| `invalid-video-registry` | `assets.videos` is present but is not an object map. |
+| `invalid-video-id` | A video registry id or video reference id uses an unsupported id shape. |
+| `duplicate-video-id` | Two video registry keys collide after normalization. |
+| `invalid-video-entry` | A video registry entry is not an object. |
+| `missing-video-file` | A video registry entry has no `file`. |
+| `invalid-video-reference` | A video reference is not an object. |
+| `missing-video-source` | A video reference has neither `videoId` nor `file`. |
+| `unknown-video-id` | A video reference points at an undeclared `assets.videos` id. |
+| `unsupported-video-extension` | A video file is not `.mp4` or `.webm`. |
+| `unsafe-video-path` | A video path is absolute, remote, data/blob/file URL, empty-segment, or traversal-based. |
+| `invalid-video-root` | A video path does not start with canonical `videos/`. |
+| `missing-video-asset-reference` | Asset validation could not find a referenced video file; this is an error before export. |
+| `missing-video-page-video` | A `type: "video"` page has no `video` reference. |
+| `invalid-video-play-mode` | An OP/ED video reference uses an unsupported `play` value. |
+| `invalid-video-volume` | Video `volume` is outside `0..1`. |
+| `invalid-video-audio-mode` | Video `audioMode` is not `replace`, `duck`, or `mix`. |
+| `invalid-video-fit` | Video `fit` is not `contain`, `cover`, or `native`. |
+| `invalid-video-boolean` | A boolean video option is not a boolean. |
+| `invalid-video-auto-advance` | A video page `autoAdvance` value is not boolean. |
+| `invalid-video-loop` | A video page `loop` value is not boolean. |
+| `video-loop-auto-advance-conflict` | A video page combines `loop: true` and `autoAdvance: true`. |
 
 ## Common Warning Codes
 
@@ -80,6 +101,8 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `missing-cg-image` | A registered CG has no full gallery image. |
 | `missing-cg-thumbnail` | A registered CG has no thumbnail for gallery review. |
 | `missing-asset-reference` | Asset validation could not find a referenced asset. |
+| `unknown-video-kind` | A video registry `kind` is outside `op`, `ed`, `story`, or `other`. |
+| `opening-video-before-title-autoplay-risk` | `ui.titleScreen.openingVideo.play` uses `before-title`, which requires a click-to-play gate for unmuted playback. |
 | `empty-normal-page` | Normal page has no useful content. |
 | `long-dialogue-text` | Dialogue text is longer than the validator limit. |
 | `unreachable-scene` | Scene cannot be reached from `start` or the selected entry scene. |

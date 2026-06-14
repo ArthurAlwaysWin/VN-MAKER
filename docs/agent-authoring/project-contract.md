@@ -92,6 +92,21 @@ Supported variable types are `number` and `bool`. Optional UI metadata is `label
 
 Ending ids use the same stable id shape as variables. Register endings before writing `unlock:ending` effects. Runtime unlock progress is stored in `player-data/profile.json.unlocks.endings`, not in save slots or `script.json`. Story Systems can read and refresh this player progress for debugging, but editing an ending never writes unlock progress back into author data.
 
+Optional ending videos use `endingVideo` and must reference canonical video project data:
+
+```json
+{
+  "systems": {
+    "endings": {
+      "good_end": {
+        "title": "Good End",
+        "endingVideo": { "videoId": "ed_good", "play": "after-unlock" }
+      }
+    }
+  }
+}
+```
+
 ## CG Gallery
 
 ```json
@@ -131,6 +146,32 @@ CG ids use the stable registry id shape. Register a CG with `add-cg` before writ
 ```
 
 `next` is optional. If present, it must target an existing scene.
+
+## Video Assets
+
+Video files are canonical project assets under `videos/...` and are stored on disk under the project asset root as `assets/videos/...`. Do not store `public/game/videos/...`, absolute paths, remote URLs, data URLs, arbitrary HTML/CSS/JS, shader data, or plugin metadata in `script.json`.
+
+```json
+{
+  "assets": {
+    "videos": {
+      "op_main": {
+        "file": "videos/op_main.mp4",
+        "poster": "videos/op_main.poster.png",
+        "label": "Main Opening",
+        "kind": "op"
+      }
+    }
+  },
+  "ui": {
+    "titleScreen": {
+      "openingVideo": { "videoId": "op_main", "play": "after-start", "oncePerProfile": true }
+    }
+  }
+}
+```
+
+Supported first-pass video file extensions are `.mp4` and `.webm`. `kind` is advisory and may be `op`, `ed`, `story`, or `other`. A video reference may use `videoId` into `assets.videos` or a direct `file`, but generated data should prefer `videoId`.
 
 ## Normal Page
 
@@ -222,6 +263,21 @@ Use canonical `effects[]`. Do not write legacy `setVariable` in new content.
 ```
 
 Supported condition modes are `all` and `any`. Supported operators are `==`, `!=`, `>`, `>=`, `<`, `<=`.
+
+## Video Page
+
+```json
+{
+  "id": "op_page",
+  "type": "video",
+  "video": { "videoId": "op_main", "fit": "contain", "audioMode": "replace" },
+  "autoAdvance": true,
+  "target": "chapter_1",
+  "effects": []
+}
+```
+
+Video pages are story pages, not runtime plugin code. `target` is a scene id used after completion when `autoAdvance` is true. `loop: true` cannot be combined with `autoAdvance: true`. Page-enter `effects` may use the same supported terminal effect contract as normal pages.
 
 ## Effects
 

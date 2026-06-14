@@ -43,13 +43,28 @@ import {
 } from './transitionCatalog.js';
 import { isValidVariableId, normalizeVariableId, normalizeVariableRegistry } from './variableRegistry.js';
 import { collectTextTemplateVariableIds } from './textTemplate.js';
+import {
+  ENDING_VIDEO_PLAY_MODES,
+  OPENING_VIDEO_PLAY_MODES,
+  VIDEO_AUDIO_MODES,
+  VIDEO_EXTENSIONS,
+  VIDEO_FIT_MODES,
+  VIDEO_KIND_OPTIONS,
+  isPlainVideoReference,
+  isSupportedVideoFilePath,
+  isValidVideoId,
+  normalizeProjectVideoPath,
+  normalizeVideoId,
+  normalizeVideoRegistry,
+  resolveVideoReference,
+} from './videoContract.js';
 
 export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
   ERROR: 'error',
   WARNING: 'warning',
 });
 
-const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'input', 'condition']);
+const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'input', 'condition', 'video']);
 const VARIABLE_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub']);
 const UNLOCK_EFFECT_TYPES = new Set(['unlock:ending', 'unlock:cg']);
 const BOOL_CONDITION_OPERATORS = new Set(['==', '!=']);
@@ -245,6 +260,230 @@ function validateEffectPackRegistry(script, report) {
   return normalized;
 }
 
+function validateVideoAssetPath(report, assetPath, path, kind, { requireVideoExtension = false } = {}) {
+  const normalized = normalizeProjectVideoPath(assetPath);
+  if (!normalized.ok) {
+    addError(report, normalized.code, `${kind} path must be a project-relative videos/... asset path.`, path, {
+      assetPath: normalized.path ?? assetPath ?? null,
+      assetKind: kind,
+    });
+    return null;
+  }
+
+  if (requireVideoExtension && !isSupportedVideoFilePath(normalized.path)) {
+    addError(report, 'unsupported-video-extension', `Video file "${normalized.path}" must use one of: ${VIDEO_EXTENSIONS.join(', ')}.`, path, {
+      assetPath: normalized.path,
+      assetKind: kind,
+      supportedExtensions: VIDEO_EXTENSIONS,
+    });
+    return null;
+  }
+
+  return normalized.path;
+}
+
+function validateKnownVideoAsset(report, assetSet, assetPath, path, kind, options = {}) {
+  const normalized = validateVideoAssetPath(report, assetPath, path, kind, options);
+  if (normalized && assetSet && !assetSet.has(normalized)) {
+    const severity = options.missingSeverity ?? 'error';
+    const message = `${kind} asset "${normalized}" does not exist in known assets.`;
+    const details = {
+      assetPath: normalized,
+      assetKind: kind,
+    };
+    if (severity === 'warning') {
+      addWarning(report, 'missing-asset-reference', message, path, details);
+    } else {
+      addError(report, 'missing-video-asset-reference', message, path, details);
+    }
+  }
+  return normalized;
+}
+
+function validateVideoRegistry(script, report, assetSet) {
+  const rawVideos = script?.assets?.videos;
+  if (rawVideos === undefined) {
+    return {};
+  }
+
+  if (!isPlainObject(rawVideos)) {
+    addError(report, 'invalid-video-registry', 'assets.videos must be an object map.', ['assets', 'videos']);
+    return {};
+  }
+
+  const normalized = normalizeVideoRegistry(rawVideos);
+  const seenNormalizedIds = new Map();
+  for (const [rawId, entry] of Object.entries(rawVideos)) {
+    const normalizedId = normalizeVideoId(rawId);
+    const path = ['assets', 'videos', rawId];
+
+    if (!isValidVideoId(rawId)) {
+      addError(report, 'invalid-video-id', `Video id "${rawId}" must start with a letter or underscore and contain only letters, numbers, underscores, or hyphens.`, path, {
+        videoId: rawId,
+      });
+    }
+
+    if (normalizedId) {
+      const previousRawId = seenNormalizedIds.get(normalizedId);
+      if (previousRawId && previousRawId !== rawId) {
+        addError(report, 'duplicate-video-id', `Video id "${rawId}" duplicates "${previousRawId}" after normalization.`, path, {
+          videoId: normalizedId,
+          duplicateOf: previousRawId,
+        });
+      }
+      seenNormalizedIds.set(normalizedId, rawId);
+    }
+
+    if (!isPlainObject(entry)) {
+      addError(report, 'invalid-video-entry', 'Video registry entry must be an object.', path, {
+        videoId: rawId,
+      });
+      continue;
+    }
+
+    const normalizedEntry = normalizedId ? normalized[normalizedId] : null;
+    if (!isNonEmptyString(normalizedEntry?.file)) {
+      addError(report, 'missing-video-file', `Video "${rawId}" requires a file path.`, [...path, 'file'], {
+        videoId: normalizedId ?? rawId,
+      });
+    } else {
+      validateKnownVideoAsset(report, assetSet, normalizedEntry.file, [...path, 'file'], 'video', {
+        requireVideoExtension: true,
+      });
+    }
+
+    if (normalizedEntry?.poster) {
+      validateKnownVideoAsset(report, assetSet, normalizedEntry.poster, [...path, 'poster'], 'video-poster', {
+        missingSeverity: 'warning',
+      });
+    }
+
+    if (normalizedEntry?.kind && !VIDEO_KIND_OPTIONS.includes(normalizedEntry.kind)) {
+      addWarning(report, 'unknown-video-kind', `Video kind "${normalizedEntry.kind}" is not recognized.`, [...path, 'kind'], {
+        videoId: normalizedId ?? rawId,
+        kind: normalizedEntry.kind,
+      });
+    }
+  }
+
+  return normalized;
+}
+
+function validateVideoReference(reference, context, report, options = {}) {
+  const {
+    assetSet,
+    path,
+    playModes,
+    reason,
+    videoRegistry,
+  } = context;
+
+  if (!isPlainVideoReference(reference)) {
+    addError(report, 'invalid-video-reference', 'Video reference must be an object.', path, {
+      reason,
+    });
+    return null;
+  }
+
+  const hasVideoId = isNonEmptyString(reference.videoId);
+  const hasFile = isNonEmptyString(reference.file);
+  if (!hasVideoId && !hasFile) {
+    addError(report, 'missing-video-source', 'Video reference requires either videoId or file.', path, {
+      reason,
+    });
+  }
+
+  if (hasVideoId) {
+    const normalizedVideoId = normalizeVideoId(reference.videoId);
+    if (!isValidVideoId(reference.videoId)) {
+      addError(report, 'invalid-video-id', `Video reference id "${reference.videoId}" is invalid.`, [...path, 'videoId'], {
+        videoId: reference.videoId,
+        reason,
+      });
+    } else if (!videoRegistry[normalizedVideoId]) {
+      addError(report, 'unknown-video-id', `Video id "${reference.videoId}" is not declared in assets.videos.`, [...path, 'videoId'], {
+        videoId: normalizedVideoId,
+        reason,
+      });
+    }
+  }
+
+  const resolved = resolveVideoReference(reference, videoRegistry);
+  if (hasFile) {
+    validateKnownVideoAsset(report, assetSet, reference.file, [...path, 'file'], 'video', {
+      requireVideoExtension: true,
+    });
+  } else if (resolved?.file) {
+    validateKnownVideoAsset(report, assetSet, resolved.file, hasVideoId ? [...path, 'videoId'] : path, 'video', {
+      requireVideoExtension: true,
+    });
+  }
+
+  if (reference.poster) {
+    validateKnownVideoAsset(report, assetSet, reference.poster, [...path, 'poster'], 'video-poster', {
+      missingSeverity: 'warning',
+    });
+  }
+
+  if (reference.volume !== undefined) {
+    const volume = Number(reference.volume);
+    if (!Number.isFinite(volume) || volume < 0 || volume > 1) {
+      addError(report, 'invalid-video-volume', 'Video volume must be a number between 0 and 1.', [...path, 'volume'], {
+        volume: reference.volume,
+        reason,
+      });
+    }
+  }
+
+  if (reference.audioMode !== undefined && !VIDEO_AUDIO_MODES.includes(reference.audioMode)) {
+    addError(report, 'invalid-video-audio-mode', `Video audioMode must be one of: ${VIDEO_AUDIO_MODES.join(', ')}.`, [...path, 'audioMode'], {
+      audioMode: reference.audioMode,
+      reason,
+    });
+  }
+
+  if (reference.fit !== undefined && !VIDEO_FIT_MODES.includes(reference.fit)) {
+    addError(report, 'invalid-video-fit', `Video fit must be one of: ${VIDEO_FIT_MODES.join(', ')}.`, [...path, 'fit'], {
+      fit: reference.fit,
+      reason,
+    });
+  }
+
+  for (const field of ['skippable', 'controls', 'oncePerProfile', 'returnToTitle', 'autoAdvance', 'loop']) {
+    if (reference[field] !== undefined && typeof reference[field] !== 'boolean') {
+      addError(report, 'invalid-video-boolean', `Video ${field} must be a boolean.`, [...path, field], {
+        field,
+        value: reference[field],
+        reason,
+      });
+    }
+  }
+
+  if (reference.play !== undefined) {
+    if (!Array.isArray(playModes) || !playModes.includes(reference.play)) {
+      const supportedModes = Array.isArray(playModes) && playModes.length > 0
+        ? playModes.join(', ')
+        : 'none for this context';
+      addError(report, 'invalid-video-play-mode', `Video play mode must be one of: ${supportedModes}.`, [...path, 'play'], {
+        play: reference.play,
+        reason,
+      });
+    } else if (reason === 'opening' && reference.play === 'before-title') {
+      addWarning(report, 'opening-video-before-title-autoplay-risk', 'Opening video before-title mode requires a click-to-play gate for unmuted playback.', [...path, 'play'], {
+        play: reference.play,
+      });
+    }
+  }
+
+  if (options.requirePlay && reference.play === undefined) {
+    addWarning(report, 'missing-video-play-mode', 'Video play mode is omitted; runtime defaults will apply.', [...path, 'play'], {
+      reason,
+    });
+  }
+
+  return resolved;
+}
+
 function isBooleanLike(value) {
   if (typeof value === 'boolean') return true;
   if (typeof value === 'number') return value === 0 || value === 1;
@@ -313,7 +552,7 @@ function validateVariableRegistry(script, registry, report) {
   }
 }
 
-function validateEndingRegistry(script, endings, report, assetSet) {
+function validateEndingRegistry(script, endings, report, assetSet, videoRegistry) {
   const rawEndings = script?.systems?.endings;
   if (rawEndings == null) {
     return;
@@ -361,6 +600,15 @@ function validateEndingRegistry(script, endings, report, assetSet) {
     }
 
     validateAssetReference(report, assetSet, normalizedEntry?.thumbnail, [...path, 'thumbnail'], 'ending-thumbnail');
+    if (normalizedEntry?.endingVideo !== undefined) {
+      validateVideoReference(normalizedEntry.endingVideo, {
+        assetSet,
+        path: [...path, 'endingVideo'],
+        playModes: ENDING_VIDEO_PLAY_MODES,
+        reason: 'ending',
+        videoRegistry,
+      }, report, { requirePlay: false });
+    }
   }
 }
 
@@ -826,6 +1074,45 @@ function validateConditionPage(page, context, report, options) {
   validateSceneTarget(report, sceneIds, normalized.falseTarget, [...pagePath, 'falseTarget']);
 }
 
+function validateVideoPage(page, context, report) {
+  const { sceneIds, sceneId, pageIndex, videoRegistry, assetSet } = context;
+  const pagePath = ['scenes', sceneId, 'pages', pageIndex];
+
+  if (page.video === undefined) {
+    addError(report, 'missing-video-page-video', 'Video page requires a video reference.', [...pagePath, 'video']);
+  } else {
+    validateVideoReference(page.video, {
+      assetSet,
+      path: [...pagePath, 'video'],
+      reason: 'page',
+      videoRegistry,
+    }, report);
+  }
+
+  validateSceneTarget(report, sceneIds, page.target, [...pagePath, 'target']);
+
+  if (page.autoAdvance !== undefined && typeof page.autoAdvance !== 'boolean') {
+    addError(report, 'invalid-video-auto-advance', 'Video page autoAdvance must be a boolean.', [...pagePath, 'autoAdvance'], {
+      value: page.autoAdvance,
+    });
+  }
+
+  if (page.loop !== undefined && typeof page.loop !== 'boolean') {
+    addError(report, 'invalid-video-loop', 'Video page loop must be a boolean.', [...pagePath, 'loop'], {
+      value: page.loop,
+    });
+  }
+
+  if (page.loop === true && page.autoAdvance === true) {
+    addError(report, 'video-loop-auto-advance-conflict', 'Video page cannot combine loop: true with autoAdvance: true.', pagePath);
+  }
+
+  validateEffects(page, {
+    ...context,
+    path: pagePath,
+  }, report);
+}
+
 function validatePageMedia(page, context, report, options) {
   const pagePath = ['scenes', context.sceneId, 'pages', context.pageIndex];
   validateAssetReference(report, options.assetSet, page.background, [...pagePath, 'background'], 'background');
@@ -1205,6 +1492,8 @@ function validatePage(page, context, report, options) {
     validateInputPage(page, context, report, options);
   } else if (page.type === 'condition') {
     validateConditionPage(page, context, report, options);
+  } else if (page.type === 'video') {
+    validateVideoPage(page, context, report);
   }
 }
 
@@ -1293,6 +1582,21 @@ function validateUiStylePresetField(script, report) {
   });
 }
 
+function validateTitleScreenVideo(script, report, context) {
+  const openingVideo = script?.ui?.titleScreen?.openingVideo;
+  if (openingVideo === undefined) {
+    return;
+  }
+
+  validateVideoReference(openingVideo, {
+    assetSet: context.assetSet,
+    path: ['ui', 'titleScreen', 'openingVideo'],
+    playModes: OPENING_VIDEO_PLAY_MODES,
+    reason: 'opening',
+    videoRegistry: context.videoRegistry,
+  }, report, { requirePlay: false });
+}
+
 export function validateProject(script, options = {}) {
   const report = {
     ok: true,
@@ -1313,6 +1617,7 @@ export function validateProject(script, options = {}) {
   validateCharacterRegistry(script, report);
   validateCharacterAssets(script, report, config.assetSet);
   const effectPackManifests = validateEffectPackRegistry(script, report);
+  const videoRegistry = validateVideoRegistry(script, report, config.assetSet);
   validateUiMotion(script, report);
   validateUiStylePresetField(script, report);
 
@@ -1320,7 +1625,7 @@ export function validateProject(script, options = {}) {
   const endings = normalizeEndingRegistry(script?.systems?.endings);
   const cgs = normalizeCgRegistry(script?.systems?.gallery?.cg);
   validateVariableRegistry(script, registry, report);
-  validateEndingRegistry(script, endings, report, config.assetSet);
+  validateEndingRegistry(script, endings, report, config.assetSet, videoRegistry);
   validateCgRegistry(script, cgs, report, config.assetSet);
   const context = {
     script,
@@ -1328,11 +1633,13 @@ export function validateProject(script, options = {}) {
     registry,
     endings,
     cgs,
+    videoRegistry,
     effectPackManifests,
     assetSet: config.assetSet,
     checkedEffectPackAssets: new Set(),
   };
 
+  validateTitleScreenVideo(script, report, context);
   validateScenes(script, context, report, config);
   validateBranchFlow(script, endings, cgs, report, {
     checkReachability: options.checkReachability,

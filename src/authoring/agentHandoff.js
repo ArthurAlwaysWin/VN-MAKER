@@ -724,7 +724,7 @@ function isReviewableAssetPath(assetPath) {
   const normalized = normalizeAssetPath(assetPath);
   if (!normalized) return false;
   if (/^(https?:|data:|asset:|file:|blob:)/i.test(normalized)) return false;
-  return /^(backgrounds|characters|audio|fonts|ui|voices|effects)\//.test(normalized);
+  return /^(backgrounds|characters|audio|fonts|ui|voices|effects|videos)\//.test(normalized);
 }
 
 const PLACEHOLDER_ASSET_TOKENS = new Set([

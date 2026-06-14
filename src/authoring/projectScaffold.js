@@ -221,7 +221,7 @@ export async function createGalgameProject({
   }
 
   await mkdir(resolvedProjectPath, { recursive: true });
-  for (const category of ['backgrounds', 'characters', 'audio', 'ui', 'fonts']) {
+  for (const category of ['backgrounds', 'characters', 'audio', 'ui', 'fonts', 'videos']) {
     await mkdir(path.join(resolvedProjectPath, 'assets', category), { recursive: true });
   }
 

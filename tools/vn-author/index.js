@@ -611,6 +611,7 @@ const ASSET_LIBRARY_CATEGORIES = [
   'ui',
   'fonts',
   'effects',
+  'videos',
 ];
 
 function tokenizeAssetName(name) {

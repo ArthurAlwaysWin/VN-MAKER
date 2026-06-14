@@ -22,7 +22,7 @@ import { exportDesktop } from '../electron/exportDesktop.js';
 
 /**
  * Create a mock project directory with script.json and asset files.
- * Includes all 5 asset categories (backgrounds, characters, audio, voices)
+ * Includes all asset categories used by the export filter fixture.
  * plus an unreferenced file for filtering tests.
  * @param {string} baseDir - Root directory for the mock project
  */
@@ -49,12 +49,27 @@ async function createMockProject(baseDir) {
       endings: {
         good: {
           thumbnail: 'ui/endings/good.png',
+          endingVideo: { videoId: 'ed_good' },
+        },
+      },
+    },
+    assets: {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          poster: 'videos/op_main.poster.png',
+        },
+        ed_good: {
+          file: 'videos/ed_good.webm',
         },
       },
     },
     ui: {
       saveLoadScreen: {
         background: 'ui/save_bg.png',
+      },
+      titleScreen: {
+        openingVideo: { videoId: 'op_main' },
       },
     },
   };
@@ -68,6 +83,7 @@ async function createMockProject(baseDir) {
   await fs.mkdir(path.join(baseDir, 'assets', 'voices'), { recursive: true });
   await fs.mkdir(path.join(baseDir, 'assets', 'ui'), { recursive: true });
   await fs.mkdir(path.join(baseDir, 'assets', 'ui', 'endings'), { recursive: true });
+  await fs.mkdir(path.join(baseDir, 'assets', 'videos'), { recursive: true });
 
   await fs.writeFile(path.join(baseDir, 'assets', 'backgrounds', 'city.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'characters', 'hero_normal.png'), Buffer.from('FAKE'));
@@ -75,9 +91,13 @@ async function createMockProject(baseDir) {
   await fs.writeFile(path.join(baseDir, 'assets', 'voices', 'v001.ogg'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'ui', 'save_bg.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'ui', 'endings', 'good.png'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'op_main.mp4'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'op_main.poster.png'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'ed_good.webm'), Buffer.from('FAKE'));
 
   // Unreferenced file (should NOT be copied)
   await fs.writeFile(path.join(baseDir, 'assets', 'audio', 'unreferenced.mp3'), Buffer.from('NOPE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'unreferenced.mp4'), Buffer.from('NOPE'));
 }
 
 /**
@@ -242,6 +262,16 @@ describe('exportDesktop — asset filtering', () => {
 
   it('copies referenced ending thumbnails', () => {
     ok(existsSync(path.join(result.outputPath, 'assets', 'ui', 'endings', 'good.png')));
+  });
+
+  it('copies referenced videos and posters', () => {
+    ok(existsSync(path.join(result.outputPath, 'assets', 'videos', 'op_main.mp4')));
+    ok(existsSync(path.join(result.outputPath, 'assets', 'videos', 'op_main.poster.png')));
+    ok(existsSync(path.join(result.outputPath, 'assets', 'videos', 'ed_good.webm')));
+  });
+
+  it('does NOT copy unreferenced videos', () => {
+    ok(!existsSync(path.join(result.outputPath, 'assets', 'videos', 'unreferenced.mp4')));
   });
 });
 

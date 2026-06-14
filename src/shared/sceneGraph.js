@@ -72,6 +72,16 @@ function collectPageSceneEdges(sceneId, page, pageIndex) {
     )];
   }
 
+  if (page.type === 'video' && isNonEmptyString(page.target)) {
+    return [createEdge(
+      sceneId,
+      page.target,
+      'video-target',
+      ['scenes', sceneId, 'pages', pageIndex, 'target'],
+      { pageIndex, optionIndex: null, targetField: 'target' },
+    )];
+  }
+
   return [];
 }
 

@@ -1,7 +1,7 @@
 /**
  * Asset format validation — magic bytes + extension whitelist.
  * Validates asset files by checking both file extension and binary signature (magic bytes).
- * Supports 12 formats across 5 asset categories.
+ * Supports asset formats across editor asset categories.
  * @module validateAsset
  */
 
@@ -22,6 +22,9 @@ const SIGNATURES = {
   },
   mp4_audio: {
     bytes: [0x66, 0x74, 0x79, 0x70], offset: 4,
+  },
+  webm: {
+    bytes: [0x1A, 0x45, 0xDF, 0xA3], offset: 0,
   },
   ogg: { bytes: [0x4F, 0x67, 0x67, 0x53], offset: 0 },
   wav: {
@@ -56,6 +59,10 @@ const CATEGORY_FORMATS = {
   ui: {
     extensions: ['.png', '.jpg', '.jpeg', '.webp'],
     signatures: ['png', 'jpeg', 'webp'],
+  },
+  videos: {
+    extensions: ['.mp4', '.webm'],
+    signatures: ['mp4_audio', 'webm'],
   },
 };
 
@@ -106,7 +113,7 @@ function matchesSignature(buffer, sig) {
  * Validate a file's format by checking extension whitelist and magic bytes.
  * @param {Buffer} buffer - First 12+ bytes of the file
  * @param {string} extension - File extension including dot (e.g. '.png')
- * @param {string} category - Asset category ('backgrounds' | 'characters' | 'audio' | 'fonts' | 'ui')
+ * @param {string} category - Asset category ('backgrounds' | 'characters' | 'audio' | 'fonts' | 'ui' | 'videos')
  * @returns {{ valid: boolean, reason?: string }}
  */
 export function validateAssetFormat(buffer, extension, category) {

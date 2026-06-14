@@ -33,7 +33,7 @@ function _escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-const EXPORT_ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices', 'effects']);
+const EXPORT_ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices', 'effects', 'videos']);
 
 function isInsidePath(fullPath, basePath) {
   const resolved = path.resolve(fullPath);
@@ -212,6 +212,7 @@ export async function exportGame(options, sendProgress) {
     ...assetDict.ui,
     ...assetDict.voices,
     ...assetDict.effects,
+    ...assetDict.videos,
   ];
   for (const relPath of allPaths) {
     const safeRelPath = normalizeExportAssetPath(relPath);

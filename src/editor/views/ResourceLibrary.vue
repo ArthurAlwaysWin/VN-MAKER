@@ -33,7 +33,7 @@
 <script setup>
 /**
  * ResourceLibrary — Master view for unified asset management.
- * Contains 4 sub-tabs (backgrounds, characters, audio, fonts) with shared
+ * Contains resource sub-tabs with shared
  * toolbar, import button, drop overlay, and import notification.
  * @module views/ResourceLibrary
  */

@@ -84,6 +84,8 @@ function getAssetContentType(assetPath) {
   if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
   if (ext === '.webp') return 'image/webp';
   if (ext === '.gif') return 'image/gif';
+  if (ext === '.mp4') return 'video/mp4';
+  if (ext === '.webm') return 'video/webm';
   if (ext === '.mp3') return 'audio/mpeg';
   if (ext === '.ogg') return 'audio/ogg';
   if (ext === '.wav') return 'audio/wav';

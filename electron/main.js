@@ -67,12 +67,24 @@ function createAssetResponseHeaders(headers = {}) {
   return nextHeaders;
 }
 
+function getAssetContentType(assetPath) {
+  const extension = path.extname(assetPath).toLowerCase();
+  if (extension === '.mp4') return 'video/mp4';
+  if (extension === '.webm') return 'video/webm';
+  return null;
+}
+
 async function fetchAssetFileResponse(fullPath) {
   const response = await net.fetch(pathToFileURL(fullPath).toString());
+  const headers = createAssetResponseHeaders(response.headers);
+  const contentType = getAssetContentType(fullPath);
+  if (contentType) {
+    headers.set('Content-Type', contentType);
+  }
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: createAssetResponseHeaders(response.headers),
+    headers,
   });
 }
 
@@ -141,7 +153,7 @@ async function ensureProjectLibraryDir() {
 
 // --- Path Security ---
 
-const ASSET_CATEGORIES = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui']);
+const ASSET_CATEGORIES = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'videos']);
 const dialogGrantedFilePaths = new Set();
 const dialogGrantedDirectoryPaths = new Set();
 const grantedProjectPaths = new Set();
@@ -400,6 +412,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
     await fs.mkdir(path.join(projectDir, 'assets', 'audio'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'ui'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'assets', 'fonts'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'assets', 'videos'), { recursive: true });
 
     const projectJson = {
       name,
@@ -420,7 +433,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
         const demoScript = JSON.parse(await fs.readFile(path.join(demoDir, 'script.json'), 'utf-8'));
         delete demoScript.meta;
         scriptData = demoScript;
-        for (const sub of ['backgrounds', 'characters', 'audio']) {
+        for (const sub of ['backgrounds', 'characters', 'audio', 'videos']) {
           const srcDir = path.join(demoDir, sub);
           const dstDir = path.join(projectDir, 'assets', sub);
           if (existsSync(srcDir)) {
@@ -506,7 +519,7 @@ ipcMain.handle('load-project', async (event, projectPath) => {
       delete scriptData.meta;
       scriptChanged = true;
       await fs.writeFile(projectJsonPath, JSON.stringify(projectData, null, 2), 'utf-8');
-      for (const sub of ['backgrounds', 'characters', 'audio', 'ui']) {
+      for (const sub of ['backgrounds', 'characters', 'audio', 'ui', 'videos']) {
         await fs.mkdir(path.join(projectPath, 'assets', sub), { recursive: true });
       }
     }
@@ -738,6 +751,7 @@ ipcMain.handle('select-asset', async (event, { types }) => {
       audio: { name: '音频', extensions: ['mp3', 'ogg', 'wav', 'm4a', 'mp4', 'aac'] },
       fonts: { name: '字体', extensions: ['ttf', 'otf', 'woff', 'woff2'] },
       ui: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+      videos: { name: '视频', extensions: ['mp4', 'webm'] },
     };
 
     const categories = (Array.isArray(types) ? types : [])
@@ -1793,6 +1807,7 @@ if (gotSingleInstanceLock) {
         return new Response(readable, {
           status: 206,
           headers: createAssetResponseHeaders({
+            ...(getAssetContentType(fullPath) ? { 'Content-Type': getAssetContentType(fullPath) } : {}),
             'Content-Range': `bytes ${start}-${end}/${total}`,
             'Content-Length': String(chunkSize),
             'Accept-Ranges': 'bytes',

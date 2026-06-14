@@ -59,6 +59,14 @@ const fullScript = {
             { speaker: 'villain', text: 'Ha', voice: 'audio/voice02.ogg' },
           ],
         },
+        {
+          type: 'video',
+          video: {
+            file: 'videos/story_intro.webm',
+            poster: 'videos/story_intro.poster.png',
+          },
+          autoAdvance: true,
+        },
       ],
     },
   },
@@ -77,6 +85,28 @@ const fullScript = {
           { path: 'effects/old-film/effect.json', role: 'manifest' },
           { path: 'effects/old-film/preview.png', role: 'preview' },
         ],
+      },
+    },
+    videos: {
+      op_main: {
+        file: 'videos/op_main.mp4',
+        poster: 'videos/op_main.poster.png',
+        kind: 'op',
+      },
+      ed_good: {
+        file: 'videos/ed_good.webm',
+        poster: 'videos/ed_good.poster.png',
+        kind: 'ed',
+      },
+      unused_video: {
+        file: 'videos/unused.mp4',
+      },
+    },
+  },
+  systems: {
+    endings: {
+      good: {
+        endingVideo: { videoId: 'ed_good' },
       },
     },
   },
@@ -105,6 +135,7 @@ const fullScript = {
     titleScreen: {
       background: 'backgrounds/title.png',
       bgm: 'audio/title_bgm.mp3',
+      openingVideo: { videoId: 'op_main' },
       elements: [
         { type: 'button', text: 'Start' },
         { type: 'image', src: 'backgrounds/logo.png' },
@@ -240,6 +271,14 @@ const expectedFull = {
     'effects/old-film/effect.json',
     'effects/old-film/preview.png',
   ],
+  videos: [
+    'videos/ed_good.poster.png',
+    'videos/ed_good.webm',
+    'videos/op_main.mp4',
+    'videos/op_main.poster.png',
+    'videos/story_intro.poster.png',
+    'videos/story_intro.webm',
+  ],
   ui: [
     'ui/backlog-bg.png',
     'ui/backlog-header.png',
@@ -291,22 +330,22 @@ const expectedFull = {
 // ─── Tests ───────────────────────────────────────────────
 
 describe('return shape', () => {
-  it('returns an object with exactly 7 keys', () => {
+  it('returns an object with exactly 8 keys', () => {
     const result = scanAssets(fullScript);
     const keys = Object.keys(result).sort();
-    deepStrictEqual(keys, ['audio', 'backgrounds', 'characters', 'effects', 'fonts', 'ui', 'voices']);
+    deepStrictEqual(keys, ['audio', 'backgrounds', 'characters', 'effects', 'fonts', 'ui', 'videos', 'voices']);
   });
 
   it('each value is an array', () => {
     const result = scanAssets(fullScript);
-    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui', 'effects']) {
+    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui', 'effects', 'videos']) {
       ok(Array.isArray(result[key]), `${key} should be an array`);
     }
   });
 
   it('each array contains only strings', () => {
     const result = scanAssets(fullScript);
-    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui', 'effects']) {
+    for (const key of ['backgrounds', 'audio', 'fonts', 'characters', 'voices', 'ui', 'effects', 'videos']) {
       for (const item of result[key]) {
         ok(typeof item === 'string', `${key} item "${item}" should be a string`);
       }
@@ -545,6 +584,95 @@ describe('ending registry assets', () => {
     });
 
     deepStrictEqual(result.backgrounds, ['ui/endings/good.png']);
+  });
+
+  it('extracts ending videos through the video registry', () => {
+    const result = scanAssets({
+      assets: {
+        videos: {
+          ed_good: {
+            file: 'videos/ed_good.webm',
+            poster: 'videos/ed_good.poster.png',
+          },
+          unused: {
+            file: 'videos/unused.webm',
+          },
+        },
+      },
+      systems: {
+        endings: {
+          good: {
+            endingVideo: { videoId: 'ed_good' },
+          },
+        },
+      },
+    });
+
+    deepStrictEqual(result.videos, [
+      'videos/ed_good.poster.png',
+      'videos/ed_good.webm',
+    ]);
+  });
+});
+
+describe('video assets', () => {
+  it('extracts video page files, posters, and title opening videos', () => {
+    const result = scanAssets({
+      assets: {
+        videos: {
+          op_main: {
+            file: 'videos/op_main.mp4',
+            poster: 'videos/op_main.poster.png',
+          },
+        },
+      },
+      scenes: {
+        intro: {
+          pages: [
+            {
+              type: 'video',
+              video: {
+                file: 'videos/story_intro.webm',
+                poster: 'videos/story_intro.poster.png',
+              },
+            },
+          ],
+        },
+      },
+      ui: {
+        titleScreen: {
+          openingVideo: { videoId: 'op_main' },
+        },
+      },
+    });
+
+    deepStrictEqual(result.videos, [
+      'videos/op_main.mp4',
+      'videos/op_main.poster.png',
+      'videos/story_intro.poster.png',
+      'videos/story_intro.webm',
+    ]);
+  });
+
+  it('ignores unsafe and unreferenced video paths', () => {
+    const result = scanAssets({
+      assets: {
+        videos: {
+          unused: { file: 'videos/unused.mp4' },
+        },
+      },
+      scenes: {
+        intro: {
+          pages: [
+            { type: 'video', video: { file: 'https://example.test/op.mp4' } },
+            { type: 'video', video: { file: '/videos/absolute.mp4' } },
+            { type: 'video', video: { file: '../outside.mp4' } },
+          ],
+        },
+      },
+    });
+
+    deepStrictEqual(result.videos, []);
   });
 });
 
@@ -789,6 +917,7 @@ describe('graceful handling', () => {
       ui: [],
       voices: [],
       effects: [],
+      videos: [],
     });
   });
 
@@ -802,6 +931,7 @@ describe('graceful handling', () => {
       ui: [],
       voices: [],
       effects: [],
+      videos: [],
     });
   });
 
@@ -815,6 +945,7 @@ describe('graceful handling', () => {
       ui: [],
       voices: [],
       effects: [],
+      videos: [],
     });
   });
 
@@ -833,6 +964,7 @@ describe('graceful handling', () => {
       ui: [],
       voices: [],
       effects: [],
+      videos: [],
     });
   });
 });

@@ -1,6 +1,6 @@
 # Video, OP, and ED Adaptation Plan
 
-**Status:** Proposed full-scope implementation plan  
+**Status:** Proposed full-scope implementation plan; V0 decisions locked
 **Audience:** maintainers, AI implementers, editor/runtime reviewers  
 **Scope:** first-class video support for opening movies, ending movies, and story video moments
 
@@ -55,17 +55,20 @@ This plan adds video support across the canonical project contract, runtime, edi
 
 Add a `videos` asset category alongside existing project asset categories.
 
-Recommended file location:
+Canonical project data should reference video files with the same asset-root-relative style used by other assets:
 
 ```text
-public/game/videos/
+videos/
 ```
+
+In an editor project, imported files should live under the project asset root as `assets/videos/...`, parallel to `assets/audio/...`. Exported/runtime builds should expose them through the existing asset resolver as `videos/...`; the contract must not hard-code `public/game/videos/` into `script.json`.
 
 Recommended supported extensions:
 
 - `.mp4` for broad browser and desktop compatibility.
 - `.webm` for high-quality web delivery.
-- `.ogv` only if the runtime and preview stack explicitly support it.
+
+Do not include `.ogv` in the first implementation unless preview, runtime, validation, MIME serving, and export all explicitly support it.
 
 The asset resolver should treat video files like other project assets: project-relative, portable, and exportable. Absolute paths, path traversal, data URLs, and remote URLs must remain invalid.
 
@@ -100,6 +103,8 @@ Rules:
 
 - Registry entries are metadata and reusable references, not executable behavior.
 - A video can be referenced by `videoId` or by direct `file`.
+- Agent-generated OP, ED, and video-page data should prefer `videoId` once a registry entry exists.
+- Direct `file` references are allowed for quick authoring and migration compatibility, but OP/ED do not require them when `videoId` is present.
 - Validators should normalize direct file references and registry references through one resolver.
 - Unknown registry IDs are errors.
 - Missing files are validation errors.
@@ -169,6 +174,8 @@ Recommended `play` values:
 
 Browser autoplay restrictions make `after-start` the recommended default for unmuted OP playback.
 
+If a project explicitly chooses `before-title`, the runtime should show a click-to-play gate before unmuted playback. The first implementation should not silently switch to muted autoplay with click-to-unmute, because that makes OP audio behavior surprising and harder to test.
+
 ### 5.5 ED Contract
 
 Extend ending registry entries with optional ending video data:
@@ -201,10 +208,11 @@ Recommended `play` values:
 | Value | Behavior |
 | --- | --- |
 | `after-unlock` | Plays after an `unlock:ending` effect succeeds. |
-| `before-unlock` | Plays before the ending is unlocked. Use only when the route must not count as complete until playback finishes. |
 | `manual` | Available from ending gallery or editor preview only. |
 
 `after-unlock` is the safest default because profile state is already durable before playback starts.
+
+`before-unlock` should be reserved for a later implementation. The current effect model applies `unlock:ending` when a page or choice effect runs; delaying the unlock until after media playback would require an explicit effect scheduling change, not just an ED player hook.
 
 ### 5.6 Story Video Pages
 
@@ -222,7 +230,7 @@ Add a blocking video page type:
     "fit": "contain"
   },
   "autoAdvance": true,
-  "next": "prologue_start",
+  "target": null,
   "effects": []
 }
 ```
@@ -231,9 +239,12 @@ Rules:
 
 - `type: "video"` pages do not require `dialogues`.
 - `video` is required.
-- `autoAdvance: true` requires a valid `next` target unless the page is terminal.
+- `autoAdvance: true` advances to the next page in the same scene by default.
+- Optional `target` jumps to a scene ID after playback, using the existing scene-target model. It is not a page ID.
+- The first implementation should not introduce page-level jump targets.
 - `loop: true` is incompatible with `autoAdvance: true`.
 - Page effects are allowed only through existing supported effect commands.
+- Video pages may use terminal effects such as `unlock:ending`. ED playback remains configured on the ending registry entry and runs after the ending unlock is durable.
 - Video pages must remain reachable through normal route validation.
 
 ### 5.7 Ambient Video Layers
@@ -327,7 +338,7 @@ Recommended flow:
 4. Video plays as a blocking overlay.
 5. Runtime applies `returnToTitle` or resumes the existing ending display flow.
 
-The ED flow must not make ending unlocks depend on a fragile media playback event unless the project explicitly chooses `before-unlock`.
+The ED flow must not make ending unlocks depend on a fragile media playback event. The initial runtime should implement `after-unlock` and `manual`; `before-unlock` belongs in a later effect-scheduling phase.
 
 ### 6.4 Story Video Page Flow
 
@@ -338,12 +349,34 @@ When the current page has `type: "video"`:
 3. Apply BGM behavior from `audioMode`.
 4. Play the video.
 5. On end or skip, run supported page effects.
-6. If `autoAdvance` is enabled, navigate to `next`.
-7. Otherwise show a continue affordance owned by the engine.
+6. If `target` is set, jump to that scene ID.
+7. If `autoAdvance` is enabled and no `target` is set, advance to the next page in the same scene.
+8. Otherwise show a continue affordance owned by the engine.
 
 Save/load should store page identity, not current playback time, by default. Loading a save on a video page restarts the video unless a future explicit resume field is added.
 
-### 6.5 Audio Behavior
+### 6.5 Profile Playback State
+
+`oncePerProfile` requires an explicit profile schema addition. The recommended first-pass shape is a generic media playback map:
+
+```json
+{
+  "playedMedia": {
+    "ui.titleScreen.openingVideo": {
+      "playedAt": 1730000000000,
+      "count": 1
+    }
+  }
+}
+```
+
+Rules:
+
+- `PlayerDataRepository` normalization must preserve `playedMedia`; otherwise OP/ED playback history will be lost during profile load/save normalization.
+- Keys should be stable project data paths such as `ui.titleScreen.openingVideo` or `systems.endings.good.endingVideo`.
+- The map records completion or accepted skip of configured media, not arbitrary runtime video URLs.
+
+### 6.6 Audio Behavior
 
 Supported `audioMode` values:
 
@@ -355,7 +388,7 @@ Supported `audioMode` values:
 
 Video volume should still obey global master mute and volume settings. A separate video volume slider can be added later, but initial behavior should not bypass existing audio preferences.
 
-### 6.6 Accessibility And Controls
+### 6.7 Accessibility And Controls
 
 The runtime should support:
 
@@ -366,13 +399,15 @@ The runtime should support:
 - visible fallback text if a video cannot load;
 - future captions through project-relative `.vtt` files.
 
+Captions are documented as a later extension. The first implementation should reserve the contract space for project-relative `.vtt` files but does not need to ship caption editing or playback.
+
 ## 7. Editor Design
 
 ### 7.1 Asset Library
 
 Add a `videos` category to the editor asset library:
 
-- import/copy video files into `public/game/videos/`;
+- import/copy video files into `assets/videos/`;
 - display filename, label, kind, size, and extension;
 - show poster thumbnail when available;
 - allow optional metadata editing for registry entries;
@@ -400,8 +435,8 @@ Add a `video` page type to the page editor:
 - fit mode selector;
 - audio mode selector;
 - auto-advance toggle;
-- next target selector;
-- validation hints for missing next target, invalid file, and loop/advance conflicts.
+- optional scene target selector;
+- validation hints for invalid scene targets, invalid file, and loop/advance conflicts.
 
 Canvas preview should show the poster or first available frame with a clear play affordance. It should not silently autoplay while the user is editing.
 
@@ -419,6 +454,10 @@ Extend title screen settings with an OP panel:
 - preview button.
 
 The UI should explain autoplay constraints through concise field help or warnings, not by hiding valid options.
+
+If `play: "manual"` is exposed from the title menu, the title-screen action registry must grow an explicit action such as `play-opening-video`. It should not be implemented through arbitrary button JavaScript.
+
+The locked first-pass title action name is `play-opening-video`.
 
 ### 7.5 Ending Settings
 
@@ -464,25 +503,27 @@ npm run vn -- clear-ending-video --script public/game/script.json --ending good 
 ### 8.4 Page Commands
 
 ```bash
-npm run vn -- add-video-page --script public/game/script.json --scene prologue --id op_story_bridge --video op_main --next prologue_start --json
+npm run vn -- add-video-page --script public/game/script.json --scene prologue --id op_story_bridge --video op_main --target prologue_after_op --json
 npm run vn -- set-page-video --script public/game/script.json --scene prologue --page op_story_bridge --video op_main --json
 npm run vn -- clear-page-video --script public/game/script.json --scene prologue --page op_story_bridge --json
 ```
+
+For video pages, `--target` must be a scene ID. If no target is provided, `autoAdvance` continues to the next page in the current scene through the existing page progression model. Do not overload `--next` with page IDs in the first implementation.
 
 ### 8.5 Apply-Plan Operations
 
 Add plan operations matching the CLI commands:
 
-- `registerVideo`
-- `updateVideo`
-- `removeVideo`
-- `setOpeningVideo`
-- `clearOpeningVideo`
-- `setEndingVideo`
-- `clearEndingVideo`
-- `addVideoPage`
-- `setPageVideo`
-- `clearPageVideo`
+- `register-video`
+- `update-video`
+- `remove-video`
+- `set-opening-video`
+- `clear-opening-video`
+- `set-ending-video`
+- `clear-ending-video`
+- `add-video-page`
+- `set-page-video`
+- `clear-page-video`
 
 Each operation should produce precise changed paths for preview, review, and handoff:
 
@@ -507,15 +548,16 @@ opening video op_main play after-start skippable once-per-profile
 ending good "Good Ending" category route video ed_good play after-unlock return-title
 
 scene prologue:
-  page op_story_bridge video op_main skippable next prologue_start
+  page op_story_bridge video op_main skippable target prologue_after_op
 ```
 
 Lowering rules:
 
-- `video` declarations lower to `registerVideo` or `updateVideo`.
-- `opening video` lowers to `setOpeningVideo`.
-- `ending ... video` lowers to ending metadata plus `setEndingVideo`.
-- `page ... video` lowers to `addVideoPage` or `setPageVideo` depending on context.
+- `video` declarations lower to `register-video` or `update-video`.
+- `opening video` lowers to `set-opening-video`.
+- `ending ... video` lowers to ending metadata plus `set-ending-video`.
+- `page ... video` lowers to `add-video-page` or `set-page-video` depending on context.
+- Any DSL target attached to a video page must lower to a scene target, not a page target.
 - Source maps should connect DSL video declarations and page statements to the canonical changed paths.
 
 Validation should happen both at DSL semantic-check level and at apply-plan validation level.
@@ -531,7 +573,7 @@ Add diagnostics for:
 - unknown ending ID for ED video;
 - OP `before-title` with unmuted autoplay risk;
 - `type: "video"` page without `video`;
-- `autoAdvance` page without `next`;
+- video page `target` that does not resolve to a scene ID;
 - `loop` combined with `autoAdvance`;
 - invalid `volume`;
 - invalid `audioMode`;
@@ -651,6 +693,9 @@ Deliver:
 - `assets.videos` schema support;
 - shared video reference resolver;
 - OP, ED, and video page contract validation;
+- `videos` asset root support in contract-level asset path validation;
+- `type: "video"` support in page-type validation;
+- profile schema support for `playedMedia`;
 - project contract and validation docs.
 
 Acceptance:
@@ -664,6 +709,7 @@ Acceptance:
 Deliver:
 
 - `videos` asset category in asset scanners;
+- `videos` support in editor/IPC asset category lists;
 - video files included in missing/unused asset reporting;
 - export copies referenced video and poster files;
 - preview renderer serves video MIME types.
@@ -696,6 +742,8 @@ Deliver:
 - `type: "video"` page runtime handling;
 - route navigation and auto-advance support;
 - save/load behavior for video pages;
+- scene-graph support for optional video page scene targets;
+- editor page-type switching support for `video`;
 - page validation and preview metadata.
 
 Acceptance:
@@ -720,7 +768,7 @@ Acceptance:
 Deliver:
 
 - ending registry `endingVideo`;
-- `after-unlock`, `before-unlock`, and `manual` modes;
+- `after-unlock` and `manual` modes;
 - return-to-title behavior;
 - profile-safe ending unlock order.
 
@@ -746,6 +794,7 @@ Acceptance:
 
 Deliver:
 
+- projectSession helpers for video registry, OP/ED config, and video pages;
 - video asset commands;
 - OP/ED commands;
 - video page commands;
@@ -755,6 +804,8 @@ Deliver:
 Acceptance:
 
 - agents can author the complete video feature through repo-owned commands.
+
+Implementation note: minimal `projectSession` and apply-plan support may need to land before editor surfaces if editor tests or fixtures depend on canonical video data. Full CLI polish and Agent DSL integration can still remain in this later phase.
 
 ### P9 - Agent DSL Integration
 
@@ -783,16 +834,24 @@ Acceptance:
 
 - reviewers can see what video behavior changed, which DSL source produced it, and what media risks remain.
 
-## 15. Open Decisions
+## 15. V0 Decisions
 
-These should be decided before P1 implementation:
+These decisions are locked before P1 implementation:
 
-1. Should direct video file references be allowed everywhere, or should OP/ED require registry IDs?
-2. Should `before-title` OP default to muted autoplay with click-to-unmute, or should it always show a click-to-play gate?
-3. Should ED `before-unlock` be allowed in the first implementation, or reserved until UX copy makes the behavior obvious?
-4. Should captions use `.vtt` in the first full pass or be documented as a later extension?
-5. Should profile state use a generic `playedMedia` map or OP/ED-specific maps?
-6. Should video pages allow terminal ending unlock effects directly, or should ED playback remain attached only to ending registry metadata?
+1. Direct `file` references are allowed everywhere a video reference is accepted, but generated data should prefer `videoId` and `assets.videos` registry entries.
+2. Canonical script paths use `videos/...`; editor imports store files under `assets/videos/...`; exported/runtime builds serve them as `videos/...`.
+3. OP config lives at `ui.titleScreen.openingVideo`.
+4. ED config lives at `systems.endings.<endingId>.endingVideo`.
+5. `type: "video"` pages are included in the first implementation.
+6. Video pages may auto-advance linearly and may optionally jump to a scene-level `target`. Page-level jump targets are out of scope.
+7. Supported first-pass extensions are `.mp4` and `.webm`. Recommended codecs are H.264/AAC for `.mp4` and VP9/Opus for `.webm`.
+8. OP default `play` is `after-start`.
+9. If `before-title` is used, the runtime shows a click-to-play gate for unmuted playback.
+10. Manual title OP playback uses the title action `play-opening-video`.
+11. ED default `play` is `after-unlock`; `before-unlock` is reserved for a later effect-scheduling phase.
+12. Profile replay tracking uses a generic `playedMedia` map keyed by stable project data paths.
+13. Captions are a later extension using project-relative `.vtt` files.
+14. Video pages may use supported terminal effects such as `unlock:ending`; ED playback remains attached to ending registry metadata and runs after durable unlock.
 
 ## 16. Recommended Defaults
 
@@ -802,7 +861,7 @@ These should be decided before P1 implementation:
 - `controls`: `false`.
 - `audioMode`: `replace`.
 - `fit`: `contain`.
-- video page `autoAdvance`: `true` when `next` is provided.
+- video page `autoAdvance`: `true` when no explicit scene `target` is provided.
 - profile replay tracking: generic `playedMedia` map keyed by stable project data paths.
 
 These defaults match common visual novel behavior while respecting browser autoplay limits and save-data durability.

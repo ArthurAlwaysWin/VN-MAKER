@@ -5,23 +5,26 @@
  * data object and returns a categorized dictionary of deduplicated,
  * sorted relative paths suitable for export.
  *
- * Covers script-referenced assets across 6 categories (per D-01 + Phase 71 UI baseline):
+ * Covers script-referenced assets across export-facing categories:
  *   backgrounds — page backgrounds, ending/CG artwork, UI screen backgrounds, UI image elements
  *   audio       — page BGM, page SE, title screen BGM
  *   fonts       — assets.fonts[].file
  *   characters  — characters[id].expressions values
  *   ui          — canonical ui/... chrome/theme/widget image paths
  *   voices      — page dialogues[].voice
+ *   effects     — referenced effect pack files
+ *   videos      — OP/ED/video-page files and posters
  *
  * @module scanAssets
  */
 
 import { collectEffectPackAssetPaths } from '../shared/effectPackContract.js';
 import { collectUiImagePaths } from '../shared/uiImageContract.js';
+import { normalizeVideoRegistry, resolveVideoReference } from '../shared/videoContract.js';
 
 // ─── Path Filter ─────────────────────────────────────────
 
-const ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices', 'effects']);
+const ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices', 'effects', 'videos']);
 
 /**
  * Add path to set if it's a valid asset file reference.
@@ -51,7 +54,7 @@ function _add(set, path) {
  * Scan a script object and extract all referenced asset paths.
  *
  * @param {Object} script - The full script.json data object
- * @returns {{ backgrounds: string[], audio: string[], fonts: string[], characters: string[], ui: string[], voices: string[] }}
+ * @returns {{ backgrounds: string[], audio: string[], fonts: string[], characters: string[], ui: string[], voices: string[], effects: string[], videos: string[] }}
  */
 export function scanAssets(script) {
   const bg = new Set();
@@ -61,6 +64,15 @@ export function scanAssets(script) {
   const ui = new Set();
   const voices = new Set();
   const effects = new Set();
+  const videos = new Set();
+  const videoRegistry = normalizeVideoRegistry(script.assets?.videos);
+
+  function addVideoReference(reference) {
+    const resolved = resolveVideoReference(reference, videoRegistry);
+    if (!resolved) return;
+    _add(videos, resolved.file);
+    _add(videos, resolved.poster);
+  }
 
   // 1. Character expression images
   for (const char of Object.values(script.characters || {})) {
@@ -75,6 +87,9 @@ export function scanAssets(script) {
       _add(bg, page.background);
       if (page.bgm?.file) _add(audio, page.bgm.file);
       if (page.se?.file) _add(audio, page.se.file);
+      if (page.type === 'video') {
+        addVideoReference(page.video);
+      }
       for (const dlg of (page.dialogues || [])) {
         if (dlg.voice) _add(voices, dlg.voice);
       }
@@ -89,6 +104,7 @@ export function scanAssets(script) {
   // 4. Ending-list and gallery artwork rendered as story visuals
   for (const ending of Object.values(script.systems?.endings || {})) {
     _add(bg, ending?.thumbnail);
+    addVideoReference(ending?.endingVideo);
   }
 
   for (const cg of Object.values(script.systems?.gallery?.cg || {})) {
@@ -107,6 +123,9 @@ export function scanAssets(script) {
     // titleScreen.bgm is a bare string path (not { file: ... } like page bgm)
     if (screenKey === 'titleScreen' && screen.bgm) {
       _add(audio, screen.bgm);
+    }
+    if (screenKey === 'titleScreen') {
+      addVideoReference(screen.openingVideo);
     }
     for (const elem of (screen.elements || [])) {
       if (elem.type === 'image' && elem.src) {
@@ -129,5 +148,6 @@ export function scanAssets(script) {
     ui: [...ui].sort(),
     voices: [...voices].sort(),
     effects: [...effects].sort(),
+    videos: [...videos].sort(),
   };
 }

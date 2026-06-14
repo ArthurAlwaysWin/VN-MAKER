@@ -2607,6 +2607,7 @@ scene start "Start":
       await stat(path.join(projectDir, 'project.json'));
       await stat(path.join(projectDir, 'script.json'));
       await stat(path.join(projectDir, 'assets', 'backgrounds'));
+      await stat(path.join(projectDir, 'assets', 'videos'));
 
       const opened = JSON.parse((await execFileAsync('node', [
         cliPath,
@@ -2954,6 +2955,7 @@ scene start "Start":
       await mkdir(path.join(dir, 'assets', 'ui', 'title'), { recursive: true });
       await mkdir(path.join(dir, 'assets', 'fonts'), { recursive: true });
       await mkdir(path.join(dir, 'assets', 'effects', 'old_film'), { recursive: true });
+      await mkdir(path.join(dir, 'assets', 'videos'), { recursive: true });
       await writeFile(path.join(dir, 'assets', 'backgrounds', 'rainy_school_gate.png'), 'bg', 'utf8');
       await writeFile(path.join(dir, 'assets', 'characters', 'sakura_nervous.webp'), 'char', 'utf8');
       await writeFile(path.join(dir, 'assets', 'audio', 'rain_theme.ogg'), 'bgm', 'utf8');
@@ -2961,6 +2963,7 @@ scene start "Start":
       await writeFile(path.join(dir, 'assets', 'ui', 'title', 'logo.png'), 'ui', 'utf8');
       await writeFile(path.join(dir, 'assets', 'fonts', 'story_serif.ttf'), 'font', 'utf8');
       await writeFile(path.join(dir, 'assets', 'effects', 'old_film', 'preview.png'), 'fx', 'utf8');
+      await writeFile(path.join(dir, 'assets', 'videos', 'op_main.mp4'), 'video', 'utf8');
 
       const { stdout } = await execFileAsync('node', [
         cliPath,
@@ -2974,7 +2977,7 @@ scene start "Start":
       expect(result).toMatchObject({
         projectPath: dir,
         assetRoot: path.join(dir, 'assets'),
-        categories: ['backgrounds', 'characters', 'audio', 'voices', 'ui', 'fonts', 'effects'],
+        categories: ['backgrounds', 'characters', 'audio', 'voices', 'ui', 'fonts', 'effects', 'videos'],
       });
       expect(result.assets.backgrounds).toEqual([
         expect.objectContaining({
@@ -2996,6 +2999,7 @@ scene start "Start":
       expect(result.assets.ui[0].path).toBe('ui/title/logo.png');
       expect(result.assets.fonts[0].path).toBe('fonts/story_serif.ttf');
       expect(result.assets.effects[0].path).toBe('effects/old_film/preview.png');
+      expect(result.assets.videos[0].path).toBe('videos/op_main.mp4');
     });
   });
 
@@ -3020,6 +3024,7 @@ scene start "Start":
       expect(result.assets.ui).toEqual([]);
       expect(result.assets.fonts).toEqual([]);
       expect(result.assets.effects).toEqual([]);
+      expect(result.assets.videos).toEqual([]);
     });
   });
 

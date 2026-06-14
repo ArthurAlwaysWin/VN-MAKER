@@ -44,12 +44,27 @@ async function createMockProject(baseDir) {
       endings: {
         good: {
           thumbnail: 'ui/endings/good.png',
+          endingVideo: { videoId: 'ed_good' },
+        },
+      },
+    },
+    assets: {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          poster: 'videos/op_main.poster.png',
+        },
+        ed_good: {
+          file: 'videos/ed_good.webm',
         },
       },
     },
     ui: {
       saveLoadScreen: {
         background: 'ui/save_bg.png',
+      },
+      titleScreen: {
+        openingVideo: { videoId: 'op_main' },
       },
     },
   };
@@ -62,15 +77,20 @@ async function createMockProject(baseDir) {
   await fs.mkdir(path.join(baseDir, 'assets', 'audio'), { recursive: true });
   await fs.mkdir(path.join(baseDir, 'assets', 'ui'), { recursive: true });
   await fs.mkdir(path.join(baseDir, 'assets', 'ui', 'endings'), { recursive: true });
+  await fs.mkdir(path.join(baseDir, 'assets', 'videos'), { recursive: true });
 
   await fs.writeFile(path.join(baseDir, 'assets', 'backgrounds', 'city.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'characters', 'hero_normal.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'audio', 'bgm1.mp3'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'ui', 'save_bg.png'), Buffer.from('FAKE'));
   await fs.writeFile(path.join(baseDir, 'assets', 'ui', 'endings', 'good.png'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'op_main.mp4'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'op_main.poster.png'), Buffer.from('FAKE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'ed_good.webm'), Buffer.from('FAKE'));
 
   // Unreferenced file (should NOT be copied)
   await fs.writeFile(path.join(baseDir, 'assets', 'audio', 'unreferenced.mp3'), Buffer.from('NOPE'));
+  await fs.writeFile(path.join(baseDir, 'assets', 'videos', 'unreferenced.mp4'), Buffer.from('NOPE'));
 }
 
 /**
@@ -229,6 +249,16 @@ describe('exportGame — asset filtering', () => {
 
   it('copies referenced ending thumbnails', () => {
     expect(existsSync(path.join(outputDir, 'assets', 'ui', 'endings', 'good.png'))).toBe(true);
+  });
+
+  it('copies referenced videos and posters', () => {
+    expect(existsSync(path.join(outputDir, 'assets', 'videos', 'op_main.mp4'))).toBe(true);
+    expect(existsSync(path.join(outputDir, 'assets', 'videos', 'op_main.poster.png'))).toBe(true);
+    expect(existsSync(path.join(outputDir, 'assets', 'videos', 'ed_good.webm'))).toBe(true);
+  });
+
+  it('does NOT copy unreferenced videos', () => {
+    expect(existsSync(path.join(outputDir, 'assets', 'videos', 'unreferenced.mp4'))).toBe(false);
   });
 
   it('removes assets left by a prior export while preserving unrelated files in the chosen directory', async () => {
@@ -491,6 +521,7 @@ describe('exportGame — ZIP', () => {
     expect(keys.includes('engine.css')).toBe(true);
     expect(keys.includes('script.json')).toBe(true);
     expect(keys.includes('assets/backgrounds/city.png')).toBe(true);
+    expect(keys.includes('assets/videos/op_main.mp4')).toBe(true);
   });
 
   it('no ZIP when zip=false', async () => {

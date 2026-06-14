@@ -4,6 +4,8 @@
 **Audience:** maintainers, AI implementers, editor/runtime reviewers  
 **Scope:** first-class video support for opening movies, ending movies, and story video moments
 
+**Roadmap:** `docs/agent-authoring/video-op-ed-roadmap.md`
+
 ## 1. Purpose
 
 Many visual novels use an OP, or opening movie, as the opening theme sequence and an ED, or ending movie, as the closing theme sequence after a route or ending. Galgame Maker should support these workflows as first-class project data rather than as ad hoc assets or custom runtime code.

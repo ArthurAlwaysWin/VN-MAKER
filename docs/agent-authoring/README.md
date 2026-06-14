@@ -53,7 +53,8 @@ These documents describe planned larger features before their contracts are acti
 
 | Feature | Read |
 | --- | --- |
-| OP, ED, and story video support | [video-op-ed-plan.md](./video-op-ed-plan.md) |
+| OP, ED, and story video architecture | [video-op-ed-plan.md](./video-op-ed-plan.md) |
+| OP, ED, and story video roadmap | [video-op-ed-roadmap.md](./video-op-ed-roadmap.md) |
 
 ## Examples
 

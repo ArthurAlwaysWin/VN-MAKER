@@ -1,6 +1,6 @@
 # Video, OP, and ED Roadmap
 
-**Status:** Proposed roadmap; V0 complete
+**Status:** V0-V2 complete; V3 and V4 substantially complete; V5 partial; V6 pending
 **Architecture plan:** `docs/agent-authoring/video-op-ed-plan.md`  
 **Scope:** first-class video assets, opening movies, ending movies, and story video pages
 
@@ -23,12 +23,12 @@ Every milestone must preserve these rules:
 | Milestone | Name | Primary Outcome |
 | --- | --- | --- |
 | V0 | Decisions And Contract Lock | Complete: canonical video data shape finalized. |
-| V1 | Assets, Validation, And Export | Video files become known, validated, preview-served, and exportable assets. |
-| V2 | Runtime Video Playback | The engine can play blocking videos safely. |
-| V3 | Story, OP, And ED Flows | Video pages, opening movies, and ending movies work in gameplay. |
-| V4 | Editor Surfaces | Human authors can configure video without hand-editing JSON. |
-| V5 | Agent Authoring Surface | CLI, apply-plan, Agent DSL, preview, and handoff support video changes. |
-| V6 | Hardening And Release Docs | Full tests, docs, readiness guidance, and audit cleanup. |
+| V1 | Assets, Validation, And Export | Complete: video files are known, validated, preview-served, and exportable assets. |
+| V2 | Runtime Video Playback | Complete: the engine can play blocking videos safely. |
+| V3 | Story, OP, And ED Flows | Substantially complete: video pages and OP/ED gameplay hooks exist; replay/profile polish remains. |
+| V4 | Editor Surfaces | Complete: human authors can configure video without hand-editing JSON. |
+| V5 | Agent Authoring Surface | Partial: projectSession, apply-plan, and CLI basics support canonical video changes; DSL and handoff polish remain. |
+| V6 | Hardening And Release Docs | Pending: final docs, readiness guidance, and release audit cleanup. |
 
 ## V0 - Decisions And Contract Lock
 
@@ -94,109 +94,113 @@ Acceptance:
 
 ## V2 - Runtime Video Playback
 
+**Status:** Complete
 **Goal:** Add a runtime-owned blocking video player that can be reused by pages, OP, and ED.
 
 Deliver:
 
-- create a video playback module owned by the engine/runtime;
-- resolve project asset URLs through existing asset path logic;
-- support ended, skipped, and error outcomes;
-- support `skippable`, `controls`, `volume`, `audioMode`, and `fit`;
-- pause, duck, replace, or mix BGM according to `audioMode`;
-- provide graceful fallback UI on media load/play errors.
+- complete: create a video playback module owned by the engine/runtime;
+- complete: resolve project asset URLs through existing asset path logic;
+- complete: support ended, skipped, and error outcomes;
+- complete: support `skippable`, `controls`, `volume`, `audioMode`, and `fit`;
+- complete: pause, duck, replace, or mix BGM according to `audioMode`;
+- complete: provide graceful fallback UI on media load/play errors.
 
 Tests:
 
-- playback resolves with `ended`;
-- skip resolves with `skipped`;
-- media error does not crash the engine;
-- BGM behavior is restored after playback;
-- global mute/volume still affects video audio.
+- complete: playback resolves with `ended`;
+- complete: skip resolves with `skipped`;
+- complete: media error does not crash the engine;
+- complete: BGM behavior is restored after playback;
+- complete: global mute/volume still affects video audio.
 
 Acceptance:
 
-- runtime video playback exists without project-local executable code;
-- the engine can play one blocking video and return cleanly to the previous flow.
+- complete: runtime video playback exists without project-local executable code;
+- complete: the engine can play one blocking video and return cleanly to the previous flow.
 
 ## V3 - Story, OP, And ED Flows
 
+**Status:** Substantially complete; replay/profile persistence polish remains.
 **Goal:** Wire video playback into actual visual novel flows.
 
 Deliver:
 
-- add `type: "video"` page runtime handling;
-- support video page auto-advance and route validation;
-- support optional scene-level video page targets if V0 includes them;
-- support OP playback from title/start flow;
-- support ED playback from ending unlock flow;
-- persist OP once-per-profile state;
-- preserve `playedMedia` through profile normalization;
-- preserve ending unlock durability when ED playback fails.
+- complete: add `type: "video"` page runtime handling;
+- complete: support video page auto-advance and route validation;
+- complete: support optional scene-level video page targets if V0 includes them;
+- complete: support OP playback from title/start flow;
+- complete: support ED playback from ending unlock flow;
+- pending: persist OP once-per-profile state;
+- pending: preserve `playedMedia` through profile normalization;
+- complete: preserve ending unlock durability when ED playback fails.
 
 Tests:
 
-- video page loads, plays, skips, and advances;
-- save/load on a video page restarts playback from the page;
-- OP `after-start` plays before entering the first page;
-- OP `oncePerProfile` prevents repeated playback;
-- ED `after-unlock` plays after the ending is saved;
-- ED `manual` can be previewed or replayed without changing unlock state;
-- ED playback failure does not lose the unlocked ending.
+- complete: video page loads, plays, skips, and advances;
+- complete: save/load on a video page restarts playback from the page;
+- complete: OP `after-start` plays before entering the first page;
+- pending: OP `oncePerProfile` prevents repeated playback;
+- complete: ED `after-unlock` plays after the ending is saved;
+- pending: ED `manual` can be previewed or replayed without changing unlock state;
+- complete: ED playback failure does not lose the unlocked ending.
 
 Acceptance:
 
-- a real project can use a story video page, an OP, and an ED through canonical project data.
+- complete: a real project can use a story video page, an OP, and an ED through canonical project data.
 
 ## V4 - Editor Surfaces
 
+**Status:** Complete for Phase 3 editor authoring UI.
 **Goal:** Make video features fully editable by human authors.
 
 Deliver:
 
-- add video asset library support;
-- add a reusable video picker;
-- add video page editing controls;
-- support `video` in page-type switching and page canvas placeholders;
-- add title OP settings;
-- add ending ED settings;
-- add safe preview affordances that do not autoplay unexpectedly in inspector views.
+- complete: add video asset library support;
+- complete: add a reusable video picker;
+- complete: add video page editing controls;
+- complete: support `video` in page-type switching and page canvas placeholders;
+- complete: add title OP settings;
+- complete: add ending ED settings;
+- complete: add safe preview affordances that do not autoplay unexpectedly in inspector views.
 
 Tests:
 
-- editor can display missing or partial video metadata without crashing;
-- video picker can choose, clear, and preview video references;
-- page inspector edits all video page fields;
-- converting to and from `video` pages preserves only fields valid for the selected page type;
-- title settings edit OP configuration;
-- ending settings edit ED configuration;
-- editor saves canonical `script.json` data only.
+- complete: editor can display missing or partial video metadata without crashing;
+- complete: video picker can choose and clear video references;
+- complete: page inspector edits all video page fields;
+- complete: converting to and from `video` pages preserves only fields valid for the selected page type;
+- complete: title settings edit OP configuration;
+- complete: ending settings edit ED configuration;
+- complete: editor saves canonical `script.json` data only.
 
 Acceptance:
 
-- no video feature requires hand-editing JSON for normal authoring;
-- editor remains stable when media files are missing during review.
+- complete: no video feature requires hand-editing JSON for normal authoring;
+- complete: editor remains stable when media files are missing during review.
 
 ## V5 - Agent Authoring Surface
 
+**Status:** Partial.
 **Goal:** Let agents author the same video features through supported commands and DSL compilation.
 
 Deliver:
 
-- add CLI commands for video registry entries;
-- add CLI commands for OP and ED video configuration;
-- add CLI commands for video pages;
-- complete apply-plan operations for the same changes;
-- add Agent DSL syntax that lowers to apply-plan operations;
-- add changed paths, preview metadata, source-map provenance, and handoff review items.
+- pending: add dedicated CLI commands for video registry entries;
+- partial: add CLI commands for OP and ED video configuration;
+- partial: add CLI commands for video pages;
+- partial: complete apply-plan operations for the same changes;
+- pending: add Agent DSL syntax that lowers to apply-plan operations;
+- pending: add changed paths, preview metadata, source-map provenance, and handoff review items.
 
 Tests:
 
-- CLI commands write valid canonical project data;
-- apply-plan validate/dry-run/write gates work for video operations;
-- DSL video syntax compiles deterministically;
-- source maps point to video-related changed paths;
-- author-check, handoff-report, and review-handoff agree on video warnings;
-- no DSL fields are written into runtime project data.
+- partial: CLI commands write valid canonical project data;
+- partial: apply-plan validate/dry-run/write gates work for video operations;
+- pending: DSL video syntax compiles deterministically;
+- pending: source maps point to video-related changed paths;
+- pending: author-check, handoff-report, and review-handoff agree on video warnings;
+- complete: no DSL fields are written into runtime project data.
 
 Acceptance:
 
@@ -204,6 +208,7 @@ Acceptance:
 
 ## V6 - Hardening And Release Docs
 
+**Status:** Pending.
 **Goal:** Polish the feature into a mergeable, auditable state.
 
 Deliver:
@@ -232,14 +237,10 @@ Acceptance:
 
 ## Suggested Implementation Order
 
-1. V0 is complete; use the locked decisions in `video-op-ed-plan.md` as the baseline for implementation.
-2. V1 is next, because validation and export should know videos before playback depends on them.
-3. V2, because OP, ED, and video pages should share one runtime player.
-4. V3, because gameplay flow proves the contract.
-5. Land any remaining minimal projectSession/apply-plan helpers needed to generate canonical fixtures before editor work depends on hand-edited JSON.
-6. V4, because editor UX should be built against working runtime behavior.
-7. V5, because full CLI, DSL, preview, and handoff support should target stable canonical operations.
-8. V6, because docs and audit should reflect final behavior.
+1. V0, V1, V2, and the Phase 3 editor authoring slice of V4 are complete.
+2. Finish the remaining V3 replay/profile persistence polish: `oncePerProfile`, `playedMedia`, and manual ED replay semantics.
+3. Complete V5 by filling in dedicated video registry commands, Agent DSL lowering, preview metadata, source-map provenance, and handoff review items.
+4. Close V6 with final docs, full readiness guidance, release audit, and any end-to-end fixtures needed for external review.
 
 ## Smaller Follow-Up Extensions
 

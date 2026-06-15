@@ -33,6 +33,7 @@ import {
   createAffectionVariableId,
   normalizeVariableRegistry,
 } from '../shared/variableRegistry.js';
+import { normalizeVideoRegistry } from '../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
 
 function cloneJsonValue(value) {
@@ -126,6 +127,24 @@ function createDefaultConditionPage(overrides = {}, registry = {}) {
   }, { registry });
 }
 
+function createDefaultVideoPage(overrides = {}) {
+  return {
+    id: overrides.id,
+    type: 'video',
+    background: overrides.background ?? '',
+    characters: Array.isArray(overrides.characters) ? cloneJsonValue(overrides.characters) : [],
+    bgm: overrides.bgm ?? null,
+    se: overrides.se ?? null,
+    video: isPlainObject(overrides.video) ? cloneJsonValue(overrides.video) : {},
+    autoAdvance: overrides.autoAdvance ?? true,
+    target: overrides.target ?? null,
+    loop: overrides.loop ?? false,
+    ...cloneJsonValue(overrides),
+    type: 'video',
+    transition: getPageTransitionContract(overrides.transition ?? { type: 'fade', duration: 800 }),
+  };
+}
+
 function getScene(script, sceneId) {
   const id = assertNonEmptyString(sceneId, 'sceneId');
   const scene = script.scenes?.[id];
@@ -188,6 +207,11 @@ function replaceSceneReferences(script, fromSceneId, toSceneId) {
         page.target = toSceneId;
         updatedReferenceCount += 1;
       }
+
+      if (page?.type === 'video' && page.target === fromSceneId) {
+        page.target = toSceneId;
+        updatedReferenceCount += 1;
+      }
     }
   }
 
@@ -224,6 +248,11 @@ function clearSceneReferenceTargets(script, targetSceneId) {
       }
 
       if (page?.type === 'input' && page.target === targetSceneId) {
+        page.target = null;
+        clearedReferenceCount += 1;
+      }
+
+      if (page?.type === 'video' && page.target === targetSceneId) {
         page.target = null;
         clearedReferenceCount += 1;
       }
@@ -627,6 +656,8 @@ function normalizeScriptForAuthoring(script) {
   normalized.systems.variables = normalizeVariableRegistry(normalized.systems.variables);
   normalized.systems.endings = normalizeEndingRegistry(normalized.systems.endings);
   normalized.systems.gallery.cg = normalizeCgRegistry(normalized.systems.gallery.cg);
+  normalized.assets ??= {};
+  normalized.assets.videos = normalizeVideoRegistry(normalized.assets.videos);
 
   for (const scene of Object.values(normalized.scenes ?? {})) {
     if (!Array.isArray(scene.pages)) {
@@ -1186,6 +1217,13 @@ export function createProjectSession(input = {}) {
       return { sceneId, pageIndex: scene.pages.length - 1 };
     },
 
+    addVideoPage({ sceneId, page = {}, ...pageFields }) {
+      const scene = getScene(script, sceneId);
+      const nextPage = createDefaultVideoPage({ ...page, ...pageFields });
+      scene.pages.push(nextPage);
+      return { sceneId, pageIndex: scene.pages.length - 1 };
+    },
+
     removePage({ sceneId, pageIndex }) {
       const scene = getScene(script, sceneId);
       assertPageIndexInRange(scene, sceneId, pageIndex);
@@ -1464,7 +1502,7 @@ export function createProjectSession(input = {}) {
       const fromIndex = fromPageIndex ?? 0;
       const toIndex = toPageIndex ?? pageCount - 1;
 
-      if (pageType !== undefined && !['normal', 'choice', 'input', 'condition'].includes(pageType)) {
+      if (pageType !== undefined && !['normal', 'choice', 'input', 'condition', 'video'].includes(pageType)) {
         throw new Error(`Unsupported page type filter: ${pageType}`);
       }
       if (hasBackground !== undefined && typeof hasBackground !== 'boolean') {
@@ -1536,7 +1574,7 @@ export function createProjectSession(input = {}) {
       };
     },
 
-    setTitleScreen({ background, bgm, elements, config, merge = true } = {}) {
+    setTitleScreen({ background, bgm, openingVideo, elements, config, merge = true } = {}) {
       const current = ensureTitleScreen(script);
       const base = merge ? current : {};
       const next = normalizeTitleScreenConfig({
@@ -1544,6 +1582,7 @@ export function createProjectSession(input = {}) {
         ...cloneJsonValue(config ?? {}),
         ...(background !== undefined ? { background } : {}),
         ...(bgm !== undefined ? { bgm } : {}),
+        ...(openingVideo !== undefined ? { openingVideo } : {}),
         ...(elements !== undefined ? { elements } : {}),
       });
       script.ui.titleScreen = next;

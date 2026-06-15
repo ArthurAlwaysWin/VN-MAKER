@@ -725,6 +725,7 @@ describe('project authoring session', () => {
               { type: 'normal', background: '', dialogues: [] },
               { type: 'choice', background: 'backgrounds/menu.png', options: [] },
               { type: 'normal', background: 'backgrounds/room.png', dialogues: [] },
+              { type: 'video', background: 'backgrounds/op.png', video: { file: 'videos/op.mp4' } },
             ],
           },
         },
@@ -763,12 +764,61 @@ describe('project authoring session', () => {
       null,
       null,
       { type: 'blur', duration: 5000 },
+      null,
     ]);
-    expect(() => session.setPageTransitions({
+    expect(session.setPageTransitions({
       sceneId: 'start',
       pageType: 'video',
       transition: { type: 'fade', duration: 800 },
-    })).toThrow('Unsupported page type filter: video');
+    })).toMatchObject({
+      matchedPageIndexes: [4],
+      changedPaths: ['scenes.start.pages.4.transition'],
+    });
+  });
+
+  it('adds video pages and retargets their canonical scene target', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_video_authoring',
+        characters: {},
+        assets: {
+          videos: {
+            intro: { file: 'videos/intro.mp4', kind: 'op' },
+          },
+        },
+        scenes: {
+          start: { pages: [] },
+          after: { pages: [] },
+          renamed: { pages: [] },
+        },
+      },
+    });
+
+    expect(session.addVideoPage({
+      sceneId: 'start',
+      page: {
+        video: { videoId: 'intro', skippable: true, controls: false, volume: 0.8, audioMode: 'duck', fit: 'cover' },
+        autoAdvance: true,
+        target: 'after',
+        loop: false,
+      },
+    })).toMatchObject({ sceneId: 'start', pageIndex: 0 });
+
+    expect(session.toJSON().scenes.start.pages[0]).toMatchObject({
+      type: 'video',
+      video: { videoId: 'intro', skippable: true, controls: false, volume: 0.8, audioMode: 'duck', fit: 'cover' },
+      autoAdvance: true,
+      target: 'after',
+      loop: false,
+    });
+
+    expect(session.retargetSceneReferences({
+      fromSceneId: 'after',
+      toSceneId: 'renamed',
+    })).toMatchObject({
+      updatedReferenceCount: 1,
+    });
+    expect(session.toJSON().scenes.start.pages[0].target).toBe('renamed');
   });
 
   it('renames and deletes scenes safely while preserving scene references', () => {

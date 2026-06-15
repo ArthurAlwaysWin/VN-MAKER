@@ -100,6 +100,20 @@
           <button type="button">{{ page.submitText || '确定' }}</button>
         </div>
       </div>
+
+      <div v-if="page && page.type === 'video'" class="canvas-video-preview">
+        <div class="video-frame">
+          <video
+            v-if="videoPreviewSrc"
+            :src="videoPreviewSrc"
+            :poster="videoPosterSrc"
+            muted
+            preload="metadata"
+          ></video>
+          <div v-else class="video-placeholder">🎬</div>
+        </div>
+        <div class="video-caption">{{ videoPreviewLabel }}</div>
+      </div>
     </div>
 
     <!-- Empty state -->
@@ -134,6 +148,22 @@ let resizeObserver = null;
 
 const page = computed(() => editor.currentPage.value);
 const currentDialogue = computed(() => editor.currentDialogue.value);
+const videoPreview = computed(() => {
+  const reference = page.value?.video;
+  if (!reference || typeof reference !== 'object') return { file: '', poster: '', label: '未选择视频' };
+  const registry = script.data?.assets?.videos || {};
+  const entry = reference.videoId ? registry[reference.videoId] : null;
+  return {
+    file: reference.file || entry?.file || '',
+    poster: reference.poster || entry?.poster || '',
+    label: reference.videoId
+      ? `${entry?.label || reference.videoId} (${reference.videoId})`
+      : reference.file || '未选择视频',
+  };
+});
+const videoPreviewSrc = computed(() => videoPreview.value.file ? resolveAsset(videoPreview.value.file) : '');
+const videoPosterSrc = computed(() => videoPreview.value.poster ? resolveAsset(videoPreview.value.poster) : '');
+const videoPreviewLabel = computed(() => videoPreview.value.label);
 
 const gridLinesX = computed(() => {
   const gs = editor.gridSize.value;
@@ -683,5 +713,54 @@ const speakerStyle = computed(() => {
 .input-row button {
   min-width: 88px;
   padding: 0 16px;
+}
+
+.canvas-video-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.video-frame {
+  width: min(760px, 78%);
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #050505;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.video-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.video-placeholder {
+  color: #777;
+  font-size: 48px;
+}
+
+.video-caption {
+  max-width: 70%;
+  padding: 8px 12px;
+  color: #ddd;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

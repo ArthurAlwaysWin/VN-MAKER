@@ -13,6 +13,7 @@
             <option value="choice">选择菜单</option>
             <option value="input">文本输入</option>
             <option value="condition">条件分支</option>
+            <option value="video">视频播放</option>
           </select>
         </div>
 
@@ -157,6 +158,42 @@
           @update-particles="setPageParticles"
           @preview="previewPageParticles"
         />
+      </div>
+    </div>
+
+    <!-- Section 1b: Video Page -->
+    <div class="inspector-section" v-if="page && page.type === 'video'">
+      <div class="section-toggle" @click="sections.video = !sections.video">
+        {{ sections.video ? '▼' : '▶' }} 🎬 视频页面
+      </div>
+      <div v-if="sections.video" class="section-body">
+        <VideoReferenceFields
+          title="剧情视频"
+          :model-value="page.video"
+          @update:model-value="setVideoReference"
+          @clear="setVideoReference({})"
+        />
+
+        <div class="form-group">
+          <label>播放结束后</label>
+          <select class="field-input" :value="page.autoAdvance === false ? 'wait' : 'advance'" @change="setVideoAutoAdvance($event.target.value)">
+            <option value="advance">自动继续</option>
+            <option value="wait">等待点击</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>跳转目标</label>
+          <select class="field-input" :value="page.target || ''" @change="setVideoTarget($event.target.value)">
+            <option value="">继续下一页</option>
+            <option v-for="[sId, s] in allScenes" :key="sId" :value="sId">{{ s.name || sId }}</option>
+          </select>
+        </div>
+
+        <label class="checkbox-label video-checkbox">
+          <input type="checkbox" :checked="page.loop === true" @change="setVideoLoop($event.target.checked)" />
+          循环播放
+        </label>
       </div>
     </div>
 
@@ -829,6 +866,7 @@ import AudioPicker from './AudioPicker.vue';
 import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
 import ParticlePanel from './ParticlePanel.vue';
+import VideoReferenceFields from '../resource-library/VideoReferenceFields.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
 import {
   CONDITION_OPERATORS,
@@ -848,7 +886,7 @@ const editor = usePageEditor();
 const script = useScriptStore();
 const assets = useAssetStore();
 
-const sections = reactive({ props: true, chars: true, dialogues: true, audio: true, choices: true, input: true, conditions: true, fonts: false });
+const sections = reactive({ props: true, video: true, chars: true, dialogues: true, audio: true, choices: true, input: true, conditions: true, fonts: false });
 const dlgDragState = reactive({ fromIndex: -1 });
 const optDragState = reactive({ fromIndex: -1 });
 const showSpeakerDropdown = ref(false);
@@ -1000,6 +1038,36 @@ function clearBackground() {
 function setPageType(type) {
   if (!editor.selectedSceneId.value || !Number.isInteger(editor.selectedPageIndex.value)) return;
   script.setPageType(editor.selectedSceneId.value, editor.selectedPageIndex.value, type);
+}
+
+function setVideoReference(reference) {
+  if (!page.value || page.value.type !== 'video') return;
+  page.value.video = reference && typeof reference === 'object' ? reference : {};
+  script.pushState();
+}
+
+function setVideoAutoAdvance(mode) {
+  if (!page.value || page.value.type !== 'video') return;
+  page.value.autoAdvance = mode !== 'wait';
+  if (page.value.autoAdvance && page.value.loop) {
+    page.value.loop = false;
+  }
+  script.pushState();
+}
+
+function setVideoTarget(target) {
+  if (!page.value || page.value.type !== 'video') return;
+  page.value.target = target || null;
+  script.pushState();
+}
+
+function setVideoLoop(loop) {
+  if (!page.value || page.value.type !== 'video') return;
+  page.value.loop = loop === true;
+  if (page.value.loop) {
+    page.value.autoAdvance = false;
+  }
+  script.pushState();
 }
 
 function clearBgm() {

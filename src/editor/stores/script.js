@@ -18,11 +18,13 @@ import {
   createAffectionVariableId,
   normalizeVariableRegistry,
 } from '../../shared/variableRegistry.js';
+import { normalizeVideoRegistry } from '../../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../../shared/textTemplate.js';
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 const DRAFT_ENDING_PREFIX = '__draft_ending__';
 const DRAFT_CG_PREFIX = '__draft_cg__';
+const DRAFT_VIDEO_PREFIX = '__draft_video__';
 
 function slugifyVariableId(value) {
   return String(value ?? '')
@@ -34,6 +36,16 @@ function slugifyVariableId(value) {
 
 function slugifyEndingId(value) {
   return slugifyVariableId(value);
+}
+
+function slugifyVideoId(value) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  if (!normalized) return '';
+  return /^[a-z_]/.test(normalized) ? normalized : `video_${normalized}`;
 }
 
 function formatVariableReferenceLocation(reference = {}) {
@@ -95,6 +107,8 @@ function normalizeStoryContracts(scriptData) {
   scriptData.systems.endings = normalizeEndingRegistry(scriptData.systems.endings);
   scriptData.systems.gallery ??= {};
   scriptData.systems.gallery.cg = normalizeCgRegistry(scriptData.systems.gallery.cg);
+  scriptData.assets ??= {};
+  scriptData.assets.videos = normalizeVideoRegistry(scriptData.assets.videos);
   normalizeStoryEffects(scriptData);
   normalizeConditionPages(scriptData, {
     registry: scriptData.systems.variables,
@@ -304,6 +318,16 @@ export const useScriptStore = defineStore('script', () => {
     data.value.systems.gallery ??= {};
     data.value.systems.gallery.cg = normalizeCgRegistry(data.value.systems.gallery.cg);
     return data.value.systems.gallery.cg;
+  }
+
+  function ensureVideoRegistryState() {
+    if (!data.value) {
+      return null;
+    }
+
+    data.value.assets ??= {};
+    data.value.assets.videos = normalizeVideoRegistry(data.value.assets.videos);
+    return data.value.assets.videos;
   }
 
   function createVariableDraft() {
@@ -615,6 +639,121 @@ export const useScriptStore = defineStore('script', () => {
     selectCg(draftId);
     pushState();
     return draftId;
+  }
+
+  function createVideoDraft() {
+    const videos = ensureVideoRegistryState();
+    if (!videos) {
+      return null;
+    }
+
+    let index = 1;
+    let draftId = `${DRAFT_VIDEO_PREFIX}${index}`;
+    while (videos[draftId]) {
+      index++;
+      draftId = `${DRAFT_VIDEO_PREFIX}${index}`;
+    }
+
+    videos[draftId] = {
+      label: '',
+      kind: 'other',
+      tags: [],
+    };
+    pushState();
+    return draftId;
+  }
+
+  function updateVideoFields(videoId, changes = {}) {
+    const videos = ensureVideoRegistryState();
+    if (!videos || !videos[videoId]) {
+      return false;
+    }
+
+    videos[videoId] = normalizeVideoRegistry({
+      [videoId]: {
+        ...videos[videoId],
+        ...changes,
+      },
+    })[videoId];
+    pushState();
+    return true;
+  }
+
+  function renameVideo(videoId, nextVideoId) {
+    const videos = ensureVideoRegistryState();
+    if (!videos || !videos[videoId]) {
+      return { success: false, error: 'missing-video' };
+    }
+
+    const normalizedId = slugifyVideoId(nextVideoId);
+    if (!normalizedId) {
+      return { success: false, error: 'empty-id' };
+    }
+    if (normalizedId === videoId) {
+      return { success: true, videoId };
+    }
+    if (videos[normalizedId]) {
+      return { success: false, error: 'duplicate-id' };
+    }
+
+    videos[normalizedId] = videos[videoId];
+    delete videos[videoId];
+    rewriteVideoReferences(videoId, normalizedId);
+    pushState();
+    return { success: true, videoId: normalizedId };
+  }
+
+  function deleteVideo(videoId) {
+    const videos = ensureVideoRegistryState();
+    if (!videos || !videos[videoId]) {
+      return { success: false, error: 'missing-video' };
+    }
+
+    delete videos[videoId];
+    clearVideoReferences(videoId);
+    pushState();
+    return { success: true, videoId };
+  }
+
+  function rewriteVideoReferences(fromVideoId, toVideoId) {
+    function visit(node) {
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node)) {
+        node.forEach(visit);
+        return;
+      }
+      if (node.videoId === fromVideoId) {
+        node.videoId = toVideoId;
+      }
+      Object.values(node).forEach(visit);
+    }
+    visit(data.value?.ui?.titleScreen?.openingVideo);
+    visit(data.value?.systems?.endings);
+    visit(data.value?.scenes);
+  }
+
+  function clearVideoReferences(videoId) {
+    function maybeClear(reference) {
+      if (!reference || typeof reference !== 'object' || reference.videoId !== videoId) return false;
+      delete reference.videoId;
+      return !reference.file;
+    }
+
+    if (maybeClear(data.value?.ui?.titleScreen?.openingVideo)) {
+      delete data.value.ui.titleScreen.openingVideo;
+    }
+    for (const ending of Object.values(data.value?.systems?.endings ?? {})) {
+      if (maybeClear(ending?.endingVideo)) {
+        delete ending.endingVideo;
+      }
+    }
+    for (const scene of Object.values(data.value?.scenes ?? {})) {
+      for (const page of scene?.pages ?? []) {
+        if (page?.type === 'video' && maybeClear(page.video)) {
+          page.video = {};
+        }
+      }
+    }
   }
 
   function updateCgFields(cgId, changes = {}) {
@@ -1235,7 +1374,7 @@ export const useScriptStore = defineStore('script', () => {
     const page = scene.pages?.[pageIndex];
     if (!page || page.type === type) return false;
 
-    page.type = ['normal', 'choice', 'input', 'condition'].includes(type) ? type : 'normal';
+    page.type = ['normal', 'choice', 'input', 'condition', 'video'].includes(type) ? type : 'normal';
 
     if (page.type === 'normal') {
       delete page.prompt;
@@ -1252,6 +1391,9 @@ export const useScriptStore = defineStore('script', () => {
       delete page.trueTarget;
       delete page.falseTarget;
       delete page.unresolvedCondition;
+      delete page.video;
+      delete page.autoAdvance;
+      delete page.loop;
       page.dialogues = Array.isArray(page.dialogues) && page.dialogues.length > 0
         ? page.dialogues
         : [{ speaker: null, text: '', expression: null, voice: null }];
@@ -1270,6 +1412,9 @@ export const useScriptStore = defineStore('script', () => {
       delete page.trueTarget;
       delete page.falseTarget;
       delete page.unresolvedCondition;
+      delete page.video;
+      delete page.autoAdvance;
+      delete page.loop;
       page.prompt ??= '';
       page.options = Array.isArray(page.options) && page.options.length > 0
         ? page.options.map((option) => normalizeEffectContainer(option))
@@ -1283,6 +1428,8 @@ export const useScriptStore = defineStore('script', () => {
       delete page.trueTarget;
       delete page.falseTarget;
       delete page.unresolvedCondition;
+      delete page.video;
+      delete page.loop;
       page.prompt ??= '请输入主角名字';
       page.variableId ??= '';
       page.placeholder ??= '名字';
@@ -1304,6 +1451,9 @@ export const useScriptStore = defineStore('script', () => {
       delete page.required;
       delete page.target;
       delete page.particles;
+      delete page.video;
+      delete page.autoAdvance;
+      delete page.loop;
       const normalizedPage = normalizeConditionPage(page, {
         registry: data.value?.systems?.variables ?? {},
       });
@@ -1312,6 +1462,25 @@ export const useScriptStore = defineStore('script', () => {
       page.trueTarget = normalizedPage.trueTarget;
       page.falseTarget = normalizedPage.falseTarget;
       delete page.unresolvedCondition;
+    } else if (page.type === 'video') {
+      delete page.effects;
+      delete page.dialogues;
+      delete page.prompt;
+      delete page.options;
+      delete page.variableId;
+      delete page.placeholder;
+      delete page.defaultValue;
+      delete page.submitText;
+      delete page.maxLength;
+      delete page.required;
+      delete page.conditionMode;
+      delete page.conditions;
+      delete page.trueTarget;
+      delete page.falseTarget;
+      delete page.unresolvedCondition;
+      page.video ??= {};
+      page.autoAdvance ??= true;
+      page.loop ??= false;
     }
 
     pushState();
@@ -1469,6 +1638,7 @@ export const useScriptStore = defineStore('script', () => {
     data.value.ui.titleScreen = {
       background: nextTitleScreen.background ?? null,
       bgm: currentTitleScreen.bgm ?? null,
+      openingVideo: currentTitleScreen.openingVideo ? JSON.parse(JSON.stringify(currentTitleScreen.openingVideo)) : undefined,
       elements: Array.isArray(nextTitleScreen.elements) ? nextTitleScreen.elements : [],
     };
 
@@ -1487,6 +1657,7 @@ export const useScriptStore = defineStore('script', () => {
     findVariableReferences, deleteVariable,
     createEndingDraft, updateEndingFields, renameEnding, findEndingReferences, deleteEnding,
     createCgDraft, updateCgFields, renameCg, findCgReferences, deleteCg,
+    ensureVideoRegistryState, createVideoDraft, updateVideoFields, renameVideo, deleteVideo,
     getSettingsScreen, updateSettingsScreen,
     getTitleScreen, updateTitleScreen,
     getDialogueBox, updateDialogueBox,

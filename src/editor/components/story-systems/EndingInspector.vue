@@ -86,6 +86,18 @@
       ></textarea>
     </label>
 
+    <section class="ending-video-section">
+      <VideoReferenceFields
+        title="Ending Video"
+        :model-value="endingEntry.endingVideo"
+        :show-play="true"
+        :play-modes="endingPlayModes"
+        :play-mode-labels="endingPlayLabels"
+        @update:model-value="setEndingVideo"
+        @clear="clearEndingVideo"
+      />
+    </section>
+
     <section class="profile-status" data-test="ending-profile-status">
       <header class="profile-header">
         <div>
@@ -120,6 +132,7 @@
 <script setup>
 import { nextTick, ref, watch } from 'vue';
 import { useScriptStore } from '../../stores/script.js';
+import VideoReferenceFields from '../resource-library/VideoReferenceFields.vue';
 
 const DRAFT_PREFIX = '__draft_ending__';
 
@@ -139,6 +152,11 @@ const titleInputRef = ref(null);
 const validationMessage = ref('');
 const draftIdValue = ref(props.endingId || '');
 const hasCustomIdValue = ref(false);
+const endingPlayModes = ['after-unlock', 'manual'];
+const endingPlayLabels = {
+  'after-unlock': '解锁后播放',
+  manual: '手动',
+};
 
 watch(() => [props.endingId, props.endingEntry], () => {
   draftIdValue.value = props.endingId || '';
@@ -216,6 +234,18 @@ function onIdInput(event) {
     validationMessage.value = '';
     draftIdValue.value = result.endingId;
   }
+}
+
+function setEndingVideo(reference) {
+  script.updateEndingFields(props.endingId, {
+    endingVideo: reference && typeof reference === 'object' ? reference : undefined,
+  });
+}
+
+function clearEndingVideo() {
+  script.updateEndingFields(props.endingId, {
+    endingVideo: undefined,
+  });
 }
 </script>
 
@@ -322,6 +352,14 @@ function onIdInput(event) {
 
 .notes-field {
   margin-top: 16px;
+}
+
+.ending-video-section {
+  background: #1f1f1f;
+  border: 1px solid #353535;
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 16px;
 }
 
 .profile-status {

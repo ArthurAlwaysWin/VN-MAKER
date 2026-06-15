@@ -119,7 +119,8 @@
     </div>
 
     <!-- ─── 右：属性面板 ─── -->
-    <div class="inspector" v-if="selectedElement">
+    <div class="inspector" v-if="selectedElement || !showPreview">
+      <template v-if="selectedElement">
       <div class="inspector-header">
         <span class="inspector-title">属性</span>
         <span class="elem-type-badge">{{ typeLabel(selectedElement.type) }}</span>
@@ -267,6 +268,27 @@
           </div>
         </template>
       </div>
+      </template>
+      <template v-else>
+        <div class="inspector-header">
+          <span class="inspector-title">标题设置</span>
+          <span class="elem-type-badge">OP</span>
+        </div>
+        <div class="inspector-body">
+          <div class="inspector-section">
+            <div class="section-title">🎬 Opening Video</div>
+            <VideoReferenceFields
+              title="标题 OP"
+              :model-value="layout.openingVideo"
+              :show-play="true"
+              :play-modes="openingPlayModes"
+              :play-mode-labels="openingPlayLabels"
+              @update:model-value="setOpeningVideo"
+              @clear="clearOpeningVideo"
+            />
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 
@@ -284,6 +306,7 @@ import { useScriptStore } from '../stores/script.js';
 import { useAssetStore } from '../stores/assets.js';
 import DraggableElement from '../components/canvas/DraggableElement.vue';
 import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
+import VideoReferenceFields from '../components/resource-library/VideoReferenceFields.vue';
 import { computeSnap } from '../utils/snapGuides.js';
 import HelpTip from '../components/HelpTip.vue';
 import { HELP_DESIGNER } from '../helpTexts.js';
@@ -315,8 +338,14 @@ const PRESET_BUTTONS = [
 const presetButtons = PRESET_BUTTONS;
 
 // ─── Layout State ───────────────────────────────────────
-const layout = reactive({ background: null, bgm: null, elements: [] });
+const layout = reactive({ background: null, bgm: null, openingVideo: null, elements: [] });
 const selectedId = ref(null);
+const openingPlayModes = ['after-start', 'before-title', 'manual'];
+const openingPlayLabels = {
+  'after-start': '开始游戏后',
+  'before-title': '标题显示前',
+  manual: '手动',
+};
 
 const selectedElement = computed(() => {
   if (!selectedId.value) return null;
@@ -408,6 +437,7 @@ onMounted(() => {
   if (screen) {
     layout.background = screen.background || null;
     layout.bgm = screen.bgm || null;
+    layout.openingVideo = screen.openingVideo ? { ...screen.openingVideo } : null;
     layout.elements = (screen.elements || []).map(e => ({ ...e }));
   }
   nextTick(updateScale);
@@ -428,6 +458,7 @@ watch(
     if (_syncing || !newScreen) return;
     layout.background = newScreen.background || null;
     layout.bgm = newScreen.bgm || null;
+    layout.openingVideo = newScreen.openingVideo ? { ...newScreen.openingVideo } : null;
     layout.elements = (newScreen.elements || []).map(e => ({ ...e }));
     if (selectedId.value && !layout.elements.find(e => e.id === selectedId.value)) {
       selectedId.value = null;
@@ -696,6 +727,16 @@ function clearBgm() {
   saveLayout();
 }
 
+function setOpeningVideo(reference) {
+  layout.openingVideo = reference && typeof reference === 'object' ? { ...reference } : null;
+  saveLayout();
+}
+
+function clearOpeningVideo() {
+  layout.openingVideo = null;
+  saveLayout();
+}
+
 // ─── BGM Preview ────────────────────────────────────────
 const bgmAudio = ref(null);
 const bgmPlaying = ref(false);
@@ -738,6 +779,7 @@ function saveLayout() {
   scriptStore.updateTitleScreen({
     background: layout.background,
     bgm: layout.bgm,
+    openingVideo: layout.openingVideo ? { ...layout.openingVideo } : undefined,
     elements: layout.elements.map(e => ({ ...e })),
   });
   nextTick(() => { _syncing = false; });

@@ -120,6 +120,10 @@ function parseJsonArg(args, name, fallback = null) {
   }
 }
 
+function parseOptionalJsonArg(args, name) {
+  return getOptionalArgValue(args, name) === undefined ? undefined : parseJsonArg(args, name, null);
+}
+
 async function parseJsonFileArg(args, name, fallback = null) {
   const value = getArgValue(args, name, null);
   if (value == null) {
@@ -474,6 +478,7 @@ async function parseTitleScreenArgs(args) {
     config,
     background: hasFlag(args, '--clear-background') ? null : getOptionalArgValue(args, '--background'),
     bgm: hasFlag(args, '--clear-bgm') ? null : getOptionalArgValue(args, '--bgm'),
+    openingVideo: parseOptionalJsonArg(args, '--opening-video'),
     elements: parseJsonArg(args, '--elements', undefined),
     merge: hasFlag(args, '--replace') ? false : true,
   });
@@ -1452,6 +1457,23 @@ function buildPlanPage(command, params) {
     return { type, page };
   }
 
+  if (type === 'video') {
+    page.video = getParam(params, 'video') ?? dropUndefinedFields({
+      videoId: getParam(params, 'videoId', 'video-id'),
+      file: getParam(params, 'file'),
+      poster: getParam(params, 'poster'),
+      skippable: getParam(params, 'skippable'),
+      controls: getParam(params, 'controls'),
+      volume: getParam(params, 'volume'),
+      audioMode: getParam(params, 'audioMode', 'audio-mode'),
+      fit: getParam(params, 'fit'),
+    });
+    page.autoAdvance = getParam(params, 'autoAdvance', 'auto-advance') ?? page.autoAdvance ?? true;
+    page.target = getParam(params, 'target') ?? page.target ?? null;
+    page.loop = getParam(params, 'loop') ?? page.loop ?? false;
+    return { type, page };
+  }
+
   page.dialogues = getParam(params, 'dialogues') ?? page.dialogues ?? [];
   return { type: 'normal', page };
 }
@@ -1460,6 +1482,7 @@ function buildTitleScreenPatch(params) {
   return dropUndefinedFields({
     background: getParam(params, 'clearBackground', 'clear-background') ? null : getParam(params, 'background'),
     bgm: getParam(params, 'clearBgm', 'clear-bgm') ? null : getParam(params, 'bgm'),
+    openingVideo: getParam(params, 'openingVideo', 'opening-video'),
     elements: getParam(params, 'elements'),
     config: getParam(params, 'config'),
     merge: getParam(params, 'merge') ?? true,
@@ -1676,6 +1699,7 @@ function applyPlanOperation(session, operation = {}, index = 0) {
       description: getParam(params, 'description'),
       thumbnail: getParam(params, 'thumbnail'),
       hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
+      endingVideo: getParam(params, 'endingVideo', 'ending-video'),
     });
   }
 
@@ -1689,6 +1713,7 @@ function applyPlanOperation(session, operation = {}, index = 0) {
         description: getParam(params, 'description'),
         thumbnail: getParam(params, 'thumbnail'),
         hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
+        endingVideo: getParam(params, 'endingVideo', 'ending-video'),
       }),
     });
   }
@@ -1765,6 +1790,9 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     }
     if (type === 'input') {
       return session.addInputPage({ sceneId, page });
+    }
+    if (type === 'video') {
+      return session.addVideoPage({ sceneId, page });
     }
     return session.addNormalPage({ sceneId, page });
   }
@@ -5231,6 +5259,7 @@ function getEndingPatchFromArgs(args) {
     order: parseOptionalScalarValue(getOptionalArgValue(args, '--order')),
     description: getOptionalArgValue(args, '--description'),
     thumbnail: getOptionalArgValue(args, '--thumbnail'),
+    endingVideo: parseOptionalJsonArg(args, '--ending-video'),
     hiddenUntilUnlocked: hiddenUntilUnlocked === undefined
       ? undefined
       : parseScalarValue(hiddenUntilUnlocked),
@@ -5273,6 +5302,7 @@ async function addEnding(args) {
     order: parseOptionalScalarValue(getArgValue(args, '--order', undefined)),
     description: getArgValue(args, '--description', undefined),
     thumbnail: getArgValue(args, '--thumbnail', undefined),
+    endingVideo: parseOptionalJsonArg(args, '--ending-video'),
     hiddenUntilUnlocked: hiddenUntilUnlocked === undefined
       ? undefined
       : parseScalarValue(hiddenUntilUnlocked),
@@ -5554,6 +5584,23 @@ function buildPageArgs(args) {
     return { type, page };
   }
 
+  if (type === 'video') {
+    page.video = parseJsonArg(args, '--video', null) ?? dropUndefinedFields({
+      videoId: getArgValue(args, '--video-id', undefined),
+      file: getArgValue(args, '--file', undefined),
+      poster: getArgValue(args, '--poster', undefined),
+      skippable: parseOptionalScalarValue(getOptionalArgValue(args, '--skippable')),
+      controls: parseOptionalScalarValue(getOptionalArgValue(args, '--controls')),
+      volume: parseOptionalScalarValue(getOptionalArgValue(args, '--volume')),
+      audioMode: getArgValue(args, '--audio-mode', undefined),
+      fit: getArgValue(args, '--fit', undefined),
+    });
+    page.autoAdvance = parseOptionalScalarValue(getOptionalArgValue(args, '--auto-advance')) ?? true;
+    page.target = getArgValue(args, '--target', null);
+    page.loop = parseOptionalScalarValue(getOptionalArgValue(args, '--loop')) ?? false;
+    return { type, page };
+  }
+
   page.dialogues = parseJsonArg(args, '--dialogues', []);
   return { type: 'normal', page };
 }
@@ -5574,6 +5621,9 @@ async function addPage(args) {
     }
     if (type === 'input') {
       return session.addInputPage({ sceneId, page });
+    }
+    if (type === 'video') {
+      return session.addVideoPage({ sceneId, page });
     }
     return session.addNormalPage({ sceneId, page });
   });

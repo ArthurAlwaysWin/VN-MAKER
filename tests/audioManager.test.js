@@ -40,4 +40,25 @@ describe('AudioManager BGM transitions', () => {
     expect(first.currentTime).toBe(0);
     expect(audio._bgm.src).toBe('/audio/second.ogg');
   });
+
+  it('supports replace, duck, and mix modes for foreground video audio', () => {
+    const audio = new AudioManager('/audio/');
+    audio.playBgm({ file: 'theme.ogg', volume: 1 });
+    const bgm = audio._bgm;
+    bgm.volume = 0.8;
+
+    const restoreDuck = audio.beginExternalAudioMode('duck', { duckFactor: 0.25 });
+    expect(bgm.volume).toBeCloseTo(0.2);
+    restoreDuck();
+    expect(bgm.volume).toBeCloseTo(0.8);
+
+    const restoreMix = audio.beginExternalAudioMode('mix');
+    restoreMix();
+    expect(bgm.pause).not.toHaveBeenCalled();
+
+    const restoreReplace = audio.beginExternalAudioMode('replace');
+    expect(bgm.pause).toHaveBeenCalledTimes(1);
+    restoreReplace();
+    expect(bgm.play).toHaveBeenCalledTimes(2);
+  });
 });

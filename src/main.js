@@ -35,6 +35,7 @@ import { TitleScreen } from './ui/TitleScreen.js';
 import { GalleryScreen } from './ui/GalleryScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
+import { VideoPlayer } from './ui/VideoPlayer.js';
 import { attachResponsiveGameContainer } from './ui/runtimeViewport.js';
 import { loadAllFonts } from './engine/fontLoader.js';
 import {
@@ -90,6 +91,7 @@ gameContainer.appendChild(skipIndicator);
 // Title screen is appended to the game container itself (z-index 100)
 const titleScreen = new TitleScreen(gameContainer, '');
 const galleryScreen = new GalleryScreen(gameContainer);
+const videoPlayer = new VideoPlayer(gameContainer, { audioManager: audio });
 
 // ─── State ──────────────────────────────────────────────
 let autoMode = false;
@@ -122,6 +124,8 @@ let activeEffectPreview = null;
 let previewRestorePending = false;
 let playerDataRepository = null;
 let activeUiMotionClasses = [];
+let activeVideoToken = 0;
+let titleStartPending = false;
 
 // ─── Toast notifications (D-11, D-12) ──────────────────
 let currentToast = null;
@@ -218,6 +222,7 @@ function establishPreviewPageBaseline(request) {
   titleScreen.hide();
   isPlaying = true;
 
+  cancelRuntimeVideo();
   cancelPageTransitionGate();
   camera.clear();
   characters.clear();
@@ -241,6 +246,7 @@ function waitForPreviewDuration(durationMs) {
 
 async function restorePreviewSnapshot(snapshot) {
   previewRestorePending = true;
+  cancelRuntimeVideo();
   cancelPageTransitionGate();
   stopAuto();
   stopSkip();
@@ -617,6 +623,7 @@ function applyUiMotion(motionConfig) {
 }
 
 function hidePreviewUiSurfaces() {
+  cancelRuntimeVideo();
   choiceMenu.hide();
   textInputScreen.hide();
   dialogueBox.hide();
@@ -625,6 +632,45 @@ function hidePreviewUiSurfaces() {
   backlogScreen.hide();
   settingsScreen.hide();
   titleScreen.hide();
+}
+
+function cancelRuntimeVideo(outcome = 'skipped') {
+  activeVideoToken += 1;
+  videoPlayer.stop(outcome);
+}
+
+async function playRuntimeVideo(reference, { skipImmediately = false } = {}) {
+  const token = ++activeVideoToken;
+  const outcome = await videoPlayer.play(reference, {
+    script: engine.script,
+    audioManager: audio,
+    skipImmediately,
+  });
+  return token === activeVideoToken ? outcome : null;
+}
+
+function getOpeningVideoConfig() {
+  const openingVideo = engine.script?.ui?.titleScreen?.openingVideo;
+  return openingVideo && typeof openingVideo === 'object' ? openingVideo : null;
+}
+
+async function playOpeningVideo(trigger) {
+  const openingVideo = getOpeningVideoConfig();
+  const playMode = openingVideo?.play ?? 'after-start';
+  if (!openingVideo || playMode !== trigger) return null;
+  return playRuntimeVideo(openingVideo);
+}
+
+async function playEndingVideo(endingId) {
+  if (!isPlaying || engine.ended || engine._previewMode) return null;
+  const endingVideo = engine.script?.systems?.endings?.[endingId]?.endingVideo;
+  if (!endingVideo || typeof endingVideo !== 'object') return null;
+  if ((endingVideo.play ?? 'after-unlock') === 'manual') return null;
+
+  stopAuto();
+  stopSkip();
+  audio.stopVoice();
+  return playRuntimeVideo(endingVideo);
 }
 
 // ─── Engine event handlers ──────────────────────────────
@@ -905,6 +951,26 @@ engine.on('input', (data) => {
   showInputEvent(data);
 });
 
+engine.on('video', async (data) => {
+  const video = data.video ?? data.page?.video;
+  const skipImmediately = skipMode && video?.skippable !== false;
+
+  stopAuto();
+  stopSkip();
+  audio.stopVoice();
+  dialogueBox.hide();
+  choiceMenu.hide();
+  textInputScreen.hide();
+
+  const outcome = await playRuntimeVideo(video, { skipImmediately });
+  if (!outcome) return;
+  engine.finishVideo(outcome.type);
+});
+
+engine.on('ending_unlocked', ({ endingId }) => {
+  void playEndingVideo(endingId);
+});
+
 engine.on('end', () => {
   // In preview mode, notify editor instead of returning to title
   if (engine._previewMode) {
@@ -914,6 +980,7 @@ engine.on('end', () => {
     dialogueBox.hide();
     choiceMenu.hide();
     textInputScreen.hide();
+    cancelRuntimeVideo();
     cancelPageTransitionGate();
     camera.clear();
     background.clear();
@@ -930,6 +997,7 @@ engine.on('end', () => {
   dialogueBox.hide();
   choiceMenu.hide();
   textInputScreen.hide();
+  cancelRuntimeVideo();
   audio.stopBgm({ fadeOut: 2000 });
   audio.stopVoice();
 
@@ -1036,6 +1104,7 @@ saveLoadScreen.onClose = (source) => {
 };
 
 function replayCurrentPage({ instant = false } = {}) {
+  cancelRuntimeVideo();
   cancelPageTransitionGate();
   dialogueBox.hide();
   choiceMenu.hide();
@@ -1084,6 +1153,7 @@ gameMenu.onTitle = async () => {
   isPlaying = false;
   stopAuto();
   stopSkip();
+  cancelRuntimeVideo();
   dialogueBox.hide();
   choiceMenu.hide();
   textInputScreen.hide();
@@ -1222,6 +1292,7 @@ document.addEventListener('keydown', (e) => {
 gameContainer.addEventListener('click', (e) => {
   if (!isPlaying) return;
   if (engine.ended) return;
+  if (videoPlayer.isPlaying) return;
 
   // Don't interfere with UI element clicks
   const target = e.target;
@@ -1438,7 +1509,9 @@ function updateQuickBtnStates() {
 // ─── Title screen ───────────────────────────────────────
 async function showTitle() {
   cancelEndReturnTimer();
+  cancelRuntimeVideo();
   galleryScreen.hide();
+  await playOpeningVideo('before-title');
   const titleLayout = engine.script?.ui?.titleScreen;
   if (titleLayout?.bgm) {
     audio.playBgm({ file: titleLayout.bgm, volume: 1, loop: true });
@@ -1453,14 +1526,21 @@ async function showTitle() {
   }
 }
 
-titleScreen.onStart = () => {
+titleScreen.onStart = async () => {
+  if (titleStartPending) return;
+  titleStartPending = true;
   cancelEndReturnTimer();
   titleScreen.hide();
   particles.clear();
   effectPacks.clear();
   audio.stopBgm();
-  isPlaying = true;
-  engine.startGame('start');
+  try {
+    await playOpeningVideo('after-start');
+    isPlaying = true;
+    engine.startGame('start');
+  } finally {
+    titleStartPending = false;
+  }
 };
 
 titleScreen.onContinue = () => {
@@ -1637,6 +1717,7 @@ function initPreview() {
         engine._previewMode = false;
         stopAuto();
         stopSkip();
+        cancelRuntimeVideo();
         dialogueBox.hide();
         choiceMenu.hide();
         textInputScreen.hide();

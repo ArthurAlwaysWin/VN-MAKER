@@ -281,6 +281,113 @@ describe('selectChoice', () => {
   });
 });
 
+// ─── Video pages ───────────────────────────────────────────
+
+describe('video pages', () => {
+  it('emits video playback requests and advances to target after completion', () => {
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {},
+      assets: { videos: { intro: { file: 'videos/intro.mp4' } } },
+      scenes: {
+        start: {
+          name: 'Start',
+          pages: [
+            {
+              type: 'video',
+              video: { videoId: 'intro', skippable: true },
+              autoAdvance: true,
+              target: 'after',
+            },
+          ],
+        },
+        after: {
+          name: 'After',
+          pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'After video' }] }],
+        },
+      },
+    };
+
+    const videoEvents = capture(engine, 'video', () => engine.startGame('start'));
+    strictEqual(videoEvents.length, 1);
+    strictEqual(videoEvents[0].video.videoId, 'intro');
+
+    const sceneEvents = capture(engine, 'scene_enter', () => engine.finishVideo('ended'));
+    strictEqual(sceneEvents[0].sceneId, 'after');
+  });
+
+  it('waits for a click after ended video pages when autoAdvance is false', () => {
+    const engine = new ScriptEngine();
+    engine.script = {
+      characters: {},
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'video',
+              video: { file: 'videos/manual.webm' },
+              autoAdvance: false,
+            },
+            { type: 'normal', dialogues: [{ speaker: null, text: 'Next page' }] },
+          ],
+        },
+      },
+    };
+
+    engine.startGame('start');
+    strictEqual(engine.finishVideo('ended'), true);
+    strictEqual(engine.waiting, true);
+    strictEqual(engine.pageIndex, 0);
+
+    engine.next();
+    strictEqual(engine.pageIndex, 1);
+  });
+});
+
+// ─── Ending video hooks ────────────────────────────────────
+
+describe('ending unlock runtime events', () => {
+  it('emits ending_unlocked after page-enter ending effects are applied', async () => {
+    const engine = new ScriptEngine();
+    const unlockCalls = [];
+    const events = [];
+    engine.setPlayerDataRepository({
+      async unlockEnding(id) {
+        unlockCalls.push(id);
+      },
+    });
+    engine.on('ending_unlocked', (event) => events.push(event));
+    engine.script = {
+      characters: {},
+      systems: {
+        endings: {
+          good_end: {
+            title: 'Good End',
+            endingVideo: { file: 'videos/good_ed.webm' },
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [
+            {
+              type: 'normal',
+              effects: [{ type: 'unlock:ending', id: 'good_end' }],
+              dialogues: [{ speaker: null, text: 'The end' }],
+            },
+          ],
+        },
+      },
+    };
+
+    engine.startGame('start');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    deepStrictEqual(unlockCalls, ['good_end']);
+    deepStrictEqual(events, [{ endingId: 'good_end', source: 'page' }]);
+  });
+});
+
 // ─── Condition pages ───────────────────────────────────────
 
 describe('condition pages', () => {

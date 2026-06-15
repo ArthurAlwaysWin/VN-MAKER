@@ -18,14 +18,15 @@ const assetStore = useAssetStore();
 const fileList = computed(() => assetStore.files[props.category] || []);
 
 const isAudio = computed(() => props.category === 'audio');
+const isVideo = computed(() => props.category === 'videos');
 
 const categoryLabel = computed(() => {
-  const map = { backgrounds: '背景图', audio: '音频', ui: 'UI 图片', characters: '角色' };
+  const map = { backgrounds: '背景图', audio: '音频', videos: '视频', ui: 'UI 图片', characters: '角色' };
   return map[props.category] || props.category;
 });
 
 onMounted(() => {
-  assetStore.loadCategory(props.category);
+  assetStore.loadCategory?.(props.category);
 });
 
 function onSelect(file) {
@@ -53,7 +54,7 @@ function onOverlayClick(e) {
           <div v-else class="picker-grid">
             <!-- Image thumbnails -->
             <div
-              v-if="!isAudio"
+              v-if="!isAudio && !isVideo"
               v-for="file in fileList"
               :key="file"
               class="picker-card"
@@ -71,6 +72,16 @@ function onOverlayClick(e) {
               class="picker-audio-row"
               @click="onSelect(file)">
               <span class="audio-icon">🎵</span>
+              <span class="audio-name">{{ file }}</span>
+            </div>
+            <!-- Video list -->
+            <div
+              v-if="isVideo"
+              v-for="file in fileList"
+              :key="file"
+              class="picker-audio-row"
+              @click="onSelect(file)">
+              <span class="audio-icon">🎞</span>
               <span class="audio-name">{{ file }}</span>
             </div>
           </div>

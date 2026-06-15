@@ -45,6 +45,7 @@ import ImportNotification from '../components/resource-library/ImportNotificatio
 import AssetGrid from '../components/resource-library/AssetGrid.vue';
 import FontGrid from '../components/resource-library/FontGrid.vue';
 import AudioList from '../components/resource-library/AudioList.vue';
+import VideoLibrary from '../components/resource-library/VideoLibrary.vue';
 import CharacterEditor from '../components/resource-library/CharacterEditor.vue';
 import HelpTip from '../components/HelpTip.vue';
 import { HELP_RESOURCE } from '../helpTexts.js';
@@ -62,6 +63,7 @@ const subTabs = [
   { id: 'backgrounds', icon: '🖼️', label: '背景' },
   { id: 'characters', icon: '👤', label: '角色' },
   { id: 'audio', icon: '🎵', label: '音频' },
+  { id: 'videos', icon: '🎬', label: '视频' },
   { id: 'fonts', icon: '🔤', label: '字体' },
 ];
 
@@ -69,6 +71,7 @@ const categoryLabels = {
   backgrounds: '背景',
   characters: '角色',
   audio: '音频',
+  videos: '视频',
   fonts: '字体',
 };
 
@@ -76,6 +79,7 @@ const subTabComponentMap = {
   backgrounds: markRaw(AssetGrid),
   characters: markRaw(CharacterEditor),
   audio: markRaw(AudioList),
+  videos: markRaw(VideoLibrary),
   fonts: markRaw(FontGrid),
 };
 
@@ -86,6 +90,7 @@ const subTabComponent = computed(() => subTabComponentMap[activeSubTab.value]);
 
 const acceptTypes = computed(() => {
   if (activeSubTab.value === 'audio') return 'audio/*';
+  if (activeSubTab.value === 'videos') return '.mp4,.webm,video/mp4,video/webm';
   if (activeSubTab.value === 'fonts') return '.ttf,.otf,.woff,.woff2';
   return 'image/*';
 });

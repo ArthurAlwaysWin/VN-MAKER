@@ -178,6 +178,43 @@ export class AudioManager {
   }
 
   /**
+   * Temporarily adapt BGM while an external media element owns foreground audio.
+   * @param {'replace'|'duck'|'mix'} mode
+   * @param {{ duckFactor?: number }} options
+   * @returns {Function} idempotent restore callback
+   */
+  beginExternalAudioMode(mode = 'replace', options = {}) {
+    const bgm = this._bgm;
+    if (!bgm || mode === 'mix') {
+      return () => {};
+    }
+
+    const previousVolume = bgm.volume;
+    const wasPaused = bgm.paused;
+    let restored = false;
+
+    if (mode === 'duck') {
+      const duckFactor = Number.isFinite(Number(options.duckFactor))
+        ? Number(options.duckFactor)
+        : 0.28;
+      bgm.volume = Math.max(0, Math.min(1, previousVolume * duckFactor));
+    } else {
+      bgm.pause();
+    }
+
+    return () => {
+      if (restored) return;
+      restored = true;
+      if (this._bgm !== bgm) return;
+
+      bgm.volume = previousVolume;
+      if (mode === 'replace' && !wasPaused) {
+        bgm.play().catch(() => {});
+      }
+    };
+  }
+
+  /**
    * Fade volume from start to end over duration ms
    * @private
    */

@@ -10,6 +10,7 @@
  *   'choice'    — Visual state + prompt/options (player selects an option)
  *   'input'     — Text input → variable assignment (player submits to advance)
  *   'condition' — Variable check → jump to target scene (auto, no visual)
+ *   'video'     — Runtime-owned video playback (ended/skipped/error advances safely)
  *
  * Events emitted:
  *   'dialogue'        — { speaker, speakerName, speakerColor, text }
@@ -22,11 +23,13 @@
  *   'play_se'         — { file }
  *   'choice'          — { prompt, options }
  *   'input'           — { prompt, variableId, placeholder, defaultValue, submitText, maxLength, required }
+ *   'video'           — { sceneId, pageIndex, page, video }
  *   'set_particles'   — { config, sceneId, pageIndex }
  *   'stop_particles'  — { sceneId, pageIndex }
  *   'set_effect_packs' — { effects, sceneId, pageIndex }
  *   'clear_effect_packs' — { sceneId, pageIndex }
  *   'end'             — {}
+ *   'ending_unlocked' — { endingId, source }
  *   'scene_enter'     — { sceneId, sceneName }
  *   'page_enter'      — { sceneId, pageIndex, page }
  */
@@ -167,7 +170,12 @@ export class ScriptEngine extends EventEmitter {
     this.waiting = false;
 
     const page = this._currentPage();
-    if (!page || page.type !== 'normal') return;
+    if (!page) return;
+    if (page.type === 'video') {
+      this._advanceVideoPage(page);
+      return;
+    }
+    if (page.type !== 'normal') return;
 
     // More dialogues in this page? → advance dialogue
     if (this.dialogueIndex < page.dialogues.length - 1) {
@@ -307,6 +315,9 @@ export class ScriptEngine extends EventEmitter {
     } else if (page.type === 'input') {
       this._renderPage(page);
       this._execInput(page);
+    } else if (page.type === 'video') {
+      this._renderPage(page);
+      this._execVideo(page);
     }
     // condition pages have no visual — should not be a restore target
   }
@@ -387,6 +398,11 @@ export class ScriptEngine extends EventEmitter {
       case 'input':
         this._renderPage(page);
         this._execInput(page);
+        break;
+      case 'video':
+        void this._applyPageEffects(page);
+        this._renderPage(page);
+        this._execVideo(page);
         break;
       case 'condition':
         this._execCondition(page);
@@ -632,6 +648,48 @@ export class ScriptEngine extends EventEmitter {
   /**
    * @private
    */
+  _execVideo(page) {
+    this.waiting = false;
+    this.emit('video', {
+      sceneId: this.currentScene,
+      pageIndex: this.pageIndex,
+      page,
+      video: {
+        ...(page.video && typeof page.video === 'object' ? page.video : {}),
+        loop: page.loop ?? page.video?.loop,
+      },
+    });
+  }
+
+  finishVideo(outcome = 'ended') {
+    if (this.ended) return false;
+    const page = this._currentPage();
+    if (!page || page.type !== 'video') return false;
+
+    if (outcome === 'ended' && page.autoAdvance === false) {
+      this.waiting = true;
+      return true;
+    }
+
+    this.waiting = false;
+    this._advanceVideoPage(page);
+    return true;
+  }
+
+  /**
+   * @private
+   */
+  _advanceVideoPage(page) {
+    if (page?.target) {
+      this._enterScene(page.target);
+      return;
+    }
+    this._advancePage();
+  }
+
+  /**
+   * @private
+   */
   _execCondition(page) {
     const registry = normalizeVariableRegistry(this.script?.systems?.variables);
     const operators = Array.isArray(page?.conditions) && page.conditions.length > 0
@@ -667,10 +725,11 @@ export class ScriptEngine extends EventEmitter {
 
   async _applyOptionEffects(option) {
     try {
-      await applyEffects(option, {
+      const result = await applyEffects(option, {
         variables: this.variables,
         playerDataRepository: this._playerDataRepository,
       });
+      this._emitEndingUnlocks(result.effects, { source: 'choice' });
     } catch (error) {
       console.error('[ScriptEngine] Failed to apply choice effects:', error);
     }
@@ -680,12 +739,24 @@ export class ScriptEngine extends EventEmitter {
     try {
       const endingEffects = (Array.isArray(page?.effects) ? page.effects : [])
         .filter((effect) => effect?.type === 'unlock:ending');
-      await applyEffects(endingEffects, {
+      const result = await applyEffects(endingEffects, {
         variables: this.variables,
         playerDataRepository: this._playerDataRepository,
       });
+      this._emitEndingUnlocks(result.effects, { source: 'page' });
     } catch (error) {
       console.error('[ScriptEngine] Failed to apply page-enter effects:', error);
+    }
+  }
+
+  _emitEndingUnlocks(effects = [], context = {}) {
+    for (const effect of effects) {
+      if (effect?.type === 'unlock:ending') {
+        this.emit('ending_unlocked', {
+          endingId: effect.id,
+          source: context.source ?? null,
+        });
+      }
     }
   }
 }

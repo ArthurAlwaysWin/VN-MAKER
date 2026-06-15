@@ -23,6 +23,7 @@ export class TitleScreen {
     /** @type {Function|null} */ this.onContinue = null;
     /** @type {Function|null} */ this.onSettings = null;
     /** @type {Function|null} */ this.onGallery = null;
+    /** @type {Function|null} */ this.onPlayOpeningVideo = null;
 
     /** @type {boolean} */ this.hasSave = false;
     /** @type {boolean} */ this.hasGallery = false;
@@ -165,6 +166,8 @@ export class TitleScreen {
       btn.addEventListener('click', () => { if (this.onSettings) this.onSettings(); });
     } else if (action === 'gallery') {
       btn.addEventListener('click', () => { if (this.onGallery) this.onGallery(); });
+    } else if (action === 'play-opening-video') {
+      btn.addEventListener('click', () => { if (this.onPlayOpeningVideo) this.onPlayOpeningVideo(); });
     } else if (action === 'quit') {
       btn.addEventListener('click', () => { if (window.close) window.close(); });
     }

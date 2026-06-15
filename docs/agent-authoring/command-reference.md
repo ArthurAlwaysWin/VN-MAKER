@@ -42,7 +42,7 @@ These commands run outside an apply-plan manifest:
 | --- | --- | --- |
 | `review-handoff` | Runs `author-check` and `handoff-report` as one continuous gate, optionally writes the combined result with `--review-out`, and supports `--write-editor-handoff`. | `--capture-preview` captures screenshots; `--require-preview-screenshot` requires captured preview targets to pass quality checks. Pass `--source-map .tmp/agent-dsl-source-map.applied.json` to include Agent DSL provenance and stale generated-region warnings in author-check and handoff output. |
 | `draft-plan` | Converts a structured prose-derived draft into deterministic operations. | `--require-adaptation-preview` requires approved adaptation-preview metadata before conversion. |
-| `dsl-plan` | Converts agent-facing DSL source or `project.gmdsl.json` into a deterministic apply-plan manifest. | Compile-time macros/includes/namespaces, P8.1 `mood` presets, P8.2 reusable sequences, and P8.3 route templates only; output must still pass `apply-plan --validate-only`. Pass `--source-map-out path` to also write the first P5 source map artifact. |
+| `dsl-plan` | Converts agent-facing DSL source or `project.gmdsl.json` into a deterministic apply-plan manifest. | Compile-time macros/includes/namespaces, P8.1 `mood` presets, P8.2 reusable sequences, P8.3 route templates, and Phase 4 video/OP/ED syntax only; output must still pass `apply-plan --validate-only`. Pass `--source-map-out path` to also write the first P5 source map artifact. |
 | `dsl-check` | Checks agent-facing DSL source or `project.gmdsl.json` without writing source, plan, source-map, or project files. | Parses, binds, analyzes, emits the plan in memory, and when `--script` is present applies the generated operations to an in-memory project session for validate-only reporting. |
 | `dsl-diff` | Compares a P5 enriched Agent DSL source map against the current `script.json` without writing files. | Pass `--source-map` to select the enriched map; otherwise the command reads `.tmp/agent-dsl-source-map.applied.json`. Reports safe, changed/stale, missing, and untracked generated regions. |
 | `dsl-build` | Runs the DSL compile pipeline and optional apply-plan gates without writing project data by default. | `--out`, `--source-map-out`, and `--check-out` write artifacts. `--validate-only` and `--dry-run` run in memory. Project writes require explicit `--write` or `--apply`; when `--source-map` is provided, stale generated regions block the write. |
@@ -107,13 +107,28 @@ route sakura:
 
 `dsl-plan` lowers the route to ordinary `add-affection-variable`, `add-ending`, `add-scene`, and `add-page` operations.
 
+Phase 4 video DSL example:
+
+```text
+video op_main "videos/op_main.mp4" label "Main OP" kind op poster "videos/op_main.poster.png"
+video ed_good "videos/ed_good.webm" label "Good ED" kind ed
+ending good_end "Good End"
+opening video op_main play after-start oncePerProfile true
+ending_video good_end ed_good play manual
+
+scene start "Start":
+  video op_main target chapter_1 autoAdvance true skippable false
+```
+
+`dsl-plan` lowers this to ordinary `add-video`, `set-opening-video`, `set-ending-video`, and `add-page type: "video"` operations. Source maps point at canonical video paths such as `assets.videos.op_main`, `ui.titleScreen.openingVideo`, `systems.endings.good_end.endingVideo`, and `scenes.start.pages.0.video`; enriched maps also keep the actual apply-plan changed paths.
+
 ## Read-Only Project Commands
 
 These commands are not plan operations. Use them to inspect the project before drafting or applying changes.
 
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
-| `list-assets` | | `project`, `script`, `json` | Lists files under `assets/backgrounds`, `assets/characters`, `assets/audio`, `assets/voices`, `assets/ui`, `assets/fonts`, and `assets/effects`. Each entry includes `path`, `name`, `tokens`, `extension`, and `size`. `--script` derives the project path from the script parent folder. |
+| `list-assets` | | `project`, `script`, `json` | Lists files under `assets/backgrounds`, `assets/characters`, `assets/audio`, `assets/voices`, `assets/videos`, `assets/ui`, `assets/fonts`, and `assets/effects`. Each entry includes `path`, `name`, `tokens`, `extension`, and `size`. `--script` derives the project path from the script parent folder. |
 | `graph-report` | | `script`, `entry`, `mermaid`, `json` | Reports attributed scene edges, repair-ready missing targets, reachability, terminal/dead-end routes, closed cycles, unlock reachability, and Mermaid flowchart text. |
 | `find-dead-ends` | | `script`, `entry`, `json` | Returns missing target edges, terminal routes without an ending resolution, and closed cycles without an exit. |
 | `find-missing-assets` | | `script`, `asset-root`, `json` | Returns referenced assets absent from the checked asset root. |
@@ -163,6 +178,7 @@ npm run vn -- list-particles --json
 | `list-endings` | | | Lists normalized `systems.endings` entries sorted by `order`, then title. |
 | `add-ending` | `id` | `title`, `category`, `order`, `description`, `thumbnail`, `hiddenUntilUnlocked` | Registers a new ending. Aliases: `endingId`, `ending`, `name`, `hidden-until-unlocked`. |
 | `update-ending` | `id` | `patch`, `title`, `category`, `order`, `description`, `thumbnail`, `hiddenUntilUnlocked` | Updates one ending through the shared ending normalizer. Aliases: `endingId`, `ending`, `name`, `hidden-until-unlocked`. |
+| `set-ending-video` | `id` | `endingVideo`, `video`, `clear` | Sets or clears canonical `systems.endings.<endingId>.endingVideo`. Use `play: "manual"` for gallery/manual replay without changing ending unlock durability. Aliases: `endingId`, `ending`, `ending-video`. |
 | `remove-ending` | `id` | `forceReferences` | Refuses to remove endings still referenced by `unlock:ending` effects unless forced; forced removes those effects. Aliases: `endingId`, `ending`, `force-references`. |
 | `add-ending-unlock` | `sceneId`, `pageIndex`, `endingId` | `optionIndex` | Without `optionIndex`, adds a page-enter `{ "type": "unlock:ending" }` effect to a normal terminal page. With `optionIndex`, adds the existing choice option effect. Aliases: `scene`, `page`, `option`, `id`, `ending`. |
 
@@ -179,6 +195,19 @@ Changed ending registry paths use `systems.endings.<endingId>`. Unlock effects r
 | `add-cg-unlock` | `sceneId`, `pageIndex`, `optionIndex`, `cgId` | | Adds `{ "type": "unlock:cg" }` to one choice option. Aliases: `scene`, `page`, `option`, `id`, `cg`. |
 
 Changed CG registry paths use `systems.gallery.cg.<cgId>`. Unlock effects report their exact choice effect path.
+
+## Video Commands
+
+These commands edit canonical project video data only. Video files remain normal assets under the project asset root, typically `assets/videos/...`, while script references use project-relative paths such as `videos/op.mp4`.
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `list-videos` | | | Lists normalized `assets.videos` entries sorted by `kind`, then label/id. |
+| `add-video` | `id`, `file` | `label`, `kind`, `poster`, `duration`, `width`, `height`, `loop`, `muted` | Registers one reusable video asset. `kind` may be used by authors for OP/ED/story organization; validation still follows canonical video fields. Aliases: `videoId`, `video`, `src`. |
+| `update-video` | `id` | `patch`, `file`, `label`, `kind`, `poster`, `duration`, `width`, `height`, `loop`, `muted` | Updates one registry entry through the shared video normalizer. Aliases: `videoId`, `video`, `src`. |
+| `remove-video` | `id` | `forceReferences` | Refuses to remove videos referenced by title OP, ending ED, or video pages unless forced; forced removal clears those video references. Aliases: `videoId`, `video`, `force-references`. |
+
+Changed video registry paths use `assets.videos.<videoId>`. Opening video changes use `ui.titleScreen.openingVideo`, ending video changes use `systems.endings.<endingId>.endingVideo`, and story video pages use `scenes.<sceneId>.pages.<pageIndex>.video`.
 
 ## Page Commands
 
@@ -261,6 +290,7 @@ These commands edit `ui.titleScreen` using the same structured config used by th
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
 | `set-title-screen` | | `background`, `bgm`, `openingVideo`, `elements`, `config`, `merge`, `clearBackground`, `clearBgm` | Updates title screen background, BGM, opening video, or full element list. `merge` defaults to `true`; pass `false` to replace the section. Aliases: `opening-video`, `clear-background`, `clear-bgm`. |
+| `set-opening-video` | | `openingVideo`, `video`, `clear` | Sets or clears canonical `ui.titleScreen.openingVideo` without editing other title-screen fields. Use `oncePerProfile: true` for profile-scoped OP playback. Aliases: `opening-video`. |
 | `add-title-element` | `type` | `id`, `content`, `text`, `label`, `action`, `src`, `x`, `y`, `anchor`, `width`, `height`, `fontSize`, `fontFamily`, `color`, `backgroundColor`, `border`, `borderRadius`, `hoverColor`, `letterSpacing`, `textShadow`, `element` | Adds a `text`, `button`, or `image` element. `label` normalizes to button `text`; button action `load` normalizes to `continue`; `gallery` opens the CG gallery. |
 | `update-title-element` | `elementId` or `index` | `patch`, plus the same element fields accepted by `add-title-element` | Updates one existing element by id or index. Aliases: `id`, `element-id`, `element-index`. |
 | `remove-title-element` | `elementId` or `index` | | Removes one title element by id or index. Aliases: `id`, `element-id`, `element-index`. |
@@ -338,7 +368,7 @@ Plan manifest example:
 }
 ```
 
-`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `ui.motion` paths create preview targets for all major screens. Changed `systems.endings.*` paths become an `ending-list` preview target, changed `systems.gallery.cg.*` paths become a `gallery` preview target, and changed `scenes.*` paths also create a `branch-graph` target at `analysis.sceneGraph` for Story Systems review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
+`author-check --transaction` turns changed `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, and `ui.backlogScreen` paths into screen preview targets. Changed `ui.motion` paths create preview targets for all major screens. Changed `systems.endings.*` paths become an `ending-list` preview target, changed `systems.gallery.cg.*` paths become a `gallery` preview target, and changed `scenes.*` paths also create a `branch-graph` target at `analysis.sceneGraph` for Story Systems review. Changed `assets.videos.*`, `ui.titleScreen.openingVideo`, `systems.endings.*.endingVideo`, and `scenes.*.pages.*.video` paths become `video-preview` review items for OP/ED/video-page playback review. `handoff-report` also includes these `previewTargets`. If the plan includes `handoff.referenceScreenshotNotes`, `handoff-report --transaction` turns those notes into `reference-screenshot-fidelity` review items.
 
 ## Shared UI Commands
 

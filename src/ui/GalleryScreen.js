@@ -17,10 +17,12 @@ export class GalleryScreen {
     this.el.classList.add('hidden');
     this.container.appendChild(this.el);
     this.onClose = null;
+    this.onEndingVideoReplay = null;
   }
 
-  show(registry = {}, unlocked = {}) {
+  show(registry = {}, unlocked = {}, { endings = {}, endingUnlocks = {} } = {}) {
     const entries = sortedEntries(registry);
+    const endingEntries = sortedEntries(endings);
     this.el.innerHTML = `
       <div class="gallery-header">
         <div class="gallery-title">CG GALLERY</div>
@@ -30,7 +32,9 @@ export class GalleryScreen {
         <div class="gallery-focus">
           <div class="gallery-focus-empty">选择已解锁的 CG 查看大图</div>
         </div>
-        <div class="gallery-grid"></div>
+        <div class="gallery-library">
+          <div class="gallery-grid"></div>
+        </div>
       </div>
     `;
     this.el.querySelector('.gallery-close').addEventListener('click', () => {
@@ -46,6 +50,21 @@ export class GalleryScreen {
       grid.appendChild(empty);
     } else {
       entries.forEach((entry) => grid.appendChild(this._createCard(entry, unlocked[entry.id])));
+    }
+
+    if (endingEntries.length > 0) {
+      const endingSection = document.createElement('section');
+      endingSection.className = 'gallery-ending-section';
+      const heading = document.createElement('h2');
+      heading.className = 'gallery-section-title';
+      heading.textContent = 'ENDINGS';
+      const endingGrid = document.createElement('div');
+      endingGrid.className = 'gallery-grid gallery-ending-grid';
+      endingEntries.forEach((entry) => {
+        endingGrid.appendChild(this._createEndingCard(entry, endingUnlocks[entry.id]));
+      });
+      endingSection.append(heading, endingGrid);
+      grid.parentElement?.appendChild(endingSection);
     }
 
     this.el.classList.remove('hidden');
@@ -77,6 +96,29 @@ export class GalleryScreen {
 
     if (isUnlocked) {
       card.addEventListener('click', () => this._showFocus(entry));
+    }
+    return card;
+  }
+
+  _createEndingCard(entry, unlockRecord) {
+    const isUnlocked = Boolean(unlockRecord) || entry.hiddenUntilUnlocked === false;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `gallery-card gallery-ending-card${isUnlocked ? ' unlocked' : ' locked'}`;
+    card.disabled = !isUnlocked;
+
+    const previewPath = isUnlocked ? entry.thumbnail : null;
+    card.appendChild(this._createImage(previewPath, isUnlocked ? entry.title : 'Locked Ending'));
+
+    const label = document.createElement('span');
+    label.className = 'gallery-card-label';
+    label.textContent = isUnlocked ? (entry.title || entry.id) : 'LOCKED';
+    card.appendChild(label);
+
+    if (isUnlocked) {
+      card.addEventListener('click', () => this._showEndingFocus(entry, {
+        canReplayEndingVideo: Boolean(unlockRecord),
+      }));
     }
     return card;
   }
@@ -118,6 +160,30 @@ export class GalleryScreen {
       next.disabled = safeIndex === images.length - 1;
       next.addEventListener('click', () => this._showFocus(entry, safeIndex + 1));
       controls.append(previous, position, next);
+      focus.appendChild(controls);
+    }
+  }
+
+  _showEndingFocus(entry, { canReplayEndingVideo = false } = {}) {
+    const focus = this.el.querySelector('.gallery-focus');
+    focus.innerHTML = '';
+    focus.classList.remove('has-navigation');
+    focus.appendChild(this._createImage(entry.thumbnail, entry.title || entry.id, 'gallery-focus-image'));
+
+    const title = document.createElement('p');
+    title.className = 'gallery-focus-title';
+    title.textContent = entry.title || entry.id;
+    focus.appendChild(title);
+
+    if (canReplayEndingVideo && entry.endingVideo && (entry.endingVideo.play ?? 'after-unlock') === 'manual') {
+      const controls = document.createElement('div');
+      controls.className = 'gallery-focus-controls';
+      const replay = document.createElement('button');
+      replay.className = 'gallery-nav gallery-ending-video-replay';
+      replay.type = 'button';
+      replay.textContent = '播放 ED';
+      replay.addEventListener('click', () => this.onEndingVideoReplay?.(entry.id));
+      controls.appendChild(replay);
       focus.appendChild(controls);
     }
   }

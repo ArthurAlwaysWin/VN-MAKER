@@ -144,6 +144,12 @@ function rewriteConditionVariables(text, namespace) {
   );
 }
 
+const VIDEO_REFERENCE_KEYS = new Set(['file', 'videoId', 'video-id', 'id']);
+
+function qualifyVideoReferenceId(id, namespace) {
+  return VIDEO_REFERENCE_KEYS.has(id) ? id : qualifyIdentifier(id, namespace);
+}
+
 function rewriteNamespaceLine(raw, namespace) {
   if (!namespace) return raw;
   const indent = raw.match(/^ */)?.[0] ?? '';
@@ -151,15 +157,24 @@ function rewriteNamespaceLine(raw, namespace) {
   if (!body.trim() || body.trim().startsWith('#')) return raw;
 
   body = body.replace(/^(character|variable|ending|cg|macro|scene|sequence|route)\s+([A-Za-z_][\w-]*)/, (_match, command, id) => `${command} ${qualifyIdentifier(id, namespace)}`);
+  if (!indent) {
+    body = body.replace(/^video\s+([A-Za-z_][\w:-]*)/, (_match, id) => `video ${qualifyIdentifier(id, namespace)}`);
+  }
   body = body.replace(/^preset\s+([A-Za-z_][\w-]*)\s+([A-Za-z_][\w:-]*)/, (_match, category, id) => `preset ${category} ${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^affection\s+variable\s+([A-Za-z_][\w:-]*)/, (_match, variableId) => `affection variable ${qualifyIdentifier(variableId, namespace)}`);
   body = body.replace(/^affection\s+(?!variable\b)([A-Za-z_][\w:-]*)\s+([A-Za-z_][\w-]*)/, (_match, characterId, variableId) => `affection ${qualifyIdentifier(characterId, namespace)} ${qualifyIdentifier(variableId, namespace)}`);
   body = body.replace(/^(good_end|normal_end)\s+([A-Za-z_][\w:-]*)/, (_match, field, id) => `${field} ${qualifyIdentifier(id, namespace)}`);
+  body = body.replace(/^opening\s+video\s+([A-Za-z_][\w:-]*)/, (_match, id) => `opening video ${qualifyVideoReferenceId(id, namespace)}`);
+  body = body.replace(/^ending_video\s+([A-Za-z_][\w:-]*)\s+([A-Za-z_][\w:-]*)/, (_match, endingId, videoId) => `ending_video ${qualifyIdentifier(endingId, namespace)} ${qualifyVideoReferenceId(videoId, namespace)}`);
   body = body.replace(/^(scene\s+[A-Za-z_][\w-]*(?:\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s:]+))?\s+next\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^show\s+([A-Za-z_][\w:-]*)/, (_match, id) => `show ${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^say\s+([A-Za-z_][\w:-]*)\s+(['"])/, (_match, id, quote) => `say ${qualifyIdentifier(id, namespace)} ${quote}`);
   body = body.replace(/^call\s+([A-Za-z_][\w:-]*)/, (_match, id) => `call ${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^jump\s+([A-Za-z_][\w:-]*)/, (_match, id) => `jump ${qualifyIdentifier(id, namespace)}`);
+  if (indent) {
+    body = body.replace(/^video\s+([A-Za-z_][\w:-]*)/, (_match, id) => `video ${qualifyVideoReferenceId(id, namespace)}`);
+    body = body.replace(/^(video\b.*\starget\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
+  }
   body = body.replace(/^(if\s+)(.*?)(\s*->\s*)/, (_match, prefix, expression, suffix) => `${prefix}${rewriteConditionVariables(expression, namespace)}${suffix}`);
   body = body.replace(/(\selse\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);
   body = body.replace(/^(effect\s+var:(?:set|add|sub)\s+)([A-Za-z_][\w:-]*)/, (_match, prefix, id) => `${prefix}${qualifyIdentifier(id, namespace)}`);

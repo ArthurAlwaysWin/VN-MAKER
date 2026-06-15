@@ -33,7 +33,7 @@ import {
   createAffectionVariableId,
   normalizeVariableRegistry,
 } from '../shared/variableRegistry.js';
-import { normalizeVideoRegistry } from '../shared/videoContract.js';
+import { normalizeVideoEntry, normalizeVideoRegistry } from '../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
 
 function cloneJsonValue(value) {
@@ -527,6 +527,72 @@ function removeCgUnlockReferences(script, cgId) {
   return deletedReferenceCount;
 }
 
+function findVideoReferences(script, videoId) {
+  const references = [];
+
+  if (script?.ui?.titleScreen?.openingVideo?.videoId === videoId) {
+    references.push({
+      kind: 'opening-video',
+      pathString: 'ui.titleScreen.openingVideo.videoId',
+      videoId,
+    });
+  }
+
+  for (const [endingId, ending] of Object.entries(script?.systems?.endings ?? {})) {
+    if (ending?.endingVideo?.videoId === videoId) {
+      references.push({
+        kind: 'ending-video',
+        endingId,
+        pathString: `systems.endings.${endingId}.endingVideo.videoId`,
+        videoId,
+      });
+    }
+  }
+
+  for (const [sceneId, scene] of Object.entries(script?.scenes ?? {})) {
+    for (const [pageIndex, page] of (scene.pages ?? []).entries()) {
+      if (page?.type === 'video' && page.video?.videoId === videoId) {
+        references.push({
+          kind: 'video-page',
+          sceneId,
+          pageIndex,
+          pathString: `scenes.${sceneId}.pages.${pageIndex}.video.videoId`,
+          videoId,
+        });
+      }
+    }
+  }
+
+  return references;
+}
+
+function removeVideoReferences(script, videoId) {
+  let removed = 0;
+
+  if (script?.ui?.titleScreen?.openingVideo?.videoId === videoId) {
+    delete script.ui.titleScreen.openingVideo.videoId;
+    removed += 1;
+  }
+
+  for (const ending of Object.values(script?.systems?.endings ?? {})) {
+    if (ending?.endingVideo?.videoId === videoId) {
+      delete ending.endingVideo.videoId;
+      removed += 1;
+    }
+  }
+
+  for (const scene of Object.values(script?.scenes ?? {})) {
+    for (const page of scene.pages ?? []) {
+      if (page?.type === 'video' && page.video?.videoId === videoId) {
+        delete page.video.videoId;
+        removed += 1;
+      }
+    }
+  }
+
+  return removed;
+}
+
 function uniqueChangedPaths(paths = []) {
   return [...new Set(paths.filter(Boolean))];
 }
@@ -813,6 +879,33 @@ export function createProjectSession(input = {}) {
       };
     },
 
+    setEndingVideo({ endingId, endingVideo, video, clear = false } = {}) {
+      const id = assertNonEmptyString(endingId, 'endingId');
+      if (!script.systems.endings[id]) {
+        throw new Error(`Ending "${id}" does not exist`);
+      }
+
+      if (clear || endingVideo === null || video === null) {
+        delete script.systems.endings[id].endingVideo;
+      } else {
+        const nextVideo = endingVideo ?? video;
+        if (!isPlainObject(nextVideo)) {
+          throw new Error('endingVideo must be an object or null');
+        }
+        script.systems.endings[id] = normalizeEndingRegistry({
+          [id]: {
+            ...script.systems.endings[id],
+            endingVideo: cloneJsonValue(nextVideo),
+          },
+        })[id];
+      }
+
+      return {
+        endingId: id,
+        changedPaths: [`systems.endings.${id}.endingVideo`],
+      };
+    },
+
     removeEnding({ endingId, id, forceReferences = false } = {}) {
       const targetId = assertNonEmptyString(endingId ?? id, 'endingId');
       if (!script.systems.endings[targetId]) {
@@ -1019,6 +1112,91 @@ export function createProjectSession(input = {}) {
           const orderDelta = Number(left.order ?? 0) - Number(right.order ?? 0);
           if (orderDelta !== 0) return orderDelta;
           return String(left.title ?? left.cgId).localeCompare(String(right.title ?? right.cgId));
+        });
+    },
+
+    addVideo(video) {
+      const id = assertNonEmptyString(video?.id ?? video?.videoId, 'video.id');
+      if (script.assets.videos[id]) {
+        throw new Error(`Video "${id}" already exists`);
+      }
+
+      script.assets.videos[id] = normalizeVideoEntry({
+        file: video.file,
+        poster: video.poster,
+        label: video.label ?? video.name ?? id,
+        kind: video.kind,
+        tags: video.tags,
+        durationMs: video.durationMs,
+        ...cloneJsonValue(video),
+        id: undefined,
+        videoId: undefined,
+      }, id);
+      delete script.assets.videos[id].id;
+      delete script.assets.videos[id].videoId;
+      return {
+        videoId: id,
+        changedPaths: [`assets.videos.${id}`],
+      };
+    },
+
+    updateVideo({ videoId, patch = {}, ...fields } = {}) {
+      const id = assertNonEmptyString(videoId ?? fields.id, 'videoId');
+      if (!script.assets.videos[id]) {
+        throw new Error(`Video "${id}" does not exist`);
+      }
+
+      script.assets.videos[id] = normalizeVideoEntry({
+        ...script.assets.videos[id],
+        ...cloneJsonValue(patch),
+        ...cloneJsonValue(fields),
+        id: undefined,
+        videoId: undefined,
+      }, id);
+      delete script.assets.videos[id].id;
+      delete script.assets.videos[id].videoId;
+      return {
+        videoId: id,
+        changedPaths: [`assets.videos.${id}`],
+      };
+    },
+
+    removeVideo({ videoId, id, forceReferences = false } = {}) {
+      const targetId = assertNonEmptyString(videoId ?? id, 'videoId');
+      if (!script.assets.videos[targetId]) {
+        throw new Error(`Video "${targetId}" does not exist`);
+      }
+
+      const references = findVideoReferences(script, targetId);
+      if (references.length > 0 && !forceReferences) {
+        const paths = references.map((reference) => reference.pathString).join(', ');
+        throw new Error(`Video "${targetId}" is still referenced by: ${paths}`);
+      }
+
+      const deletedReferenceCount = removeVideoReferences(script, targetId);
+      delete script.assets.videos[targetId];
+      return {
+        videoId: targetId,
+        deletedVideoId: targetId,
+        deletedReferenceCount,
+        references,
+        changedPaths: uniqueChangedPaths([
+          `assets.videos.${targetId}`,
+          ...references.map((reference) => reference.pathString),
+        ]),
+      };
+    },
+
+    listVideos() {
+      return Object.entries(script.assets.videos ?? {})
+        .map(([videoId, video]) => ({
+          videoId,
+          ...cloneJsonValue(video),
+        }))
+        .sort((left, right) => {
+          const kindDelta = String(left.kind ?? '').localeCompare(String(right.kind ?? ''));
+          if (kindDelta !== 0) return kindDelta;
+          return String(left.label ?? left.videoId).localeCompare(String(right.label ?? right.videoId));
         });
     },
 
@@ -1590,6 +1768,28 @@ export function createProjectSession(input = {}) {
         uiPath: 'ui.titleScreen',
         screenId: 'titleScreen',
         elementCount: next.elements.length,
+      };
+    },
+
+    setOpeningVideo({ openingVideo, video, clear = false } = {}) {
+      const current = ensureTitleScreen(script);
+      if (clear || openingVideo === null || video === null) {
+        delete current.openingVideo;
+      } else {
+        const nextVideo = openingVideo ?? video;
+        if (!isPlainObject(nextVideo)) {
+          throw new Error('openingVideo must be an object or null');
+        }
+        script.ui.titleScreen = normalizeTitleScreenConfig({
+          ...current,
+          openingVideo: cloneJsonValue(nextVideo),
+        });
+      }
+
+      return {
+        uiPath: 'ui.titleScreen.openingVideo',
+        screenId: 'titleScreen',
+        changedPaths: ['ui.titleScreen.openingVideo'],
       };
     },
 

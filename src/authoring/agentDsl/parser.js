@@ -3,9 +3,10 @@ import { parseConditionStatement } from './conditionExpression.js';
 import { createDiagnostic, DIAGNOSTIC_CODES, hasErrors } from './diagnostics.js';
 import { lexAgentDsl } from './lexer.js';
 
-const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'macro', 'preset', 'sequence', 'route', 'scene']);
+const TOP_LEVEL = new Set(['title', 'character', 'variable', 'affection', 'ending', 'cg', 'video', 'opening', 'ending_video', 'macro', 'preset', 'sequence', 'route', 'scene']);
 const SCENE_STATEMENTS = new Set([
   'page',
+  'video',
   'bg',
   'background',
   'transition',
@@ -119,6 +120,9 @@ class Parser {
     if (command === 'affection') return this.parseDeclaration('AffectionDeclaration');
     if (command === 'ending') return this.parseDeclaration('EndingDeclaration');
     if (command === 'cg') return this.parseDeclaration('CgDeclaration');
+    if (command === 'video') return this.parseDeclaration('VideoDeclaration');
+    if (command === 'opening') return this.parseOpeningVideoStatement();
+    if (command === 'ending_video') return this.parseEndingVideoStatement();
     if (command === 'macro') return this.parseMacroDeclaration();
     if (command === 'preset') return this.parsePresetDeclaration();
     if (command === 'sequence') return this.parseSequenceDeclaration();
@@ -248,6 +252,30 @@ class Parser {
     });
   }
 
+  parseOpeningVideoStatement() {
+    const line = this.current();
+    this.index += 1;
+    if (tokenText(line.tokens[1]) !== 'video') {
+      this.diagnostics.push(diagnosticForLine(line, 'Opening video syntax is: opening video <video_id> [fields].'));
+    }
+    return createNode('OpeningVideoStatement', line.span, {
+      videoId: tokenText(line.tokens[2]),
+      tokens: line.tokens.map(tokenText),
+      line,
+    });
+  }
+
+  parseEndingVideoStatement() {
+    const line = this.current();
+    this.index += 1;
+    return createNode('EndingVideoStatement', line.span, {
+      endingId: tokenText(line.tokens[1]),
+      videoId: tokenText(line.tokens[2]),
+      tokens: line.tokens.map(tokenText),
+      line,
+    });
+  }
+
   parseSceneDeclaration() {
     const line = this.current();
     const tokens = withoutTrailingColon(line.tokens);
@@ -313,6 +341,7 @@ class Parser {
       }
       return createNode('PageStatement', line.span, { id: tokenText(line.tokens[1]), line });
     }
+    if (command === 'video') return createNode('VideoStatement', line.span, { videoId: tokenText(line.tokens[1]), line });
     if (command === 'bg' || command === 'background') return createNode('BackgroundStatement', line.span, { line });
     if (command === 'transition') return createNode('TransitionStatement', line.span, { line });
     if (command === 'bgm') return createNode('BgmStatement', line.span, { line });

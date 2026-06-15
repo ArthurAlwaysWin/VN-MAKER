@@ -14,6 +14,13 @@ import {
   createIpcPlayerDataStorage,
   createPlayerDataRepositoryFromScript,
 } from './engine/PlayerDataRepository.js';
+import {
+  OPENING_VIDEO_PROFILE_KEY,
+  getEndingVideoProfileKey,
+  isManualEndingVideoReplayAllowed,
+  shouldPlayOncePerProfileVideo,
+  shouldRecordPlayedMediaOutcome,
+} from './engine/runtimeVideoBehavior.js';
 import { ReadHistory } from './engine/ReadHistory.js';
 import { applyTheme, applyNineSlice, applyButtonFamilies, applyScreenBackgrounds, applyCursors } from './engine/ThemeManager.js';
 import { detectEnvironment, ENV, BASE_PATH, SCRIPT_PATH, _capturedStartMsg } from './engine/assetPath.js';
@@ -649,28 +656,90 @@ async function playRuntimeVideo(reference, { skipImmediately = false } = {}) {
   return token === activeVideoToken ? outcome : null;
 }
 
+async function getPlayerProfileForPlayback() {
+  try {
+    return await playerDataRepository?.load();
+  } catch (error) {
+    console.warn('[GalgameMaker] Failed to load player media profile:', error);
+    return null;
+  }
+}
+
+async function recordPlayedMedia(mediaKey, outcome) {
+  if (!mediaKey || !shouldRecordPlayedMediaOutcome(outcome)) return;
+
+  try {
+    await playerDataRepository?.markPlayedMedia?.(mediaKey);
+  } catch (error) {
+    console.warn('[GalgameMaker] Failed to save played media profile:', error);
+  }
+}
+
+async function playProfileTrackedVideo(reference, mediaKey, {
+  replay = false,
+  skipImmediately = false,
+  track = true,
+} = {}) {
+  const profile = await getPlayerProfileForPlayback();
+  if (!shouldPlayOncePerProfileVideo(reference, profile, mediaKey, { replay })) {
+    return { type: 'skipped-profile', mediaKey };
+  }
+
+  const outcome = await playRuntimeVideo(reference, { skipImmediately });
+  if (track) {
+    await recordPlayedMedia(mediaKey, outcome);
+  }
+  return outcome;
+}
+
 function getOpeningVideoConfig() {
   const openingVideo = engine.script?.ui?.titleScreen?.openingVideo;
   return openingVideo && typeof openingVideo === 'object' ? openingVideo : null;
 }
 
-async function playOpeningVideo(trigger) {
+async function playOpeningVideo(trigger, { replay = false } = {}) {
   const openingVideo = getOpeningVideoConfig();
   const playMode = openingVideo?.play ?? 'after-start';
   if (!openingVideo || playMode !== trigger) return null;
-  return playRuntimeVideo(openingVideo);
+  return playProfileTrackedVideo(openingVideo, OPENING_VIDEO_PROFILE_KEY, { replay });
 }
 
-async function playEndingVideo(endingId) {
-  if (!isPlaying || engine.ended || engine._previewMode) return null;
+function getEndingVideoConfig(endingId) {
   const endingVideo = engine.script?.systems?.endings?.[endingId]?.endingVideo;
-  if (!endingVideo || typeof endingVideo !== 'object') return null;
-  if ((endingVideo.play ?? 'after-unlock') === 'manual') return null;
+  return endingVideo && typeof endingVideo === 'object' ? endingVideo : null;
+}
+
+async function playEndingVideo(endingId, {
+  manual = false,
+  preview = false,
+  replay = false,
+} = {}) {
+  if (!manual && (!isPlaying || engine.ended || engine._previewMode)) return null;
+  if (manual && !preview && !playerDataRepository) return null;
+
+  const endingVideo = getEndingVideoConfig(endingId);
+  if (!endingVideo) return null;
+  const playMode = endingVideo.play ?? 'after-unlock';
+  const mediaKey = getEndingVideoProfileKey(endingId);
+  if (!mediaKey) return null;
+
+  if (manual) {
+    const profile = preview ? null : await getPlayerProfileForPlayback();
+    const unlockRecord = profile?.unlocks?.endings?.[endingId] ?? null;
+    if (!isManualEndingVideoReplayAllowed({ endingVideo, unlockRecord, preview })) {
+      return null;
+    }
+  } else if (playMode === 'manual') {
+    return null;
+  }
 
   stopAuto();
   stopSkip();
   audio.stopVoice();
-  return playRuntimeVideo(endingVideo);
+  return playProfileTrackedVideo(endingVideo, mediaKey, {
+    replay: manual || replay,
+    track: !preview,
+  });
 }
 
 // ─── Engine event handlers ──────────────────────────────
@@ -1518,11 +1587,15 @@ async function showTitle() {
   }
   try {
     const hasSaves = await saveManager.hasAnySave();
-    const hasGallery = Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0;
+    const hasGallery = Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0
+      || Object.keys(engine.script?.systems?.endings ?? {}).length > 0;
     titleScreen.show(hasSaves, hasGallery);
   } catch (e) {
     console.error('[GalgameMaker] Failed to check saves:', e);
-    titleScreen.show(false, Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0);
+    titleScreen.show(false, (
+      Object.keys(engine.script?.systems?.gallery?.cg ?? {}).length > 0
+      || Object.keys(engine.script?.systems?.endings ?? {}).length > 0
+    ));
   }
 }
 
@@ -1554,11 +1627,25 @@ titleScreen.onSettings = () => {
 titleScreen.onGallery = async () => {
   try {
     const profile = await playerDataRepository?.load();
-    galleryScreen.show(engine.script?.systems?.gallery?.cg ?? {}, profile?.unlocks?.cg ?? {});
+    galleryScreen.show(engine.script?.systems?.gallery?.cg ?? {}, profile?.unlocks?.cg ?? {}, {
+      endings: engine.script?.systems?.endings ?? {},
+      endingUnlocks: profile?.unlocks?.endings ?? {},
+    });
   } catch (error) {
     console.error('[GalgameMaker] Failed to open gallery:', error);
-    galleryScreen.show(engine.script?.systems?.gallery?.cg ?? {}, {});
+    galleryScreen.show(engine.script?.systems?.gallery?.cg ?? {}, {}, {
+      endings: engine.script?.systems?.endings ?? {},
+      endingUnlocks: {},
+    });
   }
+};
+
+titleScreen.onPlayOpeningVideo = async () => {
+  await playOpeningVideo('manual', { replay: true });
+};
+
+galleryScreen.onEndingVideoReplay = (endingId) => {
+  void playEndingVideo(endingId, { manual: true, replay: true });
 };
 
 // ─── Bootstrap — environment detection and conditional init ──
@@ -1861,6 +1948,23 @@ function initPreview() {
         if (!activeEffectPreview) break;
         if (msg.requestId && msg.requestId !== activeEffectPreview.requestId) break;
         await cancelActiveEffectPreview('cancelled', null, 'stop');
+        break;
+      }
+      case 'preview-ending-video': {
+        if (msg.script) {
+          applyPreviewScriptSnapshot(msg);
+        }
+        const outcome = await playEndingVideo(msg.endingId, {
+          manual: true,
+          preview: true,
+          replay: true,
+        });
+        window.parent.postMessage({
+          type: 'preview-ending-video-result',
+          requestId: msg.requestId ?? null,
+          endingId: msg.endingId ?? null,
+          outcome: outcome?.type ?? null,
+        }, '*');
         break;
       }
     }

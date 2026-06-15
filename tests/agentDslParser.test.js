@@ -178,6 +178,33 @@ route sakura:
     });
   });
 
+  it('parses video registry, OP/ED config, and video page statements', () => {
+    const result = parseAgentDsl(`
+video op_main "videos/op_main.mp4" label "Main OP" kind op
+ending good_end "Good End"
+opening video op_main play after-start oncePerProfile true
+ending_video good_end op_main play manual
+scene start "Start":
+  video op_main target after_video autoAdvance true
+scene after_video "After Video":
+  end
+`, { file: 'story.dsl' });
+
+    expect(result.ok).toBe(true);
+    expect(result.ast.body).toMatchObject([
+      { kind: 'VideoDeclaration', id: 'op_main' },
+      { kind: 'EndingDeclaration', id: 'good_end' },
+      { kind: 'OpeningVideoStatement', videoId: 'op_main' },
+      { kind: 'EndingVideoStatement', endingId: 'good_end', videoId: 'op_main' },
+      { kind: 'SceneDeclaration', id: 'start' },
+      { kind: 'SceneDeclaration', id: 'after_video' },
+    ]);
+    const scene = result.ast.body.find((node) => node.kind === 'SceneDeclaration' && node.id === 'start');
+    expect(scene.body).toEqual([
+      expect.objectContaining({ kind: 'VideoStatement', videoId: 'op_main' }),
+    ]);
+  });
+
   it('reports malformed route templates', () => {
     const result = parseAgentDsl('route sakura\n  affection variable sakura_affection\n', { file: 'story.dsl' });
 

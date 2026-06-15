@@ -20,6 +20,7 @@ const PRESET_BODY_STATEMENT_KINDS = new Set([
 ]);
 const SEQUENCE_BODY_STATEMENT_KINDS = new Set([
   'PageStatement',
+  'VideoStatement',
   'BackgroundStatement',
   'BgmStatement',
   'SeStatement',
@@ -35,9 +36,30 @@ const SEQUENCE_BODY_STATEMENT_KINDS = new Set([
   'EffectStatement',
 ]);
 const CG_FIELD_KEYS = new Set(['image', 'images', 'thumbnail', 'lockedThumbnail', 'locked-thumbnail']);
+const VIDEO_DECLARATION_FIELD_KEYS = new Set(['poster']);
 const CHARACTER_FIELD_KEYS = new Set(['expression']);
 const MEDIA_STATEMENT_KINDS = new Set(['BackgroundStatement', 'BgmStatement', 'SeStatement']);
 const ROUTE_FIELDS = new Set(['affection', 'good_end', 'normal_end']);
+const VIDEO_REFERENCE_KEYS = new Set([
+  'videoId',
+  'video-id',
+  'id',
+  'file',
+  'poster',
+  'play',
+  'oncePerProfile',
+  'once-per-profile',
+  'skippable',
+  'controls',
+  'volume',
+  'audioMode',
+  'audio-mode',
+  'fit',
+  'autoAdvance',
+  'auto-advance',
+  'target',
+  'loop',
+]);
 
 function tokenText(token) {
   return agentDslTokenText(token);
@@ -226,6 +248,23 @@ function analyzeUnlockReference(diagnostics, symbols, kind, id, token, node) {
       repairHint: {
         action: `declare-${kind}-or-retarget`,
         id,
+      },
+    },
+  ));
+}
+
+function analyzeVideoReference(diagnostics, symbols, id, token, node) {
+  if (!id || hasSymbol(symbols, 'videos', id)) return;
+  diagnostics.push(diagnosticFromToken(
+    DIAGNOSTIC_CODES.unknownVideo,
+    `Video "${id}" is not declared.`,
+    token,
+    node,
+    {
+      summary: `Declare video ${id} or change the video reference.`,
+      repairHint: {
+        action: 'declare-video-or-retarget',
+        videoId: id,
       },
     },
   ));
@@ -553,12 +592,41 @@ function analyzeDeclarationAssets(diagnostics, node) {
       }
     }
   }
+  if (node.kind === 'VideoDeclaration') {
+    reportInvalidAssetPath(diagnostics, tokenText(tokens[2]), tokens[2], node);
+    for (let index = 0; index < tokens.length; index += 1) {
+      if (!VIDEO_DECLARATION_FIELD_KEYS.has(tokenText(tokens[index]))) continue;
+      reportInvalidAssetPath(diagnostics, tokenText(tokens[index + 1]), tokens[index + 1], node);
+    }
+  }
 }
 
 function analyzeMediaAsset(diagnostics, node) {
   const line = node.line;
   if (MEDIA_STATEMENT_KINDS.has(node.kind)) {
     reportInvalidAssetPath(diagnostics, tokenText(tokenAt(line, 1)), tokenAt(line, 1), node);
+  }
+}
+
+function analyzeVideoReferenceStatement(diagnostics, symbols, node, startIndex) {
+  const firstValue = tokenText(tokenAt(node.line, startIndex));
+  let videoToken = tokenAt(node.line, startIndex);
+  let videoId = firstValue;
+  if (VIDEO_REFERENCE_KEYS.has(firstValue)) {
+    videoToken = tokenAfter(node.line, 'videoId') ?? tokenAfter(node.line, 'video-id') ?? tokenAfter(node.line, 'id');
+    videoId = tokenText(videoToken);
+  }
+  if (videoId) {
+    analyzeVideoReference(diagnostics, symbols, videoId, videoToken, node);
+  }
+
+  const fileToken = tokenAfter(node.line, 'file');
+  if (fileToken) {
+    reportInvalidAssetPath(diagnostics, tokenText(fileToken), fileToken, node);
+  }
+  const posterToken = tokenAfter(node.line, 'poster');
+  if (posterToken) {
+    reportInvalidAssetPath(diagnostics, tokenText(posterToken), posterToken, node);
   }
 }
 
@@ -581,6 +649,11 @@ function visitNode(node, symbols, diagnostics, options) {
   }
   if (node.kind === 'SceneDeclaration') {
     analyzeSceneTarget(diagnostics, symbols, node.next, tokenAfter(node.line, 'next'), node);
+  } else if (node.kind === 'OpeningVideoStatement') {
+    analyzeVideoReferenceStatement(diagnostics, symbols, node, 2);
+  } else if (node.kind === 'EndingVideoStatement') {
+    analyzeUnlockReference(diagnostics, symbols, 'ending', node.endingId, tokenAt(node.line, 1), node);
+    analyzeVideoReferenceStatement(diagnostics, symbols, node, 2);
   } else if (node.kind === 'PresetUseStatement') {
     analyzePresetUse(diagnostics, symbols, node);
   } else if (node.kind === 'SequenceUseStatement') {
@@ -591,6 +664,9 @@ function visitNode(node, symbols, diagnostics, options) {
     analyzeCondition(diagnostics, symbols, node);
   } else if (node.kind === 'JumpStatement') {
     analyzeSceneTarget(diagnostics, symbols, node.target, tokenAt(node.line, 1), node);
+  } else if (node.kind === 'VideoStatement') {
+    analyzeVideoReferenceStatement(diagnostics, symbols, node, 1);
+    analyzeSceneTarget(diagnostics, symbols, tokenText(tokenAfter(node.line, 'target')), tokenAfter(node.line, 'target'), node);
   } else if (node.kind === 'ShowStatement') {
     analyzeCharacterReference(diagnostics, symbols, tokenText(tokenAt(node.line, 1)), tokenAt(node.line, 1), node);
   } else if (node.kind === 'SayStatement') {

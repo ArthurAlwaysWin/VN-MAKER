@@ -19,6 +19,7 @@ export const DIAGNOSTIC_CODES = {
   unknownConditionVariable: 'dsl-unknown-condition-variable',
   unknownEnding: 'dsl-unknown-ending',
   unknownCg: 'dsl-unknown-cg',
+  unknownVideo: 'dsl-unknown-video',
   invalidAssetPath: 'dsl-invalid-asset-path',
   invalidEffect: 'dsl-invalid-effect',
   invalidConditionExpression: 'dsl-invalid-condition-expression',

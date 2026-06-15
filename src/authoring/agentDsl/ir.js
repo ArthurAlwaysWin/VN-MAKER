@@ -294,6 +294,120 @@ function parseCg(line) {
   return createIrOperation('DeclareCg', payload, line, `dsl-add-cg-${id}`, 'cg', { cgId: id });
 }
 
+function parseVideo(line) {
+  const tokens = tokenize(line.trimmed);
+  const id = slugifyId(tokens[1], `video_${line.number}`);
+  const payload = { id, file: tokens[2] ?? `videos/${id}.mp4` };
+  let index = 3;
+  while (index < tokens.length) {
+    const key = tokens[index];
+    if (['file', 'poster', 'label', 'kind'].includes(key)) {
+      payload[key] = tokens[index + 1] ?? '';
+      index += 2;
+      continue;
+    }
+    if (key === 'durationMs' || key === 'duration-ms') {
+      payload.durationMs = Number(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'tags') {
+      payload.tags = [];
+      index += 1;
+      while (index < tokens.length && !['file', 'poster', 'label', 'kind', 'durationMs', 'duration-ms'].includes(tokens[index])) {
+        payload.tags.push(tokens[index]);
+        index += 1;
+      }
+      continue;
+    }
+    fail(line, `unknown video field "${key}"`);
+  }
+  return createIrOperation('DeclareVideo', payload, line, `dsl-add-video-${id}`, 'video', { videoId: id });
+}
+
+const VIDEO_REFERENCE_KEYS = new Set([
+  'videoId',
+  'video-id',
+  'id',
+  'file',
+  'poster',
+  'play',
+  'oncePerProfile',
+  'once-per-profile',
+  'skippable',
+  'controls',
+  'volume',
+  'audioMode',
+  'audio-mode',
+  'fit',
+]);
+
+function parseVideoReference(tokens, startIndex, line) {
+  const reference = {};
+  let index = startIndex;
+  if (tokens[index] && !VIDEO_REFERENCE_KEYS.has(tokens[index])) {
+    reference.videoId = tokens[index];
+    index += 1;
+  }
+
+  while (index < tokens.length) {
+    const key = tokens[index];
+    if (key === 'videoId' || key === 'video-id' || key === 'id') {
+      reference.videoId = tokens[index + 1];
+      index += 2;
+      continue;
+    }
+    if (['file', 'poster', 'play', 'skippable', 'controls', 'volume', 'fit'].includes(key)) {
+      reference[key] = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'oncePerProfile' || key === 'once-per-profile') {
+      reference.oncePerProfile = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'audioMode' || key === 'audio-mode') {
+      reference.audioMode = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    fail(line, `unknown video reference field "${key}"`);
+  }
+  return reference;
+}
+
+function parseOpeningVideo(line) {
+  const tokens = tokenize(line.trimmed);
+  if (tokens[1] !== 'video') {
+    fail(line, 'opening video syntax is: opening video <video_id> [fields]');
+  }
+  return createIrOperation(
+    'SetOpeningVideo',
+    { openingVideo: parseVideoReference(tokens, 2, line) },
+    line,
+    'dsl-set-opening-video',
+    'opening-video',
+    { projectPath: 'ui.titleScreen.openingVideo' },
+  );
+}
+
+function parseEndingVideo(line) {
+  const tokens = tokenize(line.trimmed);
+  const endingId = tokens[1];
+  if (!endingId) {
+    fail(line, 'ending_video requires an ending id');
+  }
+  return createIrOperation(
+    'SetEndingVideo',
+    { endingId, endingVideo: parseVideoReference(tokens, 2, line) },
+    line,
+    `dsl-set-ending-video-${endingId}`,
+    'ending-video',
+    { endingId },
+  );
+}
+
 function parseEffectStatement(line) {
   const tokens = tokenize(line.trimmed);
   if (tokens[0] === 'unlock') {
@@ -460,6 +574,67 @@ function createEmptyPage(id = null) {
     dialogues: [],
     transition: { type: 'fade', duration: 800 },
   };
+}
+
+function createVideoPageFromTokens(tokens, line) {
+  const page = {
+    type: 'video',
+    video: {},
+    autoAdvance: true,
+    target: null,
+    loop: false,
+  };
+  const pageKeys = new Set(['target', 'autoAdvance', 'auto-advance', 'loop']);
+  let index = 1;
+  if (tokens[index] && !pageKeys.has(tokens[index]) && !VIDEO_REFERENCE_KEYS.has(tokens[index])) {
+    page.video.videoId = tokens[index];
+    index += 1;
+  }
+  while (index < tokens.length) {
+    const key = tokens[index];
+    if (key === 'target') {
+      page.target = tokens[index + 1] ?? null;
+      index += 2;
+      continue;
+    }
+    if (key === 'autoAdvance' || key === 'auto-advance') {
+      page.autoAdvance = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'loop') {
+      page.loop = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'id') {
+      page.id = tokens[index + 1];
+      index += 2;
+      continue;
+    }
+    if (key === 'videoId' || key === 'video-id') {
+      page.video.videoId = tokens[index + 1];
+      index += 2;
+      continue;
+    }
+    if (['file', 'poster', 'play', 'skippable', 'controls', 'volume', 'fit'].includes(key)) {
+      page.video[key] = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'oncePerProfile' || key === 'once-per-profile') {
+      page.video.oncePerProfile = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    if (key === 'audioMode' || key === 'audio-mode') {
+      page.video.audioMode = parseScalar(tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    fail(line, `unknown video page field "${key}"`);
+  }
+  return page;
 }
 
 function titleFromId(value) {
@@ -706,6 +881,23 @@ function lowerSceneBody(sceneId, body, startLine) {
       index = parsed.nextIndex;
       continue;
     }
+    if (command === 'video') {
+      flushPage(line);
+      operations.push(createIrOperation(
+        'CreateVideoPage',
+        {
+          scene: sceneId,
+          page: createVideoPageFromTokens(tokens, line),
+        },
+        line,
+        `dsl-add-video-page-${sceneId}-${pageIndex + 1}`,
+        'video-page',
+        { sceneId, pageIndex },
+      ));
+      pageIndex += 1;
+      index += 1;
+      continue;
+    }
     if (command === 'if') {
       flushPage(line);
       operations.push(createIrOperation(
@@ -822,6 +1014,21 @@ export function lowerAgentDslToIr(ast, options = {}) {
     }
     if (command === 'cg') {
       operations.push(parseCg(line));
+      index += 1;
+      continue;
+    }
+    if (command === 'video') {
+      operations.push(parseVideo(line));
+      index += 1;
+      continue;
+    }
+    if (command === 'opening') {
+      operations.push(parseOpeningVideo(line));
+      index += 1;
+      continue;
+    }
+    if (command === 'ending_video') {
+      operations.push(parseEndingVideo(line));
       index += 1;
       continue;
     }

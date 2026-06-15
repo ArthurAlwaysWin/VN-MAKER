@@ -523,6 +523,79 @@ describe('agent handoff report', () => {
     ]));
   });
 
+  it('includes video preview targets for changed video authoring paths', () => {
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_video_targets',
+      assets: {
+        videos: {
+          op_main: { file: 'videos/op_main.mp4', kind: 'op' },
+        },
+      },
+      ui: {
+        titleScreen: {
+          openingVideo: { videoId: 'op_main', play: 'after-start' },
+        },
+      },
+      systems: {
+        endings: {
+          good_end: {
+            title: 'Good End',
+            endingVideo: { videoId: 'ed_good', play: 'manual' },
+          },
+        },
+      },
+      scenes: {
+        start: {
+          pages: [{ type: 'video', video: { videoId: 'op_main' }, autoAdvance: true }],
+        },
+      },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: [
+            'assets.videos.op_main',
+            'ui.titleScreen.openingVideo',
+            'systems.endings.good_end.endingVideo',
+            'scenes.start.pages.0.video',
+          ],
+        },
+      },
+    });
+
+    expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'video',
+        pathString: 'assets.videos.op_main',
+        reason: 'changed-video-registry',
+      }),
+      expect.objectContaining({
+        type: 'video',
+        pathString: 'ui.titleScreen.openingVideo',
+        reason: 'changed-opening-video',
+      }),
+      expect.objectContaining({
+        type: 'video',
+        pathString: 'systems.endings.good_end.endingVideo',
+        reason: 'changed-ending-video',
+      }),
+      expect.objectContaining({
+        type: 'video',
+        pathString: 'scenes.start.pages.0.video',
+        reason: 'changed-video-page',
+      }),
+    ]));
+    expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: 'preview',
+        category: 'video-preview',
+        code: 'video-preview-required',
+        pathString: 'assets.videos.op_main',
+      }),
+    ]));
+  });
+
   it('provides repair guidance for deterministic condition route findings', () => {
     const handoff = createAgentHandoff({
       projectId: 'gm_handoff_condition_analysis',

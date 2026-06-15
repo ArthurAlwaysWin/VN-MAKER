@@ -99,6 +99,47 @@ scene good "Good":
     });
   });
 
+  it('maps video DSL operations to canonical video project paths', () => {
+    const { plan, sourceMap } = createAgentDslBuildArtifacts(`
+video op_main "videos/op_main.mp4" label "Main OP" kind op
+video ed_good "videos/ed_good.webm" label "Good ED" kind ed
+ending good_end "Good End"
+opening video op_main play after-start oncePerProfile true
+ending_video good_end ed_good play manual
+scene start "Start":
+  video op_main target after_video autoAdvance true
+scene after_video "After Video":
+  end
+`, { file: 'agent-src/video.gmdsl' });
+
+    expect(plan.operations.map((operation) => operation.command)).toEqual([
+      'add-video',
+      'add-video',
+      'add-ending',
+      'set-opening-video',
+      'set-ending-video',
+      'add-scene',
+      'add-page',
+      'add-scene',
+    ]);
+    expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-video-op_main')).toMatchObject({
+      astKind: 'video',
+      projectPaths: ['assets.videos.op_main'],
+    });
+    expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-set-opening-video')).toMatchObject({
+      astKind: 'opening-video',
+      projectPaths: ['ui.titleScreen.openingVideo'],
+    });
+    expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-set-ending-video-good_end')).toMatchObject({
+      astKind: 'ending-video',
+      projectPaths: ['systems.endings.good_end.endingVideo'],
+    });
+    expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-video-page-start-1')).toMatchObject({
+      astKind: 'video-page',
+      projectPaths: ['scenes.start.pages.0.video'],
+    });
+  });
+
   it('enriches mapping project paths from apply-plan operation results', () => {
     const { sourceMap } = createAgentDslBuildArtifacts(`
 character sakura "Sakura"

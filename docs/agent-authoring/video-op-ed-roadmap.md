@@ -1,6 +1,6 @@
 # Video, OP, and ED Roadmap
 
-**Status:** Phase 0-1 complete; Phase 2 substantially complete; Phase 3 complete; Phase 4 partial; Phase 5 pending
+**Status:** Phase 0-4 complete; Phase 5 pending
 **Architecture plan:** `docs/agent-authoring/video-op-ed-plan.md`  
 **Scope:** first-class video assets, opening movies, ending movies, and story video pages
 
@@ -24,9 +24,9 @@ Every milestone must preserve these rules:
 | --- | --- | --- |
 | Phase 0 | Decisions And Contract Lock | Complete: canonical video data shape finalized. |
 | Phase 1 | Assets, Validation, And Export | Complete: video files are known, validated, preview-served, and exportable assets. |
-| Phase 2 | Runtime Video Playback And Gameplay Flows | Substantially complete: blocking video playback, video pages, and OP/ED gameplay hooks exist; replay/profile polish remains. |
+| Phase 2 | Runtime Video Playback And Gameplay Flows | Complete: blocking video playback, video pages, OP/ED gameplay hooks, replay/profile persistence, and manual ED semantics are implemented. |
 | Phase 3 | Editor Authoring UI For Videos | Complete: human authors can configure video without hand-editing JSON. |
-| Phase 4 | Agent Authoring Surface | Partial: projectSession, apply-plan, and CLI basics support canonical video changes; DSL and handoff polish remain. |
+| Phase 4 | Agent Authoring Surface | Complete: projectSession, apply-plan, direct CLI, changed paths, handoff preview review, Agent DSL syntax, and source-map provenance support canonical video changes. |
 | Phase 5 | Hardening And Release Docs | Pending: final docs, readiness guidance, and release audit cleanup. |
 
 ## Phase 0 - Decisions And Contract Lock
@@ -93,7 +93,7 @@ Acceptance:
 
 ## Phase 2 - Runtime Video Playback And Gameplay Flows
 
-**Status:** Substantially complete; replay/profile persistence polish remains.
+**Status:** Complete.
 **Goal:** Add a runtime-owned blocking video player and wire it into video pages, OP playback, and ED playback.
 
 Deliver:
@@ -109,8 +109,8 @@ Deliver:
 - complete: support optional scene-level video page targets if Phase 0 includes them;
 - complete: support OP playback from title/start flow;
 - complete: support ED playback from ending unlock flow;
-- pending: persist OP once-per-profile state;
-- pending: preserve `playedMedia` through profile normalization;
+- complete: persist OP once-per-profile state;
+- complete: preserve `playedMedia` through profile normalization;
 - complete: preserve ending unlock durability when ED playback fails.
 
 Tests:
@@ -123,9 +123,9 @@ Tests:
 - complete: video page loads, plays, skips, and advances;
 - complete: save/load on a video page restarts playback from the page;
 - complete: OP `after-start` plays before entering the first page;
-- pending: OP `oncePerProfile` prevents repeated playback;
+- complete: OP `oncePerProfile` prevents repeated playback;
 - complete: ED `after-unlock` plays after the ending is saved;
-- pending: ED `manual` can be previewed or replayed without changing unlock state;
+- complete: ED `manual` can be previewed or replayed without changing unlock state;
 - complete: ED playback failure does not lose the unlocked ending.
 
 Acceptance:
@@ -166,30 +166,31 @@ Acceptance:
 
 ## Phase 4 - Agent Authoring Surface
 
-**Status:** Partial.
+**Status:** Complete.
 **Goal:** Let agents author the same video features through supported commands and DSL compilation.
 
 Deliver:
 
-- pending: add dedicated CLI commands for video registry entries;
-- partial: add CLI commands for OP and ED video configuration;
-- partial: add CLI commands for video pages;
-- partial: complete apply-plan operations for the same changes;
-- pending: add Agent DSL syntax that lowers to apply-plan operations;
-- pending: add changed paths, preview metadata, source-map provenance, and handoff review items.
+- complete: add dedicated CLI commands for video registry entries;
+- complete: add CLI commands for OP and ED video configuration;
+- complete: support video pages through canonical `add-page type: "video"` authoring;
+- complete: complete apply-plan operations for the same changes;
+- complete: add changed paths, preview metadata, and handoff review items for video registry, OP, ED, and video-page changes;
+- complete: add Agent DSL syntax that lowers to apply-plan operations;
+- complete: add video-specific Agent DSL source-map provenance for video registry, OP, ED, and video pages.
 
 Tests:
 
-- partial: CLI commands write valid canonical project data;
-- partial: apply-plan validate/dry-run/write gates work for video operations;
-- pending: DSL video syntax compiles deterministically;
-- pending: source maps point to video-related changed paths;
-- pending: author-check, handoff-report, and review-handoff agree on video warnings;
+- complete: CLI commands write valid canonical project data;
+- complete: apply-plan validate/dry-run/write gates work for video operations;
+- complete: DSL video syntax compiles deterministically;
+- complete: source maps point to video-related changed paths;
+- complete: author-check and handoff-report emit video preview/review warnings for canonical video changed paths;
 - complete: no DSL fields are written into runtime project data.
 
 Acceptance:
 
-- agents can create, revise, validate, preview, and hand off OP/ED/video-page changes without bypassing the editor contract.
+- complete: agents can create, revise, validate, preview, and hand off OP/ED/video-page changes without bypassing the editor contract.
 
 ## Phase 5 - Hardening And Release Docs
 
@@ -223,9 +224,8 @@ Acceptance:
 ## Suggested Implementation Order
 
 1. Phase 0, Phase 1, and Phase 3 are complete.
-2. Finish the remaining Phase 2 replay/profile persistence polish: `oncePerProfile`, `playedMedia`, and manual ED replay semantics.
-3. Complete Phase 4 by filling in dedicated video registry commands, Agent DSL lowering, preview metadata, source-map provenance, and handoff review items.
-4. Close Phase 5 with final docs, full readiness guidance, release audit, and any end-to-end fixtures needed for external review.
+2. Phase 4 Agent DSL video syntax and video-specific source-map provenance are complete.
+3. Close Phase 5 with final docs, full readiness guidance, release audit, and any end-to-end fixtures needed for external review.
 
 ## Smaller Follow-Up Extensions
 

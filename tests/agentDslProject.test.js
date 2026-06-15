@@ -235,6 +235,45 @@ namespace chapter_01:
     });
   });
 
+  it('prefixes video ids inside namespaces without rewriting direct file references', async () => {
+    await withTempDir(async (dir) => {
+      const mainPath = path.join(dir, 'main.gmdsl');
+      await writeFile(mainPath, `
+namespace chapter_01:
+  video op_main "videos/op_main.mp4" label "Main OP" kind op
+  ending good_end "Good End"
+  opening video op_main play after-start
+  ending_video good_end file "videos/ed_direct.webm" play manual
+  scene start "Start":
+    video file "videos/story_direct.mp4" target after_video
+  scene after_video "After Video":
+    end
+`, 'utf8');
+
+      const plan = await compileProject(mainPath);
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-video-chapter_01_op_main')).toMatchObject({
+        command: 'add-video',
+        params: { id: 'chapter_01_op_main', file: 'videos/op_main.mp4' },
+      });
+      expect(plan.operations.find((operation) => operation.id === 'dsl-set-opening-video')).toMatchObject({
+        params: { openingVideo: { videoId: 'chapter_01_op_main', play: 'after-start' } },
+      });
+      expect(plan.operations.find((operation) => operation.id === 'dsl-set-ending-video-chapter_01_good_end')).toMatchObject({
+        params: {
+          endingId: 'chapter_01_good_end',
+          endingVideo: { file: 'videos/ed_direct.webm', play: 'manual' },
+        },
+      });
+      expect(plan.operations.find((operation) => operation.id === 'dsl-add-video-page-chapter_01_start-1')).toMatchObject({
+        params: {
+          scene: 'chapter_01_start',
+          video: { file: 'videos/story_direct.mp4' },
+          target: 'chapter_01_after_video',
+        },
+      });
+    });
+  });
+
   it('rejects duplicate symbols inside the same namespace', async () => {
     await withTempDir(async (dir) => {
       const mainPath = path.join(dir, 'main.gmdsl');

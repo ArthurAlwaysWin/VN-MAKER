@@ -46,6 +46,15 @@ function emitOperation(irOperation, index) {
   if (irOperation.kind === 'DeclareCg') {
     return createOperation(irOperation, 'add-cg', payload, index);
   }
+  if (irOperation.kind === 'DeclareVideo') {
+    return createOperation(irOperation, 'add-video', payload, index);
+  }
+  if (irOperation.kind === 'SetOpeningVideo') {
+    return createOperation(irOperation, 'set-opening-video', payload, index);
+  }
+  if (irOperation.kind === 'SetEndingVideo') {
+    return createOperation(irOperation, 'set-ending-video', payload, index);
+  }
   if (irOperation.kind === 'CreateScene') {
     return createOperation(irOperation, 'add-scene', payload, index);
   }
@@ -72,6 +81,17 @@ function emitOperation(irOperation, index) {
       conditions: payload.conditions,
       trueTarget: payload.trueTarget,
       falseTarget: payload.falseTarget,
+    }, index);
+  }
+  if (irOperation.kind === 'CreateVideoPage') {
+    return createOperation(irOperation, 'add-page', {
+      scene: payload.scene,
+      type: 'video',
+      id: payload.page?.id,
+      video: payload.page?.video,
+      autoAdvance: payload.page?.autoAdvance,
+      target: payload.page?.target,
+      loop: payload.page?.loop,
     }, index);
   }
   if (irOperation.kind === 'SetSceneNext') {

@@ -106,6 +106,28 @@ scene start "Start":
     ]);
   });
 
+  it('reports unknown videos and unsafe video asset paths', () => {
+    const result = analyzeSource(`
+video op_main "../videos/op_main.mp4" poster "/videos/poster.png"
+ending good_end "Good End"
+opening video missing_op
+ending_video missing_end op_main
+scene start "Start":
+  video missing_story target missing_scene file "../videos/story.mp4"
+`);
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({ code: 'dsl-invalid-asset-path' }),
+      expect.objectContaining({ code: 'dsl-invalid-asset-path' }),
+      expect.objectContaining({ code: 'dsl-unknown-video', message: 'Video "missing_op" is not declared.' }),
+      expect.objectContaining({ code: 'dsl-unknown-ending', message: 'Ending "missing_end" is not declared.' }),
+      expect.objectContaining({ code: 'dsl-unknown-video', message: 'Video "missing_story" is not declared.' }),
+      expect.objectContaining({ code: 'dsl-invalid-asset-path' }),
+      expect.objectContaining({ code: 'dsl-unknown-scene-target', message: 'Scene target "missing_scene" is not declared.' }),
+    ]);
+  });
+
   it('runs semantic diagnostics before createAgentDslPlan emits operations', () => {
     expect(() => createAgentDslPlan(`
 scene start "Start":

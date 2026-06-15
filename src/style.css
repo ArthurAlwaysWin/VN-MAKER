@@ -2074,12 +2074,27 @@ body {
 .gallery-nav:disabled { cursor: default; opacity: 0.4; }
 .gallery-position { min-width: 48px; color: rgba(255, 255, 255, 0.62); font-size: 12px; text-align: center; }
 
+.gallery-library {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
   gap: 16px;
-  overflow-y: auto;
+}
+
+.gallery-section-title {
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 4px;
 }
 
 .gallery-card {

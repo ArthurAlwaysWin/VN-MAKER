@@ -139,12 +139,26 @@ export function inferAgentDslProjectPaths(irOperation) {
   if (irOperation.kind === 'DeclareCg') {
     return payload.id ? [`systems.gallery.cg.${payload.id}`] : [];
   }
+  if (irOperation.kind === 'DeclareVideo') {
+    return payload.id ? [`assets.videos.${payload.id}`] : [];
+  }
+  if (irOperation.kind === 'SetOpeningVideo') {
+    return ['ui.titleScreen.openingVideo'];
+  }
+  if (irOperation.kind === 'SetEndingVideo') {
+    return payload.endingId ? [`systems.endings.${payload.endingId}.endingVideo`] : [];
+  }
   if (irOperation.kind === 'CreateScene') {
     return payload.id ? [`scenes.${payload.id}`] : [];
   }
   if (irOperation.kind === 'CreateNormalPage' || irOperation.kind === 'CreateChoicePage' || irOperation.kind === 'CreateConditionPage') {
     return payload.scene && Number.isInteger(irOperation.source?.details?.pageIndex)
       ? [`scenes.${payload.scene}.pages.${irOperation.source.details.pageIndex}`]
+      : [];
+  }
+  if (irOperation.kind === 'CreateVideoPage') {
+    return payload.scene && Number.isInteger(irOperation.source?.details?.pageIndex)
+      ? [`scenes.${payload.scene}.pages.${irOperation.source.details.pageIndex}.video`]
       : [];
   }
   if (irOperation.kind === 'SetSceneNext') {
@@ -211,8 +225,10 @@ export function enrichAgentDslSourceMapWithApplyResult(sourceMap, applyPlanResul
   return {
     ...cloneJsonValue(sourceMap ?? {}),
     mappings: (sourceMap?.mappings ?? []).map((mapping) => {
-      const projectPaths = operationsById.get(mapping.operationId);
-      const nextProjectPaths = projectPaths ?? uniqueStringValues(mapping.projectPaths);
+    const projectPaths = operationsById.get(mapping.operationId);
+    const nextProjectPaths = projectPaths
+      ? uniqueStringValues([...(mapping.projectPaths ?? []), ...projectPaths])
+      : uniqueStringValues(mapping.projectPaths);
       const generatedFingerprint = projectPaths && applyPlanResult?.project
         ? projectFingerprintForPaths(applyPlanResult.project, nextProjectPaths)
         : null;

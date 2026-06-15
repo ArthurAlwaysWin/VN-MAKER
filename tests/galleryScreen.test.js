@@ -75,6 +75,68 @@ describe('runtime CG gallery', () => {
     expect(screen.onGallery).toHaveBeenCalledTimes(2);
   });
 
+  it('exposes manual opening video replay from structured title buttons', () => {
+    const screen = new TitleScreen(document.getElementById('game'), 'Story');
+    screen.onPlayOpeningVideo = vi.fn();
+    screen.setLayout({
+      elements: [{ type: 'button', text: 'OP', action: 'play-opening-video' }],
+    });
+    screen.show(false, false);
+
+    screen.el.querySelector('.title-custom-button').click();
+
+    expect(screen.onPlayOpeningVideo).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays only unlocked manual ending videos from the runtime gallery', () => {
+    const screen = new GalleryScreen(document.getElementById('game'));
+    screen.onEndingVideoReplay = vi.fn();
+    screen.show({}, {}, {
+      endings: {
+        good_end: {
+          title: 'Good End',
+          thumbnail: 'ui/endings/good.png',
+          endingVideo: { videoId: 'ed_good', play: 'manual' },
+        },
+        normal_end: {
+          title: 'Normal End',
+          endingVideo: { videoId: 'ed_normal', play: 'after-unlock' },
+        },
+        locked_end: {
+          title: 'Locked End',
+          endingVideo: { videoId: 'ed_locked', play: 'manual' },
+        },
+        visible_unlocked_later: {
+          title: 'Visible But Not Unlocked',
+          hiddenUntilUnlocked: false,
+          endingVideo: { videoId: 'ed_visible', play: 'manual' },
+        },
+      },
+      endingUnlocks: {
+        good_end: { count: 1 },
+        normal_end: { count: 1 },
+      },
+    });
+
+    const endingCards = screen.el.querySelectorAll('.gallery-ending-card');
+    expect(endingCards).toHaveLength(4);
+    expect(endingCards[0].classList.contains('unlocked')).toBe(true);
+    const lockedCard = [...endingCards].find((card) => card.textContent.includes('LOCKED'));
+    expect(lockedCard.classList.contains('locked')).toBe(true);
+
+    endingCards[0].click();
+    screen.el.querySelector('.gallery-ending-video-replay').click();
+    expect(screen.onEndingVideoReplay).toHaveBeenCalledWith('good_end');
+
+    const normalCard = [...endingCards].find((card) => card.textContent.includes('Normal End'));
+    normalCard.click();
+    expect(screen.el.querySelector('.gallery-ending-video-replay')).toBeNull();
+
+    const visibleButNotUnlocked = [...endingCards].find((card) => card.textContent.includes('Visible But Not Unlocked'));
+    visibleButNotUnlocked.click();
+    expect(screen.el.querySelector('.gallery-ending-video-replay')).toBeNull();
+  });
+
   it('does not let an earlier hide transition hide a newly shown title screen', () => {
     vi.useFakeTimers();
     try {

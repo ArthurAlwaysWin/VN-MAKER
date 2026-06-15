@@ -235,6 +235,18 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
       continue;
     }
 
+    const videoPageMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.video/.exec(String(changedPath));
+    if (videoPageMatch) {
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        sceneId: videoPageMatch[1],
+        pageIndex: Number(videoPageMatch[2]),
+        pathString: `scenes.${videoPageMatch[1]}.pages.${videoPageMatch[2]}.video`,
+        reason: 'changed-video-page',
+      });
+    }
+
     const scenePageMatch = /^scenes\.([^.]+)\.pages\.(\d+)/.exec(String(changedPath));
     if (scenePageMatch) {
       targets.push({
@@ -290,6 +302,41 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
         reason: 'changed-cg-registry',
       });
     }
+
+    if (changedPath === 'assets.videos' || String(changedPath).startsWith('assets.videos.')) {
+      const match = /^assets\.videos\.([^.]+)/.exec(String(changedPath));
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        videoId: match?.[1] ?? null,
+        pathString: match ? `assets.videos.${match[1]}` : 'assets.videos',
+        reason: 'changed-video-registry',
+      });
+    }
+
+    if (
+      changedPath === 'ui.titleScreen.openingVideo'
+      || String(changedPath).startsWith('ui.titleScreen.openingVideo.')
+    ) {
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        pathString: 'ui.titleScreen.openingVideo',
+        reason: 'changed-opening-video',
+      });
+    }
+
+    const endingVideoMatch = /^systems\.endings\.([^.]+)\.endingVideo/.exec(String(changedPath));
+    if (endingVideoMatch) {
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        endingId: endingVideoMatch[1],
+        pathString: `systems.endings.${endingVideoMatch[1]}.endingVideo`,
+        reason: 'changed-ending-video',
+      });
+    }
+
   }
 
   const seen = new Set();
@@ -302,6 +349,8 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
       ? 'branch-graph:analysis.sceneGraph'
       : target.type === 'screen'
       ? `screen:${target.screenId}`
+      : target.type === 'video'
+      ? `video:${target.pathString ?? target.videoId ?? `${target.sceneId}:${target.pageIndex}`}`
       : `scene:${target.sceneId}:${target.pageIndex}`;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -551,6 +600,30 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
+  const videoItems = previewTargets
+    .filter((target) => target?.type === 'video' || target?.kind === 'video')
+    .map((target) => ({
+      source: 'preview',
+      severity: 'warning',
+      category: 'video-preview',
+      code: 'video-preview-required',
+      pathString: target.pathString ?? 'assets.videos',
+      message: 'Video authoring data changed and needs OP/ED/video-page playback review.',
+      videoId: target.videoId ?? null,
+      endingId: target.endingId ?? null,
+      sceneId: target.sceneId ?? null,
+      pageIndex: target.pageIndex ?? null,
+      suggestedAction: {
+        summary: 'List video registry entries, then preview the affected OP, ED, or video page in runtime/editor review.',
+        commands: [
+          {
+            command: 'list-videos',
+            args: ['--script', '<script.json>', '--json'],
+          },
+        ],
+      },
+    }));
+
   const branchGraphItems = previewTargets
     .filter((target) => target?.type === 'branch-graph' || target?.kind === 'branch-graph')
     .map((target) => ({
@@ -637,7 +710,7 @@ function collectPreviewReviewItems(previewTargets = []) {
       },
     }));
 
-  return [...screenItems, ...endingItems, ...galleryItems, ...branchGraphItems, ...particleItems, ...transitionItems, ...effectPackItems];
+  return [...screenItems, ...endingItems, ...galleryItems, ...videoItems, ...branchGraphItems, ...particleItems, ...transitionItems, ...effectPackItems];
 }
 
 function normalizeReferenceScreenshotNotes(transaction = null) {

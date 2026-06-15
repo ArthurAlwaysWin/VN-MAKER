@@ -808,6 +808,7 @@ Stable diagnostic codes:
 - `dsl-unknown-condition-variable`
 - `dsl-unknown-ending`
 - `dsl-unknown-cg`
+- `dsl-unknown-video`
 - `dsl-invalid-asset-path`
 - `dsl-invalid-effect`
 - `dsl-invalid-condition-expression`

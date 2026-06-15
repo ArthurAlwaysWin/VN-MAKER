@@ -12,6 +12,7 @@ import { ReadHistory } from '../src/engine/ReadHistory.js';
 import { SaveManager } from '../src/engine/SaveManager.js';
 import { ScriptEngine } from '../src/engine/ScriptEngine.js';
 import { WebSaveManager } from '../src/engine/WebSaveManager.js';
+import { shouldRecordPlayedMediaOutcome } from '../src/engine/runtimeVideoBehavior.js';
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -144,6 +145,7 @@ describe('player data repository', () => {
         },
         cg: {},
       },
+      playedMedia: {},
     });
     expect(storage.state.saves.get('slot_001')).toMatchObject({
       version: 99,
@@ -195,6 +197,7 @@ describe('player data repository', () => {
         endings: {},
         cg: {},
       },
+      playedMedia: {},
     });
     expect([...storage.state.saves.keys()]).toEqual(['slot_001']);
 
@@ -221,6 +224,7 @@ describe('player data repository', () => {
         endings: {},
         cg: {},
       },
+      playedMedia: {},
     });
     expect(storage.state.saves.size).toBe(0);
   });
@@ -251,6 +255,7 @@ describe('player data repository', () => {
         endings: {},
         cg: {},
       },
+      playedMedia: {},
     });
     expect(storage.state.profiles.get('gm_story')).toEqual({
       version: PLAYER_PROFILE_VERSION,
@@ -262,6 +267,46 @@ describe('player data repository', () => {
         endings: {},
         cg: {},
       },
+      playedMedia: {},
+    });
+  });
+
+  it('preserves and updates playedMedia profile state through normalization', async () => {
+    vi.setSystemTime(3000);
+    const storage = createMemoryStorage({
+      profiles: {
+        gm_story: JSON.parse(`{
+          "version": ${PLAYER_PROFILE_VERSION},
+          "projectId": "gm_story",
+          "playedMedia": {
+            "ui.titleScreen.openingVideo": { "playedAt": 1000, "count": 1 },
+            "systems.endings.good_end.endingVideo": { "playedAt": 2000, "count": 2 },
+            "__proto__": { "playedAt": 1, "count": 1 },
+            "systems.endings.constructor.endingVideo": { "playedAt": 1, "count": 1 },
+            "bad": { "playedAt": 1, "count": 1 },
+            "ui.titleScreen.empty": { "playedAt": 1, "count": 0 }
+          }
+        }`),
+      },
+    });
+    const repository = new PlayerDataRepository('gm_story', storage);
+
+    await repository.load();
+
+    expect(repository.getProfile().playedMedia).toEqual({
+      'ui.titleScreen.openingVideo': { playedAt: 1000, count: 1 },
+      'systems.endings.good_end.endingVideo': { playedAt: 2000, count: 2 },
+    });
+    expect(await repository.isMediaPlayed('ui.titleScreen.openingVideo')).toBe(true);
+    expect(await repository.isMediaPlayed('__proto__')).toBe(false);
+
+    await repository.markPlayedMedia('ui.titleScreen.openingVideo');
+    await repository.markPlayedMedia('systems.endings.good_end.endingVideo', 3500);
+    await repository.markPlayedMedia('__proto__', 9999);
+
+    expect(storage.state.profiles.get('gm_story').playedMedia).toEqual({
+      'ui.titleScreen.openingVideo': { playedAt: 3000, count: 2 },
+      'systems.endings.good_end.endingVideo': { playedAt: 3500, count: 3 },
     });
   });
 });
@@ -376,6 +421,25 @@ describe('player data runtime wiring', () => {
         },
       },
     });
+  });
+
+  it('keeps ending unlock durability when ED playback reports an error outcome', async () => {
+    vi.setSystemTime(4000);
+    const storage = createMemoryStorage();
+    const repository = new PlayerDataRepository('gm_ed_failure', storage);
+    await repository.load();
+
+    await repository.unlockEnding('good_end');
+    if (shouldRecordPlayedMediaOutcome({ type: 'error' })) {
+      await repository.markPlayedMedia('systems.endings.good_end.endingVideo');
+    }
+
+    expect(storage.state.profiles.get('gm_ed_failure').unlocks.endings.good_end).toEqual({
+      firstUnlockedAt: 4000,
+      lastUnlockedAt: 4000,
+      count: 1,
+    });
+    expect(storage.state.profiles.get('gm_ed_failure').playedMedia).toEqual({});
   });
 
   it('discards prototype-shaped unlock ids from loaded and newly applied profile data', async () => {

@@ -23,6 +23,7 @@ character sakura "Sakura" color "#ff99cc" expression normal "characters/sakura_n
 variable affection number initial 0 label "Affection"
 ending good "Good End"
 cg first_smile "First Smile" image "backgrounds/cg_smile.png"
+video op_main "videos/op_main.mp4" label "Main Opening" kind op poster "videos/op_main.poster.png"
 ```
 
 Macros are compile-time only. They expand before the plan is generated:
@@ -132,6 +133,7 @@ P2.1 diagnostic coverage includes:
 - `dsl-unknown-condition-variable` for unresolved condition variables.
 - `dsl-unknown-variable` for unresolved variable effects.
 - `dsl-unknown-ending` and `dsl-unknown-cg` for unresolved unlock targets.
+- `dsl-unknown-video` for unresolved opening, ending, or story video references.
 - `dsl-invalid-effect` for unsupported effect types. Supported effect types are `var:set`, `var:add`, `var:sub`, `unlock:ending`, and `unlock:cg`.
 - `dsl-invalid-asset-path` for absolute asset paths or traversal segments such as `../`.
 
@@ -253,6 +255,29 @@ scene start "Start":
 ```
 
 Route templates do not create runtime route logic, hidden metadata, or custom script fields. Branching remains ordinary choice, jump, and condition pages.
+
+## Video, OP, And ED Authoring
+
+Phase 4 video support adds a minimal compile-to-plan surface for canonical video data:
+
+```text
+video op_main "videos/op_main.mp4" label "Main OP" kind op poster "videos/op_main.poster.png"
+video ed_good "videos/ed_good.webm" label "Good ED" kind ed
+ending good_end "Good End"
+opening video op_main play after-start oncePerProfile true
+ending_video good_end ed_good play manual
+
+scene start "Start":
+  video op_main target chapter_1 autoAdvance true skippable false
+```
+
+The top-level `video` declaration lowers to `add-video` and writes `assets.videos.<videoId>`. Optional fields are `label`, `kind`, `poster`, `durationMs`/`duration-ms`, and `tags ...`. Files must remain project-relative canonical paths such as `videos/op_main.mp4`.
+
+`opening video <videoId>` lowers to `set-opening-video` and writes `ui.titleScreen.openingVideo`. `ending_video <endingId> <videoId>` lowers to `set-ending-video` and writes `systems.endings.<endingId>.endingVideo`; declare the ending before setting its ED video so apply-plan can run in order.
+
+Inside a scene, `video <videoId>` creates a canonical `type: "video"` page through `add-page`. Supported page fields are `id`, `target`, `autoAdvance`/`auto-advance`, and `loop`; supported video reference fields are `videoId`/`video-id`, `file`, `poster`, `play`, `skippable`, `controls`, `volume`, `audioMode`/`audio-mode`, `fit`, and `oncePerProfile`/`once-per-profile`.
+
+The DSL compiler emits only apply-plan operations. It does not write DSL source, source-map metadata, JavaScript, CSS, HTML, shaders, plugin metadata, or runtime-only fields into `script.json`. Source maps infer video paths such as `assets.videos.op_main`, `ui.titleScreen.openingVideo`, `systems.endings.good_end.endingVideo`, and `scenes.start.pages.0.video`; after apply-plan enrichment they also retain the actual operation `changedPaths`.
 
 ## Condition Expressions
 

@@ -1668,6 +1668,139 @@ scene start "Start":
     });
   });
 
+  it('checks, builds, applies, and diffs Agent DSL video authoring without DSL project fields', async () => {
+    await withTempDir(async (dir) => {
+      const dslPath = path.join(dir, 'video.gmdsl');
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'video-plan.json');
+      const sourceMapPath = path.join(dir, 'video-source-map.json');
+      const enrichedSourceMapPath = path.join(dir, 'video-source-map.applied.json');
+      await writeFile(dslPath, `
+title "Video DSL"
+video op_main "videos/op_main.mp4" label "Main OP" kind op poster "videos/op_main.poster.png"
+video ed_good "videos/ed_good.webm" label "Good ED" kind ed
+ending good_end "Good End"
+opening video op_main play after-start oncePerProfile true
+ending_video good_end ed_good play manual
+scene start "Start":
+  video op_main target after_video autoAdvance true skippable false
+scene after_video "After Video":
+  end
+`, 'utf8');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_agent_dsl_video',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      const check = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-check',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--json',
+      ])).stdout);
+      expect(check).toMatchObject({
+        success: true,
+        ok: true,
+        operationCount: 8,
+        validation: { ok: true, status: 'validated' },
+      });
+      expect(check.validation.changedPaths).toEqual(expect.arrayContaining([
+        'assets.videos.op_main',
+        'assets.videos.ed_good',
+        'ui.titleScreen.openingVideo',
+        'systems.endings.good_end.endingVideo',
+        'scenes.start.pages.0',
+      ]));
+
+      const build = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-build',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--out',
+        planPath,
+        '--source-map-out',
+        sourceMapPath,
+        '--validate-only',
+        '--json',
+      ])).stdout);
+      expect(build).toMatchObject({
+        success: true,
+        ok: true,
+        operationCount: 8,
+        transaction: {
+          command: 'dsl-build',
+          wrote: false,
+        },
+      });
+      const sourceMap = JSON.parse(await readFile(sourceMapPath, 'utf8'));
+      expect(sourceMap.mappings.find((mapping) => mapping.operationId === 'dsl-add-video-page-start-1').projectPaths).toEqual(expect.arrayContaining([
+        'scenes.start.pages.0.video',
+      ]));
+
+      await execFileAsync('node', [
+        cliPath,
+        'apply-plan',
+        planPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        sourceMapPath,
+        '--source-map-out',
+        enrichedSourceMapPath,
+        '--force',
+        '--json',
+      ]);
+
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(script.assets.videos.op_main).toMatchObject({ file: 'videos/op_main.mp4', kind: 'op' });
+      expect(script.ui.titleScreen.openingVideo).toEqual({
+        videoId: 'op_main',
+        play: 'after-start',
+        oncePerProfile: true,
+      });
+      expect(script.systems.endings.good_end.endingVideo).toEqual({
+        videoId: 'ed_good',
+        play: 'manual',
+      });
+      expect(script.scenes.start.pages[0]).toMatchObject({
+        type: 'video',
+        video: { videoId: 'op_main', skippable: false },
+        autoAdvance: true,
+        target: 'after_video',
+      });
+      expect(script).not.toHaveProperty('dsl');
+      expect(script).not.toHaveProperty('agentDsl');
+      expect(script).not.toHaveProperty('sourceMap');
+
+      const diff = JSON.parse((await execFileAsync('node', [
+        cliPath,
+        'dsl-diff',
+        dslPath,
+        '--script',
+        scriptPath,
+        '--source-map',
+        enrichedSourceMapPath,
+        '--json',
+      ])).stdout);
+      expect(diff).toMatchObject({
+        success: true,
+        ok: true,
+        mappingCount: 8,
+        staleCount: 0,
+        summary: {
+          stale: 0,
+          missing: 0,
+          untracked: 0,
+        },
+      });
+    });
+  });
+
   it('writes a project only when dsl-build is explicitly asked to write', async () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'write-build.gmdsl');
@@ -4728,6 +4861,171 @@ scene start "Start":
     });
   });
 
+  it('applies video registry and OP/ED video operations through CLI and apply-plan with changed paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const planPath = path.join(dir, 'video-plan.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_video_authoring',
+        characters: {},
+        scenes: {
+          start: {
+            pages: [],
+          },
+          after_video: {
+            pages: [{ type: 'normal', dialogues: [{ speaker: null, text: 'After video.' }] }],
+          },
+        },
+      }), 'utf8');
+      await writeFile(planPath, JSON.stringify({
+        version: 1,
+        operations: [
+          {
+            command: 'add-video',
+            params: {
+              id: 'op_main',
+              file: 'videos/op_main.mp4',
+              poster: 'videos/op_main.poster.png',
+              label: 'Main OP',
+              kind: 'op',
+              tags: ['opening'],
+              durationMs: 90000,
+            },
+          },
+          {
+            command: 'add-video',
+            params: {
+              id: 'ed_good',
+              file: 'videos/ed_good.webm',
+              label: 'Good ED',
+              kind: 'ed',
+            },
+          },
+          {
+            command: 'set-opening-video',
+            params: {
+              video: { videoId: 'op_main', play: 'after-start', oncePerProfile: true },
+            },
+          },
+          {
+            command: 'add-ending',
+            params: { id: 'good_end', title: 'Good End' },
+          },
+          {
+            command: 'set-ending-video',
+            params: {
+              ending: 'good_end',
+              video: { videoId: 'ed_good', play: 'manual' },
+            },
+          },
+          {
+            command: 'add-page',
+            params: {
+              scene: 'start',
+              type: 'video',
+              videoId: 'op_main',
+              autoAdvance: true,
+              target: 'after_video',
+            },
+          },
+        ],
+      }), 'utf8');
+
+      const result = JSON.parse((await execFileAsync('node', [
+        cliPath, 'apply-plan', planPath, '--script', scriptPath, '--force', '--json',
+      ])).stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(result.validation.ok).toBe(true);
+      expect(result.changeSummary.changedPaths).toEqual(expect.arrayContaining([
+        'assets.videos.op_main',
+        'assets.videos.ed_good',
+        'ui.titleScreen.openingVideo',
+        'systems.endings.good_end',
+        'systems.endings.good_end.endingVideo',
+        'scenes.start.pages.0',
+      ]));
+      expect(script.assets.videos.op_main).toMatchObject({
+        file: 'videos/op_main.mp4',
+        poster: 'videos/op_main.poster.png',
+        label: 'Main OP',
+        kind: 'op',
+        tags: ['opening'],
+        durationMs: 90000,
+      });
+      expect(script.ui.titleScreen.openingVideo).toEqual({
+        videoId: 'op_main',
+        play: 'after-start',
+        oncePerProfile: true,
+      });
+      expect(script.systems.endings.good_end.endingVideo).toEqual({
+        videoId: 'ed_good',
+        play: 'manual',
+      });
+      expect(script.scenes.start.pages[0]).toMatchObject({
+        type: 'video',
+        video: { videoId: 'op_main' },
+        autoAdvance: true,
+        target: 'after_video',
+      });
+
+      const list = JSON.parse((await execFileAsync('node', [
+        cliPath, 'list-videos', '--script', scriptPath, '--json',
+      ])).stdout);
+      expect(list.videos).toEqual(expect.arrayContaining([
+        expect.objectContaining({ videoId: 'op_main', label: 'Main OP' }),
+        expect.objectContaining({ videoId: 'ed_good', label: 'Good ED' }),
+      ]));
+
+      const update = JSON.parse((await execFileAsync('node', [
+        cliPath, 'update-video', '--script', scriptPath, '--id', 'op_main',
+        '--label', 'Main Opening Movie', '--kind', 'story', '--force', '--json',
+      ])).stdout);
+      expect(update.changeSummary.changedPaths).toEqual(['assets.videos.op_main']);
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).assets.videos.op_main).toMatchObject({
+        label: 'Main Opening Movie',
+        kind: 'story',
+      });
+
+      const openingUpdate = JSON.parse((await execFileAsync('node', [
+        cliPath, 'set-opening-video', '--script', scriptPath,
+        '--opening-video', JSON.stringify({ videoId: 'op_main', play: 'after-start', oncePerProfile: false }),
+        '--force', '--json',
+      ])).stdout);
+      expect(openingUpdate.changeSummary.changedPaths).toEqual(['ui.titleScreen.openingVideo']);
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).ui.titleScreen.openingVideo).toEqual({
+        videoId: 'op_main',
+        play: 'after-start',
+        oncePerProfile: false,
+      });
+
+      const endingVideoUpdate = JSON.parse((await execFileAsync('node', [
+        cliPath, 'set-ending-video', '--script', scriptPath, '--id', 'good_end',
+        '--ending-video', JSON.stringify({ videoId: 'ed_good', play: 'manual', skippable: false }),
+        '--force', '--json',
+      ])).stdout);
+      expect(endingVideoUpdate.changeSummary.changedPaths).toEqual(['systems.endings.good_end.endingVideo']);
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).systems.endings.good_end.endingVideo).toEqual({
+        videoId: 'ed_good',
+        play: 'manual',
+        skippable: false,
+      });
+
+      const unused = JSON.parse((await execFileAsync('node', [
+        cliPath, 'add-video', '--script', scriptPath, '--id', 'unused_trailer',
+        '--file', 'videos/unused_trailer.mp4', '--kind', 'other', '--force', '--json',
+      ])).stdout);
+      expect(unused.changeSummary.changedPaths).toEqual(['assets.videos.unused_trailer']);
+
+      const removed = JSON.parse((await execFileAsync('node', [
+        cliPath, 'remove-video', '--script', scriptPath, '--id', 'unused_trailer',
+        '--force', '--json',
+      ])).stdout);
+      expect(removed.changeSummary.changedPaths).toEqual(['assets.videos.unused_trailer']);
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).assets.videos.unused_trailer).toBeUndefined();
+    });
+  });
+
   it('adds normal, choice, and condition pages incrementally', async () => {
     await withTempDir(async (dir) => {
       const scriptPath = path.join(dir, 'script.json');
@@ -7120,6 +7418,133 @@ scene start "Start":
       expect(result.galleryPreview.issues).toEqual([
         expect.objectContaining({ category: 'gallery-preview', code: 'gallery-preview-required' }),
       ]);
+    });
+  });
+
+  it('surfaces video preview targets for transaction changed video paths', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const transactionPath = path.join(dir, 'video-transaction.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_video_author_check',
+        assets: {
+          videos: {
+            op_main: { file: 'videos/op-main.mp4', label: 'Opening' },
+            ed_good: { file: 'videos/ed-good.webm', label: 'Good Ending' },
+          },
+        },
+        ui: {
+          titleScreen: {
+            openingVideo: { videoId: 'op_main', play: 'after-start', oncePerProfile: true },
+          },
+        },
+        systems: {
+          endings: {
+            good_end: {
+              title: 'Good End',
+              endingVideo: { videoId: 'ed_good', play: 'manual' },
+            },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [{
+              type: 'video',
+              video: { videoId: 'op_main', autoAdvance: true },
+              target: 'after_video',
+            }],
+          },
+          after_video: {
+            pages: [{ type: 'normal', dialogues: [{ text: 'After video.' }] }],
+          },
+        },
+      }), 'utf8');
+      await writeFile(transactionPath, JSON.stringify({
+        transaction: { command: 'apply-plan', status: 'written', wrote: true },
+        changeSummary: {
+          changedPaths: [
+            'assets.videos.op_main',
+            'ui.titleScreen.openingVideo',
+            'systems.endings.good_end.endingVideo',
+            'scenes.start.pages.0.video',
+          ],
+        },
+      }), 'utf8');
+
+      const result = JSON.parse((await execFileAsync('node', [
+        cliPath, 'author-check', '--script', scriptPath, '--transaction', transactionPath,
+        '--skip-preview', '--skip-asset-check', '--json',
+      ])).stdout);
+
+      expect(result.focus.videoTargets).toEqual([
+        expect.objectContaining({
+          type: 'video',
+          pathString: 'assets.videos.op_main',
+          reason: 'changed-video-registry',
+          videoId: 'op_main',
+        }),
+        expect.objectContaining({
+          type: 'video',
+          pathString: 'ui.titleScreen.openingVideo',
+          reason: 'changed-opening-video',
+        }),
+        expect.objectContaining({
+          type: 'video',
+          pathString: 'systems.endings.good_end.endingVideo',
+          reason: 'changed-ending-video',
+          endingId: 'good_end',
+        }),
+        expect.objectContaining({
+          type: 'video',
+          pathString: 'scenes.start.pages.0.video',
+          reason: 'changed-video-page',
+          sceneId: 'start',
+          pageIndex: 0,
+        }),
+      ]);
+      expect(result.focus.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'video', pathString: 'assets.videos.op_main' }),
+        expect.objectContaining({ type: 'video', pathString: 'ui.titleScreen.openingVideo' }),
+        expect.objectContaining({ type: 'video', pathString: 'systems.endings.good_end.endingVideo' }),
+        expect.objectContaining({ type: 'video', pathString: 'scenes.start.pages.0.video' }),
+      ]));
+      expect(result.summary.videoPreviewReviewItems).toBe(4);
+      expect(result.videoPreview.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          category: 'video-preview',
+          code: 'video-preview-required',
+          pathString: 'assets.videos.op_main',
+          videoId: 'op_main',
+        }),
+        expect.objectContaining({
+          category: 'video-preview',
+          code: 'video-preview-required',
+          pathString: 'systems.endings.good_end.endingVideo',
+          endingId: 'good_end',
+        }),
+        expect.objectContaining({
+          category: 'video-preview',
+          code: 'video-preview-required',
+          pathString: 'scenes.start.pages.0.video',
+          sceneId: 'start',
+          pageIndex: 0,
+        }),
+      ]));
+      expect(result.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          category: 'video-preview',
+          code: 'video-preview-required',
+          pathString: 'ui.titleScreen.openingVideo',
+        }),
+      ]));
+      expect(result.suggestions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'preview',
+          code: 'video-preview-required',
+          pathString: 'assets.videos.op_main',
+        }),
+      ]));
     });
   });
 

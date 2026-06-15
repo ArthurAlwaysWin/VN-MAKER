@@ -8,6 +8,9 @@ const DSL_ALLOWED_APPLY_PLAN_COMMANDS = new Set([
   'add-affection-variable',
   'add-ending',
   'add-cg',
+  'add-video',
+  'set-opening-video',
+  'set-ending-video',
   'add-scene',
   'set-scene-next',
   'add-page',
@@ -211,6 +214,86 @@ route sakura:
         page: {
           effects: [{ type: 'unlock:ending', id: 'sakura_good' }],
         },
+      },
+    });
+  });
+
+  it('emits video registry, OP/ED config, and video pages as apply-plan operations', () => {
+    const plan = createAgentDslPlan(`
+title "Video Demo"
+video op_main "videos/op_main.mp4" label "Main OP" kind op poster "videos/op_main.poster.png" durationMs 90000 tags opening featured
+video ed_good "videos/ed_good.webm" label "Good ED" kind ed
+ending good_end "Good End"
+opening video op_main play after-start oncePerProfile true skippable true audioMode replace fit contain
+ending_video good_end ed_good play manual skippable false
+scene start "Start":
+  say "Before the OP page."
+  video op_main id op_page target after_video autoAdvance true loop false controls true volume 0.8
+scene after_video "After Video":
+  end
+`);
+
+    expect(plan.operations.map((operation) => operation.command)).toEqual([
+      'add-video',
+      'add-video',
+      'add-ending',
+      'set-opening-video',
+      'set-ending-video',
+      'add-scene',
+      'add-page',
+      'add-page',
+      'add-scene',
+    ]);
+    expect(plan.operations.find((operation) => operation.id === 'dsl-add-video-op_main')).toMatchObject({
+      command: 'add-video',
+      params: {
+        id: 'op_main',
+        file: 'videos/op_main.mp4',
+        label: 'Main OP',
+        kind: 'op',
+        poster: 'videos/op_main.poster.png',
+        durationMs: 90000,
+        tags: ['opening', 'featured'],
+      },
+    });
+    expect(plan.operations.find((operation) => operation.id === 'dsl-set-opening-video')).toMatchObject({
+      command: 'set-opening-video',
+      params: {
+        openingVideo: {
+          videoId: 'op_main',
+          play: 'after-start',
+          oncePerProfile: true,
+          skippable: true,
+          audioMode: 'replace',
+          fit: 'contain',
+        },
+      },
+    });
+    expect(plan.operations.find((operation) => operation.id === 'dsl-set-ending-video-good_end')).toMatchObject({
+      command: 'set-ending-video',
+      params: {
+        endingId: 'good_end',
+        endingVideo: {
+          videoId: 'ed_good',
+          play: 'manual',
+          skippable: false,
+        },
+      },
+    });
+    expect(plan.operations.find((operation) => operation.id === 'dsl-add-video-page-start-2')).toMatchObject({
+      command: 'add-page',
+      params: {
+        scene: 'start',
+        type: 'video',
+        id: 'op_page',
+        video: {
+          videoId: 'op_main',
+          controls: true,
+          volume: 0.8,
+        },
+        autoAdvance: true,
+        target: 'after_video',
+        loop: false,
       },
     });
   });

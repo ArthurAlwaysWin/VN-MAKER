@@ -777,6 +777,8 @@ function getMutationTarget(result = {}) {
     'deletedEndingId',
     'cgId',
     'deletedCgId',
+    'videoId',
+    'deletedVideoId',
     'sceneId',
     'newSceneId',
     'deletedSceneId',
@@ -823,6 +825,9 @@ function getChangedPaths(result = {}) {
   }
   if (result.cgId) {
     return [`systems.gallery.cg.${result.cgId}`];
+  }
+  if (result.videoId) {
+    return [`assets.videos.${result.videoId}`];
   }
   if (!result.sceneId) {
     return [];
@@ -1023,6 +1028,69 @@ function galleryTargetsFromChangedPaths(changedPaths = []) {
     : [];
 }
 
+function videoTargetsFromChangedPaths(changedPaths = []) {
+  const targets = [];
+  for (const changedPath of changedPaths) {
+    const pathString = String(changedPath);
+    if (pathString === 'assets.videos' || pathString.startsWith('assets.videos.')) {
+      const match = /^assets\.videos\.([^.]+)/.exec(pathString);
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        videoId: match?.[1] ?? null,
+        pathString: match ? `assets.videos.${match[1]}` : 'assets.videos',
+        reason: 'changed-video-registry',
+      });
+      continue;
+    }
+
+    if (
+      pathString === 'ui.titleScreen.openingVideo'
+      || pathString.startsWith('ui.titleScreen.openingVideo.')
+    ) {
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        pathString: 'ui.titleScreen.openingVideo',
+        reason: 'changed-opening-video',
+      });
+      continue;
+    }
+
+    const endingVideoMatch = /^systems\.endings\.([^.]+)\.endingVideo/.exec(pathString);
+    if (endingVideoMatch) {
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        endingId: endingVideoMatch[1],
+        pathString: `systems.endings.${endingVideoMatch[1]}.endingVideo`,
+        reason: 'changed-ending-video',
+      });
+      continue;
+    }
+
+    const videoPageMatch = /^scenes\.([^.]+)\.pages\.(\d+)\.video/.exec(pathString);
+    if (videoPageMatch) {
+      targets.push({
+        type: 'video',
+        kind: 'video',
+        sceneId: videoPageMatch[1],
+        pageIndex: Number(videoPageMatch[2]),
+        pathString: `scenes.${videoPageMatch[1]}.pages.${videoPageMatch[2]}.video`,
+        reason: 'changed-video-page',
+      });
+    }
+  }
+
+  const seen = new Set();
+  return targets.filter((target) => {
+    const key = target.pathString;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function branchGraphTargetsFromChangedPaths(changedPaths = []) {
   const hasSceneChange = changedPaths.some((changedPath) => String(changedPath).startsWith('scenes.'));
   return hasSceneChange
@@ -1035,7 +1103,7 @@ function branchGraphTargetsFromChangedPaths(changedPaths = []) {
     : [];
 }
 
-function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, transactionGalleryTargets, transactionBranchGraphTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
+function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction, transactionPageTargets, transactionScreenTargets, transactionEndingTargets, transactionGalleryTargets, transactionVideoTargets, transactionBranchGraphTargets, checkedSceneIds, defaultSceneId, defaultPageIndex, script }) {
   if (explicitSceneId || explicitPageIndex != null) {
     return [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
@@ -1046,7 +1114,7 @@ function createPreviewTargets({ explicitSceneId, explicitPageIndex, transaction,
       : checkedSceneIds
         .filter((sceneId) => script.scenes?.[sceneId]?.pages?.[0])
         .map((sceneId) => ({ type: 'scene', sceneId, pageIndex: 0 }));
-    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets, ...transactionGalleryTargets, ...transactionBranchGraphTargets];
+    const targets = [...sceneTargets, ...transactionScreenTargets, ...transactionEndingTargets, ...transactionGalleryTargets, ...transactionVideoTargets, ...transactionBranchGraphTargets];
     return targets.length ? targets : [{ type: 'scene', sceneId: defaultSceneId, pageIndex: defaultPageIndex }];
   }
 
@@ -1069,6 +1137,9 @@ function authorCheckPreviewTargetPathString(target = {}) {
   }
   if (target.type === 'gallery' || target.kind === 'gallery') {
     return 'systems.gallery.cg';
+  }
+  if (target.type === 'video' || target.kind === 'video') {
+    return target.pathString ?? 'assets.videos';
   }
   return '';
 }
@@ -1112,6 +1183,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
   const transactionScreenTargets = screenTargetsFromChangedPaths(changedPaths);
   const transactionEndingTargets = endingTargetsFromChangedPaths(changedPaths);
   const transactionGalleryTargets = galleryTargetsFromChangedPaths(changedPaths);
+  const transactionVideoTargets = videoTargetsFromChangedPaths(changedPaths);
   const transactionBranchGraphTargets = branchGraphTargetsFromChangedPaths(changedPaths);
   const explicitSceneId = getArgValue(args, '--scene', null);
   const explicitPageIndex = getIntArg(args, '--page', null);
@@ -1130,6 +1202,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     transactionScreenTargets,
     transactionEndingTargets,
     transactionGalleryTargets,
+    transactionVideoTargets,
     transactionBranchGraphTargets,
     checkedSceneIds,
     defaultSceneId,
@@ -1146,6 +1219,7 @@ function createAuthorCheckFocus({ args, script, transaction }) {
     screenTargets: transaction?.data ? transactionScreenTargets : [],
     endingTargets: transaction?.data ? transactionEndingTargets : [],
     galleryTargets: transaction?.data ? transactionGalleryTargets : [],
+    videoTargets: transaction?.data ? transactionVideoTargets : [],
     branchGraphTargets: transaction?.data ? transactionBranchGraphTargets : [],
     previewTargets,
     previewTarget: previewTargets[0] ?? {
@@ -1290,6 +1364,9 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'update-cg',
   'remove-cg',
   'add-cg-unlock',
+  'add-video',
+  'update-video',
+  'remove-video',
   'add-page',
   'remove-page',
   'move-page',
@@ -1319,6 +1396,8 @@ const SUPPORTED_APPLY_PLAN_COMMANDS = [
   'inherit-page-particles',
   'set-character-animation',
   'set-character-transition',
+  'set-opening-video',
+  'set-ending-video',
   'set-title-screen',
   'add-title-element',
   'update-title-element',
@@ -1487,6 +1566,20 @@ function buildTitleScreenPatch(params) {
     config: getParam(params, 'config'),
     merge: getParam(params, 'merge') ?? true,
   });
+}
+
+function buildVideoEntry(command, params, { requireFile = false } = {}) {
+  const video = getParam(params, 'video') ?? dropUndefinedFields({
+    file: requireFile
+      ? requireParam(params, command, 'file')
+      : getParam(params, 'file'),
+    poster: getParam(params, 'poster'),
+    label: getParam(params, 'label', 'name', 'title'),
+    kind: getParam(params, 'kind'),
+    tags: getParam(params, 'tags'),
+    durationMs: getParam(params, 'durationMs', 'duration-ms'),
+  });
+  return video;
 }
 
 function buildTitleElement(command, params, { requireType = true } = {}) {
@@ -1718,6 +1811,15 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
+  if (command === 'set-ending-video') {
+    return session.setEndingVideo({
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+      endingVideo: getParam(params, 'clear', 'clearEndingVideo', 'clear-ending-video')
+        ? null
+        : requireParam(params, command, 'endingVideo', 'ending-video', 'video'),
+    });
+  }
+
   if (command === 'remove-ending') {
     return session.removeEnding({
       endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
@@ -1776,6 +1878,28 @@ function applyPlanOperation(session, operation = {}, index = 0) {
       pageIndex: Number(requireParam(params, command, 'pageIndex', 'page')),
       optionIndex: Number(requireParam(params, command, 'optionIndex', 'option')),
       cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
+    });
+  }
+
+  if (command === 'add-video') {
+    const id = requireParam(params, command, 'id', 'videoId', 'video');
+    return session.addVideo({
+      id,
+      ...buildVideoEntry(command, params, { requireFile: true }),
+    });
+  }
+
+  if (command === 'update-video') {
+    return session.updateVideo({
+      videoId: requireParam(params, command, 'videoId', 'id', 'video'),
+      patch: getParam(params, 'patch') ?? buildVideoEntry(command, params),
+    });
+  }
+
+  if (command === 'remove-video') {
+    return session.removeVideo({
+      videoId: requireParam(params, command, 'videoId', 'id', 'video'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
     });
   }
 
@@ -2083,6 +2207,14 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     });
   }
 
+  if (command === 'set-opening-video') {
+    return session.setOpeningVideo({
+      openingVideo: getParam(params, 'clear', 'clearOpeningVideo', 'clear-opening-video')
+        ? null
+        : requireParam(params, command, 'openingVideo', 'opening-video', 'video'),
+    });
+  }
+
   if (command === 'set-title-screen') {
     return session.setTitleScreen(buildTitleScreenPatch(params));
   }
@@ -2362,6 +2494,30 @@ function collectGalleryPreviewIssues(galleryTargets = []) {
   }));
 }
 
+function collectVideoPreviewIssues(videoTargets = []) {
+  return videoTargets.map((target) => ({
+    source: 'preview',
+    severity: 'warning',
+    category: 'video-preview',
+    code: 'video-preview-required',
+    pathString: target.pathString ?? 'assets.videos',
+    message: 'Video authoring data changed and needs OP/ED/video-page playback review.',
+    videoId: target.videoId ?? null,
+    endingId: target.endingId ?? null,
+    sceneId: target.sceneId ?? null,
+    pageIndex: target.pageIndex ?? null,
+    suggestedAction: {
+      summary: 'List video registry entries, then preview the affected OP, ED, or video page in runtime/editor review.',
+      commands: [
+        {
+          command: 'list-videos',
+          args: ['--script', '<script.json>', '--json'],
+        },
+      ],
+    },
+  }));
+}
+
 function collectBranchGraphPreviewIssues(branchGraphTargets = []) {
   return branchGraphTargets.map((target) => ({
     source: 'preview',
@@ -2464,6 +2620,7 @@ function collectAuthorCheckSuggestions({
   screenPreviewIssues,
   endingPreviewIssues,
   galleryPreviewIssues,
+  videoPreviewIssues,
   branchGraphPreviewIssues,
   particlePreviewIssues,
   transitionPreviewIssues,
@@ -2541,6 +2698,15 @@ function collectAuthorCheckSuggestions({
   }
 
   for (const issue of galleryPreviewIssues ?? []) {
+    suggestions.push({
+      source: issue.source,
+      code: issue.code,
+      pathString: issue.pathString,
+      suggestedAction: issue.suggestedAction,
+    });
+  }
+
+  for (const issue of videoPreviewIssues ?? []) {
     suggestions.push({
       source: issue.source,
       code: issue.code,
@@ -4600,6 +4766,7 @@ async function authorCheck(args, { emit = true } = {}) {
   const screenPreviewIssues = collectScreenPreviewIssues(focus.screenTargets);
   const endingPreviewIssues = collectEndingPreviewIssues(focus.endingTargets);
   const galleryPreviewIssues = collectGalleryPreviewIssues(focus.galleryTargets);
+  const videoPreviewIssues = collectVideoPreviewIssues(focus.videoTargets);
   const branchGraphPreviewIssues = collectBranchGraphPreviewIssues(focus.branchGraphTargets);
   const particlePreviewIssues = collectParticlePreviewIssues(focus.pageTargets);
   const transitionPreviewIssues = collectTransitionPreviewIssues(focus.pageTargets);
@@ -4726,6 +4893,7 @@ async function authorCheck(args, { emit = true } = {}) {
       screenPreviewReviewItems: screenPreviewIssues.length,
       endingPreviewReviewItems: endingPreviewIssues.length,
       galleryPreviewReviewItems: galleryPreviewIssues.length,
+      videoPreviewReviewItems: videoPreviewIssues.length,
       branchGraphPreviewReviewItems: branchGraphPreviewIssues.length,
       particlePreviewReviewItems: particlePreviewIssues.length,
       transitionPreviewReviewItems: transitionPreviewIssues.length,
@@ -4751,6 +4919,10 @@ async function authorCheck(args, { emit = true } = {}) {
       issues: galleryPreviewIssues,
     },
     galleryPreviewIssues,
+    videoPreview: {
+      issues: videoPreviewIssues,
+    },
+    videoPreviewIssues,
     branchGraphPreview: {
       issues: branchGraphPreviewIssues,
     },
@@ -4788,6 +4960,7 @@ async function authorCheck(args, { emit = true } = {}) {
       ...summarizeIssues('preview', screenPreviewIssues),
       ...summarizeIssues('preview', endingPreviewIssues),
       ...summarizeIssues('preview', galleryPreviewIssues),
+      ...summarizeIssues('preview', videoPreviewIssues),
       ...summarizeIssues('preview', branchGraphPreviewIssues),
       ...summarizeIssues('preview', particlePreviewIssues),
       ...summarizeIssues('preview', transitionPreviewIssues),
@@ -5338,6 +5511,32 @@ async function updateEnding(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setEndingVideo(args) {
+  const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
+  if (!endingId) {
+    throw new Error('set-ending-video requires --id');
+  }
+  const endingVideo = hasFlag(args, '--clear')
+    ? null
+    : parseJsonArg(args, '--ending-video', parseJsonArg(args, '--video', null));
+  if (!hasFlag(args, '--clear') && endingVideo == null) {
+    throw new Error('set-ending-video requires --ending-video, --video, or --clear');
+  }
+
+  const output = await mutateScript(args, (session) => session.setEndingVideo({
+    endingId,
+    endingVideo,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Set ending video', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function removeEnding(args) {
   const endingId = getArgValue(args, '--id', getArgValue(args, '--ending', null));
   if (!endingId) {
@@ -5520,6 +5719,112 @@ async function addCgUnlock(args) {
     writeJson(output);
   } else {
     printMutationResult('Added CG unlock', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+function getVideoPatchFromArgs(args, { requireFile = false } = {}) {
+  const jsonVideo = parseJsonArg(args, '--video', null);
+  if (jsonVideo) {
+    return jsonVideo;
+  }
+
+  const file = requireFile
+    ? getArgValue(args, '--file', null)
+    : getOptionalArgValue(args, '--file');
+  if (requireFile && !file) {
+    throw new Error('add-video requires --file');
+  }
+
+  return dropUndefinedFields({
+    file,
+    poster: getOptionalArgValue(args, '--poster'),
+    label: getOptionalArgValue(args, '--label') ?? getOptionalArgValue(args, '--name') ?? getOptionalArgValue(args, '--title'),
+    kind: getOptionalArgValue(args, '--kind'),
+    tags: parseJsonArg(args, '--tags', undefined),
+    durationMs: parseOptionalScalarValue(getOptionalArgValue(args, '--duration-ms')),
+  });
+}
+
+async function listVideos(args) {
+  const { scriptPath, script } = await readScript(args);
+  const session = createProjectSession({ script });
+  const videos = session.listVideos();
+  const output = {
+    scriptPath,
+    count: videos.length,
+    videos,
+  };
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    process.stdout.write(`Videos: ${videos.length}\n`);
+    for (const video of videos) {
+      process.stdout.write(`- ${video.videoId}: ${video.label ?? video.file ?? ''}\n`);
+    }
+  }
+
+  return 0;
+}
+
+async function addVideo(args) {
+  const videoId = getArgValue(args, '--id', getArgValue(args, '--video-id', null));
+  if (!videoId) {
+    throw new Error('add-video requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.addVideo({
+    id: videoId,
+    ...getVideoPatchFromArgs(args, { requireFile: true }),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Added video', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateVideo(args) {
+  const videoId = getArgValue(args, '--id', getArgValue(args, '--video-id', null));
+  if (!videoId) {
+    throw new Error('update-video requires --id');
+  }
+
+  const patch = parseJsonArg(args, '--patch', null) ?? getVideoPatchFromArgs(args);
+  const output = await mutateScript(args, (session) => session.updateVideo({
+    videoId,
+    patch,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Updated video', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeVideo(args) {
+  const videoId = getArgValue(args, '--id', getArgValue(args, '--video-id', null));
+  if (!videoId) {
+    throw new Error('remove-video requires --id');
+  }
+
+  const output = await mutateScript(args, (session) => session.removeVideo({
+    videoId,
+    forceReferences: hasFlag(args, '--force-references'),
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Removed video', output);
   }
 
   return output.validation.ok ? 0 : 1;
@@ -6633,6 +6938,27 @@ async function setTitleScreen(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function setOpeningVideo(args) {
+  const openingVideo = hasFlag(args, '--clear')
+    ? null
+    : parseJsonArg(args, '--opening-video', parseJsonArg(args, '--video', null));
+  if (!hasFlag(args, '--clear') && openingVideo == null) {
+    throw new Error('set-opening-video requires --opening-video, --video, or --clear');
+  }
+
+  const output = await mutateScript(args, (session) => session.setOpeningVideo({
+    openingVideo,
+  }));
+
+  if (hasFlag(args, '--json')) {
+    writeJson(output);
+  } else {
+    printMutationResult('Set opening video', output);
+  }
+
+  return output.validation.ok ? 0 : 1;
+}
+
 async function addTitleElement(args) {
   const output = await mutateScript(args, (session) => session.addTitleElement({
     element: parseTitleElementArgs(args),
@@ -7165,13 +7491,18 @@ function printHelp() {
   add-ending --id ending_id [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-ending --id ending_id [--patch json] [--title title] [--category category] [--order number] [--description text] [--thumbnail path] [--hidden-until-unlocked] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-ending --id ending_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-ending-video --id ending_id [--ending-video json|--video json|--clear] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-ending-unlock --scene scene_id --page index [--option index] --id ending_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-cg [--script path] [--json]
   add-cg --id cg_id [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-cg --id cg_id [--patch json] [--title title] [--images json] [--thumbnail path] [--locked-thumbnail path] [--category category] [--order number] [--description text] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-cg --id cg_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-cg-unlock --scene scene_id --page index --option index --id cg_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  add-page --scene scene_id [--type normal|choice|input|condition] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--variable id] [--prompt text] [--placeholder text] [--default-value text] [--submit-text text] [--max-length number] [--optional] [--target scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  list-videos [--script path] [--json]
+  add-video --id video_id --file videos/file.mp4 [--label label] [--kind opening|ending|story] [--poster path] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-video --id video_id [--patch json] [--file videos/file.mp4] [--label label] [--kind opening|ending|story] [--poster path] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-video --id video_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-page --scene scene_id [--type normal|choice|input|condition|video] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--video json] [--video-id video_id] [--file videos/file.mp4] [--poster path] [--skippable] [--controls] [--volume number] [--audio-mode duck|pause|replace|mix] [--fit contain|cover] [--auto-advance] [--variable id] [--prompt text] [--placeholder text] [--default-value text] [--submit-text text] [--max-length number] [--optional] [--target scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-page --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-page --scene scene_id --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-dialogue --scene scene_id --page index [--speaker character_id] [--text text] [--expression expression] [--dialogue json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -7203,7 +7534,8 @@ function printHelp() {
   inherit-page-particles --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-animation --scene scene_id --page index --character character_id [--animation none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce|fade|slide-left|slide-right|pop|scale-in|blur-in] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-character-transition --scene scene_id --page index --character character_id [--transition none|fade-in|slide-in-left|slide-in-right|shake|nod|breathe|bounce|fade|slide-left|slide-right|pop|scale-in|blur-in] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  set-title-screen [--background path] [--bgm path] [--elements json] [--config file] [--config-json json] [--clear-background] [--clear-bgm] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-title-screen [--background path] [--bgm path] [--opening-video json] [--elements json] [--config file] [--config-json json] [--clear-background] [--clear-bgm] [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-opening-video [--opening-video json|--video json|--clear] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-title-element --type text|button|image [--id id] [--content text] [--text text] [--label text] [--action start|continue|settings|quit] [--src path] [--x number] [--y number] [--anchor center|top-left] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-title-element --id id|--index index [--patch json] [--content text] [--text text] [--x number] [--y number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-title-element --id id|--index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -7474,6 +7806,11 @@ async function main() {
       return;
     }
 
+    if (command === 'set-ending-video') {
+      process.exitCode = await setEndingVideo(args);
+      return;
+    }
+
     if (command === 'remove-ending') {
       process.exitCode = await removeEnding(args);
       return;
@@ -7506,6 +7843,26 @@ async function main() {
 
     if (command === 'add-cg-unlock') {
       process.exitCode = await addCgUnlock(args);
+      return;
+    }
+
+    if (command === 'list-videos') {
+      process.exitCode = await listVideos(args);
+      return;
+    }
+
+    if (command === 'add-video') {
+      process.exitCode = await addVideo(args);
+      return;
+    }
+
+    if (command === 'update-video') {
+      process.exitCode = await updateVideo(args);
+      return;
+    }
+
+    if (command === 'remove-video') {
+      process.exitCode = await removeVideo(args);
       return;
     }
 
@@ -7646,6 +8003,11 @@ async function main() {
 
     if (command === 'set-character-animation' || command === 'set-character-transition') {
       process.exitCode = await setCharacterAnimation(args);
+      return;
+    }
+
+    if (command === 'set-opening-video') {
+      process.exitCode = await setOpeningVideo(args);
       return;
     }
 

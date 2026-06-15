@@ -11,6 +11,9 @@ import { isValidEndingId } from '../shared/endingRegistry.js';
 export const PLAYER_PROFILE_VERSION = 1;
 export const PLAYER_PROFILE_STORAGE_PREFIX = 'playerProfile:';
 
+const UNSAFE_PROFILE_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
+const MEDIA_PROFILE_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*)+$/;
+
 function cloneJsonValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -70,6 +73,50 @@ function normalizeUnlockRecord(record, unlockedAt) {
   };
 }
 
+function isValidPlayedMediaKey(mediaKey) {
+  if (typeof mediaKey !== 'string' || !MEDIA_PROFILE_KEY_PATTERN.test(mediaKey)) {
+    return false;
+  }
+
+  return mediaKey.split('.').every((part) => !UNSAFE_PROFILE_MAP_KEYS.has(part));
+}
+
+function normalizePlayedMediaRecord(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return null;
+  }
+
+  const count = Number(record.count);
+  if (!Number.isFinite(count) || count <= 0) {
+    return null;
+  }
+
+  const playedAt = Number(record.playedAt);
+  return {
+    playedAt: Number.isFinite(playedAt) && playedAt >= 0 ? playedAt : 0,
+    count: Math.floor(count),
+  };
+}
+
+function normalizePlayedMediaBucket(bucket) {
+  if (!bucket || typeof bucket !== 'object' || Array.isArray(bucket)) {
+    return {};
+  }
+
+  const normalized = {};
+  for (const [mediaKey, record] of Object.entries(bucket)) {
+    if (!isValidPlayedMediaKey(mediaKey)) {
+      continue;
+    }
+
+    const normalizedRecord = normalizePlayedMediaRecord(record);
+    if (normalizedRecord) {
+      normalized[mediaKey] = normalizedRecord;
+    }
+  }
+  return normalized;
+}
+
 export function createDefaultPlayerProfile(projectId) {
   return {
     version: PLAYER_PROFILE_VERSION,
@@ -81,6 +128,7 @@ export function createDefaultPlayerProfile(projectId) {
       endings: {},
       cg: {},
     },
+    playedMedia: {},
   };
 }
 
@@ -95,6 +143,7 @@ export function normalizePlayerProfile(projectId, profile = {}) {
   normalized.readHistory.pages = normalizePages(source.readHistory?.pages);
   normalized.unlocks.endings = normalizeUnlockBucket(source.unlocks?.endings, isValidEndingId);
   normalized.unlocks.cg = normalizeUnlockBucket(source.unlocks?.cg, isValidCgId);
+  normalized.playedMedia = normalizePlayedMediaBucket(source.playedMedia);
   return normalized;
 }
 
@@ -293,6 +342,36 @@ export class PlayerDataRepository {
 
   async unlockCg(cgId, unlockedAt = Date.now()) {
     return this._unlock('cg', cgId, unlockedAt);
+  }
+
+  hasPlayedMedia(mediaKey) {
+    if (!isValidPlayedMediaKey(mediaKey)) {
+      return false;
+    }
+
+    return Number(this._profile.playedMedia?.[mediaKey]?.count) > 0;
+  }
+
+  async isMediaPlayed(mediaKey) {
+    await this.load();
+    return this.hasPlayedMedia(mediaKey);
+  }
+
+  async markPlayedMedia(mediaKey, playedAt = Date.now()) {
+    if (!isValidPlayedMediaKey(mediaKey)) {
+      return this.getProfile();
+    }
+
+    await this.load();
+    const timestamp = Number(playedAt);
+    const existing = normalizePlayedMediaRecord(this._profile.playedMedia?.[mediaKey]);
+    this._profile.playedMedia ??= {};
+    this._profile.playedMedia[mediaKey] = {
+      playedAt: Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : Date.now(),
+      count: existing ? existing.count + 1 : 1,
+    };
+    await this._storage.saveProfile(this.projectId, this._profile);
+    return this.getProfile();
   }
 
   async _unlock(bucketName, entryId, unlockedAt = Date.now()) {

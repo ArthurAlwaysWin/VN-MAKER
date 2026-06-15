@@ -1,6 +1,6 @@
 # Video, OP, and ED Roadmap
 
-**Status:** V0-V2 complete; V3 and V4 substantially complete; V5 partial; V6 pending
+**Status:** Phase 0-1 complete; Phase 2 substantially complete; Phase 3 complete; Phase 4 partial; Phase 5 pending
 **Architecture plan:** `docs/agent-authoring/video-op-ed-plan.md`  
 **Scope:** first-class video assets, opening movies, ending movies, and story video pages
 
@@ -18,19 +18,18 @@ Every milestone must preserve these rules:
 6. Existing image, audio, title, ending, route, preview, and export behavior must keep working.
 7. Validation failures should be clear project-data diagnostics, not runtime crashes.
 
-## Milestone Overview
+## Phase Overview
 
-| Milestone | Name | Primary Outcome |
+| Phase | Name | Primary Outcome |
 | --- | --- | --- |
-| V0 | Decisions And Contract Lock | Complete: canonical video data shape finalized. |
-| V1 | Assets, Validation, And Export | Complete: video files are known, validated, preview-served, and exportable assets. |
-| V2 | Runtime Video Playback | Complete: the engine can play blocking videos safely. |
-| V3 | Story, OP, And ED Flows | Substantially complete: video pages and OP/ED gameplay hooks exist; replay/profile polish remains. |
-| V4 | Editor Surfaces | Complete: human authors can configure video without hand-editing JSON. |
-| V5 | Agent Authoring Surface | Partial: projectSession, apply-plan, and CLI basics support canonical video changes; DSL and handoff polish remain. |
-| V6 | Hardening And Release Docs | Pending: final docs, readiness guidance, and release audit cleanup. |
+| Phase 0 | Decisions And Contract Lock | Complete: canonical video data shape finalized. |
+| Phase 1 | Assets, Validation, And Export | Complete: video files are known, validated, preview-served, and exportable assets. |
+| Phase 2 | Runtime Video Playback And Gameplay Flows | Substantially complete: blocking video playback, video pages, and OP/ED gameplay hooks exist; replay/profile polish remains. |
+| Phase 3 | Editor Authoring UI For Videos | Complete: human authors can configure video without hand-editing JSON. |
+| Phase 4 | Agent Authoring Surface | Partial: projectSession, apply-plan, and CLI basics support canonical video changes; DSL and handoff polish remain. |
+| Phase 5 | Hardening And Release Docs | Pending: final docs, readiness guidance, and release audit cleanup. |
 
-## V0 - Decisions And Contract Lock
+## Phase 0 - Decisions And Contract Lock
 
 **Status:** Complete
 **Goal:** Decide the exact canonical shape before implementation begins.
@@ -57,11 +56,11 @@ Deliver:
 
 Acceptance:
 
-- `video-op-ed-plan.md` records the locked V0 decisions;
+- `video-op-ed-plan.md` records the locked Phase 0 decisions;
 - planned contract changes are small, explicit, and compatible with existing project data;
 - no runtime/editor implementation starts with unresolved data-shape questions.
 
-## V1 - Assets, Validation, And Export
+## Phase 1 - Assets, Validation, And Export
 
 **Goal:** Make video a first-class asset category before playback behavior depends on it.
 
@@ -75,7 +74,7 @@ Deliver:
 - complete: add project-relative path validation for video files;
 - complete: validate unknown video IDs, missing files, unsupported extensions, and unsafe paths;
 - complete: include referenced videos and posters in export;
-- complete: projectSession/apply-plan helpers are not required for V1 because canonical video data can already be represented directly in project JSON and test fixtures;
+- complete: projectSession/apply-plan helpers are not required for Phase 1 because canonical video data can already be represented directly in project JSON and test fixtures;
 - complete: update project contract and validation docs.
 
 Tests:
@@ -92,10 +91,10 @@ Acceptance:
 - complete: invalid video references are caught before runtime;
 - complete: export does not silently omit referenced video files.
 
-## V2 - Runtime Video Playback
+## Phase 2 - Runtime Video Playback And Gameplay Flows
 
-**Status:** Complete
-**Goal:** Add a runtime-owned blocking video player that can be reused by pages, OP, and ED.
+**Status:** Substantially complete; replay/profile persistence polish remains.
+**Goal:** Add a runtime-owned blocking video player and wire it into video pages, OP playback, and ED playback.
 
 Deliver:
 
@@ -105,30 +104,9 @@ Deliver:
 - complete: support `skippable`, `controls`, `volume`, `audioMode`, and `fit`;
 - complete: pause, duck, replace, or mix BGM according to `audioMode`;
 - complete: provide graceful fallback UI on media load/play errors.
-
-Tests:
-
-- complete: playback resolves with `ended`;
-- complete: skip resolves with `skipped`;
-- complete: media error does not crash the engine;
-- complete: BGM behavior is restored after playback;
-- complete: global mute/volume still affects video audio.
-
-Acceptance:
-
-- complete: runtime video playback exists without project-local executable code;
-- complete: the engine can play one blocking video and return cleanly to the previous flow.
-
-## V3 - Story, OP, And ED Flows
-
-**Status:** Substantially complete; replay/profile persistence polish remains.
-**Goal:** Wire video playback into actual visual novel flows.
-
-Deliver:
-
 - complete: add `type: "video"` page runtime handling;
 - complete: support video page auto-advance and route validation;
-- complete: support optional scene-level video page targets if V0 includes them;
+- complete: support optional scene-level video page targets if Phase 0 includes them;
 - complete: support OP playback from title/start flow;
 - complete: support ED playback from ending unlock flow;
 - pending: persist OP once-per-profile state;
@@ -137,6 +115,11 @@ Deliver:
 
 Tests:
 
+- complete: playback resolves with `ended`;
+- complete: skip resolves with `skipped`;
+- complete: media error does not crash the engine;
+- complete: BGM behavior is restored after playback;
+- complete: global mute/volume still affects video audio;
 - complete: video page loads, plays, skips, and advances;
 - complete: save/load on a video page restarts playback from the page;
 - complete: OP `after-start` plays before entering the first page;
@@ -147,9 +130,11 @@ Tests:
 
 Acceptance:
 
+- complete: runtime video playback exists without project-local executable code;
+- complete: the engine can play one blocking video and return cleanly to the previous flow;
 - complete: a real project can use a story video page, an OP, and an ED through canonical project data.
 
-## V4 - Editor Surfaces
+## Phase 3 - Editor Authoring UI For Videos
 
 **Status:** Complete for Phase 3 editor authoring UI.
 **Goal:** Make video features fully editable by human authors.
@@ -179,7 +164,7 @@ Acceptance:
 - complete: no video feature requires hand-editing JSON for normal authoring;
 - complete: editor remains stable when media files are missing during review.
 
-## V5 - Agent Authoring Surface
+## Phase 4 - Agent Authoring Surface
 
 **Status:** Partial.
 **Goal:** Let agents author the same video features through supported commands and DSL compilation.
@@ -206,7 +191,7 @@ Acceptance:
 
 - agents can create, revise, validate, preview, and hand off OP/ED/video-page changes without bypassing the editor contract.
 
-## V6 - Hardening And Release Docs
+## Phase 5 - Hardening And Release Docs
 
 **Status:** Pending.
 **Goal:** Polish the feature into a mergeable, auditable state.
@@ -237,10 +222,10 @@ Acceptance:
 
 ## Suggested Implementation Order
 
-1. V0, V1, V2, and the Phase 3 editor authoring slice of V4 are complete.
-2. Finish the remaining V3 replay/profile persistence polish: `oncePerProfile`, `playedMedia`, and manual ED replay semantics.
-3. Complete V5 by filling in dedicated video registry commands, Agent DSL lowering, preview metadata, source-map provenance, and handoff review items.
-4. Close V6 with final docs, full readiness guidance, release audit, and any end-to-end fixtures needed for external review.
+1. Phase 0, Phase 1, and Phase 3 are complete.
+2. Finish the remaining Phase 2 replay/profile persistence polish: `oncePerProfile`, `playedMedia`, and manual ED replay semantics.
+3. Complete Phase 4 by filling in dedicated video registry commands, Agent DSL lowering, preview metadata, source-map provenance, and handoff review items.
+4. Close Phase 5 with final docs, full readiness guidance, release audit, and any end-to-end fixtures needed for external review.
 
 ## Smaller Follow-Up Extensions
 

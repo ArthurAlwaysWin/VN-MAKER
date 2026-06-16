@@ -13,16 +13,22 @@ describe('video authoring editor wiring', () => {
     const resourceLibrary = readSource('src/editor/views/ResourceLibrary.vue');
     const videoLibrary = readSource('src/editor/components/resource-library/VideoLibrary.vue');
     const scriptStore = readSource('src/editor/stores/script.js');
+    const validateAsset = readSource('electron/validateAsset.js');
+    const electronMain = readSource('electron/main.js');
 
     expect(resourceLibrary).toContain("{ id: 'videos'");
-    expect(resourceLibrary).toContain("'.mp4,.webm,video/mp4,video/webm'");
+    expect(resourceLibrary).toContain("'.mp4,.webm,.png,.jpg,.jpeg,.webp,video/mp4,video/webm,image/png,image/jpeg,image/webp'");
     expect(resourceLibrary).toContain('VideoLibrary');
+    expect(videoLibrary).toContain('videoFileList');
+    expect(videoLibrary).toContain('posterFileExtensions');
     expect(videoLibrary).toContain('script.createVideoDraft');
     expect(videoLibrary).toContain('script.updateVideoFields');
     expect(videoLibrary).toContain('script.renameVideo');
     expect(videoLibrary).toContain('script.deleteVideo');
     expect(scriptStore).toContain('normalizeVideoRegistry');
     expect(scriptStore).toContain('ensureVideoRegistryState');
+    expect(validateAsset).toContain("extensions: ['.mp4', '.webm', '.png', '.jpg', '.jpeg', '.webp']");
+    expect(electronMain).toContain("extensions: ['mp4', 'webm', 'png', 'jpg', 'jpeg', 'webp']");
   });
 
   it('exposes canonical OP, ED, and video page fields through shared video reference controls', () => {
@@ -30,6 +36,7 @@ describe('video authoring editor wiring', () => {
     const endingInspector = readSource('src/editor/components/story-systems/EndingInspector.vue');
     const pageInspector = readSource('src/editor/components/page-editor/PageInspector.vue');
     const videoFields = readSource('src/editor/components/resource-library/VideoReferenceFields.vue');
+    const assetPicker = readSource('src/editor/components/resource-library/AssetPickerModal.vue');
 
     expect(titleDesigner).toContain('layout.openingVideo');
     expect(titleDesigner).toContain('setOpeningVideo');
@@ -46,6 +53,9 @@ describe('video authoring editor wiring', () => {
     for (const field of ['videoId', 'file', 'poster', 'skippable', 'controls', 'volume', 'audioMode', 'fit', 'play']) {
       expect(videoFields).toContain(field);
     }
+    expect(videoFields).toContain(':allowed-extensions="pickerField === \'poster\' ? posterFileExtensions : videoFileExtensions"');
+    expect(assetPicker).toContain('allowedExtensions');
+    expect(assetPicker).toContain('isImageFile');
   });
 
   it('keeps title layout saves canonical and prevents theme application from dropping openingVideo', () => {

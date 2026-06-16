@@ -90,7 +90,7 @@ const subTabComponent = computed(() => subTabComponentMap[activeSubTab.value]);
 
 const acceptTypes = computed(() => {
   if (activeSubTab.value === 'audio') return 'audio/*';
-  if (activeSubTab.value === 'videos') return '.mp4,.webm,video/mp4,video/webm';
+  if (activeSubTab.value === 'videos') return '.mp4,.webm,.png,.jpg,.jpeg,.webp,video/mp4,video/webm,image/png,image/jpeg,image/webp';
   if (activeSubTab.value === 'fonts') return '.ttf,.otf,.woff,.woff2';
   return 'image/*';
 });

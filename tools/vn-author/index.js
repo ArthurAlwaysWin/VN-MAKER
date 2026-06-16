@@ -159,6 +159,10 @@ function parseOptionalScalarValue(value) {
   return value == null ? undefined : parseScalarValue(value);
 }
 
+function getOptionalScalarArg(args, name) {
+  return parseOptionalScalarValue(getOptionalArgValue(args, name));
+}
+
 function getFlagOrOptionalValue(args, name) {
   const index = args.indexOf(name);
   if (index === -1) {
@@ -171,6 +175,10 @@ function getFlagOrOptionalValue(args, name) {
   }
 
   return true;
+}
+
+function getOptionalFlagScalarArg(args, name) {
+  return parseOptionalScalarValue(getFlagOrOptionalValue(args, name));
 }
 
 function cloneJsonValue(value) {
@@ -5894,18 +5902,18 @@ function buildPageArgs(args) {
 
   if (type === 'video') {
     page.video = parseJsonArg(args, '--video', null) ?? dropUndefinedFields({
-      videoId: getArgValue(args, '--video-id', undefined),
-      file: getArgValue(args, '--file', undefined),
-      poster: getArgValue(args, '--poster', undefined),
-      skippable: parseOptionalScalarValue(getOptionalArgValue(args, '--skippable')),
-      controls: parseOptionalScalarValue(getOptionalArgValue(args, '--controls')),
-      volume: parseOptionalScalarValue(getOptionalArgValue(args, '--volume')),
-      audioMode: getArgValue(args, '--audio-mode', undefined),
-      fit: getArgValue(args, '--fit', undefined),
+      videoId: getOptionalArgValue(args, '--video-id'),
+      file: getOptionalArgValue(args, '--file'),
+      poster: getOptionalArgValue(args, '--poster'),
+      skippable: getOptionalFlagScalarArg(args, '--skippable'),
+      controls: getOptionalFlagScalarArg(args, '--controls'),
+      volume: getOptionalScalarArg(args, '--volume'),
+      audioMode: getOptionalArgValue(args, '--audio-mode'),
+      fit: getOptionalArgValue(args, '--fit'),
     });
-    page.autoAdvance = parseOptionalScalarValue(getOptionalArgValue(args, '--auto-advance')) ?? true;
+    page.autoAdvance = getOptionalFlagScalarArg(args, '--auto-advance') ?? true;
     page.target = getArgValue(args, '--target', null);
-    page.loop = parseOptionalScalarValue(getOptionalArgValue(args, '--loop')) ?? false;
+    page.loop = getOptionalFlagScalarArg(args, '--loop') ?? false;
     return { type, page };
   }
 
@@ -7502,10 +7510,10 @@ function printHelp() {
   remove-cg --id cg_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-cg-unlock --scene scene_id --page index --option index --id cg_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   list-videos [--script path] [--json]
-  add-video --id video_id --file videos/file.mp4 [--label label] [--kind opening|ending|story] [--poster path] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  update-video --id video_id [--patch json] [--file videos/file.mp4] [--label label] [--kind opening|ending|story] [--poster path] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-video --id video_id --file videos/file.mp4 [--label label] [--kind op|ed|story|other] [--poster path] [--duration-ms number] [--tags json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-video --id video_id [--patch json] [--file videos/file.mp4] [--label label] [--kind op|ed|story|other] [--poster path] [--duration-ms number] [--tags json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-video --id video_id [--force-references] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
-  add-page --scene scene_id [--type normal|choice|input|condition|video] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--video json] [--video-id video_id] [--file videos/file.mp4] [--poster path] [--skippable] [--controls] [--volume number] [--audio-mode duck|pause|replace|mix] [--fit contain|cover] [--auto-advance] [--variable id] [--prompt text] [--placeholder text] [--default-value text] [--submit-text text] [--max-length number] [--optional] [--target scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-page --scene scene_id [--type normal|choice|input|condition|video] [--id page_id] [--background path] [--preset preset] [--character id[:expression]] [--characters json] [--dialogues json] [--options json] [--conditions json] [--video json] [--video-id video_id] [--file videos/file.mp4] [--poster path] [--skippable [true|false]] [--controls [true|false]] [--volume number] [--audio-mode replace|duck|mix] [--fit contain|cover|native] [--auto-advance [true|false]] [--loop [true|false]] [--variable id] [--prompt text] [--placeholder text] [--default-value text] [--submit-text text] [--max-length number] [--optional] [--target scene_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-page --scene scene_id --page index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-page --scene scene_id --from index --to index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-dialogue --scene scene_id --page index [--speaker character_id] [--text text] [--expression expression] [--dialogue json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]

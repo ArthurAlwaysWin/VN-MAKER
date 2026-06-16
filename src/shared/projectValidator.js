@@ -409,6 +409,8 @@ function validateVideoReference(reference, context, report, options = {}) {
   }
 
   const resolved = resolveVideoReference(reference, videoRegistry);
+  const effectiveLoop = reference.loop ?? resolved?.registryEntry?.loop;
+  const effectiveSkippable = reference.skippable ?? resolved?.registryEntry?.skippable ?? true;
   if (hasFile) {
     validateKnownVideoAsset(report, assetSet, reference.file, [...path, 'file'], 'video', {
       requireVideoExtension: true,
@@ -457,6 +459,12 @@ function validateVideoReference(reference, context, report, options = {}) {
         reason,
       });
     }
+  }
+
+  if (effectiveLoop === true && effectiveSkippable === false) {
+    addError(report, 'video-loop-unskippable-conflict', 'Looping videos must remain skippable so playback always has an exit path.', path, {
+      reason,
+    });
   }
 
   if (reference.play !== undefined) {
@@ -1077,11 +1085,12 @@ function validateConditionPage(page, context, report, options) {
 function validateVideoPage(page, context, report) {
   const { sceneIds, sceneId, pageIndex, videoRegistry, assetSet } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
+  let resolvedVideoReference = null;
 
   if (page.video === undefined) {
     addError(report, 'missing-video-page-video', 'Video page requires a video reference.', [...pagePath, 'video']);
   } else {
-    validateVideoReference(page.video, {
+    resolvedVideoReference = validateVideoReference(page.video, {
       assetSet,
       path: [...pagePath, 'video'],
       reason: 'page',
@@ -1103,8 +1112,17 @@ function validateVideoPage(page, context, report) {
     });
   }
 
-  if (page.loop === true && page.autoAdvance === true) {
+  const effectiveLoop = page.loop ?? (isPlainObject(page.video) ? page.video.loop : undefined);
+  const effectiveSkippable = isPlainObject(page.video) && page.video.skippable !== undefined
+    ? page.video.skippable
+    : resolvedVideoReference?.registryEntry?.skippable;
+
+  if (effectiveLoop === true && page.autoAdvance === true) {
     addError(report, 'video-loop-auto-advance-conflict', 'Video page cannot combine loop: true with autoAdvance: true.', pagePath);
+  }
+
+  if (effectiveLoop === true && effectiveSkippable === false) {
+    addError(report, 'video-loop-unskippable-conflict', 'Looping video pages must remain skippable so playback can continue.', pagePath);
   }
 
   validateEffects(page, {

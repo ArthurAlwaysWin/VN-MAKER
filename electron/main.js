@@ -751,7 +751,7 @@ ipcMain.handle('select-asset', async (event, { types }) => {
       audio: { name: '音频', extensions: ['mp3', 'ogg', 'wav', 'm4a', 'mp4', 'aac'] },
       fonts: { name: '字体', extensions: ['ttf', 'otf', 'woff', 'woff2'] },
       ui: { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
-      videos: { name: '视频', extensions: ['mp4', 'webm'] },
+      videos: { name: '视频/封面', extensions: ['mp4', 'webm', 'png', 'jpg', 'jpeg', 'webp'] },
     };
 
     const categories = (Array.isArray(types) ? types : [])

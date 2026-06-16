@@ -203,9 +203,9 @@ These commands edit canonical project video data only. Video files remain normal
 | Command | Required params | Optional params | Notes |
 | --- | --- | --- | --- |
 | `list-videos` | | | Lists normalized `assets.videos` entries sorted by `kind`, then label/id. |
-| `add-video` | `id`, `file` | `label`, `kind`, `poster`, `duration`, `width`, `height`, `loop`, `muted` | Registers one reusable video asset. `kind` may be used by authors for OP/ED/story organization; validation still follows canonical video fields. Aliases: `videoId`, `video`, `src`. |
-| `update-video` | `id` | `patch`, `file`, `label`, `kind`, `poster`, `duration`, `width`, `height`, `loop`, `muted` | Updates one registry entry through the shared video normalizer. Aliases: `videoId`, `video`, `src`. |
-| `remove-video` | `id` | `forceReferences` | Refuses to remove videos referenced by title OP, ending ED, or video pages unless forced; forced removal clears those video references. Aliases: `videoId`, `video`, `force-references`. |
+| `add-video` | `id`, `file` | `label`, `kind`, `poster`, `durationMs`, `tags` | Registers one reusable video asset. `kind` may be `op`, `ed`, `story`, or `other`; validation still follows canonical video fields. Aliases: `videoId`, `video`, `src`, `duration-ms`. |
+| `update-video` | `id` | `patch`, `file`, `label`, `kind`, `poster`, `durationMs`, `tags` | Updates one registry entry through the shared video normalizer. Aliases: `videoId`, `video`, `src`, `duration-ms`. |
+| `remove-video` | `id` | `forceReferences` | Refuses to remove videos referenced by title OP, ending ED, or video pages unless forced. Forced removal clears OP/ED references and removes video pages that have no direct `file` fallback. Aliases: `videoId`, `video`, `force-references`. |
 
 Changed video registry paths use `assets.videos.<videoId>`. Opening video changes use `ui.titleScreen.openingVideo`, ending video changes use `systems.endings.<endingId>.endingVideo`, and story video pages use `scenes.<sceneId>.pages.<pageIndex>.video`.
 

@@ -10,12 +10,21 @@ import { useAssetStore } from '../../stores/assets.js';
 const props = defineProps({
   category: { type: String, required: true },
   visible: { type: Boolean, default: false },
+  allowedExtensions: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['select', 'close']);
 
 const assetStore = useAssetStore();
-const fileList = computed(() => assetStore.files[props.category] || []);
+const normalizedAllowedExtensions = computed(() => props.allowedExtensions
+  .map(extension => String(extension || '').trim().toLowerCase())
+  .filter(Boolean)
+  .map(extension => extension.startsWith('.') ? extension : `.${extension}`));
+const fileList = computed(() => {
+  const files = assetStore.files[props.category] || [];
+  if (normalizedAllowedExtensions.value.length === 0) return files;
+  return files.filter(file => normalizedAllowedExtensions.value.includes(fileExtension(file)));
+});
 
 const isAudio = computed(() => props.category === 'audio');
 const isVideo = computed(() => props.category === 'videos');
@@ -28,6 +37,15 @@ const categoryLabel = computed(() => {
 onMounted(() => {
   assetStore.loadCategory?.(props.category);
 });
+
+function fileExtension(file) {
+  const match = String(file || '').toLowerCase().match(/\.[^.]+$/);
+  return match?.[0] || '';
+}
+
+function isImageFile(file) {
+  return ['.png', '.jpg', '.jpeg', '.webp'].includes(fileExtension(file));
+}
 
 function onSelect(file) {
   emit('select', `${props.category}/${file}`);
@@ -75,15 +93,24 @@ function onOverlayClick(e) {
               <span class="audio-name">{{ file }}</span>
             </div>
             <!-- Video list -->
-            <div
-              v-if="isVideo"
-              v-for="file in fileList"
-              :key="file"
-              class="picker-audio-row"
-              @click="onSelect(file)">
-              <span class="audio-icon">🎞</span>
-              <span class="audio-name">{{ file }}</span>
-            </div>
+            <template v-if="isVideo">
+              <div
+                v-for="file in fileList"
+                :key="file"
+                :class="isImageFile(file) ? 'picker-card' : 'picker-audio-row'"
+                @click="onSelect(file)">
+                <template v-if="isImageFile(file)">
+                  <div class="picker-thumb">
+                    <img :src="`asset://${category}/${file}`" :alt="file" draggable="false" />
+                  </div>
+                  <div class="picker-name">{{ file }}</div>
+                </template>
+                <template v-else>
+                  <span class="audio-icon">🎞</span>
+                  <span class="audio-name">{{ file }}</span>
+                </template>
+              </div>
+            </template>
           </div>
         </div>
       </div>

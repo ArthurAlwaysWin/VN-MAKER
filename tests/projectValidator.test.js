@@ -635,6 +635,36 @@ describe('project validator', () => {
     ]));
   });
 
+  it('rejects looping videos that cannot be skipped', () => {
+    const script = createValidScript();
+    script.assets = {
+      videos: {
+        op_main: {
+          file: 'videos/op_main.mp4',
+          skippable: false,
+        },
+      },
+    };
+    script.ui = {
+      titleScreen: {
+        openingVideo: { videoId: 'op_main', loop: true },
+      },
+    };
+    script.scenes.start.pages[0] = {
+      type: 'video',
+      video: { videoId: 'op_main' },
+      autoAdvance: false,
+      loop: true,
+    };
+
+    const report = validateProject(script);
+
+    expect(report.ok).toBe(false);
+    expect(codes(report)).toEqual(expect.arrayContaining([
+      'video-loop-unskippable-conflict',
+    ]));
+  });
+
   it('warns about unsupported advanced staging values while preserving runtime fallback', () => {
     const script = createValidScript();
     script.scenes.start.pages[0].camera = { effect: 'spin', durationMs: 50000, intensity: 'extreme' };

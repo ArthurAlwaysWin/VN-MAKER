@@ -17,6 +17,8 @@ const emit = defineEmits(['update:modelValue', 'clear']);
 const script = useScriptStore();
 const pickerVisible = ref(false);
 const pickerField = ref('file');
+const videoFileExtensions = ['.mp4', '.webm'];
+const posterFileExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
 
 const reference = computed(() => props.modelValue && typeof props.modelValue === 'object'
   ? props.modelValue
@@ -203,6 +205,7 @@ function clearReference() {
     <AssetPickerModal
       category="videos"
       :visible="pickerVisible"
+      :allowed-extensions="pickerField === 'poster' ? posterFileExtensions : videoFileExtensions"
       @select="onPickerSelect"
       @close="pickerVisible = false"
     />

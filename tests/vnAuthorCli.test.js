@@ -5085,6 +5085,72 @@ scene start "Start":
       ])).stdout);
       expect(removed.changeSummary.changedPaths).toEqual(['assets.videos.unused_trailer']);
       expect(JSON.parse(await readFile(scriptPath, 'utf8')).assets.videos.unused_trailer).toBeUndefined();
+
+      const removedReferenced = JSON.parse((await execFileAsync('node', [
+        cliPath, 'remove-video', '--script', scriptPath, '--id', 'op_main',
+        '--force-references', '--force', '--json',
+      ])).stdout);
+      const afterReferencedRemoval = JSON.parse(await readFile(scriptPath, 'utf8'));
+      expect(removedReferenced.validation.ok).toBe(true);
+      expect(removedReferenced.result).toMatchObject({
+        deletedVideoId: 'op_main',
+        deletedReferenceCount: 2,
+      });
+      expect(afterReferencedRemoval.assets.videos.op_main).toBeUndefined();
+      expect(afterReferencedRemoval.ui.titleScreen.openingVideo).toBeUndefined();
+      expect(afterReferencedRemoval.scenes.start.pages).toEqual([]);
+    });
+  });
+
+  it('adds direct CLI video pages without null playback fields and accepts bare boolean flags', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_video_page_direct',
+        characters: {},
+        assets: {
+          videos: {
+            intro: { file: 'videos/intro.mp4', kind: 'story' },
+          },
+        },
+        ui: { titleScreen: {} },
+        systems: { endings: {}, gallery: { cg: {} }, variables: {} },
+        scenes: {
+          start: { pages: [] },
+        },
+      }), 'utf8');
+
+      const minimal = JSON.parse((await execFileAsync('node', [
+        cliPath, 'add-page', '--script', scriptPath, '--scene', 'start',
+        '--type', 'video', '--video-id', 'intro', '--force', '--json',
+      ])).stdout);
+      expect(minimal.validation.ok).toBe(true);
+
+      const flagged = JSON.parse((await execFileAsync('node', [
+        cliPath, 'add-page', '--script', scriptPath, '--scene', 'start',
+        '--type', 'video', '--video-id', 'intro', '--skippable', '--controls',
+        '--volume', '0.7', '--audio-mode', 'duck', '--fit', 'native',
+        '--auto-advance', 'false', '--loop', 'false', '--force', '--json',
+      ])).stdout);
+      const script = JSON.parse(await readFile(scriptPath, 'utf8'));
+
+      expect(flagged.validation.ok).toBe(true);
+      expect(script.scenes.start.pages[0].video).toEqual({ videoId: 'intro' });
+      expect(script.scenes.start.pages[0].video).not.toHaveProperty('audioMode');
+      expect(script.scenes.start.pages[0].video).not.toHaveProperty('fit');
+      expect(script.scenes.start.pages[1]).toMatchObject({
+        type: 'video',
+        video: {
+          videoId: 'intro',
+          skippable: true,
+          controls: true,
+          volume: 0.7,
+          audioMode: 'duck',
+          fit: 'native',
+        },
+        autoAdvance: false,
+        loop: false,
+      });
     });
   });
 

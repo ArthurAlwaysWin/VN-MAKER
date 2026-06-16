@@ -568,24 +568,38 @@ function findVideoReferences(script, videoId) {
 
 function removeVideoReferences(script, videoId) {
   let removed = 0;
+  const hasDirectFile = (reference) => isPlainObject(reference)
+    && typeof reference.file === 'string'
+    && reference.file.trim();
 
   if (script?.ui?.titleScreen?.openingVideo?.videoId === videoId) {
     delete script.ui.titleScreen.openingVideo.videoId;
     removed += 1;
+    if (!hasDirectFile(script.ui.titleScreen.openingVideo)) {
+      delete script.ui.titleScreen.openingVideo;
+    }
   }
 
   for (const ending of Object.values(script?.systems?.endings ?? {})) {
     if (ending?.endingVideo?.videoId === videoId) {
       delete ending.endingVideo.videoId;
       removed += 1;
+      if (!hasDirectFile(ending.endingVideo)) {
+        delete ending.endingVideo;
+      }
     }
   }
 
   for (const scene of Object.values(script?.scenes ?? {})) {
-    for (const page of scene.pages ?? []) {
+    if (!Array.isArray(scene.pages)) continue;
+    for (let pageIndex = scene.pages.length - 1; pageIndex >= 0; pageIndex -= 1) {
+      const page = scene.pages[pageIndex];
       if (page?.type === 'video' && page.video?.videoId === videoId) {
         delete page.video.videoId;
         removed += 1;
+        if (!hasDirectFile(page.video)) {
+          scene.pages.splice(pageIndex, 1);
+        }
       }
     }
   }

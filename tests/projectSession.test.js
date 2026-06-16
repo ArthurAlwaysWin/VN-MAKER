@@ -821,6 +821,59 @@ describe('project authoring session', () => {
     expect(session.toJSON().scenes.start.pages[0].target).toBe('renamed');
   });
 
+  it('force-removes video references without leaving invalid empty video references', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_video_remove_refs',
+        characters: {},
+        assets: {
+          videos: {
+            intro: { file: 'videos/intro.mp4', kind: 'op' },
+          },
+        },
+        ui: {
+          titleScreen: {
+            openingVideo: { videoId: 'intro', play: 'after-start' },
+          },
+        },
+        systems: {
+          endings: {
+            good: {
+              title: 'Good',
+              endingVideo: { videoId: 'intro', play: 'manual' },
+            },
+          },
+        },
+        scenes: {
+          start: {
+            pages: [
+              { type: 'video', video: { videoId: 'intro' }, autoAdvance: true },
+              { type: 'video', video: { videoId: 'intro', file: 'videos/direct.mp4' }, autoAdvance: true },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(() => session.removeVideo({ videoId: 'intro' })).toThrow(/still referenced/);
+    expect(session.removeVideo({ videoId: 'intro', forceReferences: true })).toMatchObject({
+      deletedVideoId: 'intro',
+      deletedReferenceCount: 4,
+    });
+
+    const script = session.toJSON();
+    expect(script.assets.videos.intro).toBeUndefined();
+    expect(script.ui.titleScreen.openingVideo).toBeUndefined();
+    expect(script.systems.endings.good.endingVideo).toBeUndefined();
+    expect(script.scenes.start.pages).toHaveLength(1);
+    expect(script.scenes.start.pages[0]).toMatchObject({
+      type: 'video',
+      video: { file: 'videos/direct.mp4' },
+    });
+    expect(script.scenes.start.pages[0].video.videoId).toBeUndefined();
+    expect(session.validate().ok).toBe(true);
+  });
+
   it('renames and deletes scenes safely while preserving scene references', () => {
     const session = createProjectSession({
       script: {

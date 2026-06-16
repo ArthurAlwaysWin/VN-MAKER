@@ -733,10 +733,15 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function clearVideoReferences(videoId) {
+    const hasDirectFile = (reference) => reference
+      && typeof reference === 'object'
+      && typeof reference.file === 'string'
+      && reference.file.trim();
+
     function maybeClear(reference) {
       if (!reference || typeof reference !== 'object' || reference.videoId !== videoId) return false;
       delete reference.videoId;
-      return !reference.file;
+      return !hasDirectFile(reference);
     }
 
     if (maybeClear(data.value?.ui?.titleScreen?.openingVideo)) {
@@ -748,9 +753,11 @@ export const useScriptStore = defineStore('script', () => {
       }
     }
     for (const scene of Object.values(data.value?.scenes ?? {})) {
-      for (const page of scene?.pages ?? []) {
+      if (!Array.isArray(scene?.pages)) continue;
+      for (let pageIndex = scene.pages.length - 1; pageIndex >= 0; pageIndex -= 1) {
+        const page = scene.pages[pageIndex];
         if (page?.type === 'video' && maybeClear(page.video)) {
-          page.video = {};
+          scene.pages.splice(pageIndex, 1);
         }
       }
     }

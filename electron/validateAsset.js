@@ -61,8 +61,8 @@ const CATEGORY_FORMATS = {
     signatures: ['png', 'jpeg', 'webp'],
   },
   videos: {
-    extensions: ['.mp4', '.webm'],
-    signatures: ['mp4_audio', 'webm'],
+    extensions: ['.mp4', '.webm', '.png', '.jpg', '.jpeg', '.webp'],
+    signatures: ['mp4_audio', 'webm', 'png', 'jpeg', 'webp'],
   },
 };
 

@@ -11,6 +11,8 @@ const script = useScriptStore();
 const pickerVisible = ref(false);
 const pickerTarget = ref({ videoId: null, field: 'file' });
 const validationMessage = ref('');
+const videoFileExtensions = ['.mp4', '.webm'];
+const posterFileExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
 
 const videoEntries = computed(() => Object.entries(script.data?.assets?.videos || {})
   .map(([id, video]) => ({ id, ...video }))
@@ -18,14 +20,25 @@ const videoEntries = computed(() => Object.entries(script.data?.assets?.videos |
     || (left.label || left.id).localeCompare(right.label || right.id)));
 
 const fileList = computed(() => assets.files.videos || []);
+const videoFileList = computed(() => fileList.value.filter(isVideoFile));
+
+function fileExtension(file) {
+  const match = String(file || '').toLowerCase().match(/\.[^.]+$/);
+  return match?.[0] || '';
+}
+
+function isVideoFile(file) {
+  return videoFileExtensions.includes(fileExtension(file));
+}
 
 function createVideo() {
   validationMessage.value = '';
   const videoId = script.createVideoDraft();
-  if (videoId && fileList.value.length > 0) {
+  if (videoId && videoFileList.value.length > 0) {
+    const file = videoFileList.value[0];
     script.updateVideoFields(videoId, {
-      label: fileList.value[0].replace(/\.[^.]+$/, ''),
-      file: `videos/${fileList.value[0]}`,
+      label: file.replace(/\.[^.]+$/, ''),
+      file: `videos/${file}`,
       kind: 'other',
     });
   }
@@ -57,7 +70,7 @@ function updateDuration(videoId, rawValue) {
 
 function deleteVideo(videoId) {
   validationMessage.value = '';
-  if (!confirm(`确定要删除视频注册项 "${videoId}" 吗？引用此 ID 的 OP/ED/视频页会被清空。`)) {
+  if (!confirm(`确定要删除视频注册项 "${videoId}" 吗？引用此 ID 的 OP/ED 会被清空；没有直接文件兜底的视频页会被移除。`)) {
     return;
   }
   script.deleteVideo(videoId);
@@ -166,6 +179,7 @@ function onPickerSelect(path) {
     <AssetPickerModal
       category="videos"
       :visible="pickerVisible"
+      :allowed-extensions="pickerTarget.field === 'poster' ? posterFileExtensions : videoFileExtensions"
       @select="onPickerSelect"
       @close="pickerVisible = false"
     />

@@ -1399,7 +1399,7 @@ export function createProjectSession(input = {}) {
       const scene = getScene(script, sceneId);
       const nextPage = createDefaultVideoPage({ ...page, ...pageFields });
       scene.pages.push(nextPage);
-      return { sceneId, pageIndex: scene.pages.length - 1 };
+      return { sceneId, pageIndex: scene.pages.length - 1, pageType: 'video' };
     },
 
     removePage({ sceneId, pageIndex }) {

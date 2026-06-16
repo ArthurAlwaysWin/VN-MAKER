@@ -28,6 +28,8 @@ npm run vn -- list-assets --script public/game/script.json --json
 
 Use semantic asset names from `docs/agent-authoring/asset-naming-guidelines.md`; mention ambiguous or missing assets in the handoff.
 
+For OP, ED, or story video work, register video files through canonical `assets.videos` paths such as `videos/op_main.mp4`, then set `ui.titleScreen.openingVideo`, `systems.endings.<id>.endingVideo`, or `type: "video"` pages through supported commands or apply-plan. Do not add project-local JavaScript, CSS, HTML, shader code, plugin metadata, or Agent DSL metadata to `script.json`.
+
 ## Choose The Edit Path
 
 - Prose or outline input: first show an adaptation preview like `docs/agent-authoring/example-adaptation-preview.md`, then create a structured draft that follows `docs/agent-authoring/structured-draft-contract.md`.
@@ -66,12 +68,13 @@ Rules:
 
 ```bash
 npm run validate:project -- --json
+npm run validate:project -- --check-assets --json
 npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
 npm run vn:lint-layout -- --json
 npm run vn:readiness -- --json
 ```
 
-`author-check --transaction` focuses changed scenes/pages and supported changed screen UI paths, then writes a preview plan without needing a browser.
+`author-check --transaction` focuses changed scenes/pages, supported changed screen UI paths, and video preview targets for changed video registry, OP, ED, and story video page paths. It writes a preview plan without needing a browser; OP/ED/video-page review items still require human playback review in the editor/runtime.
 
 ## Preview
 
@@ -107,6 +110,7 @@ Include:
 - Scenes/pages/characters/variables changed.
 - `changeSummary.changedPaths`.
 - Remaining validation, layout, readiness, or preview warnings.
+- OP/ED/video playback review items, including any `video-preview` handoff items.
 - Checkpoint path and rollback command when available.
 - What the human should review in the no-code editor.
 

@@ -107,6 +107,8 @@ Optional ending videos use `endingVideo` and must reference canonical video proj
 }
 ```
 
+`endingVideo.play` supports `after-unlock` and `manual`. `after-unlock` plays only after the ending unlock is durably saved; playback failure must not roll back the unlock. `manual` is for preview/replay surfaces and does not change unlock state.
+
 ## CG Gallery
 
 ```json
@@ -172,6 +174,8 @@ Video files are canonical project assets under `videos/...` and are stored on di
 ```
 
 Supported first-pass video file extensions are `.mp4` and `.webm`. `kind` is advisory and may be `op`, `ed`, `story`, or `other`. A video reference may use `videoId` into `assets.videos` or a direct `file`, but generated data should prefer `videoId`.
+
+Reusable video references support `skippable`, `controls`, `volume`, `audioMode`, `fit`, and `loop`. `audioMode` is one of `replace`, `duck`, or `mix`; `fit` is one of `contain`, `cover`, or `native`; `volume` is `0..1`. Opening videos additionally support `play: "after-start" | "before-title" | "manual"` and `oncePerProfile`; `before-title` should be reviewed because browsers may require a click-to-play gate for unmuted playback.
 
 ## Normal Page
 

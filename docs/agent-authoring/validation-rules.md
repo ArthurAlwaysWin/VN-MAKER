@@ -205,6 +205,7 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 | `ending-list-preview` | `systems.endings` changed and needs review in Story Systems. |
 | `gallery-preview` | `systems.gallery.cg` changed and needs review in Story Systems and the runtime gallery. |
 | `branch-graph-preview` | `scenes.*` changed and needs review in the Story Systems branch flow panel. |
+| `video-preview` | `assets.videos`, `ui.titleScreen.openingVideo`, `systems.endings.*.endingVideo`, or `scenes.*.pages.*.video` changed and needs OP/ED/story video playback review. |
 | `particle-preview` | `scenes.*.pages.*.particles` changed and needs visual review in page/runtime preview. |
 | `transition-preview` | `scenes.*.pages.*.transition` changed and needs visual review in page/runtime preview. |
 | `effect-pack-preview` | `scenes.*.pages.*.effectPacks` changed and needs visual review in page/runtime preview. |

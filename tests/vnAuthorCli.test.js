@@ -1673,19 +1673,33 @@ scene start "Start":
       const dslPath = path.join(dir, 'video.gmdsl');
       const scriptPath = path.join(dir, 'script.json');
       const planPath = path.join(dir, 'video-plan.json');
+      const transactionPath = path.join(dir, 'video-transaction.json');
       const sourceMapPath = path.join(dir, 'video-source-map.json');
       const enrichedSourceMapPath = path.join(dir, 'video-source-map.applied.json');
+      const reviewPath = path.join(dir, 'video-review-handoff.json');
+      const handoffPath = path.join(dir, 'agent-handoff.json');
       await writeFile(dslPath, `
 title "Video DSL"
 video op_main "videos/op_main.mp4" label "Main OP" kind op poster "videos/op_main.poster.png"
 video ed_good "videos/ed_good.webm" label "Good ED" kind ed
 ending good_end "Good End"
+ending quiet_end "Quiet End"
 opening video op_main play after-start oncePerProfile true
 ending_video good_end ed_good play manual
 scene start "Start":
   video op_main target after_video autoAdvance true skippable false
 scene after_video "After Video":
-  end
+  choice "Choose ending":
+    option "Good" -> good_scene:
+      effect unlock:ending good_end
+    option "Quiet" -> quiet_scene:
+      effect unlock:ending quiet_end
+scene good_scene "Good Scene":
+  bg "backgrounds/review.png"
+  say "Good."
+scene quiet_scene "Quiet Scene":
+  bg "backgrounds/review.png"
+  say "Quiet."
 `, 'utf8');
       await writeFile(scriptPath, JSON.stringify({
         projectId: 'gm_cli_agent_dsl_video',
@@ -1704,7 +1718,7 @@ scene after_video "After Video":
       expect(check).toMatchObject({
         success: true,
         ok: true,
-        operationCount: 8,
+        operationCount: 14,
         validation: { ok: true, status: 'validated' },
       });
       expect(check.validation.changedPaths).toEqual(expect.arrayContaining([
@@ -1731,7 +1745,7 @@ scene after_video "After Video":
       expect(build).toMatchObject({
         success: true,
         ok: true,
-        operationCount: 8,
+        operationCount: 14,
         transaction: {
           command: 'dsl-build',
           wrote: false,
@@ -1752,6 +1766,8 @@ scene after_video "After Video":
         sourceMapPath,
         '--source-map-out',
         enrichedSourceMapPath,
+        '--result-out',
+        transactionPath,
         '--force',
         '--json',
       ]);
@@ -1790,7 +1806,7 @@ scene after_video "After Video":
       expect(diff).toMatchObject({
         success: true,
         ok: true,
-        mappingCount: 8,
+        mappingCount: 14,
         staleCount: 0,
         summary: {
           stale: 0,
@@ -1798,6 +1814,52 @@ scene after_video "After Video":
           untracked: 0,
         },
       });
+
+      const reviewRun = await execFileAsync('node', [
+        cliPath,
+        'review-handoff',
+        '--script',
+        scriptPath,
+        '--transaction',
+        transactionPath,
+        '--source-map',
+        enrichedSourceMapPath,
+        '--skip-preview',
+        '--skip-asset-check',
+        '--write-preview-plan',
+        '--write-editor-handoff',
+        '--review-out',
+        reviewPath,
+        '--json',
+      ]).catch((error) => error);
+      const review = JSON.parse(reviewRun.stdout);
+      const reviewArtifact = JSON.parse(await readFile(reviewPath, 'utf8'));
+      const handoff = JSON.parse(await readFile(handoffPath, 'utf8'));
+
+      expect(review).toMatchObject({
+        kind: 'agent-review-handoff',
+        ok: true,
+        gates: { authorCheck: true, handoff: true },
+      });
+      expect(reviewArtifact.kind).toBe('agent-review-handoff');
+      expect(review.authorCheck.focus.videoTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({ pathString: 'assets.videos.op_main', reason: 'changed-video-registry' }),
+        expect.objectContaining({ pathString: 'ui.titleScreen.openingVideo', reason: 'changed-opening-video' }),
+        expect.objectContaining({ pathString: 'systems.endings.good_end.endingVideo', reason: 'changed-ending-video' }),
+        expect.objectContaining({ pathString: 'scenes.start.pages.0.video', reason: 'changed-video-page' }),
+      ]));
+      expect(handoff.kind).toBe('agent-authoring-handoff');
+      expect(handoff.previewTargets).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'video', pathString: 'assets.videos.op_main' }),
+        expect.objectContaining({ type: 'video', pathString: 'ui.titleScreen.openingVideo' }),
+        expect.objectContaining({ type: 'video', pathString: 'systems.endings.good_end.endingVideo' }),
+        expect.objectContaining({ type: 'video', pathString: 'scenes.start.pages.0.video' }),
+      ]));
+      expect(handoff.reviewItems).toEqual(expect.arrayContaining([
+        expect.objectContaining({ source: 'preview', category: 'video-preview', pathString: 'assets.videos.op_main' }),
+        expect.objectContaining({ source: 'agent-dsl', code: 'dsl-generated-change', pathString: 'ui.titleScreen.openingVideo' }),
+      ]));
+      expect((await stat(handoffPath)).isFile()).toBe(true);
     });
   });
 

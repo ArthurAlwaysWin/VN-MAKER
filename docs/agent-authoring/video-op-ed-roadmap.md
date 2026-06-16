@@ -1,6 +1,6 @@
 # Video, OP, and ED Roadmap
 
-**Status:** Phase 0-4 complete; Phase 5 pending
+**Status:** Phase 0-5 complete
 **Architecture plan:** `docs/agent-authoring/video-op-ed-plan.md`  
 **Scope:** first-class video assets, opening movies, ending movies, and story video pages
 
@@ -27,7 +27,7 @@ Every milestone must preserve these rules:
 | Phase 2 | Runtime Video Playback And Gameplay Flows | Complete: blocking video playback, video pages, OP/ED gameplay hooks, replay/profile persistence, and manual ED semantics are implemented. |
 | Phase 3 | Editor Authoring UI For Videos | Complete: human authors can configure video without hand-editing JSON. |
 | Phase 4 | Agent Authoring Surface | Complete: projectSession, apply-plan, direct CLI, changed paths, handoff preview review, Agent DSL syntax, and source-map provenance support canonical video changes. |
-| Phase 5 | Hardening And Release Docs | Pending: final docs, readiness guidance, and release audit cleanup. |
+| Phase 5 | Hardening And Release Docs | Complete: final docs, readiness guidance, release audit cleanup, and end-to-end handoff coverage. |
 
 ## Phase 0 - Decisions And Contract Lock
 
@@ -194,38 +194,38 @@ Acceptance:
 
 ## Phase 5 - Hardening And Release Docs
 
-**Status:** Pending.
+**Status:** Complete.
 **Goal:** Polish the feature into a mergeable, auditable state.
 
 Deliver:
 
-- complete docs for project contract, validation rules, command reference, plan manifest, and Agent DSL;
-- add authoring checklist guidance for OP/ED usage;
-- add sample project or fixture coverage;
-- run full test suite;
-- perform focused code audit for runtime/editor/authoring boundary leaks;
-- update roadmap status after completion.
+- complete: project contract, validation rules, command reference, plan manifest, and Agent DSL docs describe the implemented canonical video behavior;
+- complete: authoring checklist and human review guidance call out OP/ED/video-page readiness and playback review;
+- complete: end-to-end fixture coverage now runs Agent DSL video authoring through apply-plan result/source-map enrichment and `review-handoff --write-editor-handoff`;
+- complete: full test suite was run after Phase 5 changes;
+- complete: focused code audit found no runtime dependency on Agent DSL or source maps; DSL provenance stays in authoring/handoff metadata and editor review display only;
+- complete: roadmap status updated after completion.
 
 Tests:
 
-- `npm run test`;
-- targeted CLI integration tests;
-- targeted editor tests;
-- export/readiness tests;
-- at least one end-to-end authoring path from DSL or apply-plan to editor handoff.
+- complete: `npm run test`;
+- complete: targeted CLI integration tests, including `tests/vnAuthorCli.test.js`;
+- complete: targeted editor/video tests, including `tests/videoAuthoringEditor.test.js`;
+- complete: export/readiness coverage in the full suite, including video asset export/readiness paths;
+- complete: Agent DSL/apply-plan to editor handoff path with video registry, OP, ED, video page changed paths, source-map provenance, and `video-preview` handoff items.
 
 Acceptance:
 
-- full test suite passes;
-- docs describe implemented behavior, not aspirational syntax;
-- no arbitrary code or runtime DSL dependency is introduced;
-- feature is ready for external audit and merge.
+- complete: full test suite passes;
+- complete: docs describe implemented behavior, not aspirational syntax;
+- complete: no arbitrary code or runtime DSL dependency is introduced;
+- complete: feature is ready for external audit and merge.
 
 ## Suggested Implementation Order
 
 1. Phase 0, Phase 1, and Phase 3 are complete.
 2. Phase 4 Agent DSL video syntax and video-specific source-map provenance are complete.
-3. Close Phase 5 with final docs, full readiness guidance, release audit, and any end-to-end fixtures needed for external review.
+3. Phase 5 is complete with final docs, readiness guidance, release audit, and end-to-end handoff fixture coverage.
 
 ## Smaller Follow-Up Extensions
 

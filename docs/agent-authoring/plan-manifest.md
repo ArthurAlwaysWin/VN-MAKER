@@ -81,6 +81,17 @@ Plan command names match the CLI command names:
 - `rename-variable`
 - `delete-variable`
 - `add-affection-variable`
+- `add-ending`
+- `update-ending`
+- `remove-ending`
+- `add-ending-unlock`
+- `add-cg`
+- `update-cg`
+- `remove-cg`
+- `add-cg-unlock`
+- `add-video`
+- `update-video`
+- `remove-video`
 - `add-scene`
 - `rename-scene`
 - `delete-scene`
@@ -115,8 +126,13 @@ Plan command names match the CLI command names:
 - `register-effect-pack`
 - `set-page-effect-pack`
 - `clear-page-effect-packs`
+- `set-page-particles`
+- `clear-page-particles`
+- `inherit-page-particles`
 - `set-character-animation`
 - `set-character-transition`
+- `set-opening-video`
+- `set-ending-video`
 - `set-title-screen`
 - `add-title-element`
 - `update-title-element`
@@ -125,6 +141,46 @@ Plan command names match the CLI command names:
 - `set-dialogue-box`
 - `set-theme`
 - `set-widget-styles`
+- `set-ui-motion`
+- `apply-ui-style-preset`
+
+Video operations stay inside canonical project data. Use `add-video`, `set-opening-video`, `set-ending-video`, and `add-page` with `type: "video"`; do not put Agent DSL source, player code, HTML/CSS, shader data, or plugin metadata into the manifest.
+
+```json
+{
+  "version": 1,
+  "operations": [
+    {
+      "id": "register-op",
+      "command": "add-video",
+      "params": {
+        "id": "op_main",
+        "file": "videos/op_main.mp4",
+        "label": "Main Opening",
+        "kind": "op"
+      }
+    },
+    {
+      "id": "title-op",
+      "command": "set-opening-video",
+      "params": {
+        "video": { "videoId": "op_main", "play": "after-start", "oncePerProfile": true }
+      }
+    },
+    {
+      "id": "story-video",
+      "command": "add-page",
+      "params": {
+        "scene": "start",
+        "type": "video",
+        "videoId": "op_main",
+        "autoAdvance": true,
+        "target": "chapter_1"
+      }
+    }
+  ]
+}
+```
 
 ## Parameter Style
 

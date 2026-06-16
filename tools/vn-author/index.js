@@ -842,6 +842,9 @@ function getChangedPaths(result = {}) {
   }
 
   const pagePath = `${scenePath}.pages.${result.pageIndex}`;
+  if (result.pageType === 'video') {
+    return [pagePath, `${pagePath}.video`];
+  }
   if (result.dialogueIndex !== undefined) {
     return [`${pagePath}.dialogues.${result.dialogueIndex}`];
   }

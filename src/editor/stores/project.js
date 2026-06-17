@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { createHandoffReviewItemKey, parseAgentPathTarget, parseScenePath } from '../utils/agentHandoff.js';
 import { createScriptDiffSummary } from '../utils/scriptDiff.js';
+import { isSameFileState } from '../../shared/fileState.js';
 
 export const useProjectStore = defineStore('project', () => {
   const projectPath = ref(null);
@@ -232,10 +233,6 @@ export const useProjectStore = defineStore('project', () => {
 
   function markDirty() {
     isDirty.value = true;
-  }
-
-  function isSameFileState(left, right) {
-    return Boolean(left && right && left.mtimeMs === right.mtimeMs && left.size === right.size);
   }
 
   async function loadExternalScriptDiff(localScript = {}) {

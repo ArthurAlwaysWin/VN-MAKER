@@ -10,6 +10,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { atomicWrite } from '../atomicWrite.js';
 import { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -54,29 +55,6 @@ function isInsideSaves(fullPath) {
   const resolved = path.resolve(fullPath);
   const savesResolved = path.resolve(savesDir);
   return resolved.startsWith(savesResolved + path.sep) || resolved === savesResolved;
-}
-
-// ─── Atomic File Write (Windows-safe, async) ────────────────
-
-/**
- * Write file atomically: write to .tmp → rename .bak → rename .tmp → delete .bak.
- * Same proven pattern as electron/main.js line 68-75.
- * @param {string} filePath
- * @param {string} content
- */
-async function atomicWrite(filePath, content) {
-  const tmp = filePath + '.tmp';
-  const bak = filePath + '.bak';
-  await fs.writeFile(tmp, content, 'utf-8');
-  try { await fs.rename(filePath, bak); } catch {}
-  try {
-    await fs.rename(tmp, filePath);
-  } catch (err) {
-    try { await fs.rename(bak, filePath); } catch {}
-    try { await fs.unlink(tmp); } catch {}
-    throw err;
-  }
-  try { await fs.unlink(bak); } catch {}
 }
 
 function isValidSlot(slot) {

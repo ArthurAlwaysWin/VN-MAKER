@@ -1,48 +1,14 @@
-import { normalizeConditionPage } from './branchingContract.js';
-
-const BOOL_CONDITION_OPERATORS = new Set(['==', '!=']);
+import {
+  BOOL_CONDITION_OPERATORS,
+  compareConditionValues,
+  getConditionInputRows,
+  isBooleanConditionValue,
+  isNumberConditionValue,
+  normalizeConditionPage,
+} from './branchingContract.js';
 
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isBooleanLike(value) {
-  if (typeof value === 'boolean') return true;
-  if (typeof value === 'number') return value === 0 || value === 1;
-  if (typeof value === 'string') {
-    return ['false', 'true', '0', '1', 'yes', 'no', 'on', 'off'].includes(value.trim().toLowerCase());
-  }
-  return false;
-}
-
-function isNumberLike(value) {
-  return typeof value !== 'boolean' && value !== '' && Number.isFinite(Number(value));
-}
-
-function getRawConditionRows(page = {}) {
-  if (Array.isArray(page.conditions) && page.conditions.length > 0) {
-    return page.conditions;
-  }
-  if ('variable' in page || 'operator' in page || 'value' in page) {
-    return [{
-      variableId: page.variable,
-      operator: page.operator,
-      value: page.value,
-    }];
-  }
-  return [];
-}
-
-function evaluateComparison(actual, operator, expected) {
-  switch (operator) {
-    case '==': return actual === expected;
-    case '!=': return actual !== expected;
-    case '>': return actual > expected;
-    case '>=': return actual >= expected;
-    case '<': return actual < expected;
-    case '<=': return actual <= expected;
-    default: return false;
-  }
 }
 
 function collectComparisonCandidates(conditions, type) {
@@ -66,7 +32,7 @@ function collectComparisonCandidates(conditions, type) {
 
 export function analyzeConditionPage(page = {}, { registry = {} } = {}) {
   const normalized = normalizeConditionPage(page, { registry });
-  const rawRows = getRawConditionRows(page);
+  const rawRows = getConditionInputRows(page);
   const findings = [];
 
   if (
@@ -94,8 +60,8 @@ export function analyzeConditionPage(page = {}, { registry = {} } = {}) {
       const rawOperator = rawCondition.operator ?? condition.operator;
       const rawValue = rawCondition.value;
       const isValid = entry.type === 'bool'
-        ? BOOL_CONDITION_OPERATORS.has(rawOperator) && isBooleanLike(rawValue)
-        : isNumberLike(rawValue);
+        ? BOOL_CONDITION_OPERATORS.includes(rawOperator) && isBooleanConditionValue(rawValue)
+        : isNumberConditionValue(rawValue);
       return isValid ? { condition, conditionIndex, type: entry.type } : null;
     })
     .filter(Boolean);
@@ -135,7 +101,7 @@ export function analyzeConditionPage(page = {}, { registry = {} } = {}) {
     const candidates = collectComparisonCandidates(items.map((item) => item.condition), items[0].type);
     const results = candidates.map((candidate) => {
       const comparisons = items.map(({ condition }) => (
-        evaluateComparison(candidate, condition.operator, condition.value)
+        compareConditionValues(candidate, condition.operator, condition.value)
       ));
       return normalized.conditionMode === 'any'
         ? comparisons.some(Boolean)

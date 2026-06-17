@@ -3,7 +3,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
 import { existsSync, mkdirSync, watch as watchFs } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { atomicWrite } from './atomicWrite.js';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 import { exportGame } from './exportGame.js';
 import { exportDesktop } from './exportDesktop.js';
@@ -33,6 +34,7 @@ import {
 } from '../src/authoring/projectScaffold.js';
 import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
+import { isSameFileState } from '../src/shared/fileState.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -317,24 +319,6 @@ function sanitizeProjectName(name) {
   return sanitizeScaffoldProjectName(name);
 }
 
-// --- Atomic File Write (Windows-safe, async) ---
-
-async function atomicWrite(filePath, content) {
-  const tmp = filePath + '.tmp';
-  const bak = filePath + '.bak';
-  await fs.writeFile(tmp, content, 'utf-8');
-  try { await fs.rename(filePath, bak); } catch {}
-  try {
-    await fs.rename(tmp, filePath);
-  } catch (err) {
-    // rename failed — restore backup and clean up temp, then rethrow
-    try { await fs.rename(bak, filePath); } catch {}
-    try { await fs.unlink(tmp); } catch {}
-    throw err;
-  }
-  try { await fs.unlink(bak); } catch {}
-}
-
 // --- Unique Filename (auto-naming collision resolution) ---
 
 async function uniqueFilename(dir, originalName) {
@@ -385,11 +369,13 @@ async function getProjectScriptFileState(projectPath = currentProjectPath) {
 
   const scriptPath = path.join(projectPath, 'script.json');
   try {
+    const scriptBytes = await fs.readFile(scriptPath);
     const scriptStat = await fs.stat(scriptPath);
     return {
       path: scriptPath,
       mtimeMs: scriptStat.mtimeMs,
       size: scriptStat.size,
+      sha256: createHash('sha256').update(scriptBytes).digest('hex'),
     };
   } catch (error) {
     if (error?.code === 'ENOENT') {
@@ -397,13 +383,6 @@ async function getProjectScriptFileState(projectPath = currentProjectPath) {
     }
     throw error;
   }
-}
-
-function isSameFileState(left, right) {
-  if (!left || !right) {
-    return false;
-  }
-  return left.mtimeMs === right.mtimeMs && left.size === right.size;
 }
 
 async function ensurePlayerProfile(projectId, projectPath = currentProjectPath) {

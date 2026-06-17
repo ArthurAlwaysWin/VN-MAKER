@@ -114,7 +114,12 @@ async function createMockAppRoot(baseDir) {
   await fs.mkdir(path.join(baseDir, 'electron', 'game'), { recursive: true });
   await fs.writeFile(
     path.join(baseDir, 'electron', 'game', 'main.js'),
-    "import { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';\nconst GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n// rest of template",
+    "import { atomicWrite } from '../atomicWrite.js';\nimport { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';\nconst GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n// rest of template",
+    'utf-8',
+  );
+  await fs.writeFile(
+    path.join(baseDir, 'electron', 'atomicWrite.js'),
+    'export async function atomicWrite() {}\n',
     'utf-8',
   );
   await fs.writeFile(
@@ -432,6 +437,16 @@ describe('exportDesktop — template filling', () => {
     const mainContent = await fs.readFile(path.join(result.outputPath, 'main.js'), 'utf-8');
     ok(mainContent.includes("from './thumbnailSecurity.js'"));
     ok(existsSync(path.join(result.outputPath, 'thumbnailSecurity.js')));
+  });
+
+  it('copies shared atomic write helper used by the desktop game template', async () => {
+    const outputDir = path.join(tempRoot, 'out-template-atomic-write');
+    const noop = () => {};
+    const result = await exportDesktop({ ...baseOpts(), outputDir }, noop);
+
+    const mainContent = await fs.readFile(path.join(result.outputPath, 'main.js'), 'utf-8');
+    ok(mainContent.includes("from './atomicWrite.js'"));
+    ok(existsSync(path.join(result.outputPath, 'atomicWrite.js')));
   });
 });
 

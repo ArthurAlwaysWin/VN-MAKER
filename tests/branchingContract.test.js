@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
 import {
+  compareConditionValues,
   evaluateConditionPage,
+  getConditionInputRows,
+  isBooleanConditionValue,
+  isNumberConditionValue,
   normalizeConditionPage,
 } from '../src/shared/branchingContract.js';
 import { useScriptStore } from '../src/editor/stores/script.js';
@@ -123,6 +127,23 @@ describe('branching contract', () => {
       registry,
       variables: new Map([['route_locked', false]]),
     })).toBe(true);
+  });
+
+  it('shares raw condition row and value compatibility helpers across consumers', () => {
+    expect(getConditionInputRows({
+      variable: 'legacy_flag',
+      operator: '==',
+      value: 'false',
+    })).toEqual([{
+      variableId: 'legacy_flag',
+      operator: '==',
+      value: 'false',
+    }]);
+    expect(isBooleanConditionValue('off')).toBe(true);
+    expect(isBooleanConditionValue('maybe')).toBe(false);
+    expect(isNumberConditionValue('3.5')).toBe(true);
+    expect(isNumberConditionValue(null)).toBe(false);
+    expect(compareConditionValues(4, '>=', 3)).toBe(true);
   });
 
   it('normalizes incoming choice effects and condition pages before the first history snapshot is saved', () => {

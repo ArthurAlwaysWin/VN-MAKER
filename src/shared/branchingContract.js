@@ -20,7 +20,7 @@ export const CONDITION_OPERATORS = Object.freeze([
   '<=',
 ]);
 
-const BOOL_CONDITION_OPERATORS = Object.freeze([
+export const BOOL_CONDITION_OPERATORS = Object.freeze([
   '==',
   '!=',
 ]);
@@ -123,7 +123,7 @@ function getLegacyConditionRows(page = {}) {
   }];
 }
 
-function getInputConditionRows(page = {}) {
+export function getConditionInputRows(page = {}) {
   if (Array.isArray(page.conditions) && page.conditions.length > 0) {
     return page.conditions;
   }
@@ -131,7 +131,7 @@ function getInputConditionRows(page = {}) {
   return getLegacyConditionRows(page);
 }
 
-function compareConditionValues(actual, operator, expected) {
+export function compareConditionValues(actual, operator, expected) {
   switch (operator) {
     case '==':
       return actual === expected;
@@ -148,6 +148,23 @@ function compareConditionValues(actual, operator, expected) {
     default:
       return false;
   }
+}
+
+export function isBooleanConditionValue(value) {
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return value === 0 || value === 1;
+  if (typeof value === 'string') {
+    return ['false', 'true', '0', '1', 'yes', 'no', 'on', 'off'].includes(value.trim().toLowerCase());
+  }
+  return false;
+}
+
+export function isNumberConditionValue(value) {
+  return typeof value !== 'boolean'
+    && value !== null
+    && value !== undefined
+    && value !== ''
+    && Number.isFinite(Number(value));
 }
 
 export function normalizeConditionRow(row = {}, { registry = {} } = {}) {
@@ -169,7 +186,7 @@ export function normalizeConditionPage(page = {}, { registry = {} } = {}) {
   const normalized = isPlainObject(page)
     ? cloneJsonValue(page)
     : {};
-  const inputRows = getInputConditionRows(normalized);
+  const inputRows = getConditionInputRows(normalized);
 
   delete normalized.variable;
   delete normalized.operator;

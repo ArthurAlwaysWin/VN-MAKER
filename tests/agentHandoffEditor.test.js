@@ -372,8 +372,8 @@ describe('agent handoff editor integration', () => {
 
   it('tracks external script changes and blocks stale saves in the project store', async () => {
     setActivePinia(createPinia());
-    const loadedState = { path: 'E:/demo-project/script.json', mtimeMs: 1000, size: 10 };
-    const changedState = { path: 'E:/demo-project/script.json', mtimeMs: 2000, size: 20 };
+    const loadedState = { path: 'E:/demo-project/script.json', mtimeMs: 1000, size: 10, sha256: 'hash-a' };
+    const changedState = { path: 'E:/demo-project/script.json', mtimeMs: 1000, size: 10, sha256: 'hash-b' };
     window.ipcRenderer = {
       invoke: vi.fn(async (channel) => {
         if (channel === 'load-project') {

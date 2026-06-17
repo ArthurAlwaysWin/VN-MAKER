@@ -60,6 +60,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the third repair pass: S13, M9, M14.
 - Completed in the fourth repair pass: S9, B8, B15, B19, P2, P6, P8, P9, P10.
 - Completed in the fifth repair pass: desktop B11 parity, the remaining S13 theme-preflight return path, thumbnail helper deduplication and boundary coverage, P16, S15, and S18.
+- Completed in the sixth repair pass: Q6 shared atomic writes, M4 content-hashed script file state, and Q12 shared condition-row helpers. B1 was confirmed with delayed persistence, and P1/P3 were benchmarked at three project sizes.
 
 Repair validation:
 
@@ -183,14 +184,29 @@ Fifth repair validation results:
 - `npm run build:web`: passed.
 - Full `npm test`: Vitest 122 files / 1087 tests passed; Node test run 292 tests passed.
 
+Sixth repair verification and measurement:
+
+- B1 confirmed: with a deliberately delayed ending repository, `selectChoice()` entered the target scene and returned before the ending unlock persisted. Synchronous variable effects still apply before routing, so the residual risk is limited to asynchronous unlock persistence/events.
+- P1/P3 benchmark setup: Node 24.13.1, actual Pinia script store `pushState()`, Vue deep watcher, 20 mutations per size, and generated projects containing 10 pages per scene.
+- 500 pages / 0.13 MiB JSON: `pushState()` median 7.35 ms, p95 9.65 ms; deep watcher median 6.75 ms, p95 14.49 ms.
+- 2,500 pages / 0.64 MiB JSON: `pushState()` median 39.60 ms, p95 44.72 ms; deep watcher median 47.60 ms, p95 64.46 ms.
+- 10,000 pages / 2.57 MiB JSON: `pushState()` median 261.55 ms, p95 305.73 ms; deep watcher median 319.84 ms, p95 362.49 ms.
+- Twenty additional 10,000-page undo snapshots increased retained heap by about 129.08 MiB after garbage collection. P1 and P3 should therefore be treated as measured large-project bottlenecks and addressed in a dedicated performance change.
+- Q6/M4 targeted Vitest run: 4 files, 139 tests passed; desktop export Node test run: 30 tests passed.
+- Q12 targeted Vitest run: 3 files, 42 tests passed.
+- `npm audit --json`: 0 vulnerabilities.
+- `npm run build`: passed on Vite 8.0.16 with the existing `inlineDynamicImports` deprecation warning.
+- `npm run build:web`: passed.
+- Full `npm test`: Vitest 124 files / 1091 tests passed; Node test run 293 tests passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
-- Worth doing when touching nearby code or after measurement: P1, P3, Q5, Q6, Q9, Q10, Q11, Q12, Q17.
+- Worth doing in a measured performance pass or when touching nearby code: P1, P3, Q5, Q9, Q10, Q11, Q17.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the fifth pass: Q5/Q6/Q17 cleanup remains useful but lower priority, and large undo/deep-watch optimizations should be handled with measurement rather than audit-driven churn. The Vite Electron build still emits an `inlineDynamicImports` deprecation warning that should be resolved through a verified plugin/configuration update.
+- Residual risk after the sixth pass: B1 asynchronous unlock persistence remains behaviorally observable, Q5/Q17 cleanup remains useful but lower priority, and the now-measured P1/P3 bottlenecks warrant a dedicated performance design. The Vite Electron build still emits an `inlineDynamicImports` deprecation warning that should be resolved through a verified plugin/configuration update.
 
 ## Priority Repair Plan
 
@@ -213,7 +229,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
-| B1: choice effects fire-and-forget | Partially true | Low | `ScriptEngine.selectChoice()` uses `void this._applyOptionEffects(option)`, but variable writes occur synchronously before first `await`; a canonical choice-to-condition repro routed correctly. Async unlock persistence/events may still lag. | Await effects only if route sequencing must include async unlock writes. | Yes, if changing behavior. |
+| B1: choice effects fire-and-forget | True | Low | A delayed-repository repro confirmed that `selectChoice()` routes and returns before asynchronous ending persistence completes. Variable writes remain synchronous and route correctly. | Define whether choice navigation must await unlock persistence; if yes, return/await the effect promise without changing synchronous variable semantics. | Yes, if changing behavior. |
 | B2: `WebSaveManager._getDb()` race | Completed | Medium | Fixed with pending `_dbPromise` reuse; concurrent regression test added. | Done. | Added. |
 | B3: `Scenes.vue` / `Characters.vue` call nonexistent store APIs | False positive | Informational | `loadScript()` and `saveScript()` deprecated shims exist in `src/editor/stores/script.js`; current `App.vue` routes `scenes` to `PageEditor.vue`. | Optional deletion of legacy views. | No. |
 | B4: `listEffectPacksCommand()` crashes because it passes script directly | False positive | Informational | `createProjectSession()` accepts bare script or `{ script }`; CLI command succeeded. | No fix. | No. |
@@ -237,9 +253,9 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
-| P1: undo snapshots full JSON | True | Medium | `pushState()` stringifies and parses all `script.data`. | Incremental snapshots or structured clone with dirty tracking. | Benchmark. |
+| P1: undo snapshots full JSON | True | Medium | Measured at 261.55 ms median / 305.73 ms p95 per snapshot for a 10,000-page, 2.57 MiB project; 20 additional snapshots retained about 129.08 MiB heap. | Incremental snapshots, patches, or bounded structural sharing with dirty tracking. | Performance regression. |
 | P2: graph report computed twice | Completed | Low | `validateProject()` now computes one branch graph report per reachability-enabled validation pass and passes it into branch and ending progression checks. | Done. | Added. |
-| P3: deep watcher on entire script | True | Medium | `App.vue` deep watches `script.data`. | Targeted dirty tracking. | Benchmark. |
+| P3: deep watcher on entire script | True | Medium | Measured at 319.84 ms median / 362.49 ms p95 per mutation for a 10,000-page project. | Replace whole-script deep traversal with targeted dirty/version tracking. | Performance regression. |
 | P4: SE Audio cleanup | Partially true | Low | Creates `new Audio`; not DOM garbage, and GC should collect, but long sessions can retain until playback finishes. | Optional pool / ended cleanup. | Optional. |
 | P5: fixed 20 fade steps | Not planned for audit hardening | Informational | `_fadeVolume()` fixed `steps = 20`; mostly quality, not performance. Impact is visual-tuning level and should not be changed without product/UX intent. | Defer unless tuning nearby fade behavior. | No. |
 | P6: `isPageRead()` O(n) | Completed | Low | `PlayerDataRepository` now maintains a read-page Set alongside normalized profile pages; read checks and duplicate guards use the Set. | Done. | Added. |
@@ -291,13 +307,13 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | Q3: duplicated helper functions | Partially true | Low | Duplication is real, but count/impact is overstated in places. | Extract shared utility carefully. |
 | Q4: `electron/main.js` giant file | True | Medium | 1830 lines with IPC, protocol, window, state, export. | Split into modules. |
 | Q5: duplicated `isInsidePath` | Partially completed | Low | Export/theme duplicates were replaced by shared `electron/pathSecurity.js`; other filesystem helpers can still be consolidated later. | Continue only when touching related Electron file utilities. |
-| Q6: duplicated `atomicWrite` | True | Low | Exists in `electron/main.js` and `electron/game/main.js`. | Shared file util. |
+| Q6: duplicated `atomicWrite` | Completed | Low | Editor and exported-game main processes now import `electron/atomicWrite.js`; desktop export copies and rewrites the shared helper import. | Done. |
 | Q7: iframe preview duplication | True | Low | Similar postMessage lifecycle in multiple composables. | Extract preview composable. |
 | Q8: screen editor view duplication | True | Low | Game menu, save/load, backlog editors are similar wrappers. | Parameterized screen editor. |
 | Q9: CLI JSON output duplication | True | Low | Many repeated JSON/text branches. | `outputResult()` helper. |
 | Q10: CLI main dispatch if-chain | True | Low | Long command dispatch in main. | Command map. |
 | Q11: plan operation dispatch if-chain | True | Low | Similar long operation dispatch. | Operation map. |
-| Q12: condition row helper duplication | True | Low | `conditionAnalysis`, `projectValidator`, and `branchingContract` overlap. | Export canonical helper. |
+| Q12: condition row helper duplication | Completed | Low | Canonical/legacy row extraction, condition value compatibility, and comparison helpers now live in `branchingContract` and are reused by condition analysis and project validation. | Done. |
 | Q13: condition row limit magic number | True | Informational | Hard-coded condition row limit. | Named constant. |
 | Q14: long dialogue limit undocumented | True | Informational | `DEFAULT_LONG_DIALOGUE_LIMIT = 120`. | Comment/config. |
 | Q15: checkpoint limit magic number | True | Informational | Default checkpoint limit `5`. | Named constant. |
@@ -313,7 +329,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | M1: legacy views use old `commands[]` | Partially true | Low | Old `Scenes.vue` does; current App uses `PageEditor.vue`. | Delete or mark deprecated. |
 | M2: `onBeforeUnmount` outside factory | False positive | Informational | Checked related composables; cleanup is registered inside factory functions. | No fix. |
 | M3: manual debounce timers | True | Informational | `App.vue` manages timers manually. | Optional composable. |
-| M4: file state compares only mtime and size | True | Low | `isSameFileState()` does exactly that. | Optional hash. |
+| M4: file state compares only mtime and size | Completed | Low | Script file state now includes SHA-256 and shared comparison prefers hashes while retaining compatibility with pre-hash mtime/size states. | Done. |
 | M5: exported global regex lastIndex | Completed | Low | Text template operations reset the exported global regex before use. |
 | M6: unsafe key set duplicated | True | Low | Repeated in registry contracts. | Shared object-map guard. |
 | M7: `unique().filter(Boolean)` drops falsy values | Partially true | Informational | True but current call sites mostly expect strings. | Rename or preserve semantics. |
@@ -328,7 +344,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q18, S8, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M5, M9, M11, M14, P2, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered.
-2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as Q5/Q6 or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
+1. Do not restart with Q6, Q12, Q18, S8, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P2, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered.
+2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as Q5 or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
 3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, P1/P3, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

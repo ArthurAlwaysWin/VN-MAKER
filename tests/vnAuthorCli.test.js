@@ -116,7 +116,12 @@ async function createExportFixture(dir, { missingAsset = false } = {}) {
   await writeFile(path.join(appRoot, 'dist-web', 'engine.css'), '/* engine */', 'utf8');
   await writeFile(
     path.join(appRoot, 'electron', 'game', 'main.js'),
-    "import { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';\nconst GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n",
+    "import { atomicWrite } from '../atomicWrite.js';\nimport { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';\nconst GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n",
+    'utf8',
+  );
+  await writeFile(
+    path.join(appRoot, 'electron', 'atomicWrite.js'),
+    'export async function atomicWrite() {}\n',
     'utf8',
   );
   await writeFile(
@@ -2323,6 +2328,8 @@ scene start "Start":
       expect(await readFile(path.join(result.outputPath, 'package.json'), 'utf8')).toContain('"main": "main.js"');
       expect(await readFile(path.join(result.outputPath, 'main.js'), 'utf8')).toContain('CLI Export Fixture');
       expect(await readFile(path.join(result.outputPath, 'main.js'), 'utf8')).toContain("from './thumbnailSecurity.js'");
+      expect(await readFile(path.join(result.outputPath, 'main.js'), 'utf8')).toContain("from './atomicWrite.js'");
+      await expect(stat(path.join(result.outputPath, 'atomicWrite.js'))).resolves.toBeTruthy();
       await expect(stat(path.join(result.outputPath, 'thumbnailSecurity.js'))).resolves.toBeTruthy();
       await expect(stat(path.join(result.outputPath, 'assets', 'characters', 'hero_normal.png'))).resolves.toBeTruthy();
     });

@@ -1,4 +1,10 @@
-import { normalizeConditionPage } from './branchingContract.js';
+import {
+  BOOL_CONDITION_OPERATORS,
+  getConditionInputRows,
+  isBooleanConditionValue,
+  isNumberConditionValue,
+  normalizeConditionPage,
+} from './branchingContract.js';
 import { analyzeConditionPage } from './conditionAnalysis.js';
 import {
   collectCgUnlockReferences,
@@ -67,7 +73,6 @@ export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
 const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'input', 'condition', 'video']);
 const VARIABLE_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub']);
 const UNLOCK_EFFECT_TYPES = new Set(['unlock:ending', 'unlock:cg']);
-const BOOL_CONDITION_OPERATORS = new Set(['==', '!=']);
 const DEFAULT_LONG_DIALOGUE_LIMIT = 120;
 
 function isPlainObject(value) {
@@ -76,6 +81,23 @@ function isPlainObject(value) {
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isBooleanEffectValue(value) {
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return value === 0 || value === 1;
+  if (typeof value === 'string') {
+    return ['false', 'true', '0', '1', 'yes', 'no', 'on', 'off'].includes(value.trim().toLowerCase());
+  }
+  return false;
+}
+
+function isNumberEffectValue(value) {
+  return typeof value !== 'boolean'
+    && value !== null
+    && value !== undefined
+    && value !== ''
+    && Number.isFinite(Number(value));
 }
 
 function pathToString(path) {
@@ -492,21 +514,6 @@ function validateVideoReference(reference, context, report, options = {}) {
   return resolved;
 }
 
-function isBooleanLike(value) {
-  if (typeof value === 'boolean') return true;
-  if (typeof value === 'number') return value === 0 || value === 1;
-  if (typeof value === 'string') {
-    return ['false', 'true', '0', '1', 'yes', 'no', 'on', 'off'].includes(value.trim().toLowerCase());
-  }
-  return false;
-}
-
-function isNumberLike(value) {
-  if (typeof value === 'boolean') return false;
-  if (value === null || value === undefined || value === '') return false;
-  return Number.isFinite(Number(value));
-}
-
 function validateVariableRegistry(script, registry, report) {
   const variables = script?.systems?.variables;
   if (variables == null) {
@@ -810,13 +817,13 @@ function validateEffects(container, context, report) {
           expectedType: 'bool',
           actualEffectType: effect.type,
         });
-      } else if (variableEntry.type === 'bool' && !isBooleanLike(effect.value)) {
+      } else if (variableEntry.type === 'bool' && !isBooleanEffectValue(effect.value)) {
         addWarning(report, 'variable-type-mismatch', `Boolean variable "${effect.id}" should be set to a boolean-compatible value.`, [...effectPath, 'value'], {
           variableId: effect.id,
           expectedType: 'bool',
           actualValue: effect.value,
         });
-      } else if (variableEntry.type === 'number' && effect.type === 'var:set' && !isNumberLike(effect.value)) {
+      } else if (variableEntry.type === 'number' && effect.type === 'var:set' && !isNumberEffectValue(effect.value)) {
         addWarning(report, 'variable-type-mismatch', `Number variable "${effect.id}" should be set to a numeric value.`, [...effectPath, 'value'], {
           variableId: effect.id,
           expectedType: 'number',
@@ -861,22 +868,6 @@ function validateEffects(container, context, report) {
       addError(report, 'unsupported-effect', `Unsupported effect type "${effect.type}".`, [...effectPath, 'type']);
     }
   });
-}
-
-function getRawConditionRows(page = {}) {
-  if (Array.isArray(page.conditions) && page.conditions.length > 0) {
-    return page.conditions;
-  }
-
-  if ('variable' in page || 'operator' in page || 'value' in page) {
-    return [{
-      variableId: page.variable,
-      operator: page.operator,
-      value: page.value,
-    }];
-  }
-
-  return [];
 }
 
 function validateConditionComparisonAnalysis(page, registry, pagePath, report) {
@@ -1013,7 +1004,7 @@ function validateTemplateField(text, path, context, report) {
 function validateConditionPage(page, context, report, options) {
   const { registry, sceneIds, sceneId, pageIndex } = context;
   const pagePath = ['scenes', sceneId, 'pages', pageIndex];
-  const rawRows = getRawConditionRows(page);
+  const rawRows = getConditionInputRows(page);
   const normalized = normalizeConditionPage(page, { registry });
   validatePageMedia(page, context, report, options);
 
@@ -1050,19 +1041,19 @@ function validateConditionPage(page, context, report, options) {
     }
 
     const entry = registry[condition.variableId];
-    if (entry.type === 'bool' && !BOOL_CONDITION_OPERATORS.has(rawOperator)) {
+    if (entry.type === 'bool' && !BOOL_CONDITION_OPERATORS.includes(rawOperator)) {
       addWarning(report, 'variable-type-mismatch', `Boolean condition "${condition.variableId}" only supports == or !=.`, [...conditionPath, 'operator'], {
         variableId: condition.variableId,
         expectedType: 'bool',
         operator: rawOperator,
       });
-    } else if (entry.type === 'bool' && !isBooleanLike(rawValue)) {
+    } else if (entry.type === 'bool' && !isBooleanConditionValue(rawValue)) {
       addWarning(report, 'variable-type-mismatch', `Boolean condition "${condition.variableId}" should compare against a boolean-compatible value.`, [...conditionPath, 'value'], {
         variableId: condition.variableId,
         expectedType: 'bool',
         actualValue: rawValue,
       });
-    } else if (entry.type === 'number' && !isNumberLike(rawValue)) {
+    } else if (entry.type === 'number' && !isNumberConditionValue(rawValue)) {
       addWarning(report, 'variable-type-mismatch', `Number condition "${condition.variableId}" should compare against a numeric value.`, [...conditionPath, 'value'], {
         variableId: condition.variableId,
         expectedType: 'number',

@@ -172,6 +172,7 @@ async function exportDesktopUnlocked(options, sendProgress) {
     const mainTemplatePath = path.join(appRoot, 'electron', 'game', 'main.js');
     let mainContent = await fs.readFile(mainTemplatePath, 'utf-8');
     mainContent = mainContent
+      .replace("from '../atomicWrite.js'", "from './atomicWrite.js'")
       .replace("from '../thumbnailSecurity.js'", "from './thumbnailSecurity.js'")
       .replace("GAME_TITLE = 'My Game'", `GAME_TITLE = ${JSON.stringify(gameTitle)}`)
       .replace('GAME_WIDTH = 1280', `GAME_WIDTH = ${gameWidth}`)
@@ -181,6 +182,10 @@ async function exportDesktopUnlocked(options, sendProgress) {
     // Copy preload.js verbatim (no placeholders)
     const preloadPath = path.join(appRoot, 'electron', 'game', 'preload.js');
     await fs.copyFile(preloadPath, path.join(stagingDir, 'preload.js'));
+    await fs.copyFile(
+      path.join(appRoot, 'electron', 'atomicWrite.js'),
+      path.join(stagingDir, 'atomicWrite.js'),
+    );
     await fs.copyFile(
       path.join(appRoot, 'electron', 'thumbnailSecurity.js'),
       path.join(stagingDir, 'thumbnailSecurity.js'),

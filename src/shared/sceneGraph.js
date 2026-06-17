@@ -244,37 +244,63 @@ function findClosedCycles(sceneIds, edges, reachableIds, endingCompletionSceneId
   const onStack = new Set();
   const components = [];
 
-  function visit(sceneId) {
-    indices.set(sceneId, nextIndex);
-    lowLinks.set(sceneId, nextIndex);
-    nextIndex += 1;
-    stack.push(sceneId);
-    onStack.add(sceneId);
+  for (const rootSceneId of sceneIds) {
+    if (indices.has(rootSceneId)) {
+      continue;
+    }
 
-    for (const targetId of adjacency.get(sceneId) ?? []) {
-      if (!indices.has(targetId)) {
-        visit(targetId);
-        lowLinks.set(sceneId, Math.min(lowLinks.get(sceneId), lowLinks.get(targetId)));
-      } else if (onStack.has(targetId)) {
-        lowLinks.set(sceneId, Math.min(lowLinks.get(sceneId), indices.get(targetId)));
+    const traversal = [{
+      sceneId: rootSceneId,
+      parentSceneId: null,
+      targets: null,
+      targetIndex: 0,
+    }];
+
+    while (traversal.length > 0) {
+      const frame = traversal[traversal.length - 1];
+      if (frame.targets === null) {
+        indices.set(frame.sceneId, nextIndex);
+        lowLinks.set(frame.sceneId, nextIndex);
+        nextIndex += 1;
+        stack.push(frame.sceneId);
+        onStack.add(frame.sceneId);
+        frame.targets = [...(adjacency.get(frame.sceneId) ?? [])];
       }
-    }
 
-    if (lowLinks.get(sceneId) === indices.get(sceneId)) {
-      const component = [];
-      let member = null;
-      do {
-        member = stack.pop();
-        onStack.delete(member);
-        component.push(member);
-      } while (member !== sceneId);
-      components.push(component);
-    }
-  }
+      if (frame.targetIndex < frame.targets.length) {
+        const targetId = frame.targets[frame.targetIndex];
+        frame.targetIndex += 1;
+        if (!indices.has(targetId)) {
+          traversal.push({
+            sceneId: targetId,
+            parentSceneId: frame.sceneId,
+            targets: null,
+            targetIndex: 0,
+          });
+        } else if (onStack.has(targetId)) {
+          lowLinks.set(frame.sceneId, Math.min(lowLinks.get(frame.sceneId), indices.get(targetId)));
+        }
+        continue;
+      }
 
-  for (const sceneId of sceneIds) {
-    if (!indices.has(sceneId)) {
-      visit(sceneId);
+      if (lowLinks.get(frame.sceneId) === indices.get(frame.sceneId)) {
+        const component = [];
+        let member = null;
+        do {
+          member = stack.pop();
+          onStack.delete(member);
+          component.push(member);
+        } while (member !== frame.sceneId);
+        components.push(component);
+      }
+
+      traversal.pop();
+      if (frame.parentSceneId !== null) {
+        lowLinks.set(
+          frame.parentSceneId,
+          Math.min(lowLinks.get(frame.parentSceneId), lowLinks.get(frame.sceneId)),
+        );
+      }
     }
   }
 
@@ -444,7 +470,14 @@ function mermaidId(value) {
 }
 
 function escapeMermaidLabel(value) {
-  return String(value).replace(/"/g, '&quot;');
+  return String(value)
+    .replace(/[\r\n\t\f\v]+/g, ' ')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\[/g, '&#91;')
+    .replace(/\]/g, '&#93;');
 }
 
 export function createBranchGraphMermaid(report = {}) {

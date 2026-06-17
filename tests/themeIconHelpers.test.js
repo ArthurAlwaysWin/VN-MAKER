@@ -68,6 +68,13 @@ describe('themeIconHelpers', () => {
     );
   });
 
+  it('escapes SVG fallback markup unless the caller marks it as trusted', () => {
+    const svg = '<svg><path onload="alert(1)" /></svg>';
+
+    expect(resolveThemeIcon(null, 'test', svg)).toContain('&lt;svg&gt;');
+    expect(resolveThemeIcon(null, 'test', svg, '', { trustedSvgFallback: true })).toBe(svg);
+  });
+
   it('hasThemeIcon returns true only for configured canonical slots', () => {
     expect(hasThemeIcon({ close: 'ui/icons/close.png' }, 'close')).toBe(true);
     expect(hasThemeIcon({ close: 'ui/icons/close.png' }, 'voiceReplay')).toBe(false);

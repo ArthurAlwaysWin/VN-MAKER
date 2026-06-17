@@ -17,11 +17,12 @@ import { resolvePath } from '../engine/assetPath.js';
  * @param {string} slotKey — one of 'gameMenu', 'qab', 'close', 'voiceReplay'
  * @param {string} fallbackText — default text/emoji when no icon is configured
  * @param {string} [cssClass] — optional CSS class for the <img>
+ * @param {{ trustedSvgFallback?: boolean }} [options]
  * @returns {string} HTML string (<img> or escaped text)
  */
-export function resolveThemeIcon(icons, slotKey, fallbackText, cssClass = '') {
+export function resolveThemeIcon(icons, slotKey, fallbackText, cssClass = '', options = {}) {
   const src = icons?.[slotKey];
-  const fallbackHtml = renderFallbackContent(fallbackText);
+  const fallbackHtml = renderFallbackContent(fallbackText, options.trustedSvgFallback === true);
   if (!src) return fallbackHtml;
 
   const resolved = resolvePath(src);
@@ -70,9 +71,9 @@ export function attachThemeIconFallback(root) {
   });
 }
 
-function renderFallbackContent(text) {
+function renderFallbackContent(text, trustedSvgFallback = false) {
   const value = String(text ?? '');
-  return /^\s*<svg[\s>]/i.test(value) ? value : escapeHtml(value);
+  return trustedSvgFallback && /^\s*<svg[\s>]/i.test(value) ? value : escapeHtml(value);
 }
 
 /**

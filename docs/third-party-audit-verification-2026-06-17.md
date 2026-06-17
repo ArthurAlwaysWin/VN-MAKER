@@ -51,7 +51,7 @@ Test results:
 
 ## Repair Status Update
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 
 The first repair pass has been completed and validated. It covered the highest-confidence security and robustness items from the priority plan:
 
@@ -59,6 +59,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the second repair pass: Q18, S8, B7, B10, B12, B13, B17, S5, S20, S21, M5, M11, P13, P14, and remaining P18 grant cleanup.
 - Completed in the third repair pass: S13, M9, M14.
 - Completed in the fourth repair pass: S9, B8, B15, B19, P2, P6, P8, P9, P10.
+- Completed in the fifth repair pass: desktop B11 parity, the remaining S13 theme-preflight return path, thumbnail helper deduplication and boundary coverage, P16, S15, and S18.
 
 Repair validation:
 
@@ -159,14 +160,37 @@ Fourth repair validation results:
 - `npm run build:web`: passed.
 - Full `npm test`: Vitest 122 files / 1080 tests passed; Node test run 291 tests passed.
 
+Fifth repair validation:
+
+```powershell
+node --check src/shared/sceneGraph.js
+node --check src/ui/themeIconHelpers.js
+node --check src/ui/QuickActionBar.js
+npx vitest run tests/sceneGraph.test.js tests/themeIconHelpers.test.js tests/quickActionBarThemeIcon.test.js tests/projectValidator.test.js
+npm audit --json
+npm run build
+npm run build:web
+npm test
+```
+
+Fifth repair validation results:
+
+- Targeted Vitest run: 4 files, 50 tests passed.
+- A direct 10,000-scene cyclic-graph repro completed without overflowing the call stack and returned one 10,000-member closed cycle.
+- A Mermaid label containing a node-closing bracket and newline remained inside one encoded label instead of injecting an additional statement.
+- `npm audit --json`: 0 vulnerabilities.
+- `npm run build`: passed on Vite 8.0.16. The existing `inlineDynamicImports` deprecation warning remains a separate dependency-maintenance item.
+- `npm run build:web`: passed.
+- Full `npm test`: Vitest 122 files / 1087 tests passed; Node test run 292 tests passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
-- Worth doing when touching nearby code or after measurement: P1, P3, P16, Q5, Q6, Q9, Q10, Q11, Q12, Q17.
+- Worth doing when touching nearby code or after measurement: P1, P3, Q5, Q6, Q9, Q10, Q11, Q12, Q17.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the fourth pass: Mermaid/SVG sanitizer hardening remains optional without a confirmed exploit path (S15/S18), Q5/Q6/Q17 cleanup remains useful but lower priority, and large undo/deep-watch optimizations should be handled with measurement rather than audit-driven churn.
+- Residual risk after the fifth pass: Q5/Q6/Q17 cleanup remains useful but lower priority, and large undo/deep-watch optimizations should be handled with measurement rather than audit-driven churn. The Vite Electron build still emits an `inlineDynamicImports` deprecation warning that should be resolved through a verified plugin/configuration update.
 
 ## Priority Repair Plan
 
@@ -199,7 +223,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | B8: `_enterScene()` has no null guard | Completed | Low | `_enterScene()` now returns safely with a logged error when called before a script is loaded. | Done. | Added. |
 | B9: first scene fallback uses `Object.keys()[0]` | Partially true | Informational | JS order is deterministic insertion order, not random; product may still need explicit start scene. | Add explicit `startScene` contract if desired. | Yes, if adding field. |
 | B10: save slot range not validated in managers | Completed | Low | `SaveManager` and `WebSaveManager` now reject invalid regular slots before IPC/IndexedDB access. | Done. | Added. |
-| B11: cyclic save state throws before catch | Completed | Low | Fixed by moving JSON cloning into the save/quickSave catch path; cyclic-state regression test added for `save()`. | Done. | Added. |
+| B11: cyclic save state throws before catch | Completed | Low | Web and desktop save/quickSave paths now catch JSON cloning failures and return structured failures; cyclic-state regression coverage exercises both desktop operations. | Done. | Added. |
 | B12: `EventEmitter.emit()` stops after thrown handler | Completed | Low | Listener callbacks are isolated; thrown listener errors are logged and later listeners still run. | Done. | Added. |
 | B13: CLI `readScript()` raw JSON.parse error | Completed | Low | `readScript()` wraps parse failures with script path context, and generic `--json` CLI failures now return structured JSON. | Done. | Added. |
 | B14: `ackPendingOpenProjectRequest` empty catch | False positive | Informational | Function not present in current `project.js`; likely stale report. | No fix. | No. |
@@ -228,7 +252,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | P13: font loading serial | Completed | Low | `loadAllFonts()` now loads fonts concurrently with `Promise.allSettled` while preserving the existing loaded/failed result shape. | Done. | Added. |
 | P14: read history debounce loses close-time writes | Completed | Low | `ReadHistory` now flushes pending debounced writes on `beforeunload` and hidden `visibilitychange`, with explicit teardown support. | Done. | Added. |
 | P15: scriptDiff recursion stack overflow | Completed | Medium | Fixed with max-depth and cycle-pair protection; deep-object and cyclic-object tests added. | Done. | Added. |
-| P16: recursive Tarjan stack risk | True | Low | Tarjan SCC recursion in `sceneGraph`. | Iterative SCC or guard depth. | Large graph. |
+| P16: recursive Tarjan stack risk | Completed | Low | Replaced recursive Tarjan traversal with an explicit traversal stack; 5,000-scene test coverage and a direct 10,000-scene cyclic-graph repro complete without call-stack overflow. | Done. | Added. |
 | P17: transition catalog clones every call | Not planned for audit hardening | Informational | True, but only 56 entries; clone also protects catalog from caller mutation. | Defer unless measured hot. | No. |
 | P18: dialog grant Sets never clear | Completed | Low | Project close now clears dialog file grants, dialog directory grants, import grants, and project path grants. | Done. | Added. |
 
@@ -248,14 +272,14 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | S10: npm audit high vulnerabilities | Completed | High | Fixed by upgrading dependency chain to `vite@^8.0.16` and `tmp@0.2.7`; `npm audit --json` reports 0 vulnerabilities. | Done. | Verified by audit, build, web build, and full tests. |
 | S11: path containment ignores symlinks | Completed | Medium | Added shared realpath-aware path utility and migrated audited import/export call sites; symlink containment regression added. | Done. | Added. |
 | S12: theme ZIP decompression bomb | Completed | Medium | Theme ZIP parsing/install now bounds compressed bytes, total uncompressed bytes, and file count; regression added. | Done. | Added. |
-| S13: IPC leaks `e.message` | Completed | Low | IPC catch paths in editor and exported-game main processes now log details in the main process but return a generic public error response instead of raw exception messages. | Done. | Added. |
+| S13: IPC leaks `e.message` | Completed | Low | IPC catch paths and the theme-package preflight structured-error path now log details in the main process but return a generic public error response instead of raw exception messages. | Done. | Added. |
 | S14: global console replacement | Not planned for audit hardening | Low | `runWithJsonSafeConsole()` mutates global console, but CLI commands run in a short single-command lifecycle. Refactoring logger injection is not worth the audit-hardening churn. | Defer unless CLI logging is refactored. | No. |
-| S15: Mermaid escaping incomplete | Partially true | Low | Labels escape only `"`. Concrete injection impact not fully proven. | Broaden label escaping. | Optional. |
+| S15: Mermaid escaping incomplete | Completed | Low | Mermaid labels now normalize control whitespace and encode ampersands, quotes, angle brackets, and square brackets; regression coverage prevents label text from injecting another graph statement. | Done. | Added. |
 | S16: FontFace URL single-quote injection | Completed | Medium | Fixed with shared `cssUrl()` in `fontLoader`; FontFace source escaping regression added. S7 and S16 were grouped because both were CSS string-construction injection risks. | Done. | Added. |
 | S17: CSS sanitizer blacklist bypass | Unconfirmed | Informational | Blacklist is limited, but most usage is via `style.setProperty`; no concrete exploit path confirmed. | Prefer allowlists for high-risk fields. | Needs threat model. |
-| S18: SVG fallback passthrough | Partially true | Low | `<svg` fallback is returned without sanitization; source appears mostly code-controlled. | Restrict to trusted constants or sanitize. | Optional. |
+| S18: SVG fallback passthrough | Completed | Low | Fallback markup is escaped by default; the Quick Action Bar must explicitly opt into `trustedSvgFallback` for its code-owned SVG constants. | Done. | Added. |
 | S19: `executeJavaScript` bypasses isolation | Not planned for audit hardening | Informational | Fixed internal snippets are used for dirty/save checks; no user data interpolation was found. Replacing with IPC would be architectural cleanup, not a confirmed security fix. | Defer to architecture cleanup. | No. |
-| S20: thumbnail bytes not JPEG-validated | Completed | Low | Save IPC now normalizes bounded JPEG bytes before writing `.jpg` thumbnails in editor and exported game main processes. | Done. | Added. |
+| S20: thumbnail bytes not JPEG-validated | Completed | Low | Save IPC now uses one shared helper to normalize bounded JPEG bytes before writing `.jpg` thumbnails in editor and exported game main processes; tests cover Buffer, Uint8Array, non-JPEG, and oversized input. | Done. | Added. |
 | S21: `process.noAsar` global mutation | Completed | Low | Desktop exports that mutate `process.noAsar` are serialized through an export mutex; restore coverage remains in place. | Done. | Added. |
 
 ### Code Quality Findings
@@ -304,7 +328,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q18, S8, B7, B8, B10, B12, B13, B15, B17, B19, S5, S9, S13, S20, S21, M5, M9, M11, M14, P2, P6, P8, P9, P10, P13, P14, or P18; these are now completed and regression-covered.
-2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as S15, S18, Q5/Q6, or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
+1. Do not restart with Q18, S8, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M5, M9, M11, M14, P2, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered.
+2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as Q5/Q6 or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
 3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, P1/P3, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

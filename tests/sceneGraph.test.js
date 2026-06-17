@@ -287,4 +287,31 @@ describe('scene graph helpers', () => {
     expect(mermaid).toContain('scene_route_a_2["route_a');
     expect(mermaid).toContain('scene_route_a -->|next| scene_route_a_2');
   });
+
+  it('escapes Mermaid control syntax in scene labels', () => {
+    const mermaid = createBranchGraphMermaid({
+      nodes: [{ id: 'start', name: 'Safe"]\n  injected["owned<script>' }],
+      edges: [],
+    });
+
+    expect(mermaid.split('\n')).toHaveLength(3);
+    expect(mermaid).not.toContain('\n  injected');
+    expect(mermaid).toContain('Safe&quot;&#93;   injected&#91;&quot;owned&lt;script&gt;');
+  });
+
+  it('handles large cyclic scene graphs without overflowing the call stack', () => {
+    const sceneCount = 5000;
+    const scenes = {};
+    for (let index = 0; index < sceneCount; index += 1) {
+      scenes[`scene_${index}`] = {
+        pages: [],
+        next: index + 1 < sceneCount ? `scene_${index + 1}` : 'scene_0',
+      };
+    }
+
+    const report = createBranchGraphReport({ scenes });
+
+    expect(report.cyclesWithoutExit).toHaveLength(1);
+    expect(report.cyclesWithoutExit[0].sceneIds).toHaveLength(sceneCount);
+  });
 });

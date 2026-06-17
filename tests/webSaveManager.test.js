@@ -41,6 +41,31 @@ describe('WebSaveManager project storage isolation', () => {
     expect(open).toHaveBeenNthCalledWith(2, 'galgame-saves:gm_story_b', 1);
   });
 
+  it('reuses a pending IndexedDB open request for concurrent callers', async () => {
+    const open = installIndexedDbOpenMock();
+    const saveManager = new WebSaveManager('gm_story');
+
+    const [firstDb, secondDb] = await Promise.all([
+      saveManager._getDb(),
+      saveManager._getDb(),
+    ]);
+
+    expect(firstDb).toBe(secondDb);
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a save failure instead of throwing when state is not JSON-serializable', async () => {
+    const saveManager = new WebSaveManager('gm_story');
+    saveManager._getDb = vi.fn();
+    const state = { currentScene: 'start' };
+    state.self = state;
+
+    await expect(saveManager.save(1, state, 'Preview')).resolves.toMatchObject({
+      success: false,
+    });
+    expect(saveManager._getDb).not.toHaveBeenCalled();
+  });
+
   it('persists data URL thumbnails for exported web save slots', async () => {
     const records = new Map();
     const saveManager = new WebSaveManager('gm_story');
@@ -65,5 +90,19 @@ describe('WebSaveManager project storage isolation', () => {
         hasThumbnail: true,
       }),
     ]);
+  });
+
+  it('rejects invalid regular slots before opening IndexedDB', async () => {
+    const saveManager = new WebSaveManager('gm_story');
+    const getDb = vi.spyOn(saveManager, '_getDb');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(saveManager.save(0, { currentScene: 'start' }, 'Preview'))
+      .resolves.toEqual({ success: false, error: 'Invalid slot number' });
+    await expect(saveManager.load(109)).resolves.toBeNull();
+    await expect(saveManager.delete(1.5)).resolves.toEqual({ success: false, error: 'Invalid slot number' });
+
+    expect(getDb).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith('[WebSaveManager] Invalid slot number:', 109);
   });
 });

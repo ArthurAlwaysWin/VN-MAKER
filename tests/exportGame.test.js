@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { unzipSync } from 'fflate';
@@ -135,6 +135,14 @@ afterAll(async () => {
 // ─── generateHtml Tests ─────────────────────────────────
 
 describe('generateHtml', () => {
+  it('uses execFile for the Vite build command', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'electron/exportGame.js'), 'utf8');
+
+    expect(source).toContain("import { execFile } from 'node:child_process'");
+    expect(source).toContain('execFileAsync(getNpxCommand()');
+    expect(source).not.toContain('execAsync(`npx vite build');
+  });
+
   it('includes game title in <title> tag', () => {
     expect(generateHtml('My Game', null)).toMatch(/<title>My Game<\/title>/);
   });

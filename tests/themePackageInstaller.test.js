@@ -9,6 +9,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { installThemePackage } from '../electron/themePackageInstaller.js';
 import { getBuiltinThemeAssets } from '../src/editor/builtinThemeAssets.js';
 import { BUILTIN_THEMES } from '../src/editor/builtinThemes.js';
+import { unzipThemeZipBounded } from '../src/utils/themePackager.js';
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -308,5 +309,19 @@ describe('theme package installer', () => {
         ).resolves.toBeInstanceOf(Uint8Array);
       }
     }
+  });
+
+  it('rejects theme ZIPs whose declared uncompressed size exceeds the configured bound', () => {
+    const archive = zipSync({
+      'manifest.json': strToU8('{}'),
+      'theme.json': strToU8('{}'),
+      'assets/ui/themes/moonlight/large.bin': new Uint8Array(16),
+    });
+
+    expect(() => unzipThemeZipBounded(archive, {
+      maxCompressedBytes: 1024 * 1024,
+      maxUncompressedBytes: 15,
+      maxFiles: 10,
+    })).toThrow(/expands to too many bytes/);
   });
 });

@@ -267,6 +267,10 @@ describe('page editor effect preview state', () => {
         effectKind: 'camera',
         status,
         reason: status === 'failed' ? 'runtime-error' : null,
+        provenance: {
+          sceneId: 'start',
+          pageIndex: 0,
+        },
       });
       expect(editor.previewSessionType.value).toBe(null);
       expect(editor.isPreviewMode.value).toBe(false);
@@ -359,6 +363,10 @@ describe('page editor effect preview state', () => {
         effectKind: 'camera',
         status: 'rejected',
         reason: 'unsupported-effect',
+        provenance: {
+          sceneId: 'start',
+          pageIndex: 0,
+        },
       },
     });
     expect(editor.getEffectPreviewUiState('character')).toMatchObject({

@@ -381,9 +381,12 @@ async function handleExpressionFiles(event) {
   if (!fileList || fileList.length === 0 || !selectedChar.value) return;
   if (bgModalVisible.value) return;
 
-  const filePaths = Array.from(fileList)
-    .map(f => window.getPathForFile ? window.getPathForFile(f) : f.path)
-    .filter(Boolean);
+  const files = Array.from(fileList);
+  const filePaths = window.createImportFileGrant
+    ? (await Promise.all(files.map(file => window.createImportFileGrant(file)))).filter(Boolean)
+    : files
+      .map(f => window.getPathForFile ? window.getPathForFile(f) : f.path)
+      .filter(Boolean);
   if (filePaths.length === 0) return;
 
   const result = await assets.importAssets('characters', filePaths);

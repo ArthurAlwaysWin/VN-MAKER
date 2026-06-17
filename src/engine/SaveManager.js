@@ -5,6 +5,10 @@
  * file system backend accessed through IPC handlers in electron/main.js.
  * All methods are async. Includes lazy migration from legacy localStorage saves.
  */
+function isValidRegularSlot(slot, slotCount) {
+  return Number.isInteger(slot) && slot >= 1 && slot <= slotCount;
+}
+
 export class SaveManager {
   constructor() {
     /** @type {number} Maximum save slots */
@@ -37,6 +41,10 @@ export class SaveManager {
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async save(slot, state, previewText, thumbnail = null) {
+    if (!isValidRegularSlot(slot, this.slotCount)) {
+      return { success: false, error: 'Invalid slot number' };
+    }
+
     // Deep-clone to strip Vue Proxy wrappers (P11 prevention)
     const plainState = JSON.parse(JSON.stringify(state));
 
@@ -72,6 +80,11 @@ export class SaveManager {
    * @returns {Promise<Object|null>} — { version, state, previewText, sceneName, timestamp, date } or null
    */
   async load(slot) {
+    if (!isValidRegularSlot(slot, this.slotCount)) {
+      console.error('[SaveManager] Invalid slot number:', slot);
+      return null;
+    }
+
     const result = await window.ipcRenderer.invoke('load-slot', { slot });
     if (!result.success) {
       console.error('[SaveManager] Load failed:', result.error);
@@ -86,6 +99,10 @@ export class SaveManager {
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async delete(slot) {
+    if (!isValidRegularSlot(slot, this.slotCount)) {
+      return { success: false, error: 'Invalid slot number' };
+    }
+
     const result = await window.ipcRenderer.invoke('delete-slot', { slot });
     if (result.success) {
       this._cache.delete(slot);

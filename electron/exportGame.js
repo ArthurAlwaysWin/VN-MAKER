@@ -7,15 +7,20 @@
  * @module exportGame
  */
 
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { zipSync } from 'fflate';
 import { scanAssets } from '../src/engine/scanAssets.js';
+import { isInsidePath, isPathInsideRealBase } from './pathSecurity.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+function getNpxCommand() {
+  return process.platform === 'win32' ? 'npx.cmd' : 'npx';
+}
 
 // ─── HTML Helpers ────────────────────────────────────────
 
@@ -34,12 +39,6 @@ function _escapeHtml(str) {
 }
 
 const EXPORT_ASSET_ROOTS = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'voices', 'effects', 'videos']);
-
-function isInsidePath(fullPath, basePath) {
-  const resolved = path.resolve(fullPath);
-  const baseResolved = path.resolve(basePath);
-  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
-}
 
 /**
  * Sanitize user-provided names before using them as filenames.
@@ -179,7 +178,7 @@ export async function exportGame(options, sendProgress) {
   sendProgress({ step: '构建引擎', percent: 0 });
   if (!_skipBuild) {
     const configPath = path.join(appRoot, 'vite.web.config.js');
-    await execAsync(`npx vite build --config "${configPath}"`, { cwd: appRoot });
+    await execFileAsync(getNpxCommand(), ['vite', 'build', '--config', configPath], { cwd: appRoot });
   }
 
   // Step 2 — 扫描资源 (17%)
@@ -231,6 +230,10 @@ export async function exportGame(options, sendProgress) {
     }
     if (!existsSync(src)) {
       warnings.push(safeRelPath);
+      continue;
+    }
+    if (!(await isPathInsideRealBase(src, assetRoot))) {
+      warnings.push(`Invalid asset path skipped: ${relPath}`);
       continue;
     }
     await fs.mkdir(path.dirname(dst), { recursive: true });

@@ -142,9 +142,11 @@ async function onFileDrop(droppedFiles) {
  */
 async function importFiles(fileArray) {
   const category = activeSubTab.value;
-  const filePaths = fileArray
-    .map(f => window.getPathForFile ? window.getPathForFile(f) : f.path)
-    .filter(Boolean);
+  const filePaths = window.createImportFileGrant
+    ? (await Promise.all(fileArray.map(file => window.createImportFileGrant(file)))).filter(Boolean)
+    : fileArray
+      .map(f => window.getPathForFile ? window.getPathForFile(f) : f.path)
+      .filter(Boolean);
   if (filePaths.length === 0) return;
   let result;
   if (category === 'fonts') {

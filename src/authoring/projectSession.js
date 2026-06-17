@@ -35,6 +35,7 @@ import {
 } from '../shared/variableRegistry.js';
 import { normalizeVideoEntry, normalizeVideoRegistry } from '../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
+import { assertStableId } from '../shared/stableId.js';
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -54,6 +55,10 @@ function assertNonEmptyString(value, label) {
   }
 
   return value.trim();
+}
+
+function assertEntityId(value, label) {
+  return assertStableId(value, label);
 }
 
 function createDefaultNormalPage(overrides = {}) {
@@ -146,7 +151,7 @@ function createDefaultVideoPage(overrides = {}) {
 }
 
 function getScene(script, sceneId) {
-  const id = assertNonEmptyString(sceneId, 'sceneId');
+  const id = assertEntityId(sceneId, 'sceneId');
   const scene = script.scenes?.[id];
   if (!scene) {
     throw new Error(`Scene "${id}" does not exist`);
@@ -772,7 +777,7 @@ export function createProjectSession(input = {}) {
 
   const session = {
     addCharacter(character) {
-      const id = assertNonEmptyString(character?.id, 'character.id');
+      const id = assertEntityId(character?.id, 'character.id');
       script.characters[id] = {
         name: character.name ?? id,
         color: character.color ?? '#ffffff',
@@ -785,7 +790,7 @@ export function createProjectSession(input = {}) {
     },
 
     addVariable(variable) {
-      const id = assertNonEmptyString(variable?.id, 'variable.id');
+      const id = assertEntityId(variable?.id, 'variable.id');
       if (script.systems.variables[id]) {
         throw new Error(`Variable "${id}" already exists`);
       }
@@ -803,7 +808,7 @@ export function createProjectSession(input = {}) {
     },
 
     updateVariable({ variableId, patch = {}, ...fields } = {}) {
-      const id = assertNonEmptyString(variableId ?? fields.id, 'variableId');
+      const id = assertEntityId(variableId ?? fields.id, 'variableId');
       if (!script.systems.variables[id]) {
         throw new Error(`Variable "${id}" does not exist`);
       }
@@ -821,13 +826,13 @@ export function createProjectSession(input = {}) {
     },
 
     addAffectionVariable({ characterId, id, variableId, ...fields } = {}) {
-      const targetCharacterId = assertNonEmptyString(characterId, 'characterId');
+      const targetCharacterId = assertEntityId(characterId, 'characterId');
       const character = script.characters?.[targetCharacterId];
       if (!character) {
         throw new Error(`Character "${targetCharacterId}" does not exist`);
       }
 
-      const targetVariableId = assertNonEmptyString(
+      const targetVariableId = assertEntityId(
         id ?? variableId ?? createAffectionVariableId(targetCharacterId),
         'variable.id',
       );
@@ -848,7 +853,7 @@ export function createProjectSession(input = {}) {
     },
 
     addEnding(ending) {
-      const id = assertNonEmptyString(ending?.id ?? ending?.endingId, 'ending.id');
+      const id = assertEntityId(ending?.id ?? ending?.endingId, 'ending.id');
       if (script.systems.endings[id]) {
         throw new Error(`Ending "${id}" already exists`);
       }
@@ -873,7 +878,7 @@ export function createProjectSession(input = {}) {
     },
 
     updateEnding({ endingId, patch = {}, ...fields } = {}) {
-      const id = assertNonEmptyString(endingId ?? fields.id, 'endingId');
+      const id = assertEntityId(endingId ?? fields.id, 'endingId');
       if (!script.systems.endings[id]) {
         throw new Error(`Ending "${id}" does not exist`);
       }
@@ -894,7 +899,7 @@ export function createProjectSession(input = {}) {
     },
 
     setEndingVideo({ endingId, endingVideo, video, clear = false } = {}) {
-      const id = assertNonEmptyString(endingId, 'endingId');
+      const id = assertEntityId(endingId, 'endingId');
       if (!script.systems.endings[id]) {
         throw new Error(`Ending "${id}" does not exist`);
       }
@@ -921,7 +926,7 @@ export function createProjectSession(input = {}) {
     },
 
     removeEnding({ endingId, id, forceReferences = false } = {}) {
-      const targetId = assertNonEmptyString(endingId ?? id, 'endingId');
+      const targetId = assertEntityId(endingId ?? id, 'endingId');
       if (!script.systems.endings[targetId]) {
         throw new Error(`Ending "${targetId}" does not exist`);
       }
@@ -947,7 +952,7 @@ export function createProjectSession(input = {}) {
     },
 
     addEndingUnlock({ sceneId, pageIndex, optionIndex, endingId, id } = {}) {
-      const targetEndingId = assertNonEmptyString(endingId ?? id, 'endingId');
+      const targetEndingId = assertEntityId(endingId ?? id, 'endingId');
       if (!script.systems.endings[targetEndingId]) {
         throw new Error(`Ending "${targetEndingId}" does not exist`);
       }
@@ -1013,7 +1018,7 @@ export function createProjectSession(input = {}) {
     },
 
     addCg(cg) {
-      const id = assertNonEmptyString(cg?.id ?? cg?.cgId, 'cg.id');
+      const id = assertEntityId(cg?.id ?? cg?.cgId, 'cg.id');
       if (script.systems.gallery.cg[id]) {
         throw new Error(`CG "${id}" already exists`);
       }
@@ -1039,7 +1044,7 @@ export function createProjectSession(input = {}) {
     },
 
     updateCg({ cgId, patch = {}, ...fields } = {}) {
-      const id = assertNonEmptyString(cgId ?? fields.id, 'cgId');
+      const id = assertEntityId(cgId ?? fields.id, 'cgId');
       if (!script.systems.gallery.cg[id]) {
         throw new Error(`CG "${id}" does not exist`);
       }
@@ -1060,7 +1065,7 @@ export function createProjectSession(input = {}) {
     },
 
     removeCg({ cgId, id, forceReferences = false } = {}) {
-      const targetId = assertNonEmptyString(cgId ?? id, 'cgId');
+      const targetId = assertEntityId(cgId ?? id, 'cgId');
       if (!script.systems.gallery.cg[targetId]) {
         throw new Error(`CG "${targetId}" does not exist`);
       }
@@ -1086,7 +1091,7 @@ export function createProjectSession(input = {}) {
     },
 
     addCgUnlock({ sceneId, pageIndex, optionIndex, cgId, id } = {}) {
-      const targetCgId = assertNonEmptyString(cgId ?? id, 'cgId');
+      const targetCgId = assertEntityId(cgId ?? id, 'cgId');
       if (!script.systems.gallery.cg[targetCgId]) {
         throw new Error(`CG "${targetCgId}" does not exist`);
       }
@@ -1130,7 +1135,7 @@ export function createProjectSession(input = {}) {
     },
 
     addVideo(video) {
-      const id = assertNonEmptyString(video?.id ?? video?.videoId, 'video.id');
+      const id = assertEntityId(video?.id ?? video?.videoId, 'video.id');
       if (script.assets.videos[id]) {
         throw new Error(`Video "${id}" already exists`);
       }
@@ -1155,7 +1160,7 @@ export function createProjectSession(input = {}) {
     },
 
     updateVideo({ videoId, patch = {}, ...fields } = {}) {
-      const id = assertNonEmptyString(videoId ?? fields.id, 'videoId');
+      const id = assertEntityId(videoId ?? fields.id, 'videoId');
       if (!script.assets.videos[id]) {
         throw new Error(`Video "${id}" does not exist`);
       }
@@ -1176,7 +1181,7 @@ export function createProjectSession(input = {}) {
     },
 
     removeVideo({ videoId, id, forceReferences = false } = {}) {
-      const targetId = assertNonEmptyString(videoId ?? id, 'videoId');
+      const targetId = assertEntityId(videoId ?? id, 'videoId');
       if (!script.assets.videos[targetId]) {
         throw new Error(`Video "${targetId}" does not exist`);
       }
@@ -1215,8 +1220,8 @@ export function createProjectSession(input = {}) {
     },
 
     renameVariable({ variableId, newVariableId, id, newId } = {}) {
-      const fromId = assertNonEmptyString(variableId ?? id, 'variableId');
-      const toId = assertNonEmptyString(newVariableId ?? newId, 'newVariableId');
+      const fromId = assertEntityId(variableId ?? id, 'variableId');
+      const toId = assertEntityId(newVariableId ?? newId, 'newVariableId');
       if (!script.systems.variables[fromId]) {
         throw new Error(`Variable "${fromId}" does not exist`);
       }
@@ -1253,7 +1258,7 @@ export function createProjectSession(input = {}) {
     },
 
     deleteVariable({ variableId, id, forceReferences = false } = {}) {
-      const targetId = assertNonEmptyString(variableId ?? id, 'variableId');
+      const targetId = assertEntityId(variableId ?? id, 'variableId');
       if (!script.systems.variables[targetId]) {
         throw new Error(`Variable "${targetId}" does not exist`);
       }
@@ -1279,7 +1284,7 @@ export function createProjectSession(input = {}) {
     },
 
     addScene(scene) {
-      const id = assertNonEmptyString(scene?.id, 'scene.id');
+      const id = assertEntityId(scene?.id, 'scene.id');
       if (script.scenes[id]) {
         throw new Error(`Scene "${id}" already exists`);
       }
@@ -1298,8 +1303,8 @@ export function createProjectSession(input = {}) {
     },
 
     renameScene({ sceneId, newSceneId, name }) {
-      const fromId = assertNonEmptyString(sceneId, 'sceneId');
-      const toId = assertNonEmptyString(newSceneId, 'newSceneId');
+      const fromId = assertEntityId(sceneId, 'sceneId');
+      const toId = assertEntityId(newSceneId, 'newSceneId');
       if (fromId === toId) {
         const scene = getScene(script, fromId);
         if (name !== undefined) {
@@ -1322,7 +1327,7 @@ export function createProjectSession(input = {}) {
     },
 
     deleteScene({ sceneId, forceReferences = false } = {}) {
-      const id = assertNonEmptyString(sceneId, 'sceneId');
+      const id = assertEntityId(sceneId, 'sceneId');
       getScene(script, id);
       const references = collectSceneReferences(script, id).filter((reference) => reference.sceneId !== id);
       if (references.length > 0 && !forceReferences) {
@@ -1341,7 +1346,7 @@ export function createProjectSession(input = {}) {
     },
 
     inspectSceneReferences({ sceneId }) {
-      const id = assertNonEmptyString(sceneId, 'sceneId');
+      const id = assertEntityId(sceneId, 'sceneId');
       getScene(script, id);
       return {
         sceneId: id,
@@ -1350,8 +1355,8 @@ export function createProjectSession(input = {}) {
     },
 
     retargetSceneReferences({ fromSceneId, toSceneId, allowMissingSource = false }) {
-      const fromId = assertNonEmptyString(fromSceneId, 'fromSceneId');
-      const toId = assertNonEmptyString(toSceneId, 'toSceneId');
+      const fromId = assertEntityId(fromSceneId, 'fromSceneId');
+      const toId = assertEntityId(toSceneId, 'toSceneId');
       if (!allowMissingSource) {
         getScene(script, fromId);
       }
@@ -1368,7 +1373,7 @@ export function createProjectSession(input = {}) {
     },
 
     clearSceneReferences({ sceneId, allowMissingTarget = false }) {
-      const id = assertNonEmptyString(sceneId, 'sceneId');
+      const id = assertEntityId(sceneId, 'sceneId');
       if (!allowMissingTarget) {
         getScene(script, id);
       }
@@ -1744,7 +1749,7 @@ export function createProjectSession(input = {}) {
     },
 
     setCharacterAnimation({ sceneId, pageIndex, characterId, animation }) {
-      const id = assertNonEmptyString(characterId, 'characterId');
+      const id = assertEntityId(characterId, 'characterId');
       const page = getPage(script, sceneId, pageIndex);
       if (!Array.isArray(page.characters)) {
         page.characters = [];

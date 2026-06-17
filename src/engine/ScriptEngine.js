@@ -526,7 +526,7 @@ export class ScriptEngine extends EventEmitter {
         this.emit('play_bgm', {
           file: page.bgm.file,
           volume: page.bgm.volume ?? 0.5,
-          fadeIn: 0,
+          fadeIn: page.bgm.fadeIn ?? 0,
         });
         this._currentBgmFile = page.bgm.file;
       }

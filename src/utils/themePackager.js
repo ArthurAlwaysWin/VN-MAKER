@@ -16,6 +16,9 @@ import {
 } from '../shared/themePackageContract.js';
 
 const BLANK_PNG_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5m8pUAAAAASUVORK5CYII=';
+export const THEME_ZIP_MAX_COMPRESSED_BYTES = 50 * 1024 * 1024;
+export const THEME_ZIP_MAX_UNCOMPRESSED_BYTES = 250 * 1024 * 1024;
+export const THEME_ZIP_MAX_FILES = 2048;
 
 function toUint8Array(value) {
   if (value instanceof Uint8Array) {
@@ -88,6 +91,33 @@ function parseZipJson(unzipped, filename) {
     exists: true,
     value: JSON.parse(raw),
   };
+}
+
+export function unzipThemeZipBounded(zipBuffer, {
+  maxCompressedBytes = THEME_ZIP_MAX_COMPRESSED_BYTES,
+  maxUncompressedBytes = THEME_ZIP_MAX_UNCOMPRESSED_BYTES,
+  maxFiles = THEME_ZIP_MAX_FILES,
+} = {}) {
+  const bytes = toUint8Array(zipBuffer);
+  if (bytes.byteLength > maxCompressedBytes) {
+    throw new Error(`Theme package is too large (${bytes.byteLength} bytes, max ${maxCompressedBytes})`);
+  }
+
+  let fileCount = 0;
+  let totalUncompressedBytes = 0;
+  return unzipSync(bytes, {
+    filter(file) {
+      fileCount += 1;
+      totalUncompressedBytes += file.originalSize;
+      if (fileCount > maxFiles) {
+        throw new Error(`Theme package contains too many files (max ${maxFiles})`);
+      }
+      if (totalUncompressedBytes > maxUncompressedBytes) {
+        throw new Error(`Theme package expands to too many bytes (max ${maxUncompressedBytes})`);
+      }
+      return true;
+    },
+  });
 }
 
 function reconstructLegacyNineSlice(themeJson, unzipped) {
@@ -342,7 +372,7 @@ export function buildFullThemeZip({
  */
 export function parseThemeZip(zipBuffer) {
   try {
-    const unzipped = unzipSync(toUint8Array(zipBuffer));
+    const unzipped = unzipThemeZipBounded(zipBuffer);
     const manifestJson = parseZipJson(unzipped, 'manifest.json');
     const themeJson = parseZipJson(unzipped, 'theme.json');
     const formatVersion = manifestJson.value?.formatVersion ?? themeJson.value?.formatVersion ?? LEGACY_THEME_FORMAT_VERSION;

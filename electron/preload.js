@@ -41,3 +41,10 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 contextBridge.exposeInMainWorld('getPathForFile', (file) => {
   return webUtils.getPathForFile(file);
 });
+
+contextBridge.exposeInMainWorld('createImportFileGrant', async (file) => {
+  const filePath = webUtils.getPathForFile(file);
+  if (!filePath) return null;
+  const result = await ipcRenderer.invoke('grant-import-file', { path: filePath });
+  return result?.success ? { path: result.path, importToken: result.importToken } : null;
+});

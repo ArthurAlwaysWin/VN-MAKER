@@ -169,7 +169,7 @@ export function createPageEditor() {
       return null;
     }
 
-    const resultProvenance = effectPreviewProvenanceByRequestId.get(result.requestId);
+    const resultProvenance = result.provenance ?? effectPreviewProvenanceByRequestId.get(result.requestId);
     if (!isSameEffectPreviewProvenance(effectKind, resultProvenance, provenance)) {
       return null;
     }
@@ -329,12 +329,18 @@ export function createPageEditor() {
         }
         break;
       case 'preview-effect-result':
-        lastEffectPreviewResult.value = msg;
         if (msg.status === 'accepted') {
+          lastEffectPreviewResult.value = msg;
           isEffectPreviewBusy.value = true;
           break;
         }
         if (['completed', 'cancelled', 'rejected', 'failed'].includes(msg.status)) {
+          const provenance = effectPreviewProvenanceByRequestId.get(msg.requestId) ?? null;
+          lastEffectPreviewResult.value = {
+            ...msg,
+            provenance,
+          };
+          effectPreviewProvenanceByRequestId.delete(msg.requestId);
           isEffectPreviewBusy.value = false;
           activeEffectPreviewRequestId.value = null;
           activeEffectPreviewRequest.value = null;
@@ -342,6 +348,8 @@ export function createPageEditor() {
             previewSessionType.value = null;
             isMuted.value = false;
           }
+        } else {
+          lastEffectPreviewResult.value = msg;
         }
         break;
     }

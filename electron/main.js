@@ -3,12 +3,15 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import fs from 'node:fs/promises';
 import { existsSync, mkdirSync, watch as watchFs } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { validateAssetFormat, getSupportedFormats, checkImageAlpha } from './validateAsset.js';
 import { exportGame } from './exportGame.js';
 import { exportDesktop } from './exportDesktop.js';
 import { preflightThemePackage } from './themePackagePreflight.js';
 import { installThemePackage } from './themePackageInstaller.js';
 import { exportThemePackage } from './themePackageExporter.js';
+import { isInsidePath, isPathInsideRealBase, isSameRealPath } from './pathSecurity.js';
+import { normalizeJpegThumbnailBytes } from './thumbnailSecurity.js';
 import {
   createDefaultPlayerProfile,
   normalizePlayerProfile,
@@ -56,7 +59,14 @@ let openRequestWatcher = null;
 let openRequestDebounce = null;
 
 function getMainWindow() {
-  return win || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null;
+  if (!win || win.isDestroyed()) {
+    return null;
+  }
+  return win;
+}
+
+function createIpcErrorResponse() {
+  return { success: false, error: 'Operation failed' };
 }
 
 function createAssetResponseHeaders(headers = {}) {
@@ -147,7 +157,7 @@ async function ensureProjectLibraryDir() {
   if (registry.projectLibraryDir !== projectLibraryDir) {
     await setProjectLibraryDir(recentProjectsPath(), projectLibraryDir);
   }
-  rememberDialogDirectoryPath(projectLibraryDir);
+  await rememberDialogDirectoryPath(projectLibraryDir);
   return projectLibraryDir;
 }
 
@@ -156,12 +166,14 @@ async function ensureProjectLibraryDir() {
 const ASSET_CATEGORIES = new Set(['backgrounds', 'characters', 'audio', 'fonts', 'ui', 'videos']);
 const dialogGrantedFilePaths = new Set();
 const dialogGrantedDirectoryPaths = new Set();
+const importFileGrants = new Map();
 const grantedProjectPaths = new Set();
 
-function isInsidePath(fullPath, basePath) {
-  const resolved = path.resolve(fullPath);
-  const baseResolved = path.resolve(basePath);
-  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
+function clearProjectPathGrants() {
+  dialogGrantedFilePaths.clear();
+  dialogGrantedDirectoryPaths.clear();
+  importFileGrants.clear();
+  grantedProjectPaths.clear();
 }
 
 function isInsideProject(fullPath) {
@@ -213,31 +225,81 @@ function getAssetRelativePath(filePath) {
   return relative;
 }
 
-function rememberDialogFilePath(filePath) {
+async function rememberDialogFilePath(filePath) {
   if (filePath) {
     dialogGrantedFilePaths.add(path.resolve(filePath));
+    const realPath = await fs.realpath(filePath).catch(() => null);
+    if (realPath) {
+      dialogGrantedFilePaths.add(realPath);
+    }
   }
 }
 
-function hasDialogFileGrant(filePath) {
+async function hasDialogFileGrant(filePath) {
   if (!filePath) return false;
-  return dialogGrantedFilePaths.has(path.resolve(filePath));
+  const resolved = path.resolve(filePath);
+  if (dialogGrantedFilePaths.has(resolved)) return true;
+  for (const grantedPath of dialogGrantedFilePaths) {
+    if (await isSameRealPath(resolved, grantedPath)) {
+      return true;
+    }
+  }
+  return false;
 }
 
-function rememberDialogDirectoryPath(dirPath) {
+async function rememberDialogDirectoryPath(dirPath) {
   if (dirPath) {
     dialogGrantedDirectoryPaths.add(path.resolve(dirPath));
+    const realPath = await fs.realpath(dirPath).catch(() => null);
+    if (realPath) {
+      dialogGrantedDirectoryPaths.add(realPath);
+    }
   }
 }
 
-function hasDialogDirectoryGrant(dirPath) {
+async function hasDialogDirectoryGrant(dirPath) {
   if (!dirPath) return false;
-  return dialogGrantedDirectoryPaths.has(path.resolve(dirPath));
+  const resolved = path.resolve(dirPath);
+  if (dialogGrantedDirectoryPaths.has(resolved)) return true;
+  for (const grantedPath of dialogGrantedDirectoryPaths) {
+    if (await isSameRealPath(resolved, grantedPath)) {
+      return true;
+    }
+  }
+  return false;
 }
 
-function isInsideDialogGrantedDirectory(targetPath) {
+async function isInsideDialogGrantedDirectory(targetPath) {
   if (!targetPath) return false;
-  return [...dialogGrantedDirectoryPaths].some((grantedPath) => isInsidePath(targetPath, grantedPath));
+  for (const grantedPath of dialogGrantedDirectoryPaths) {
+    if (await isPathInsideRealBase(targetPath, grantedPath, { allowMissing: true })) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function createImportFileGrant(filePath) {
+  const token = randomUUID();
+  importFileGrants.set(token, {
+    filePath: path.resolve(filePath),
+    expiresAt: Date.now() + 5 * 60 * 1000,
+  });
+  return token;
+}
+
+function consumeImportFileGrant(filePath, token) {
+  if (!filePath || !token) return false;
+  const grant = importFileGrants.get(token);
+  importFileGrants.delete(token);
+  if (!grant || grant.expiresAt < Date.now()) return false;
+  return grant.filePath === path.resolve(filePath);
+}
+
+async function hasImportFileReadGrant(filePath, token) {
+  return consumeImportFileGrant(filePath, token)
+    || await hasDialogFileGrant(filePath)
+    || await isInsideDialogGrantedDirectory(filePath);
 }
 
 function rememberProjectPath(projectPath) {
@@ -398,7 +460,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
   try {
     const projectLibraryDir = await ensureProjectLibraryDir();
     const targetLocation = location || projectLibraryDir;
-    if (!hasDialogDirectoryGrant(targetLocation)) {
+    if (!(await hasDialogDirectoryGrant(targetLocation))) {
       return { success: false, error: 'Invalid project location' };
     }
     const safeName = sanitizeProjectName(name);
@@ -453,7 +515,7 @@ ipcMain.handle('create-project', async (event, { name, author, location, resolut
     return { success: true, path: projectDir, projectLibraryDir: targetLocation };
   } catch (e) {
     console.error('Failed to create project:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -564,7 +626,7 @@ ipcMain.handle('load-project', async (event, projectPath) => {
      };
   } catch (e) {
     console.error('Failed to load project:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -589,7 +651,7 @@ ipcMain.handle('save-project', async (event, { project, script, expectedScriptFi
     return { success: true, scriptFileState: await getProjectScriptFileState() };
   } catch (e) {
     console.error('Failed to save project:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -604,7 +666,7 @@ ipcMain.handle('check-project-file-state', async () => {
     };
   } catch (e) {
     console.error('Failed to check project file state:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -621,7 +683,7 @@ ipcMain.handle('read-project-script-for-conflict', async () => {
     };
   } catch (e) {
     console.error('Failed to read external script for conflict review:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -640,7 +702,7 @@ ipcMain.handle('read-agent-handoff', async () => {
     return { success: true, handoff, path: handoffPath };
   } catch (e) {
     console.error('Failed to read agent handoff:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -683,7 +745,7 @@ ipcMain.handle('read-agent-review-state', async (event, { handoffCreatedAt } = {
     return { success: true, state, path: statePath };
   } catch (e) {
     console.error('Failed to read agent review state:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -701,7 +763,7 @@ ipcMain.handle('write-agent-review-state', async (event, payload = {}) => {
     return { success: true, state, path: statePath };
   } catch (e) {
     console.error('Failed to write agent review state:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -801,8 +863,29 @@ ipcMain.handle('select-asset', async (event, { types }) => {
   }
 });
 
+ipcMain.handle('grant-import-file', async (event, { path: filePath } = {}) => {
+  try {
+    if (!filePath) {
+      return { success: false, error: 'Invalid file path' };
+    }
+    const resolvedPath = path.resolve(filePath);
+    const stat = await fs.stat(resolvedPath).catch(() => null);
+    if (!stat?.isFile()) {
+      return { success: false, error: 'Invalid import file' };
+    }
+    return {
+      success: true,
+      path: resolvedPath,
+      importToken: createImportFileGrant(resolvedPath),
+    };
+  } catch (e) {
+    console.error('[grant-import-file] Failed:', e);
+    return createIpcErrorResponse();
+  }
+});
+
 ipcMain.handle('import-assets', async (event, { category, paths }) => {
-  // paths: string[] — native file paths from renderer
+  // paths: Array<string|{ path: string, importToken?: string }> — native file paths from renderer
   try {
     if (!currentProjectPath) return { success: false, error: 'No project loaded' };
 
@@ -814,9 +897,16 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
     const imported = [];
     const errors = [];
 
-    for (const filePath of Array.isArray(paths) ? paths : []) {
-      const name = path.basename(filePath);
+    for (const fileEntry of Array.isArray(paths) ? paths : []) {
+      const filePath = typeof fileEntry === 'string' ? fileEntry : fileEntry?.path;
+      const importToken = typeof fileEntry === 'object' ? fileEntry?.importToken : null;
+      const name = path.basename(filePath || '');
       const ext = path.extname(name);
+
+      if (!filePath || !(await hasImportFileReadGrant(filePath, importToken))) {
+        errors.push({ name: name || '(unknown)', reason: 'File path was not granted by a trusted file picker' });
+        continue;
+      }
 
       // Validate format (D-03: magic bytes + extension) — read first 32 bytes (covers PNG IHDR for alpha check)
       let headerBytes;
@@ -841,7 +931,10 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
       const safeName = await uniqueFilename(dir, name);
       const fullPath = getAssetFilePath(normalizedCategory, safeName);
 
-      if (!fullPath) {
+      if (
+        !fullPath
+        || !(await isPathInsideRealBase(fullPath, getAssetsRoot(), { allowMissing: true }))
+      ) {
         errors.push({ name, reason: 'Path security violation' });
         continue;
       }
@@ -861,7 +954,7 @@ ipcMain.handle('import-assets', async (event, { category, paths }) => {
     return { success: true, imported, errors, supportedFormats: getSupportedFormats(normalizedCategory) };
   } catch (e) {
     console.error('[import-assets] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -876,7 +969,7 @@ ipcMain.handle('delete-asset', async (event, { category, filename }) => {
     return { success: true };
   } catch (e) {
     console.error('[delete-asset] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -898,7 +991,7 @@ ipcMain.handle('rename-asset', async (event, { category, oldName, newName }) => 
     return { success: true, newName };
   } catch (e) {
     console.error('[rename-asset] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -919,7 +1012,7 @@ ipcMain.handle('save-processed-image', async (event, { category, filename, dataB
     return { success: true };
   } catch (e) {
     console.error('[save-processed-image] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -940,7 +1033,7 @@ ipcMain.handle('list-assets', async (event, { category }) => {
     return { success: true, files };
   } catch (e) {
     console.error('[list-assets] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -965,17 +1058,18 @@ ipcMain.handle('choose-project-library', async () => {
     const selectedPath = result.filePaths[0];
     validateProjectLibraryDir(selectedPath);
     await fs.mkdir(selectedPath, { recursive: true });
-    rememberDialogDirectoryPath(selectedPath);
+    await rememberDialogDirectoryPath(selectedPath);
     const projectLibraryDir = await setProjectLibraryDir(recentProjectsPath(), selectedPath);
     return { success: true, projectLibraryDir };
   } catch (e) {
     console.error('choose-project-library error:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
 ipcMain.handle('close-project', () => {
   currentProjectPath = null;
+  clearProjectPathGrants();
 });
 
 // ─── Save System IPC ──────────────────────────────────────────────────
@@ -992,7 +1086,7 @@ ipcMain.handle('load-player-profile', async (event, { projectId }) => {
     return { success: true, data: normalizePlayerProfile(projectId || profile.projectId, profile) };
   } catch (e) {
     console.error('[load-player-profile] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1007,7 +1101,7 @@ ipcMain.handle('save-player-profile', async (event, { projectId, profile }) => {
     return { success: true, data: normalizedProfile };
   } catch (e) {
     console.error('[save-player-profile] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1032,13 +1126,14 @@ ipcMain.handle('save-slot', async (event, { slot, state, previewText, thumbnail 
       date: new Date().toLocaleString('zh-CN'),
     };
     await atomicWrite(jsonPath, JSON.stringify(data, null, 2));
-    if (thumbnail) {
-      await fs.writeFile(jpgPath, thumbnail);
+    const thumbnailBytes = normalizeJpegThumbnailBytes(thumbnail);
+    if (thumbnailBytes) {
+      await fs.writeFile(jpgPath, thumbnailBytes);
     }
     return { success: true };
   } catch (e) {
     console.error('[save-slot] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1056,7 +1151,7 @@ ipcMain.handle('load-slot', async (event, { slot }) => {
   } catch (e) {
     if (e.code === 'ENOENT') return { success: true, data: null };
     console.error('[load-slot] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1075,7 +1170,7 @@ ipcMain.handle('delete-slot', async (event, { slot }) => {
     return { success: true };
   } catch (e) {
     console.error('[delete-slot] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1107,7 +1202,7 @@ ipcMain.handle('list-saves', async () => {
     return { success: true, data: results.filter(Boolean) };
   } catch (e) {
     console.error('[list-saves] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1133,14 +1228,15 @@ ipcMain.handle('save-quickslot', async (event, { state, previewText, thumbnail }
 
     await atomicWrite(jsonPath, JSON.stringify(data, null, 2));
 
-    if (thumbnail) {
-      await fs.writeFile(jpgPath, thumbnail);
+    const thumbnailBytes = normalizeJpegThumbnailBytes(thumbnail);
+    if (thumbnailBytes) {
+      await fs.writeFile(jpgPath, thumbnailBytes);
     }
 
     return { success: true };
   } catch (e) {
     console.error('[save-quickslot] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1155,7 +1251,7 @@ ipcMain.handle('load-quickslot', async () => {
   } catch (e) {
     if (e.code === 'ENOENT') return { success: true, data: null };
     console.error('[load-quickslot] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1169,7 +1265,7 @@ ipcMain.handle('capture-screenshot', async () => {
     return { success: true, data: jpegBuffer };
   } catch (e) {
     console.error('[capture-screenshot] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1200,7 +1296,7 @@ ipcMain.handle('migrate-legacy-saves', async (event, { saves }) => {
     return { success: true, migrated: count };
   } catch (e) {
     console.error('[migrate-legacy-saves] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1225,7 +1321,7 @@ ipcMain.handle('reset-player-data', async (event, { scope, projectId }) => {
     return { success: true };
   } catch (e) {
     console.error('[reset-player-data] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1242,7 +1338,7 @@ ipcMain.handle('rebuild-player-data', async (event, { projectId }) => {
     };
   } catch (e) {
     console.error('[rebuild-player-data] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1287,7 +1383,7 @@ ipcMain.handle('dialog-open-directory', async () => {
     });
     if (result.canceled) return null;
     const selectedPath = result.filePaths[0];
-    rememberDialogDirectoryPath(selectedPath);
+    await rememberDialogDirectoryPath(selectedPath);
     return selectedPath;
   } catch (err) {
     console.error('dialog-open-directory error:', err);
@@ -1345,7 +1441,7 @@ ipcMain.handle('export-gmtheme', async (event, { metadata } = {}) => {
     return { success: true, path: result.filePath };
   } catch (e) {
     console.error('[export-gmtheme] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1358,11 +1454,11 @@ ipcMain.handle('import-theme', async () => {
     });
     if (result.canceled) return { success: false, canceled: true };
     const selectedPath = result.filePaths[0];
-    rememberDialogFilePath(selectedPath);
+    await rememberDialogFilePath(selectedPath);
     return { success: true, filePath: selectedPath };
   } catch (e) {
     console.error('[import-theme] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1371,7 +1467,7 @@ ipcMain.handle('preflight-theme-package', async (event, { filePath }) => {
     if (!currentProjectPath) {
       return { success: false, error: 'No project loaded' };
     }
-    if (!hasDialogFileGrant(filePath)) {
+    if (!(await hasDialogFileGrant(filePath))) {
       return { success: false, error: 'Invalid theme package path' };
     }
     return await preflightThemePackage({
@@ -1380,7 +1476,7 @@ ipcMain.handle('preflight-theme-package', async (event, { filePath }) => {
     });
   } catch (e) {
     console.error('[preflight-theme-package] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1389,7 +1485,7 @@ ipcMain.handle('install-theme-package', async (event, payload) => {
     if (!currentProjectPath) {
       return { success: false, error: 'No project loaded' };
     }
-    if (payload?.source === 'file' && !hasDialogFileGrant(payload.filePath)) {
+    if (payload?.source === 'file' && !(await hasDialogFileGrant(payload.filePath))) {
       return { success: false, error: 'Invalid theme package path' };
     }
     return await installThemePackage({
@@ -1398,7 +1494,7 @@ ipcMain.handle('install-theme-package', async (event, payload) => {
     });
   } catch (e) {
     console.error('[install-theme-package] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1406,12 +1502,15 @@ ipcMain.handle('install-theme-package', async (event, payload) => {
 
 ipcMain.handle('export-game', async (event, options) => {
   try {
-    if (!hasDialogDirectoryGrant(options?.outputDir)) {
+    if (!(await hasDialogDirectoryGrant(options?.outputDir))) {
       return { success: false, error: 'Invalid output directory' };
     }
+    const faviconGranted = options?.faviconPath
+      ? await hasDialogFileGrant(options.faviconPath)
+      : false;
     const safeOptions = {
       ...options,
-      faviconPath: options?.faviconPath && hasDialogFileGrant(options.faviconPath)
+      faviconPath: faviconGranted
         ? options.faviconPath
         : null,
     };
@@ -1428,18 +1527,21 @@ ipcMain.handle('export-game', async (event, options) => {
     }, sendProgress);
   } catch (e) {
     console.error('[ExportGame] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
 ipcMain.handle('export-game-desktop', async (event, options) => {
   try {
-    if (!hasDialogDirectoryGrant(options?.outputDir)) {
+    if (!(await hasDialogDirectoryGrant(options?.outputDir))) {
       return { success: false, error: 'Invalid output directory' };
     }
+    const iconGranted = options?.iconPath
+      ? await hasDialogFileGrant(options.iconPath)
+      : false;
     const safeOptions = {
       ...options,
-      iconPath: options?.iconPath && hasDialogFileGrant(options.iconPath)
+      iconPath: iconGranted
         ? options.iconPath
         : null,
     };
@@ -1457,7 +1559,7 @@ ipcMain.handle('export-game-desktop', async (event, options) => {
     }, sendProgress);
   } catch (e) {
     console.error('[ExportDesktop] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1465,14 +1567,14 @@ ipcMain.handle('export-game-desktop', async (event, options) => {
 
 ipcMain.handle('open-folder', async (event, folderPath) => {
   try {
-    if (!isInsideDialogGrantedDirectory(folderPath)) {
+    if (!(await isInsideDialogGrantedDirectory(folderPath))) {
       return { success: false, error: 'Invalid folder path' };
     }
     await shell.openPath(folderPath);
     return { success: true };
   } catch (e) {
     console.error('[open-folder] Failed:', e);
-    return { success: false, error: e.message };
+    return createIpcErrorResponse();
   }
 });
 
@@ -1485,7 +1587,7 @@ ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     const selectedPath = result.filePaths[0];
-    rememberDialogFilePath(selectedPath);
+    await rememberDialogFilePath(selectedPath);
     return selectedPath;
   } catch (e) {
     console.error('[dialog-open-file] Failed:', e);
@@ -1495,7 +1597,7 @@ ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
 
 ipcMain.handle('read-file-base64', async (event, filePath) => {
   try {
-    if (!hasDialogFileGrant(filePath)) return null;
+    if (!(await hasDialogFileGrant(filePath))) return null;
     const data = await fs.readFile(filePath);
     return data.toString('base64');
   } catch (e) {

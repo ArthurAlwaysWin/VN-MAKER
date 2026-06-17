@@ -3,6 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { createProjectSession } from '../src/authoring/projectSession.js';
 
 describe('project authoring session', () => {
+  it('rejects unstable entity IDs before they become script object keys', () => {
+    const session = createProjectSession({
+      script: {
+        projectId: 'gm_authoring_ids',
+        characters: {},
+        scenes: {},
+      },
+    });
+
+    expect(() => session.addScene({ id: '../bad', name: 'Bad' })).toThrow(/scene\.id must start/);
+    expect(() => session.addCharacter({ id: 'bad.id', name: 'Bad' })).toThrow(/character\.id must start/);
+    expect(() => session.addVariable({ id: 'bad/id', type: 'number' })).toThrow(/variable\.id must start/);
+    expect(() => session.addEnding({ id: 'bad id', title: 'Bad' })).toThrow(/ending\.id must start/);
+    expect(() => session.addCg({ id: 'bad\\id', title: 'Bad' })).toThrow(/cg\.id must start/);
+    expect(() => session.addVideo({ id: '__proto__', file: 'videos/op.mp4' })).toThrow(/video\.id must start/);
+  });
+
   it('builds a valid small VN script through the authoring API', () => {
     const session = createProjectSession({
       script: {

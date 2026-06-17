@@ -197,10 +197,14 @@ export function getLegacySetVariableCompat(source = {}) {
 
 export function setLegacySetVariableCompat(container = {}, variableId, value) {
   const normalized = normalizeEffectContainer(container);
+  const numericValue = Number(value);
+  if (typeof variableId === 'string' && variableId.trim() && !Number.isFinite(numericValue)) {
+    throw new Error(`Variable effect value for "${variableId.trim()}" must be a finite number`);
+  }
   const nextVarEffects = typeof variableId === 'string' && variableId.trim()
     ? normalizeEffects({
       setVariable: {
-        [variableId.trim()]: Number(value) || 0,
+        [variableId.trim()]: numericValue,
       },
     })
     : [];

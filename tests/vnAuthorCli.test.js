@@ -1161,6 +1161,68 @@ scene start "Start":
     });
   });
 
+  it('returns structured JSON when a script file cannot be parsed', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'broken-script.json');
+      await writeFile(scriptPath, '{ bad json', 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'inspect',
+          '--script',
+          scriptPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      expect(JSON.parse(failure.stdout)).toMatchObject({
+        success: false,
+        error: expect.stringContaining(`Failed to parse script JSON at ${scriptPath}`),
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
+  it('rejects unstable authoring IDs through JSON CLI output', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_stable_ids',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'add-scene',
+          '--id',
+          '../bad',
+          '--name',
+          'Bad',
+          '--script',
+          scriptPath,
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toBeTruthy();
+      expect(JSON.parse(failure.stdout)).toMatchObject({
+        success: false,
+        error: expect.stringContaining('scene.id must start with a letter or underscore'),
+      });
+      expect(failure.stderr).toBe('');
+    });
+  });
+
   it('checks an agent DSL source without writing source, project, or artifact files', async () => {
     await withTempDir(async (dir) => {
       const dslPath = path.join(dir, 'check.gmdsl');
@@ -3595,20 +3657,31 @@ scene start "Start":
         scenes: {},
       }), 'utf8');
 
-      await expect(execFileAsync('node', [
-        cliPath,
-        'set-screen-layout',
-        '--script',
-        scriptPath,
-        '--screen',
-        'titleScreen',
-        '--config-json',
-        '{}',
-        '--force',
-        '--json',
-      ])).rejects.toMatchObject({
+      let failure = null;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'set-screen-layout',
+          '--script',
+          scriptPath,
+          '--screen',
+          'titleScreen',
+          '--config-json',
+          '{}',
+          '--force',
+          '--json',
+        ]);
+      } catch (error) {
+        failure = error;
+      }
+
+      expect(failure).toMatchObject({
         code: 1,
-        stderr: expect.stringContaining('Unsupported screen layout id: titleScreen'),
+        stderr: '',
+      });
+      expect(JSON.parse(failure.stdout)).toMatchObject({
+        success: false,
+        error: expect.stringContaining('Unsupported screen layout id: titleScreen'),
       });
     });
   });
@@ -6507,6 +6580,21 @@ scene start "Start":
         characters: [{ id: 'sakura', animation: 'bounce' }],
       });
     });
+  });
+
+  it('parses equals-form CLI option values', async () => {
+    const catalog = JSON.parse((await execFileAsync('node', [
+      cliPath,
+      'list-transitions',
+      '--target=background',
+      '--supported-only=true',
+      '--json',
+    ])).stdout);
+
+    expect(catalog.target).toBe('background');
+    expect(catalog.supportedOnly).toBe(true);
+    expect(catalog.transitions.length).toBeGreaterThan(0);
+    expect(catalog.transitions.every(entry => entry.target === 'background')).toBe(true);
   });
 
   it('bulk applies page transitions through direct CLI selectors and apply-plan predicates', async () => {

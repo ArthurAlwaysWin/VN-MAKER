@@ -587,6 +587,50 @@ describe('player data runtime wiring', () => {
     ]);
   });
 
+  it('SaveManager rejects invalid regular slots before IPC', async () => {
+    const invoke = vi.fn();
+    globalThis.window = {
+      ipcRenderer: { invoke },
+    };
+    const saveManager = new SaveManager();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(saveManager.save(0, { currentScene: 'start', history: [] }, 'preview'))
+      .resolves.toEqual({ success: false, error: 'Invalid slot number' });
+    await expect(saveManager.load(109)).resolves.toBeNull();
+    await expect(saveManager.delete(1.5)).resolves.toEqual({ success: false, error: 'Invalid slot number' });
+
+    expect(invoke).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith('[SaveManager] Invalid slot number:', 109);
+  });
+
+  it('ReadHistory flushes pending debounced writes on page unload', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map();
+    globalThis.window = {
+      addEventListener: vi.fn((event, handler) => listeners.set(event, handler)),
+      removeEventListener: vi.fn((event) => listeners.delete(event)),
+    };
+    const repository = {
+      getProfile: () => ({ readHistory: { pages: [] } }),
+      replaceReadHistoryPages: vi.fn(async () => {}),
+    };
+    try {
+      const readHistory = new ReadHistory(repository);
+
+      readHistory.markRead('start', 3);
+      expect(repository.replaceReadHistoryPages).not.toHaveBeenCalled();
+
+      listeners.get('beforeunload')();
+      expect(repository.replaceReadHistoryPages).toHaveBeenCalledWith(['start:3']);
+
+      readHistory.dispose();
+    } finally {
+      delete globalThis.window;
+      vi.useRealTimers();
+    }
+  });
+
   it('web save manager exposes named reset and rebuild entrypoints through the repository boundary', async () => {
     const repository = {
       reset: vi.fn(async () => ({ success: true })),

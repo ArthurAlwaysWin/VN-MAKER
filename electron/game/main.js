@@ -38,6 +38,29 @@ const userDataDir = path.join(
 const savesDir = path.join(userDataDir, 'saves');
 const windowStatePath = path.join(userDataDir, 'window-state.json');
 const crashLogPath = path.join(userDataDir, 'crash.log');
+const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024;
+
+function createIpcErrorResponse() {
+  return { success: false, error: 'Operation failed' };
+}
+
+function normalizeJpegThumbnailBytes(thumbnail) {
+  if (!thumbnail) return null;
+  const bytes = Buffer.isBuffer(thumbnail)
+    ? thumbnail
+    : thumbnail instanceof Uint8Array
+      ? Buffer.from(thumbnail)
+      : null;
+  if (!bytes) throw new Error('Invalid thumbnail image');
+  if (bytes.length > MAX_THUMBNAIL_BYTES) throw new Error('Thumbnail image is too large');
+  const hasJpegMarkers = bytes.length >= 4
+    && bytes[0] === 0xff
+    && bytes[1] === 0xd8
+    && bytes[bytes.length - 2] === 0xff
+    && bytes[bytes.length - 1] === 0xd9;
+  if (!hasJpegMarkers) throw new Error('Thumbnail image must be JPEG data');
+  return bytes;
+}
 
 /**
  * Validate that a resolved path stays within the saves directory.
@@ -224,13 +247,14 @@ app.whenReady().then(async () => {
         date: new Date().toLocaleString('zh-CN'),
       };
       await atomicWrite(jsonPath, JSON.stringify(data, null, 2));
-      if (thumbnail) {
-        await fs.writeFile(jpgPath, thumbnail);
+      const thumbnailBytes = normalizeJpegThumbnailBytes(thumbnail);
+      if (thumbnailBytes) {
+        await fs.writeFile(jpgPath, thumbnailBytes);
       }
       return { success: true };
     } catch (e) {
       console.error('[save-slot] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 
@@ -245,7 +269,7 @@ app.whenReady().then(async () => {
     } catch (e) {
       if (e.code === 'ENOENT') return { success: true, data: null };
       console.error('[load-slot] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 
@@ -261,7 +285,7 @@ app.whenReady().then(async () => {
       return { success: true };
     } catch (e) {
       console.error('[delete-slot] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 
@@ -291,7 +315,7 @@ app.whenReady().then(async () => {
       return { success: true, data: results.filter(Boolean) };
     } catch (e) {
       console.error('[list-saves] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 
@@ -312,13 +336,14 @@ app.whenReady().then(async () => {
         date: new Date().toLocaleString('zh-CN'),
       };
       await atomicWrite(jsonPath, JSON.stringify(data, null, 2));
-      if (thumbnail) {
-        await fs.writeFile(jpgPath, thumbnail);
+      const thumbnailBytes = normalizeJpegThumbnailBytes(thumbnail);
+      if (thumbnailBytes) {
+        await fs.writeFile(jpgPath, thumbnailBytes);
       }
       return { success: true };
     } catch (e) {
       console.error('[save-quickslot] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 
@@ -330,7 +355,7 @@ app.whenReady().then(async () => {
     } catch (e) {
       if (e.code === 'ENOENT') return { success: true, data: null };
       console.error('[load-quickslot] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 
@@ -345,7 +370,7 @@ app.whenReady().then(async () => {
       return { success: true, data: jpegBuffer };
     } catch (e) {
       console.error('[capture-screenshot] Failed:', e);
-      return { success: false, error: e.message };
+      return createIpcErrorResponse();
     }
   });
 

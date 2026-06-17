@@ -123,4 +123,17 @@ describe('effect DSL', () => {
       },
     );
   });
+
+  it('rejects invalid legacy numeric variable edits instead of coercing them to zero', () => {
+    const option = {
+      text: 'Option A',
+      effects: [{ type: 'var:add', id: 'mood', value: 1 }],
+    };
+
+    throws(
+      () => setLegacySetVariableCompat(option, 'mood', 'not-a-number'),
+      /must be a finite number/,
+    );
+    deepStrictEqual(getLegacySetVariableCompat(option), { mood: 1 });
+  });
 });

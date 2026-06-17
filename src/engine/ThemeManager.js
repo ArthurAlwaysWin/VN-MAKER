@@ -10,6 +10,7 @@
 import { DEFAULT_TOKENS } from './tokens.js';
 import { resolvePath } from './assetPath.js';
 import { normalizeNineSliceInsets } from './nineSlice.js';
+import { cssUrl } from './cssEscape.js';
 
 /**
  * Apply theme token overrides onto a container element.
@@ -124,7 +125,7 @@ function buildNineSliceCSS(nineSlice) {
       `  position: absolute;\n` +
       `  inset: 0;\n` +
       `  z-index: -1;\n` +
-      `  border-image: url("${resolvedSrc}") ${slice} / ${width} / ${outset} ${repeat};\n` +
+      `  border-image: ${cssUrl(resolvedSrc)} ${slice} / ${width} / ${outset} ${repeat};\n` +
       `  pointer-events: none;\n` +
       `}`
     );
@@ -135,7 +136,7 @@ function buildNineSliceCSS(nineSlice) {
         const resolvedHoverSrc = resolvePath(config.states.hover.src);
         rules.push(
           `${selector}:hover::before {\n` +
-          `  border-image-source: url("${resolvedHoverSrc}");\n` +
+          `  border-image-source: ${cssUrl(resolvedHoverSrc)};\n` +
           `}`
         );
       }
@@ -143,7 +144,7 @@ function buildNineSliceCSS(nineSlice) {
         const resolvedActiveSrc = resolvePath(config.states.active.src);
         rules.push(
           `${selector}:active::before {\n` +
-          `  border-image-source: url("${resolvedActiveSrc}");\n` +
+          `  border-image-source: ${cssUrl(resolvedActiveSrc)};\n` +
           `}`
         );
       }
@@ -189,7 +190,7 @@ function buildButtonFamilyCSS(buttonFamilies) {
       const stateSelectors = selectors.map(s => `${s}${pseudoSuffix}`);
       rules.push(
         `${stateSelectors.join(', ')} {\n` +
-        `  background-image: url("${resolvedSrc}");\n` +
+        `  background-image: ${cssUrl(resolvedSrc)};\n` +
         `  background-repeat: no-repeat;\n` +
         `  background-position: center;\n` +
         `  background-size: 100% 100%;\n` +
@@ -315,7 +316,7 @@ function buildScreenBackgroundCSS(uiData) {
     const resolvedSrc = resolvePath(bgImage);
     rules.push(
       `${selector} {\n` +
-      `  background-image: url("${resolvedSrc}");\n` +
+      `  background-image: ${cssUrl(resolvedSrc)};\n` +
       `  background-size: cover;\n` +
       `  background-position: center;\n` +
       `  background-repeat: no-repeat;\n` +
@@ -461,7 +462,7 @@ async function buildCursorCSS(cursorData) {
 
     rules.push(
       `${selector} {\n` +
-      `  cursor: url("${finalSrc}") 0 0, ${fallback};\n` +
+      `  cursor: ${cssUrl(finalSrc)} 0 0, ${fallback};\n` +
       `}`
     );
   }

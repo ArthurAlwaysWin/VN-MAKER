@@ -10,7 +10,12 @@ function displayValue(value) {
     return JSON.stringify(shortened);
   }
   if (typeof value === 'object') {
-    const json = JSON.stringify(value);
+    let json;
+    try {
+      json = JSON.stringify(value);
+    } catch {
+      return '[unserializable object]';
+    }
     return json.length > 80 ? `${json.slice(0, 77)}...` : json;
   }
   return String(value);
@@ -25,8 +30,33 @@ function addDiff(entries, pathParts, type, editorValue, diskValue) {
   });
 }
 
-function visitDiff(editorValue, diskValue, pathParts, entries) {
+function hasSeenPair(seenPairs, editorValue, diskValue) {
+  if (!editorValue || !diskValue || typeof editorValue !== 'object' || typeof diskValue !== 'object') {
+    return false;
+  }
+
+  let seenDiskValues = seenPairs.get(editorValue);
+  if (!seenDiskValues) {
+    seenDiskValues = new WeakSet();
+    seenPairs.set(editorValue, seenDiskValues);
+  } else if (seenDiskValues.has(diskValue)) {
+    return true;
+  }
+  seenDiskValues.add(diskValue);
+  return false;
+}
+
+function visitDiff(editorValue, diskValue, pathParts, entries, context) {
   if (Object.is(editorValue, diskValue)) {
+    return;
+  }
+
+  if (pathParts.length >= context.maxDepth) {
+    addDiff(entries, pathParts, 'changed-on-disk', editorValue, diskValue);
+    return;
+  }
+
+  if (hasSeenPair(context.seenPairs, editorValue, diskValue)) {
     return;
   }
 
@@ -38,7 +68,7 @@ function visitDiff(editorValue, diskValue, pathParts, entries) {
       } else if (index >= diskValue.length) {
         addDiff(entries, [...pathParts, index], 'removed-on-disk', editorValue[index], undefined);
       } else {
-        visitDiff(editorValue[index], diskValue[index], [...pathParts, index], entries);
+        visitDiff(editorValue[index], diskValue[index], [...pathParts, index], entries, context);
       }
     }
     return;
@@ -52,7 +82,7 @@ function visitDiff(editorValue, diskValue, pathParts, entries) {
       } else if (!(key in diskValue)) {
         addDiff(entries, [...pathParts, key], 'removed-on-disk', editorValue[key], undefined);
       } else {
-        visitDiff(editorValue[key], diskValue[key], [...pathParts, key], entries);
+        visitDiff(editorValue[key], diskValue[key], [...pathParts, key], entries, context);
       }
     }
     return;
@@ -61,9 +91,12 @@ function visitDiff(editorValue, diskValue, pathParts, entries) {
   addDiff(entries, pathParts, 'changed-on-disk', editorValue, diskValue);
 }
 
-export function createScriptDiffSummary(editorScript = {}, diskScript = {}, { limit = 20 } = {}) {
+export function createScriptDiffSummary(editorScript = {}, diskScript = {}, { limit = 20, maxDepth = 100 } = {}) {
   const entries = [];
-  visitDiff(editorScript, diskScript, [], entries);
+  visitDiff(editorScript, diskScript, [], entries, {
+    maxDepth,
+    seenPairs: new WeakMap(),
+  });
   return {
     changedPathCount: entries.length,
     entries: entries.slice(0, limit),

@@ -13,6 +13,10 @@ function normalizeThumbnail(thumbnail) {
   return /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(trimmed) ? trimmed : null;
 }
 
+function isValidRegularSlot(slot, slotCount) {
+  return Number.isInteger(slot) && slot >= 1 && slot <= slotCount;
+}
+
 export class WebSaveManager {
   constructor(projectId = null) {
     /** @type {number} Maximum save slots */
@@ -23,6 +27,9 @@ export class WebSaveManager {
 
     /** @type {IDBDatabase|null} */
     this._db = null;
+
+    /** @type {Promise<IDBDatabase>|null} */
+    this._dbPromise = null;
 
     /** @type {Map<number|string, Object>} In-memory cache */
     this._cache = new Map();
@@ -52,32 +59,36 @@ export class WebSaveManager {
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async save(slot, state, previewText, thumbnail = null) {
-    // Deep-clone to strip Vue Proxy wrappers
-    const plainState = JSON.parse(JSON.stringify(state));
-
-    // Truncate history to 50 entries
-    if (plainState.history?.length > 50) {
-      plainState.history = plainState.history.slice(-50);
-    }
-
-    const sceneName = plainState.currentScene || '';
-    const timestamp = Date.now();
-    const date = new Date().toLocaleString('zh-CN');
-    const thumbnailData = normalizeThumbnail(thumbnail);
-
-    const record = {
-      slot,
-      version: 1,
-      state: plainState,
-      previewText: previewText || '',
-      sceneName,
-      timestamp,
-      date,
-      thumbnail: thumbnailData,
-      hasThumbnail: !!thumbnailData,
-    };
-
     try {
+      if (!isValidRegularSlot(slot, this.slotCount)) {
+        return { success: false, error: 'Invalid slot number' };
+      }
+
+      // Deep-clone to strip Vue Proxy wrappers.
+      const plainState = JSON.parse(JSON.stringify(state));
+
+      // Truncate history to 50 entries
+      if (plainState.history?.length > 50) {
+        plainState.history = plainState.history.slice(-50);
+      }
+
+      const sceneName = plainState.currentScene || '';
+      const timestamp = Date.now();
+      const date = new Date().toLocaleString('zh-CN');
+      const thumbnailData = normalizeThumbnail(thumbnail);
+
+      const record = {
+        slot,
+        version: 1,
+        state: plainState,
+        previewText: previewText || '',
+        sceneName,
+        timestamp,
+        date,
+        thumbnail: thumbnailData,
+        hasThumbnail: !!thumbnailData,
+      };
+
       const db = await this._getDb();
       await this._put(db, 'saves', record);
       this._cache.set(slot, {
@@ -103,6 +114,11 @@ export class WebSaveManager {
    */
   async load(slot) {
     try {
+      if (!isValidRegularSlot(slot, this.slotCount)) {
+        console.error('[WebSaveManager] Invalid slot number:', slot);
+        return null;
+      }
+
       const db = await this._getDb();
       const record = await this._get(db, 'saves', slot);
       if (!record) {
@@ -133,6 +149,10 @@ export class WebSaveManager {
    */
   async delete(slot) {
     try {
+      if (!isValidRegularSlot(slot, this.slotCount)) {
+        return { success: false, error: 'Invalid slot number' };
+      }
+
       const db = await this._getDb();
       await this._delete(db, 'saves', slot);
       this._cache.delete(slot);
@@ -207,32 +227,32 @@ export class WebSaveManager {
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async quickSave(state, previewText, thumbnail = null) {
-    // Deep-clone to strip Vue Proxy wrappers
-    const plainState = JSON.parse(JSON.stringify(state));
-
-    // Truncate history to 50 entries
-    if (plainState.history?.length > 50) {
-      plainState.history = plainState.history.slice(-50);
-    }
-
-    const sceneName = plainState.currentScene || '';
-    const timestamp = Date.now();
-    const date = new Date().toLocaleString('zh-CN');
-    const thumbnailData = normalizeThumbnail(thumbnail);
-
-    const record = {
-      slot: 'quick',
-      version: 1,
-      state: plainState,
-      previewText: previewText || '',
-      sceneName,
-      timestamp,
-      date,
-      thumbnail: thumbnailData,
-      hasThumbnail: !!thumbnailData,
-    };
-
     try {
+      // Deep-clone to strip Vue Proxy wrappers.
+      const plainState = JSON.parse(JSON.stringify(state));
+
+      // Truncate history to 50 entries
+      if (plainState.history?.length > 50) {
+        plainState.history = plainState.history.slice(-50);
+      }
+
+      const sceneName = plainState.currentScene || '';
+      const timestamp = Date.now();
+      const date = new Date().toLocaleString('zh-CN');
+      const thumbnailData = normalizeThumbnail(thumbnail);
+
+      const record = {
+        slot: 'quick',
+        version: 1,
+        state: plainState,
+        previewText: previewText || '',
+        sceneName,
+        timestamp,
+        date,
+        thumbnail: thumbnailData,
+        hasThumbnail: !!thumbnailData,
+      };
+
       const db = await this._getDb();
       await this._put(db, 'saves', record);
       this._hasQuickSave = true;
@@ -306,6 +326,7 @@ export class WebSaveManager {
 
     this._db?.close?.();
     this._db = null;
+    this._dbPromise = null;
     this._cache.clear();
     this._hasQuickSave = undefined;
     this._projectId = normalizedProjectId;
@@ -352,9 +373,11 @@ export class WebSaveManager {
     if (!this._projectId) {
       throw new Error('WebSaveManager projectId has not been configured');
     }
+    if (this._dbPromise) return this._dbPromise;
 
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(`galgame-saves:${this._projectId}`, 1);
+    const projectId = this._projectId;
+    this._dbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(`galgame-saves:${projectId}`, 1);
 
       request.onupgradeneeded = (e) => {
         const db = e.target.result;
@@ -364,14 +387,25 @@ export class WebSaveManager {
       };
 
       request.onsuccess = (e) => {
-        this._db = e.target.result;
+        const db = e.target.result;
+        if (this._projectId !== projectId) {
+          db.close?.();
+          reject(new Error('IndexedDB open was superseded by another project'));
+          return;
+        }
+        this._db = db;
         resolve(this._db);
       };
 
       request.onerror = (e) => {
         reject(new Error(`IndexedDB open failed: ${e.target.error?.message || 'unknown'}`));
       };
+    }).catch((error) => {
+      this._dbPromise = null;
+      throw error;
     });
+
+    return this._dbPromise;
   }
 
   /**

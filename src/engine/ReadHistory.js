@@ -13,7 +13,15 @@ export class ReadHistory {
     this._repository = repository;
     this._read = new Set();
     this._saveTimer = null;
+    this._handleBeforeUnload = () => this.flush();
+    this._handleVisibilityChange = () => {
+      if (globalThis.document?.visibilityState === 'hidden') {
+        this.flush();
+      }
+    };
     this._loadFromRepository();
+    globalThis.window?.addEventListener?.('beforeunload', this._handleBeforeUnload);
+    globalThis.document?.addEventListener?.('visibilitychange', this._handleVisibilityChange);
   }
 
   /**
@@ -42,7 +50,23 @@ export class ReadHistory {
   clear() {
     this._read.clear();
     if (this._saveTimer) clearTimeout(this._saveTimer);
+    this._saveTimer = null;
     this._save();
+  }
+
+  /** Flush any pending debounced save immediately. */
+  flush() {
+    if (!this._saveTimer) return;
+    clearTimeout(this._saveTimer);
+    this._saveTimer = null;
+    this._save();
+  }
+
+  /** Remove lifecycle listeners for tests or explicit teardown. */
+  dispose() {
+    this.flush();
+    globalThis.window?.removeEventListener?.('beforeunload', this._handleBeforeUnload);
+    globalThis.document?.removeEventListener?.('visibilitychange', this._handleVisibilityChange);
   }
 
   /** @returns {number} Number of read entries */

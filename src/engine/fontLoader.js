@@ -4,6 +4,7 @@
  * Each BrowserWindow has its own document.fonts — fonts must be loaded independently per window.
  * @module fontLoader
  */
+import { cssUrl } from './cssEscape.js';
 
 // ─── Public API ───────────────────────────────────────────────────────
 
@@ -14,21 +15,26 @@
  * @returns {Promise<{ loaded: string[], failed: Array<{ family: string, file: string, error: string }> }>}
  */
 export async function loadAllFonts(fonts, baseUrl = 'asset://') {
-  const loaded = [];
-  const failed = [];
-  for (const fontMeta of fonts) {
-    try {
-      const url = `${baseUrl}${fontMeta.file}`;
-      const face = new FontFace(fontMeta.family, `url('${url}')`);
-      await face.load();
-      document.fonts.add(face);
-      loaded.push(fontMeta.family);
-    } catch (err) {
-      console.error(`[FontLoader] Failed to load ${fontMeta.file}:`, err);
-      failed.push({ family: fontMeta.family, file: fontMeta.file, error: err.message });
+  const results = await Promise.allSettled(fonts.map(async (fontMeta) => {
+    const url = `${baseUrl}${fontMeta.file}`;
+    const face = new FontFace(fontMeta.family, cssUrl(url));
+    await face.load();
+    document.fonts.add(face);
+    return fontMeta.family;
+  }));
+
+  return results.reduce((summary, result, index) => {
+    const fontMeta = fonts[index];
+    if (result.status === 'fulfilled') {
+      summary.loaded.push(result.value);
+      return summary;
     }
-  }
-  return { loaded, failed };
+
+    const err = result.reason;
+    console.error(`[FontLoader] Failed to load ${fontMeta.file}:`, err);
+    summary.failed.push({ family: fontMeta.family, file: fontMeta.file, error: err.message });
+    return summary;
+  }, { loaded: [], failed: [] });
 }
 
 /**
@@ -40,7 +46,7 @@ export async function loadAllFonts(fonts, baseUrl = 'asset://') {
 export async function loadSingleFont(fontMeta, baseUrl = 'asset://') {
   try {
     const url = `${baseUrl}${fontMeta.file}`;
-    const face = new FontFace(fontMeta.family, `url('${url}')`);
+    const face = new FontFace(fontMeta.family, cssUrl(url));
     await face.load();
     document.fonts.add(face);
     return true;

@@ -158,6 +158,23 @@ function showToast(message, duration = 3000) {
   }, duration);
 }
 
+function renderInitializationError(container, error) {
+  container.textContent = '';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#ff6b6b;font-size:18px;padding:40px;text-align:center;flex-direction:column;';
+
+  const title = document.createElement('div');
+  title.textContent = '加载游戏失败';
+
+  const detail = document.createElement('small');
+  detail.style.cssText = 'color:#888;margin-top:8px;';
+  detail.textContent = error?.message || 'Unknown initialization error';
+
+  panel.append(title, detail);
+  container.appendChild(panel);
+}
+
 // ─── Preview text builder ───────────────────────────────
 function buildPreviewText() {
   const page = engine._currentPage();
@@ -1774,11 +1791,7 @@ async function init(env) {
     console.log('[GalgameMaker] Ready!');
   } catch (err) {
     console.error('[GalgameMaker] Failed to initialize:', err);
-    gameContainer.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ff6b6b;font-size:18px;padding:40px;text-align:center;">
-        加载游戏失败<br /><small style="color:#888;margin-top:8px;">${err.message}</small>
-      </div>
-    `;
+    renderInitializationError(gameContainer, err);
   }
 }
 

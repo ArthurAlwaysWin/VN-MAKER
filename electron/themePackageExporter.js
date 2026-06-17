@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { collectUiImagePaths } from '../src/shared/uiImageContract.js';
 import { buildFullThemeZip } from '../src/utils/themePackager.js';
+import { isInsidePath, isPathInsideRealBase } from './pathSecurity.js';
 
 const OWNED_UI_KEYS = Object.freeze([
   'theme',
@@ -38,12 +39,6 @@ function rewritePathToThemeNamespace(assetPath, themeId) {
     return assetPath;
   }
   return `${assetRoot}${assetPath.slice(3)}`;
-}
-
-function isInsidePath(fullPath, basePath) {
-  const resolved = path.resolve(fullPath);
-  const baseResolved = path.resolve(basePath);
-  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
 }
 
 function replaceThemeUiRefs(node, rewrite) {
@@ -126,7 +121,7 @@ export async function exportThemePackage({
     }
     seenTargetPaths.add(targetPath);
     const sourcePath = path.join(assetRoot, ...originalPath.split('/'));
-    if (!isInsidePath(sourcePath, assetRoot)) {
+    if (!isInsidePath(sourcePath, assetRoot) || !await isPathInsideRealBase(sourcePath, assetRoot)) {
       throw new Error(`Theme asset path escapes project assets: ${originalPath}`);
     }
     const assetBytes = await fs.readFile(sourcePath);

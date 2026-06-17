@@ -37,6 +37,12 @@ export class EventEmitter {
    * @param {*} data
    */
   emit(event, data) {
-    this._listeners.get(event)?.forEach(cb => cb(data));
+    this._listeners.get(event)?.forEach((cb) => {
+      try {
+        cb(data);
+      } catch (error) {
+        console.error(`[EventEmitter] Listener for "${event}" failed:`, error);
+      }
+    });
   }
 }

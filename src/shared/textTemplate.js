@@ -31,6 +31,7 @@ export function interpolateTextTemplate(text, variables = new Map()) {
     return text;
   }
 
+  TEXT_TEMPLATE_PATTERN.lastIndex = 0;
   return text.replace(TEXT_TEMPLATE_PATTERN, (match, variableId) => {
     if (!isValidTemplateVariableId(variableId)) {
       return match;
@@ -51,6 +52,7 @@ export function collectTextTemplateVariableIds(text) {
   }
 
   const ids = new Set();
+  TEXT_TEMPLATE_PATTERN.lastIndex = 0;
   for (const match of text.matchAll(TEXT_TEMPLATE_PATTERN)) {
     const variableId = match[1];
     if (isValidTemplateVariableId(variableId)) {
@@ -66,6 +68,7 @@ export function replaceTextTemplateVariableId(text, fromVariableId, toVariableId
     return text;
   }
 
+  TEXT_TEMPLATE_PATTERN.lastIndex = 0;
   return text.replace(TEXT_TEMPLATE_PATTERN, (match, variableId) => (
     variableId === fromVariableId ? `\${${toVariableId}}` : match
   ));

@@ -281,6 +281,32 @@ describe('selectChoice', () => {
   });
 });
 
+describe('audio', () => {
+  it('passes page BGM fadeIn through to audio events', () => {
+    const engine = makeEngine({
+      start: {
+        name: 'Opening',
+        pages: [{
+          type: 'normal',
+          bgm: { file: 'audio/theme.ogg', volume: 0.7, fadeIn: 1200 },
+          characters: [],
+          dialogues: [{ speaker: null, text: 'Intro' }],
+        }],
+      },
+    });
+
+    const events = capture(engine, 'play_bgm', () => {
+      engine.startGame('start');
+    });
+
+    deepStrictEqual(events, [{
+      file: 'audio/theme.ogg',
+      volume: 0.7,
+      fadeIn: 1200,
+    }]);
+  });
+});
+
 // ─── Video pages ───────────────────────────────────────────
 
 describe('video pages', () => {

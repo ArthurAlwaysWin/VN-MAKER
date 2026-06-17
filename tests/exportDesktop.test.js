@@ -13,7 +13,7 @@
 import { describe, it, before, after } from 'node:test';
 import { strictEqual, deepStrictEqual, ok, match, rejects } from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { exportDesktop } from '../electron/exportDesktop.js';
@@ -489,6 +489,16 @@ describe('exportDesktop — progress', () => {
 });
 
 describe('exportDesktop — process state recovery', () => {
+  it('serializes packager exports around process.noAsar mutation and uses execFile for builds', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'electron/exportDesktop.js'), 'utf8');
+
+    ok(source.includes('let desktopExportMutex = Promise.resolve()'));
+    ok(source.includes('withDesktopExportMutex'));
+    ok(source.includes("import { execFile } from 'node:child_process'"));
+    ok(source.includes('execFileAsync(getNpxCommand()'));
+    ok(!source.includes('execAsync(`npx vite build'));
+  });
+
   it('restores process.noAsar when final desktop assembly fails', async () => {
     const electronDist = path.join(mockAppRoot, 'node_modules', 'electron', 'dist');
     await fs.mkdir(electronDist, { recursive: true });

@@ -2,11 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { unzipSync } from 'fflate';
-
 import { getBuiltinThemeAssets } from '../src/editor/builtinThemeAssets.js';
 import { BUILTIN_THEMES } from '../src/editor/builtinThemes.js';
-import { parseThemeZip } from '../src/utils/themePackager.js';
+import { parseThemeZip, unzipThemeZipBounded } from '../src/utils/themePackager.js';
+import { isInsidePath, isPathInsideRealBase } from './pathSecurity.js';
 import { preflightThemePackage } from './themePackagePreflight.js';
 
 const OWNED_UI_KEYS = Object.freeze([
@@ -100,7 +99,10 @@ async function writeThemeAsset(projectPath, relativeUiPath, bytes) {
   const assetRoot = path.resolve(projectPath, 'assets');
   const relativeParts = relativeUiPath.split('/');
   const destination = path.resolve(assetRoot, ...relativeParts);
-  if (destination !== assetRoot && !destination.startsWith(assetRoot + path.sep)) {
+  if (
+    !isInsidePath(destination, assetRoot)
+    || !await isPathInsideRealBase(destination, assetRoot, { allowMissing: true })
+  ) {
     throw new Error(`Theme package asset path escapes project assets: ${relativeUiPath}`);
   }
   await fs.mkdir(path.dirname(destination), { recursive: true });
@@ -230,7 +232,7 @@ export async function installThemePackage({
     return parsed;
   }
 
-  const unzipped = unzipSync(zipBuffer);
+  const unzipped = unzipThemeZipBounded(zipBuffer);
   for (const action of preflight.actions ?? []) {
     if (action.type === 'skip') {
       continue;

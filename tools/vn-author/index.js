@@ -74,11 +74,31 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const defaultScriptPath = path.join(repoRoot, 'public', 'game', 'script.json');
 
+function readEqualsArg(arg, name) {
+  const prefix = `${name}=`;
+  return typeof arg === 'string' && arg.startsWith(prefix)
+    ? arg.slice(prefix.length)
+    : null;
+}
+
 function hasFlag(args, flag) {
-  return args.includes(flag);
+  if (args.includes(flag)) {
+    return true;
+  }
+
+  const equalsValue = args.map(arg => readEqualsArg(arg, flag)).find(value => value != null);
+  if (equalsValue == null) {
+    return false;
+  }
+  return !['0', 'false', 'no', 'off'].includes(String(equalsValue).trim().toLowerCase());
 }
 
 function getArgValue(args, name, fallback = null) {
+  const equalsValue = args.map(arg => readEqualsArg(arg, name)).find(value => value != null);
+  if (equalsValue != null) {
+    return equalsValue;
+  }
+
   const index = args.indexOf(name);
   if (index === -1 || index === args.length - 1) {
     return fallback;
@@ -88,6 +108,11 @@ function getArgValue(args, name, fallback = null) {
 }
 
 function getOptionalArgValue(args, name) {
+  const equalsValue = args.map(arg => readEqualsArg(arg, name)).find(value => value != null);
+  if (equalsValue != null) {
+    return equalsValue;
+  }
+
   const index = args.indexOf(name);
   if (index === -1 || index === args.length - 1) {
     return undefined;
@@ -99,7 +124,10 @@ function getOptionalArgValue(args, name) {
 function getArgValues(args, name) {
   const values = [];
   for (let index = 0; index < args.length; index += 1) {
-    if (args[index] === name && index < args.length - 1) {
+    const equalsValue = readEqualsArg(args[index], name);
+    if (equalsValue != null) {
+      values.push(equalsValue);
+    } else if (args[index] === name && index < args.length - 1) {
       values.push(args[index + 1]);
       index += 1;
     }
@@ -579,9 +607,15 @@ function parseTitleElementArgs(args, { requireType = true } = {}) {
 async function readScript(args) {
   const scriptPath = path.resolve(repoRoot, getArgValue(args, '--script', defaultScriptPath));
   const raw = await readFile(scriptPath, 'utf8');
+  let script;
+  try {
+    script = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Failed to parse script JSON at ${scriptPath}: ${error.message}`);
+  }
   return {
     scriptPath,
-    script: JSON.parse(raw),
+    script,
   };
 }
 
@@ -8128,6 +8162,16 @@ async function main() {
         error: error.message,
         readiness: error.readiness,
       });
+      process.exitCode = 1;
+      return;
+    }
+    if (hasFlag(args, '--json')) {
+      writeJson({
+        success: false,
+        error: error.message,
+      });
+      process.exitCode = 1;
+      return;
     }
     process.stderr.write(`${error.stack || error.message}\n`);
     process.exitCode = 1;

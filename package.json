@@ -16,6 +16,7 @@
     "test:node": "node --test tests/colorRecipe.test.js tests/configurableTabs.test.js tests/decorLayoutEditor.test.js tests/effectDsl.test.js tests/exportDesktop.test.js tests/oklch.test.js tests/scanAssets.test.js tests/scriptEngine.test.js tests/smartColorPanel.test.js tests/tabLayoutEditor.test.js tests/uiImageContract.test.js tests/widgetDefaults.test.js",
     "test:vitest": "vitest run",
     "test:focused": "vitest run tests/branchingContract.test.js tests/variableRegistryContract.test.js tests/sceneGraph.test.js tests/transitionCatalog.test.js tests/cinematicContractCompatibility.test.js tests/backgroundLayerTransitions.test.js tests/backgroundTransitionPreview.test.js tests/cameraContract.test.js tests/cameraRuntimePlayback.test.js tests/characterAnimationContract.test.js tests/characterMotionPlayback.test.js tests/pageInspectorCinematicControls.test.js tests/projectValidator.test.js tests/projectSession.test.js tests/layoutPresets.test.js tests/layoutLint.test.js tests/projectReport.test.js tests/exportReadiness.test.js tests/agentHandoff.test.js tests/agentHandoffEditor.test.js tests/novelDraftImport.test.js tests/vnAuthorCli.test.js tests/themeBrowserService.test.js tests/themePackageImportUx.test.js tests/bgRemoval.test.js",
+    "benchmark:script-history": "node --expose-gc scripts/benchmark-script-history.mjs",
     "validate:project": "node tools/vn-author/index.js validate",
     "vn": "node tools/vn-author/index.js",
     "vn:inspect": "node tools/vn-author/index.js inspect",

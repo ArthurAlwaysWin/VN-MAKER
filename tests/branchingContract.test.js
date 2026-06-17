@@ -146,7 +146,7 @@ describe('branching contract', () => {
     expect(compareConditionValues(4, '>=', 3)).toBe(true);
   });
 
-  it('normalizes incoming choice effects and condition pages before the first history snapshot is saved', () => {
+  it('normalizes incoming choice effects and condition pages before tracked editing begins', () => {
     const store = useScriptStore();
 
     store.loadFromData({
@@ -215,18 +215,6 @@ describe('branching contract', () => {
       trueTarget: 'roof',
       falseTarget: null,
     });
-    expect(store.history[0].scenes.start.pages[1]).toEqual({
-      type: 'condition',
-      conditionMode: 'all',
-      conditions: [
-        {
-          variableId: 'route_locked',
-          operator: '==',
-          value: false,
-        },
-      ],
-      trueTarget: 'roof',
-      falseTarget: null,
-    });
+    expect(store.history[0]).toEqual({ patches: [], inversePatches: [] });
   });
 });

@@ -142,7 +142,7 @@ describe('galgame contract wiring', () => {
     });
   });
 
-  it('normalizes editor loadFromData input before the first history snapshot is pushed', () => {
+  it('normalizes editor loadFromData input before tracked editing begins', () => {
     const store = useScriptStore();
 
     store.loadFromData({
@@ -165,12 +165,6 @@ describe('galgame contract wiring', () => {
       },
     });
     expect(store.history).toHaveLength(1);
-    expect(store.history[0].systems).toEqual({
-      variables: {},
-      endings: {},
-      gallery: {
-        cg: {},
-      },
-    });
+    expect(store.history[0]).toEqual({ patches: [], inversePatches: [] });
   });
 });

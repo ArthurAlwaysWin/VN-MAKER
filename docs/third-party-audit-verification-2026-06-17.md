@@ -61,6 +61,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the fourth repair pass: S9, B8, B15, B19, P2, P6, P8, P9, P10.
 - Completed in the fifth repair pass: desktop B11 parity, the remaining S13 theme-preflight return path, thumbnail helper deduplication and boundary coverage, P16, S15, and S18.
 - Completed in the sixth repair pass: Q6 shared atomic writes, M4 content-hashed script file state, and Q12 shared condition-row helpers. B1 was confirmed with delayed persistence, and P1/P3 were benchmarked at three project sizes.
+- Completed in the seventh repair pass: P1 patch-based undo history and P3 revision-based editor change notification.
 
 Repair validation:
 
@@ -199,14 +200,34 @@ Sixth repair verification and measurement:
 - `npm run build:web`: passed.
 - Full `npm test`: Vitest 124 files / 1091 tests passed; Node test run 293 tests passed.
 
+Seventh repair verification and measurement:
+
+- The script store now tracks direct nested `set`/`delete` operations as forward and inverse path patches while preserving Vue nested reactivity. `pushState()` commits only pending patches; undo applies inverse patches, redo applies forward patches, redo branches are truncated after a new edit, and history remains capped at 50 entries.
+- `App.vue` now watches the O(1) `changeRevision` notification rather than traversing all of `script.data`. The same notification continues to drive dirty state, the 500 ms undo transaction boundary, and 2 s autosave. Existing editor preview composables retain their direct reactive updates.
+- Tracking metadata remains editor-only and is not added to the canonical `script.json` contract or Agent authoring data.
+- Benchmark setup remained 20 mutations per size with 10 pages per generated scene. The optimized measurements were produced by `npm run benchmark:script-history` on Node 24.13.1.
+
+| Pages | Before `pushState()` median / p95 | After patch commit median / p95 | Before deep watcher median / p95 | After revision notification median / p95 |
+|---:|---:|---:|---:|---:|
+| 500 | 7.35 / 9.65 ms | 0.002 / 0.012 ms | 6.75 / 14.49 ms | 0.005 / 0.020 ms |
+| 2,500 | 39.60 / 44.72 ms | 0.002 / 0.002 ms | 47.60 / 64.46 ms | 0.003 / 0.007 ms |
+| 10,000 | 261.55 / 305.73 ms | 0.002 / 0.005 ms | 319.84 / 362.49 ms | 0.005 / 0.005 ms |
+
+- Twenty additional 10,000-page history entries retained about 0.017 MiB after garbage collection, down from about 129.08 MiB for the previous full snapshot history.
+- Targeted editor/history run: 9 files, 44 tests passed. Added coverage includes direct nested edits, revision and nested reactive notification, array/object/delete patches, reorder-then-edit paths, undo/redo, pending-edit undo, branch truncation, the 50-entry limit, autosave wiring, and 10,000-page time/space bounds.
+- `npm audit --json`: 0 vulnerabilities.
+- `npm run build`: passed on Vite 8.0.16 with the existing `inlineDynamicImports` deprecation warning.
+- `npm run build:web`: passed.
+- Full `npm test`: Vitest 124 files / 1097 tests passed; Node test run 293 tests passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
-- Worth doing in a measured performance pass or when touching nearby code: P1, P3, Q5, Q9, Q10, Q11, Q17.
+- Worth doing in a measured performance pass or when touching nearby code: Q5, Q9, Q10, Q11, Q17.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the sixth pass: B1 asynchronous unlock persistence remains behaviorally observable, Q5/Q17 cleanup remains useful but lower priority, and the now-measured P1/P3 bottlenecks warrant a dedicated performance design. The Vite Electron build still emits an `inlineDynamicImports` deprecation warning that should be resolved through a verified plugin/configuration update.
+- Residual risk after the seventh pass: B1 asynchronous unlock persistence remains behaviorally observable, and Q5/Q17 cleanup remains useful but lower priority. The Vite Electron build still emits an `inlineDynamicImports` deprecation warning that should be resolved through a verified plugin/configuration update.
 
 ## Priority Repair Plan
 
@@ -253,9 +274,9 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
-| P1: undo snapshots full JSON | True | Medium | Measured at 261.55 ms median / 305.73 ms p95 per snapshot for a 10,000-page, 2.57 MiB project; 20 additional snapshots retained about 129.08 MiB heap. | Incremental snapshots, patches, or bounded structural sharing with dirty tracking. | Performance regression. |
+| P1: undo snapshots full JSON | Completed | Medium | Replaced full duplicate JSON snapshots with forward/inverse path patches. At 10,000 pages patch commit measured 0.002 ms median / 0.005 ms p95, and 20 entries retained about 0.017 MiB instead of 129.08 MiB. | Done. | Added. |
 | P2: graph report computed twice | Completed | Low | `validateProject()` now computes one branch graph report per reachability-enabled validation pass and passes it into branch and ending progression checks. | Done. | Added. |
-| P3: deep watcher on entire script | True | Medium | Measured at 319.84 ms median / 362.49 ms p95 per mutation for a 10,000-page project. | Replace whole-script deep traversal with targeted dirty/version tracking. | Performance regression. |
+| P3: deep watcher on entire script | Completed | Medium | Replaced the whole-script deep watcher with explicit `changeRevision` notification emitted by tracked direct nested mutations. At 10,000 pages notification measured 0.005 ms median / 0.005 ms p95. | Done. | Added. |
 | P4: SE Audio cleanup | Partially true | Low | Creates `new Audio`; not DOM garbage, and GC should collect, but long sessions can retain until playback finishes. | Optional pool / ended cleanup. | Optional. |
 | P5: fixed 20 fade steps | Not planned for audit hardening | Informational | `_fadeVolume()` fixed `steps = 20`; mostly quality, not performance. Impact is visual-tuning level and should not be changed without product/UX intent. | Defer unless tuning nearby fade behavior. | No. |
 | P6: `isPageRead()` O(n) | Completed | Low | `PlayerDataRepository` now maintains a read-page Set alongside normalized profile pages; read checks and duplicate guards use the Set. | Done. | Added. |
@@ -344,7 +365,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q6, Q12, Q18, S8, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P2, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered.
+1. Do not restart with Q6, Q12, Q18, S8, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered.
 2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as Q5 or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
-3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, P1/P3, Q9/Q10/Q11, and major IPC response-shape consolidation.
+3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

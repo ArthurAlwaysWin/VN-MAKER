@@ -60,8 +60,8 @@ describe('cinematic contract compatibility', () => {
     store.loadFromData(scriptData);
 
     expect(store.data.scenes.start.pages[0].characters[0].animation).toBe('legacy-bounce');
-    expect(store.history[0].scenes.start.pages[0].camera.effect).toBe('legacy-zoom');
-    expect(store.history[0].scenes.start.pages[0].transition.type).toBe('legacy-wipe');
+    expect(store.data.scenes.start.pages[0].camera.effect).toBe('legacy-zoom');
+    expect(store.data.scenes.start.pages[0].transition.type).toBe('legacy-wipe');
 
     const result = store.addPage('start', 0);
 

@@ -10,6 +10,9 @@ describe('editor save and close dirty-state handshake', () => {
     expect(source).toContain('const saving = ref(false)');
     expect(source).toContain('async function flushPendingSnapshotBeforeSave()');
     expect(source).toContain('script._skipWatch = true');
+    expect(source).toContain('watch(() => script.changeRevision');
+    expect(source).not.toMatch(/watch\(\(\) => script\.data[\s\S]{0,500}deep:\s*true/);
+    expect(source).toContain("source: 'autosave'");
     expect(source).toContain('await flushPendingSnapshotBeforeSave()');
     expect(source).toContain('window.__hasDirtyProject = async () =>');
     expect(source).toContain('await activeSavePromise.catch(() => false)');

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { normalizeUiMotion } from '../../shared/uiMotionContract.js';
 import { applyUiStylePresetToScript } from '../../shared/uiStylePresetContract.js';
-import { computed, ref, nextTick } from 'vue';
+import { computed, reactive, ref, shallowRef, toRaw } from 'vue';
 import { normalizeConditionPage, normalizeConditionPages } from '../../shared/branchingContract.js';
 import { DEFAULT_PAGE_CAMERA, copyPageCinematicFields } from '../../shared/cinematicContract.js';
 import { normalizeEffectContainer } from '../../shared/effectDsl.js';
@@ -159,6 +159,7 @@ export const useScriptStore = defineStore('script', () => {
   const data = ref(null);
   const isLoading = ref(false);
   const _skipWatch = ref(false);
+  const changeRevision = ref(0);
   const selectedVariableId = ref(null);
   const selectedEndingId = ref(null);
   const selectedCgId = ref(null);
@@ -166,9 +167,137 @@ export const useScriptStore = defineStore('script', () => {
   const storySystemsRepairRequest = ref(null);
 
   // Undo/Redo history
-  const history = ref([]);
+  const history = shallowRef([]);
   const historyIndex = ref(-1);
-  const historySerialized = [];
+  let pendingPatches = [];
+  let pendingInversePatches = [];
+  let trackingSuspended = false;
+  let rawByTrackedProxy = new WeakMap();
+
+  function clonePatchValue(value) {
+    const rawValue = unwrapTrackedValue(toRaw(value));
+    if (rawValue === undefined || rawValue === null || typeof rawValue !== 'object') {
+      return rawValue;
+    }
+    return JSON.parse(JSON.stringify(rawValue));
+  }
+
+  function unwrapTrackedValue(value) {
+    let current = value;
+    while (current && typeof current === 'object' && rawByTrackedProxy.has(current)) {
+      current = rawByTrackedProxy.get(current);
+    }
+    return current;
+  }
+
+  function recordMutation(patch, inversePatch) {
+    if (trackingSuspended) return;
+    pendingPatches.push(patch);
+    pendingInversePatches.unshift(inversePatch);
+    changeRevision.value++;
+  }
+
+  function createTrackedScriptData(scriptData) {
+    const proxyByRaw = new WeakMap();
+    const pathByRaw = new WeakMap();
+    rawByTrackedProxy = new WeakMap();
+
+    const wrap = (value, path = []) => {
+      const rawValue = unwrapTrackedValue(toRaw(value));
+      if (!rawValue || typeof rawValue !== 'object') return rawValue;
+      pathByRaw.set(rawValue, path);
+      if (proxyByRaw.has(rawValue)) return proxyByRaw.get(rawValue);
+
+      const proxy = new Proxy(rawValue, {
+        get(target, key, receiver) {
+          const result = Reflect.get(target, key, receiver);
+          if (!result || typeof result !== 'object') return result;
+          const currentPath = pathByRaw.get(target) ?? path;
+          return wrap(result, [...currentPath, key]);
+        },
+        set(target, key, nextValue, receiver) {
+          const hadValue = Object.prototype.hasOwnProperty.call(target, key);
+          const previousValue = target[key];
+          const previousArrayLength = Array.isArray(target) ? target.length : null;
+          const unwrappedNext = unwrapTrackedValue(toRaw(nextValue));
+          if (hadValue && Object.is(previousValue, unwrappedNext)) return true;
+
+          const currentPath = pathByRaw.get(target) ?? path;
+          const patchPath = [...currentPath, key];
+          const patch = {
+            op: hadValue ? 'replace' : 'add',
+            path: patchPath,
+            value: clonePatchValue(unwrappedNext),
+          };
+          const isNewArrayIndex = !hadValue
+            && Array.isArray(target)
+            && Number.isInteger(Number(key))
+            && Number(key) >= previousArrayLength;
+          const inversePatch = hadValue
+            ? { op: 'replace', path: patchPath, value: clonePatchValue(previousValue) }
+            : isNewArrayIndex
+              ? { op: 'set-array-length', path: currentPath, value: previousArrayLength }
+              : { op: 'remove', path: patchPath };
+          const changed = Reflect.set(target, key, unwrappedNext);
+          if (changed) {
+            if (unwrappedNext && typeof unwrappedNext === 'object') {
+              pathByRaw.set(unwrappedNext, patchPath);
+            }
+            recordMutation(patch, inversePatch);
+          }
+          return changed;
+        },
+        deleteProperty(target, key) {
+          if (!Object.prototype.hasOwnProperty.call(target, key)) return true;
+          const currentPath = pathByRaw.get(target) ?? path;
+          const patchPath = [...currentPath, key];
+          const previousValue = target[key];
+          const changed = Reflect.deleteProperty(target, key);
+          if (changed) {
+            recordMutation(
+              { op: 'remove', path: patchPath },
+              { op: 'add', path: patchPath, value: clonePatchValue(previousValue) },
+            );
+          }
+          return changed;
+        },
+      });
+      proxyByRaw.set(rawValue, proxy);
+      rawByTrackedProxy.set(proxy, rawValue);
+      return proxy;
+    };
+
+    return reactive(wrap(scriptData));
+  }
+
+  function applyPatch(patch) {
+    if (!data.value || !patch?.path) return;
+    let target = data.value;
+    const targetDepth = patch.op === 'set-array-length' ? patch.path.length : patch.path.length - 1;
+    for (let index = 0; index < targetDepth; index++) {
+      target = target[patch.path[index]];
+    }
+    if (patch.op === 'set-array-length') {
+      target.length = patch.value;
+      return;
+    }
+    if (patch.path.length === 0) return;
+    const key = patch.path[patch.path.length - 1];
+    if (patch.op === 'remove') {
+      delete target[key];
+    } else {
+      target[key] = clonePatchValue(patch.value);
+    }
+  }
+
+  function applyPatches(patches) {
+    trackingSuspended = true;
+    try {
+      for (const patch of patches) applyPatch(patch);
+    } finally {
+      trackingSuspended = false;
+    }
+  }
   const conditionPageIssues = computed(() => {
     const issues = [];
     if (!data.value?.scenes) {
@@ -197,60 +326,61 @@ export const useScriptStore = defineStore('script', () => {
 
   function pushState() {
     if (!data.value) return;
-    normalizeStoryContracts(data.value);
-    const serialized = JSON.stringify(data.value);
-    if (serialized === historySerialized[historyIndex.value]) {
-      return;
-    }
-
-    const snapshot = JSON.parse(serialized);
+    if (pendingPatches.length === 0) return;
     if (historyIndex.value < history.value.length - 1) {
       history.value = history.value.slice(0, historyIndex.value + 1);
-      historySerialized.splice(historyIndex.value + 1);
     }
-    history.value.push(snapshot);
-    historySerialized.push(serialized);
+    history.value = [...history.value, {
+      patches: pendingPatches,
+      inversePatches: pendingInversePatches,
+    }];
+    pendingPatches = [];
+    pendingInversePatches = [];
     historyIndex.value++;
     if (history.value.length > 50) {
-      history.value.shift();
-      historySerialized.shift();
+      history.value = history.value.slice(1);
       historyIndex.value--;
     }
   }
 
   function undo() {
+    pushState();
     if (historyIndex.value > 0) {
-      _skipWatch.value = true;
+      const entry = history.value[historyIndex.value];
+      applyPatches(entry.inversePatches ?? []);
       historyIndex.value--;
-      data.value = JSON.parse(JSON.stringify(history.value[historyIndex.value]));
-      nextTick(() => { _skipWatch.value = false; });
+      changeRevision.value++;
     }
   }
 
   function redo() {
     if (historyIndex.value < history.value.length - 1) {
-      _skipWatch.value = true;
       historyIndex.value++;
-      data.value = JSON.parse(JSON.stringify(history.value[historyIndex.value]));
-      nextTick(() => { _skipWatch.value = false; });
+      const entry = history.value[historyIndex.value];
+      applyPatches(entry.patches ?? []);
+      changeRevision.value++;
     }
   }
 
   function loadFromData(scriptData) {
-    data.value = normalizeStoryContracts(
+    const normalized = normalizeStoryContracts(
       ensureGalgameContract(migrateLegacyAppliedThemeData(scriptData).script),
     );
-    history.value = [];
-    historySerialized.length = 0;
-    historyIndex.value = -1;
-    pushState();
+    trackingSuspended = true;
+    data.value = createTrackedScriptData(normalized);
+    trackingSuspended = false;
+    pendingPatches = [];
+    pendingInversePatches = [];
+    history.value = [{ patches: [], inversePatches: [] }];
+    historyIndex.value = 0;
   }
 
   function reset() {
     data.value = null;
     history.value = [];
-    historySerialized.length = 0;
     historyIndex.value = -1;
+    pendingPatches = [];
+    pendingInversePatches = [];
     selectedVariableId.value = null;
     selectedEndingId.value = null;
     selectedCgId.value = null;
@@ -1653,7 +1783,7 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   return {
-    data, isLoading, _skipWatch,
+    data, isLoading, _skipWatch, changeRevision,
     selectedVariableId, selectedEndingId, selectedCgId, storySystemsPanel, storySystemsRepairRequest,
     conditionPageIssues, canSaveConditionPages,
     pushState, undo, redo,

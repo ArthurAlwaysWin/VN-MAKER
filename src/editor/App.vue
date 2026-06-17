@@ -163,7 +163,7 @@ async function flushPendingSnapshotBeforeSave() {
   }
 }
 
-watch(() => script.data, () => {
+watch(() => script.changeRevision, () => {
   if (!script.data || script._skipWatch) return;
   project.markDirty();
   // Auto-snapshot for undo history
@@ -176,7 +176,7 @@ watch(() => script.data, () => {
       void attemptSave({ silent: true, source: 'autosave' });
     }
   }, 2000);
-}, { deep: true });
+});
 
 watch(() => script.storySystemsRepairRequest?.nonce, (nonce) => {
   if (!nonce || currentView.value !== 'editing') {

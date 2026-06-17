@@ -136,7 +136,8 @@ Remaining-fix recommendation:
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
 - Worth doing when touching nearby code or after measurement: P1, P2, P3, P6, P8, P9, P10, P16, Q5, Q6, Q9, Q10, Q11, Q12, Q17.
-- Do not spend immediate hardening time on: false positives, informational findings, and broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned.
+- Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
+- Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
 - Residual risk after the third pass: preview `postMessage('*')` could be tightened where concrete origins are available (S9), Mermaid/SVG sanitizer hardening remains optional without a confirmed exploit path (S15/S18), Q5/Q6/Q17 cleanup remains useful but lower priority, and large undo/deep-watch/graph optimizations should be handled with measurement rather than audit-driven churn.
 
 ## Priority Repair Plan
@@ -188,19 +189,19 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | P2: graph report computed twice | True | Low | `projectValidator` calls `createBranchGraphReport()` in branch and ending checks. | Compute once and pass through. | Call-count regression. |
 | P3: deep watcher on entire script | True | Medium | `App.vue` deep watches `script.data`. | Targeted dirty tracking. | Benchmark. |
 | P4: SE Audio cleanup | Partially true | Low | Creates `new Audio`; not DOM garbage, and GC should collect, but long sessions can retain until playback finishes. | Optional pool / ended cleanup. | Optional. |
-| P5: fixed 20 fade steps | True | Informational | `_fadeVolume()` fixed `steps = 20`; mostly quality, not performance. | Dynamic steps by duration. | Optional. |
+| P5: fixed 20 fade steps | Not planned for audit hardening | Informational | `_fadeVolume()` fixed `steps = 20`; mostly quality, not performance. Impact is visual-tuning level and should not be changed without product/UX intent. | Defer unless tuning nearby fade behavior. | No. |
 | P6: `isPageRead()` O(n) | True | Low | Uses `readHistory.pages.includes`. | Cache Set. | Yes. |
 | P7: profile double stringify | True | Low | Compares stored and normalized with `JSON.stringify`. | Dirty flag / migration marker. | Optional. |
 | P8: sceneGraph adjacency dedupe O(E*D) | True | Low | Uses array `includes` when building adjacency. | Use Set adjacency. | Large graph. |
 | P9: ending completion nested loop | True | Low | Loops ending refs over all edges. | Pre-index edges. | Large graph. |
 | P10: edge count by repeated filter | True | Low | Filters edges per node for incoming/outgoing counts. | Single-pass counters. | Large graph. |
-| P11: repeated `normalizeEffects` | Partially true | Informational | Some repeated normalization exists, but small and not proven hot. | Reuse normalized arrays where already available. | No. |
+| P11: repeated `normalizeEffects` | Not planned for audit hardening | Informational | Some repeated normalization exists, but small and not proven hot. The churn risk is higher than the unmeasured performance benefit. | Defer unless profiling identifies it. | No. |
 | P12: preview script deep clone | True | Low | `buildScriptSnapshot()` clones whole script for preview. | Send minimal scene/page or cache snapshot. | Optional. |
 | P13: font loading serial | Completed | Low | `loadAllFonts()` now loads fonts concurrently with `Promise.allSettled` while preserving the existing loaded/failed result shape. | Done. | Added. |
 | P14: read history debounce loses close-time writes | Completed | Low | `ReadHistory` now flushes pending debounced writes on `beforeunload` and hidden `visibilitychange`, with explicit teardown support. | Done. | Added. |
 | P15: scriptDiff recursion stack overflow | Completed | Medium | Fixed with max-depth and cycle-pair protection; deep-object and cyclic-object tests added. | Done. | Added. |
 | P16: recursive Tarjan stack risk | True | Low | Tarjan SCC recursion in `sceneGraph`. | Iterative SCC or guard depth. | Large graph. |
-| P17: transition catalog clones every call | Partially true | Informational | True, but only 56 entries; clone also protects catalog. | Cache immutable clone only if measured. | No. |
+| P17: transition catalog clones every call | Not planned for audit hardening | Informational | True, but only 56 entries; clone also protects catalog from caller mutation. | Defer unless measured hot. | No. |
 | P18: dialog grant Sets never clear | Completed | Low | Project close now clears dialog file grants, dialog directory grants, import grants, and project path grants. | Done. | Added. |
 
 ### Security Findings
@@ -212,20 +213,20 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | S3: unvalidated editor binary spawn | False positive | Informational | `--editor` and env var are explicit local execution controls. Not a vulnerability by itself. | Optional UX warning. | No. |
 | S4: `import-assets` accepts arbitrary native paths | Completed | High | Fixed with preload-issued one-time import grants consumed by `import-assets`; source-level wiring regression added. | Done. | Added. |
 | S5: shell string build command | Completed | Medium | Web and desktop export builds now invoke Vite through `execFile` with argv, avoiding shell string construction. | Done. | Added. |
-| S6: BrowserWindow security flags not explicit | Partially true | Informational | Flags are not explicit, but Electron defaults are secure. Report severity overstated. | Explicitly set `contextIsolation:true`, `nodeIntegration:false`. | Optional. |
-| S7: ThemeManager CSS URL injection | Completed | Medium | Fixed with shared `cssUrl()` / CSS string escaping in `ThemeManager`; escaping regression added. | Done. | Added. |
+| S6: BrowserWindow security flags not explicit | Not planned for audit hardening | Informational | Flags are not explicit, but Electron defaults are secure. This is documentation-by-code hardening rather than a confirmed behavior bug. | Defer unless touching BrowserWindow construction. | No. |
+| S7: ThemeManager CSS URL injection | Completed | Medium | Fixed with shared `cssUrl()` / CSS string escaping in `ThemeManager`; escaping regression added. S7 and S16 were grouped because both were CSS string-construction injection risks. | Done. | Added. |
 | S8: `err.message` inside `innerHTML` | Completed | Low | Runtime initialization failure rendering now uses DOM nodes and `textContent` for the error message. | Done. | Added. |
 | S9: postMessage wildcard origin | Partially true | Low | Outbound `*` exists; preview incoming has origin check and editor incoming checks source. | Use concrete target origin where possible. | Optional. |
 | S10: npm audit high vulnerabilities | Completed | High | Fixed by upgrading dependency chain to `vite@^8.0.16` and `tmp@0.2.7`; `npm audit --json` reports 0 vulnerabilities. | Done. | Verified by audit, build, web build, and full tests. |
 | S11: path containment ignores symlinks | Completed | Medium | Added shared realpath-aware path utility and migrated audited import/export call sites; symlink containment regression added. | Done. | Added. |
 | S12: theme ZIP decompression bomb | Completed | Medium | Theme ZIP parsing/install now bounds compressed bytes, total uncompressed bytes, and file count; regression added. | Done. | Added. |
 | S13: IPC leaks `e.message` | Completed | Low | IPC catch paths in editor and exported-game main processes now log details in the main process but return a generic public error response instead of raw exception messages. | Done. | Added. |
-| S14: global console replacement | Partially true | Low | `runWithJsonSafeConsole()` mutates global console; risk low in single CLI command. | Inject logger instead. | Optional. |
+| S14: global console replacement | Not planned for audit hardening | Low | `runWithJsonSafeConsole()` mutates global console, but CLI commands run in a short single-command lifecycle. Refactoring logger injection is not worth the audit-hardening churn. | Defer unless CLI logging is refactored. | No. |
 | S15: Mermaid escaping incomplete | Partially true | Low | Labels escape only `"`. Concrete injection impact not fully proven. | Broaden label escaping. | Optional. |
-| S16: FontFace URL single-quote injection | Completed | Medium | Fixed with shared `cssUrl()` in `fontLoader`; FontFace source escaping regression added. | Done. | Added. |
+| S16: FontFace URL single-quote injection | Completed | Medium | Fixed with shared `cssUrl()` in `fontLoader`; FontFace source escaping regression added. S7 and S16 were grouped because both were CSS string-construction injection risks. | Done. | Added. |
 | S17: CSS sanitizer blacklist bypass | Unconfirmed | Informational | Blacklist is limited, but most usage is via `style.setProperty`; no concrete exploit path confirmed. | Prefer allowlists for high-risk fields. | Needs threat model. |
 | S18: SVG fallback passthrough | Partially true | Low | `<svg` fallback is returned without sanitization; source appears mostly code-controlled. | Restrict to trusted constants or sanitize. | Optional. |
-| S19: `executeJavaScript` bypasses isolation | Partially true | Informational | Fixed internal snippets are used for dirty/save checks; no user data interpolation. | Replace with IPC for cleaner architecture. | Optional. |
+| S19: `executeJavaScript` bypasses isolation | Not planned for audit hardening | Informational | Fixed internal snippets are used for dirty/save checks; no user data interpolation was found. Replacing with IPC would be architectural cleanup, not a confirmed security fix. | Defer to architecture cleanup. | No. |
 | S20: thumbnail bytes not JPEG-validated | Completed | Low | Save IPC now normalizes bounded JPEG bytes before writing `.jpg` thumbnails in editor and exported game main processes. | Done. | Added. |
 | S21: `process.noAsar` global mutation | Completed | Low | Desktop exports that mutate `process.noAsar` are serialized through an export mutex; restore coverage remains in place. | Done. | Added. |
 
@@ -266,16 +267,16 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | M7: `unique().filter(Boolean)` drops falsy values | Partially true | Informational | True but current call sites mostly expect strings. | Rename or preserve semantics. |
 | M8: fallback project ID collision | Partially true | Informational | Theoretical; default crypto UUID path is fine, fallback 10000-run repro had no collision. | Optional longer random/counter. |
 | M9: ConfigManager set accepts any key/value | Completed | Low | `ConfigManager` now applies a key/type/range schema when loading persisted settings and when setting values at runtime; invalid and unknown keys are ignored with regression coverage. | Done. |
-| M10: EventEmitter lacks `once/removeAllListeners` | Partially true | Informational | Missing convenience API, not a bug. | Add only if needed. |
+| M10: EventEmitter lacks `once/removeAllListeners` | Not planned for audit hardening | Informational | Missing convenience API, not a correctness or security defect. | Add only when a real caller needs it. |
 | M11: BGM fadeIn ignored | Completed | Low | `ScriptEngine` now emits `page.bgm.fadeIn ?? 0` in `play_bgm` events. |
 | M12: undo limit 50 magic number | True | Informational | Hard-coded in `script.js`. | Named constant. |
 | M13: CLI lacks `--flag=value` parsing | Completed | Low | CLI helpers now parse equals-form values and boolean flags; `list-transitions --target=background` regression added. | Done. |
 | M14: `getMainWindow()` may return wrong fallback | Completed | Low | `getMainWindow()` now returns only the tracked main `win` and rejects missing/destroyed windows; source regression coverage prevents focused/all-window fallback from returning. | Done. |
-| M15: Chinese UI strings hard-coded | True | Informational | Many hard-coded strings. Product may be Chinese-first. | i18n only if product goal requires it. |
+| M15: Chinese UI strings hard-coded | Not planned for audit hardening | Informational | Many hard-coded strings. Product may be Chinese-first, so i18n is a product milestone rather than an audit repair. | Defer unless localization becomes a product goal. |
 
 ## Suggested Next Session Start
 
 1. Do not restart with Q18, S8, B7, B10, B12, B13, B17, S5, S20, S21, M5, M11, P13, P14, P18, S13, M9, or M14; these are now completed and regression-covered.
-2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as S9, S15, S18, Q5/Q6, or Q17.
+2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as S9, S15, S18, Q5/Q6, or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
 3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, P1/P3, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

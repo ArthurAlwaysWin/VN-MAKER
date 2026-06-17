@@ -177,7 +177,7 @@ describe('page editor effect preview state', () => {
         animation: 'shake',
         durationMs: 300,
       },
-    }, '*');
+    }, window.location.origin);
 
     expect(editor.previewSessionType.value).toBe('effect');
     expect(editor.isPreviewMode.value).toBe(true);
@@ -207,7 +207,7 @@ describe('page editor effect preview state', () => {
         config: { preset: 'snow', density: 0.5, speed: 1, wind: 0, opacity: 0.8, color: '#ffffff', direction: 'down' },
         durationMs: 1200,
       },
-    }, '*');
+    }, window.location.origin);
     expect(editor.isEffectPreviewBusy.value).toBe(true);
   });
 
@@ -290,10 +290,10 @@ describe('page editor effect preview state', () => {
       sceneId: 'start',
       pageIndex: 0,
       previewMode: true,
-    }, '*');
+    }, window.location.origin);
 
     editor.stopPreview();
-    expect(postMessage).toHaveBeenLastCalledWith({ type: 'stop' }, '*');
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'stop' }, window.location.origin);
     expect(editor.previewSessionType.value).toBe(null);
     expect(editor.isPreviewMode.value).toBe(false);
 
@@ -468,7 +468,7 @@ describe('page editor effect preview state', () => {
     expect(postMessage).toHaveBeenCalledWith({
       type: 'preview-effect-stop',
       requestId: request.requestId,
-    }, '*');
+    }, window.location.origin);
     expect(editor.previewSessionType.value).toBe('effect');
 
     editor.previewSessionType.value = 'play';
@@ -476,7 +476,7 @@ describe('page editor effect preview state', () => {
 
     editor.stopPreview();
     expect(postMessage).toHaveBeenCalledTimes(1);
-    expect(postMessage).toHaveBeenCalledWith({ type: 'stop' }, '*');
+    expect(postMessage).toHaveBeenCalledWith({ type: 'stop' }, window.location.origin);
     expect(editor.previewSessionType.value).toBe(null);
   });
 });

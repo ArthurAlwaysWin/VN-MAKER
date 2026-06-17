@@ -134,6 +134,39 @@ describe('agent handoff editor integration', () => {
     }));
   });
 
+  it('does not update local handoff review cache when project artifact write fails', async () => {
+    setActivePinia(createPinia());
+    const reviewItem = { source: 'layout', code: 'layout-blank-page', pathString: 'scenes.start.pages.0' };
+    const handoff = {
+      kind: 'agent-authoring-handoff',
+      createdAt: '2026-05-20T10:00:00.000Z',
+      reviewItems: [reviewItem],
+    };
+    window.ipcRenderer = {
+      invoke: vi.fn(async (channel) => {
+        if (channel === 'load-project') {
+          return { success: true, path: 'E:/demo-project', project: { name: 'Demo Project' } };
+        }
+        if (channel === 'read-agent-handoff') {
+          return { success: true, handoff, path: 'E:/demo-project/agent-handoff.json' };
+        }
+        if (channel === 'write-agent-review-state') {
+          return { success: false, error: 'disk full' };
+        }
+        return { success: true };
+      }),
+    };
+
+    const project = useProjectStore();
+    await project.loadProject('E:/demo-project');
+    expect(project.setAgentReviewItemStatus(reviewItem, 'resolved')).toBe(true);
+    await Promise.resolve();
+
+    const storageKey = `galgame-maker:agent-review-state:E:/demo-project:${handoff.createdAt}`;
+    expect(window.ipcRenderer.invoke).toHaveBeenCalledWith('write-agent-review-state', expect.any(Object));
+    expect(window.localStorage.getItem(storageKey)).toBeNull();
+  });
+
   it('loads persisted handoff review lifecycle state from the project artifact when available', async () => {
     setActivePinia(createPinia());
     const reviewItem = { source: 'layout', code: 'layout-blank-page', pathString: 'scenes.start.pages.0' };

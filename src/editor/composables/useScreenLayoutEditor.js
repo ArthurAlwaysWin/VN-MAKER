@@ -9,6 +9,7 @@
 
 import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 
 // ─── Symbol Key ────────────────────────────────────────
 export const SCREEN_LAYOUT_EDITOR_KEY = Symbol('screenLayoutEditor');
@@ -64,11 +65,11 @@ export function createScreenLayoutEditor(fixedScreenId) {
       const getter = screenGetters[target];
       const config = getter ? getter() : null;
       if (!config) return;
-      iframeRef.value.contentWindow.postMessage({
+      postPreviewMessage(iframeRef.value.contentWindow, {
         type: 'update-screen-layout',
         screen: target,
         config: JSON.parse(JSON.stringify(config)),
-      }, '*');
+      });
     }, 200);
   }
 
@@ -79,11 +80,11 @@ export function createScreenLayoutEditor(fixedScreenId) {
     const getter = screenGetters[target];
     const config = getter ? getter() : null;
     if (!config) return;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'update-screen-layout',
       screen: target,
       config: JSON.parse(JSON.stringify(config)),
-    }, '*');
+    });
   }
 
   function startEngine() {
@@ -91,13 +92,13 @@ export function createScreenLayoutEditor(fixedScreenId) {
     if (!script.data) return;
     const snapshot = JSON.parse(JSON.stringify(script.data));
     const firstSceneId = Object.keys(script.data.scenes || {})[0] || null;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'start',
       script: snapshot,
       sceneId: firstSceneId,
       pageIndex: 0,
       previewMode: true,
-    }, '*');
+    });
   }
 
   // ─── Engine Message Handler ────────────────────────
@@ -108,15 +109,15 @@ export function createScreenLayoutEditor(fixedScreenId) {
 
     if (event.data.type === 'ready') {
       isEngineReady.value = true;
-      event.source?.postMessage({ type: 'ack-preview' }, '*');
+      postPreviewMessage(event.source, { type: 'ack-preview' }, event);
       startEngine();
       flushPreview();
       // Auto-show the target screen in the iframe
       if (fixedScreenId) {
-        iframeRef.value?.contentWindow?.postMessage({
+        postPreviewMessage(iframeRef.value?.contentWindow, {
           type: 'show-screen',
           screenId: fixedScreenId,
-        }, '*');
+        });
       }
     }
   }

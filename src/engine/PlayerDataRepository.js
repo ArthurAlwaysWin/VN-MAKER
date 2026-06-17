@@ -256,7 +256,13 @@ export class PlayerDataRepository {
     this.projectId = projectId;
     this._storage = storage;
     this._profile = createDefaultPlayerProfile(projectId);
+    this._readPageSet = new Set(this._profile.readHistory.pages);
     this._loaded = false;
+  }
+
+  _setProfile(profile) {
+    this._profile = profile;
+    this._readPageSet = new Set(profile.readHistory.pages);
   }
 
   async load(force = false) {
@@ -266,7 +272,7 @@ export class PlayerDataRepository {
 
     const stored = await this._storage.loadProfile(this.projectId);
     const normalized = normalizePlayerProfile(this.projectId, stored);
-    this._profile = normalized;
+    this._setProfile(normalized);
     this._loaded = true;
 
     if (JSON.stringify(stored) !== JSON.stringify(normalized)) {
@@ -281,17 +287,18 @@ export class PlayerDataRepository {
   }
 
   isPageRead(sceneId, pageIndex) {
-    return this._profile.readHistory.pages.includes(`${sceneId}:${pageIndex}`);
+    return this._readPageSet.has(`${sceneId}:${pageIndex}`);
   }
 
   async markRead(sceneId, pageIndex) {
     await this.load();
     const key = `${sceneId}:${pageIndex}`;
-    if (this._profile.readHistory.pages.includes(key)) {
+    if (this._readPageSet.has(key)) {
       return this.getProfile();
     }
 
     this._profile.readHistory.pages.push(key);
+    this._readPageSet.add(key);
     await this._storage.saveProfile(this.projectId, this._profile);
     return this.getProfile();
   }
@@ -299,6 +306,7 @@ export class PlayerDataRepository {
   async clearReadHistory() {
     await this.load();
     this._profile.readHistory.pages = [];
+    this._readPageSet.clear();
     await this._storage.saveProfile(this.projectId, this._profile);
     return this.getProfile();
   }
@@ -312,7 +320,7 @@ export class PlayerDataRepository {
     await this._storage.reset(scope, this.projectId);
 
     if (scope === GALGAME_RESET_SCOPES.PROFILE || scope === GALGAME_RESET_SCOPES.ALL) {
-      this._profile = createDefaultPlayerProfile(this.projectId);
+      this._setProfile(createDefaultPlayerProfile(this.projectId));
       await this._storage.saveProfile(this.projectId, this._profile);
     }
 
@@ -332,6 +340,7 @@ export class PlayerDataRepository {
   async replaceReadHistoryPages(pages) {
     await this.load();
     this._profile.readHistory.pages = normalizePages(pages);
+    this._readPageSet = new Set(this._profile.readHistory.pages);
     await this._storage.saveProfile(this.projectId, this._profile);
     return this.getProfile();
   }

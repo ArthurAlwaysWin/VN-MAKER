@@ -114,15 +114,15 @@ export function collectSceneEdges(script = {}) {
 
 export function collectSceneGraph(script = {}) {
   const scenes = isPlainObject(script?.scenes) ? script.scenes : {};
-  const graph = Object.fromEntries(Object.keys(scenes).map((sceneId) => [sceneId, []]));
+  const adjacency = new Map(Object.keys(scenes).map((sceneId) => [sceneId, new Set()]));
 
   for (const edge of collectSceneEdges(script)) {
-    if (!graph[edge.fromSceneId].includes(edge.toSceneId)) {
-      graph[edge.fromSceneId].push(edge.toSceneId);
-    }
+    adjacency.get(edge.fromSceneId)?.add(edge.toSceneId);
   }
 
-  return graph;
+  return Object.fromEntries(
+    [...adjacency.entries()].map(([sceneId, targets]) => [sceneId, [...targets]]),
+  );
 }
 
 export function collectSceneReferences(script = {}, targetSceneId = null) {
@@ -232,9 +232,9 @@ function collectUnlockReferences(script = {}, type) {
 }
 
 function findClosedCycles(sceneIds, edges, reachableIds, endingCompletionSceneIds) {
-  const adjacency = new Map(sceneIds.map((sceneId) => [sceneId, []]));
+  const adjacency = new Map(sceneIds.map((sceneId) => [sceneId, new Set()]));
   for (const edge of edges.filter((entry) => entry.targetExists)) {
-    adjacency.get(edge.fromSceneId)?.push(edge.toSceneId);
+    adjacency.get(edge.fromSceneId)?.add(edge.toSceneId);
   }
 
   let nextIndex = 0;
@@ -301,6 +301,10 @@ function findClosedCycles(sceneIds, edges, reachableIds, endingCompletionSceneId
     .filter(Boolean);
 }
 
+function createChoiceEdgeKey(sceneId, pageIndex, optionIndex) {
+  return `${sceneId}:${pageIndex}:${optionIndex}`;
+}
+
 function summarizeUnlockProgress(registry, references, reachableIds) {
   const referencesById = new Map();
   for (const reference of references) {
@@ -355,25 +359,39 @@ export function createBranchGraphReport(script = {}, options = {}) {
   const endingUnlockSceneIds = new Set(endingUnlockReferences.map((reference) => reference.sceneId));
   const cgUnlockSceneIds = new Set(cgUnlockReferences.map((reference) => reference.sceneId));
   const endingCompletionSceneIds = new Set(endingUnlockSceneIds);
+  const incomingEdgeCounts = new Map(sceneIds.map((sceneId) => [sceneId, 0]));
+  const outgoingEdgeCounts = new Map(sceneIds.map((sceneId) => [sceneId, 0]));
+  const choiceTargetsBySource = new Map();
+  for (const edge of edges) {
+    if (outgoingEdgeCounts.has(edge.fromSceneId)) {
+      outgoingEdgeCounts.set(edge.fromSceneId, outgoingEdgeCounts.get(edge.fromSceneId) + 1);
+    }
+    if (incomingEdgeCounts.has(edge.toSceneId)) {
+      incomingEdgeCounts.set(edge.toSceneId, incomingEdgeCounts.get(edge.toSceneId) + 1);
+    }
+    if (edge.kind === 'choice-option' && edge.targetExists) {
+      choiceTargetsBySource.set(
+        createChoiceEdgeKey(edge.fromSceneId, edge.pageIndex, edge.optionIndex),
+        edge.toSceneId,
+      );
+    }
+  }
   for (const reference of endingUnlockReferences) {
-    for (const edge of edges) {
-      if (
-        edge.kind === 'choice-option'
-        && edge.fromSceneId === reference.sceneId
-        && edge.pageIndex === reference.pageIndex
-        && edge.optionIndex === reference.optionIndex
-        && edge.targetExists
-      ) {
-        endingCompletionSceneIds.add(edge.toSceneId);
-      }
+    const choiceTarget = choiceTargetsBySource.get(
+      createChoiceEdgeKey(reference.sceneId, reference.pageIndex, reference.optionIndex),
+    );
+    if (choiceTarget) {
+      endingCompletionSceneIds.add(choiceTarget);
     }
   }
   const terminalSceneIds = sceneIds.filter((sceneId) => (
-    !edges.some((edge) => edge.fromSceneId === sceneId)
+    outgoingEdgeCounts.get(sceneId) === 0
   ));
   const deadEndSceneIds = terminalSceneIds.filter((sceneId) => (
     reachableIds.has(sceneId) && !endingCompletionSceneIds.has(sceneId)
   ));
+  const terminalSceneIdSet = new Set(terminalSceneIds);
+  const deadEndSceneIdSet = new Set(deadEndSceneIds);
   const cyclesWithoutExit = findClosedCycles(sceneIds, edges, reachableIds, endingCompletionSceneIds);
   const cycleSceneIds = new Set(cyclesWithoutExit.flatMap((cycle) => cycle.sceneIds));
   const endings = summarizeUnlockProgress(
@@ -391,14 +409,14 @@ export function createBranchGraphReport(script = {}, options = {}) {
     id: sceneId,
     name: scenes[sceneId]?.name ?? sceneId,
     reachable: reachableIds.has(sceneId),
-    terminal: terminalSceneIds.includes(sceneId),
-    deadEnd: deadEndSceneIds.includes(sceneId),
+    terminal: terminalSceneIdSet.has(sceneId),
+    deadEnd: deadEndSceneIdSet.has(sceneId),
     cycleWithoutExit: cycleSceneIds.has(sceneId),
     unlocksEnding: endingUnlockSceneIds.has(sceneId),
     endingResolved: endingCompletionSceneIds.has(sceneId),
     unlocksCg: cgUnlockSceneIds.has(sceneId),
-    incomingEdgeCount: edges.filter((edge) => edge.toSceneId === sceneId).length,
-    outgoingEdgeCount: edges.filter((edge) => edge.fromSceneId === sceneId).length,
+    incomingEdgeCount: incomingEdgeCounts.get(sceneId) ?? 0,
+    outgoingEdgeCount: outgoingEdgeCounts.get(sceneId) ?? 0,
   }));
 
   return {

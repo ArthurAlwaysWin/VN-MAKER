@@ -162,6 +162,34 @@ describe('player data repository', () => {
     });
   });
 
+  it('checks read pages through a cached set instead of scanning the profile array', async () => {
+    const storage = createMemoryStorage({
+      profiles: {
+        gm_story: {
+          version: PLAYER_PROFILE_VERSION,
+          projectId: 'gm_story',
+          readHistory: {
+            pages: ['start:0', 'start:1'],
+          },
+          unlocks: {
+            endings: {},
+            cg: {},
+          },
+        },
+      },
+    });
+    const repository = new PlayerDataRepository('gm_story', storage);
+    await repository.load();
+    repository._profile.readHistory.pages.includes = () => {
+      throw new Error('linear scan should not be used');
+    };
+
+    expect(repository.isPageRead('start', 1)).toBe(true);
+    expect(repository.isPageRead('start', 2)).toBe(false);
+    await repository.markRead('start', 2);
+    expect(repository.isPageRead('start', 2)).toBe(true);
+  });
+
   it('reset scopes touch only the requested surface and reuse the contract rebuild scope from plan 01', async () => {
     const storage = createMemoryStorage({
       profiles: {

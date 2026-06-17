@@ -1828,7 +1828,8 @@ if (!gotSingleInstanceLock) {
 
 if (gotSingleInstanceLock) {
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') { app.quit(); win = null; }
+    win = null;
+    if (process.platform !== 'darwin') app.quit();
   });
 
   app.whenReady().then(() => {

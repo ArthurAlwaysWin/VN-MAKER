@@ -26,4 +26,12 @@ describe('electron IPC hardening', () => {
     expect(helper).not.toContain('BrowserWindow.getFocusedWindow');
     expect(helper).not.toContain('BrowserWindow.getAllWindows');
   });
+
+  it('clears the tracked main window before platform-specific quit handling', () => {
+    const editorMain = readSource('electron/main.js');
+    const handler = editorMain.match(/app\.on\('window-all-closed'[\s\S]*?\n  \}\);/)?.[0] || '';
+
+    expect(handler).toContain('win = null;');
+    expect(handler.indexOf('win = null;')).toBeLessThan(handler.indexOf("process.platform !== 'darwin'"));
+  });
 });

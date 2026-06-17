@@ -344,6 +344,10 @@ export class ScriptEngine extends EventEmitter {
    * @private
    */
   _enterScene(sceneId) {
+    if (!this.script?.scenes) {
+      console.error('[ScriptEngine] Cannot enter scene before script is loaded');
+      return;
+    }
     const scene = this.script.scenes[sceneId];
     if (!scene) {
       console.error(`[ScriptEngine] Scene not found: ${sceneId}`);

@@ -11,6 +11,7 @@ import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { DEFAULT_TOKENS } from '../../engine/tokens.js';
 import { deriveTokens } from '../../engine/oklch.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 
 // ─── Symbol Key ────────────────────────────────────────
 const THEME_EDITOR_KEY = Symbol('themeEditor');
@@ -144,13 +145,13 @@ export function createThemeEditor() {
     // Immediately send preview to iframe — no debounce, no store write
     if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
     const theme = script.getTheme();
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'update-theme',
       theme: {
         tokens: { ...presetTokens },
         nineSlice: theme?.nineSlice ?? {},
       },
-    }, '*');
+    });
   }
 
   function applyPreset(presetTokens) {
@@ -177,10 +178,10 @@ export function createThemeEditor() {
       if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
       const theme = script.getTheme();
       if (!theme) return;
-      iframeRef.value.contentWindow.postMessage({
+      postPreviewMessage(iframeRef.value.contentWindow, {
         type: 'update-theme',
         theme: JSON.parse(JSON.stringify(theme)),
-      }, '*');
+      });
     }, 200);
   }
 
@@ -189,10 +190,10 @@ export function createThemeEditor() {
     if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
     const theme = script.getTheme();
     if (!theme) return;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'update-theme',
       theme: JSON.parse(JSON.stringify(theme)),
-    }, '*');
+    });
   }
 
   function startEngine() {
@@ -200,13 +201,13 @@ export function createThemeEditor() {
     if (!script.data) return;
     const snapshot = JSON.parse(JSON.stringify(script.data));
     const firstSceneId = Object.keys(script.data.scenes || {})[0] || null;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'start',
       script: snapshot,
       sceneId: firstSceneId,
       pageIndex: 0,
       previewMode: true,
-    }, '*');
+    });
   }
 
   // ─── Engine Message Handler ────────────────────────
@@ -217,7 +218,7 @@ export function createThemeEditor() {
 
     if (event.data.type === 'ready') {
       isEngineReady.value = true;
-      event.source?.postMessage({ type: 'ack-preview' }, '*');
+      postPreviewMessage(event.source, { type: 'ack-preview' }, event);
       startEngine();
       flushPreview();
     }

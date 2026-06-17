@@ -10,6 +10,7 @@
 import { ref, provide, inject, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { WIDGET_DEFAULTS } from '../../engine/widgetDefaults.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 
 // ─── Symbol Key ────────────────────────────────────────
 export const WIDGET_STYLES_EDITOR_KEY = Symbol('widgetStylesEditor');
@@ -32,10 +33,10 @@ export function createWidgetStylesEditor() {
       if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
       const ws = script.getWidgetStyles();
       if (!ws) return;
-      iframeRef.value.contentWindow.postMessage({
+      postPreviewMessage(iframeRef.value.contentWindow, {
         type: 'update-widget-styles',
         widgetStyles: JSON.parse(JSON.stringify(ws)),
-      }, '*');
+      });
     }, 200);
   }
 
@@ -44,10 +45,10 @@ export function createWidgetStylesEditor() {
     if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
     const ws = script.getWidgetStyles();
     if (!ws) return;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'update-widget-styles',
       widgetStyles: JSON.parse(JSON.stringify(ws)),
-    }, '*');
+    });
   }
 
   function startEngine() {
@@ -55,13 +56,13 @@ export function createWidgetStylesEditor() {
     if (!script.data) return;
     const snapshot = JSON.parse(JSON.stringify(script.data));
     const firstSceneId = Object.keys(script.data.scenes || {})[0] || null;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'start',
       script: snapshot,
       sceneId: firstSceneId,
       pageIndex: 0,
       previewMode: true,
-    }, '*');
+    });
   }
 
   // ─── Engine Message Handler ────────────────────────
@@ -72,7 +73,7 @@ export function createWidgetStylesEditor() {
 
     if (event.data.type === 'ready') {
       isEngineReady.value = true;
-      event.source?.postMessage({ type: 'ack-preview' }, '*');
+      postPreviewMessage(event.source, { type: 'ack-preview' }, event);
       startEngine();
       flushPreview();
     }

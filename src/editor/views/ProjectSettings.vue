@@ -276,6 +276,7 @@ import { provide, ref, computed, onMounted, onActivated, onBeforeUnmount } from 
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { createThemeEditor } from '../composables/useThemeEditor.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 import { UI_MOTION_FIELD_SCHEMA, normalizeUiMotion } from '../../shared/uiMotionContract.js';
 import {
   UI_STYLE_PRESET_SCOPES,
@@ -615,30 +616,30 @@ function previewUiMotion() {
   if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
   themeEditor.startEngine();
   themeEditor.flushPreview();
-  themeEditor.iframeRef.value.contentWindow.postMessage({
+  postPreviewMessage(themeEditor.iframeRef.value.contentWindow, {
     type: 'update-ui-motion',
     motion: normalizeUiMotion(script.data.ui?.motion),
-  }, '*');
-  themeEditor.iframeRef.value.contentWindow.postMessage({
+  });
+  postPreviewMessage(themeEditor.iframeRef.value.contentWindow, {
     type: 'show-screen',
     screenId: 'titleScreen',
-  }, '*');
+  });
 }
 
 function showPresetPreviewTarget(scope = uiStylePresetScope.value) {
   if (scope === 'dialogue') {
-    themeEditor.iframeRef.value?.contentWindow?.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+    postPreviewMessage(themeEditor.iframeRef.value?.contentWindow, DIALOGUE_PREVIEW_SAMPLE);
     return;
   }
   if (scope === 'choices') {
-    themeEditor.iframeRef.value?.contentWindow?.postMessage(CHOICE_PREVIEW_SAMPLE, '*');
+    postPreviewMessage(themeEditor.iframeRef.value?.contentWindow, CHOICE_PREVIEW_SAMPLE);
     return;
   }
   const screenId = scope === 'screens' ? 'settingsScreen' : 'titleScreen';
-  themeEditor.iframeRef.value?.contentWindow?.postMessage({
+  postPreviewMessage(themeEditor.iframeRef.value?.contentWindow, {
     type: 'show-screen',
     screenId,
-  }, '*');
+  });
 }
 
 function previewUiStylePreset(presetId) {
@@ -650,11 +651,11 @@ function previewUiStylePreset(presetId) {
   });
   const previewScript = result.script;
   const firstSceneId = Object.keys(previewScript.scenes || {})[0] || null;
-  themeEditor.iframeRef.value.contentWindow.postMessage({
+  postPreviewMessage(themeEditor.iframeRef.value.contentWindow, {
     type: 'start',
     script: previewScript,
     sceneId: firstSceneId,
-  }, '*');
+  });
   setTimeout(() => showPresetPreviewTarget(result.scope), 50);
 }
 
@@ -700,17 +701,17 @@ function showPreviewScreen(screenId = 'settingsScreen') {
     themeEditor.startEngine();
     themeEditor.flushPreview();
   }
-  themeEditor.iframeRef.value?.contentWindow?.postMessage({
+  postPreviewMessage(themeEditor.iframeRef.value?.contentWindow, {
     type: 'show-screen',
     screenId,
-  }, '*');
+  });
 }
 
 function sendDialoguePreview() {
   if (!themeEditor.iframeRef.value?.contentWindow || !script.data) return;
   themeEditor.startEngine();
   themeEditor.flushPreview();
-  themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+  postPreviewMessage(themeEditor.iframeRef.value.contentWindow, DIALOGUE_PREVIEW_SAMPLE);
 }
 
 const buttonFamilyPreviewMap = {
@@ -728,9 +729,9 @@ function onButtonFamilyPreview(familyKey) {
 
   const route = buttonFamilyPreviewMap[familyKey];
   if (route) {
-    themeEditor.iframeRef.value.contentWindow.postMessage(route, '*');
+    postPreviewMessage(themeEditor.iframeRef.value.contentWindow, route);
   } else if (familyKey === 'qab') {
-    themeEditor.iframeRef.value.contentWindow.postMessage(DIALOGUE_PREVIEW_SAMPLE, '*');
+    postPreviewMessage(themeEditor.iframeRef.value.contentWindow, DIALOGUE_PREVIEW_SAMPLE);
   }
 }
 

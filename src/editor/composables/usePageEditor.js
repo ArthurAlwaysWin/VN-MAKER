@@ -1,5 +1,6 @@
 import { ref, computed, provide, inject } from 'vue';
 import { useScriptStore } from '../stores/script.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 
 const PAGE_EDITOR_KEY = Symbol('pageEditor');
 
@@ -212,13 +213,13 @@ export function createPageEditor() {
 
     const snapshot = buildScriptSnapshot();
 
-    previewIframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(previewIframeRef.value.contentWindow, {
       type: 'start',
       script: snapshot,
       sceneId: selectedSceneId.value,
       pageIndex: selectedPageIndex.value,
       previewMode: true,
-    }, '*');
+    });
 
     previewSessionType.value = 'play';
     isMuted.value = false;
@@ -250,7 +251,7 @@ export function createPageEditor() {
       payload,
     };
 
-    previewIframeRef.value.contentWindow.postMessage(message, '*');
+    postPreviewMessage(previewIframeRef.value.contentWindow, message);
 
     effectPreviewProvenanceByRequestId.set(requestId, provenance);
     previewDisabledReason.value = null;
@@ -285,10 +286,10 @@ export function createPageEditor() {
 
   function stopActiveEffectPreview() {
     if (!previewIframeRef.value?.contentWindow || !activeEffectPreviewRequestId.value) return;
-    previewIframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(previewIframeRef.value.contentWindow, {
       type: 'preview-effect-stop',
       requestId: activeEffectPreviewRequestId.value,
-    }, '*');
+    });
   }
 
   function stopPreview() {
@@ -297,7 +298,7 @@ export function createPageEditor() {
       return;
     }
     if (previewIframeRef.value?.contentWindow) {
-      previewIframeRef.value.contentWindow.postMessage({ type: 'stop' }, '*');
+      postPreviewMessage(previewIframeRef.value.contentWindow, { type: 'stop' });
     }
     previewSessionType.value = null;
   }
@@ -305,10 +306,10 @@ export function createPageEditor() {
   function toggleMute() {
     isMuted.value = !isMuted.value;
     if (previewIframeRef.value?.contentWindow) {
-      previewIframeRef.value.contentWindow.postMessage({
+      postPreviewMessage(previewIframeRef.value.contentWindow, {
         type: 'mute',
         muted: isMuted.value,
-      }, '*');
+      });
     }
   }
 
@@ -321,7 +322,7 @@ export function createPageEditor() {
       case 'ready':
         isEngineReady.value = true;
         // Acknowledge preview context so iframe detects 'preview' env
-        event.source?.postMessage({ type: 'ack-preview' }, '*');
+        postPreviewMessage(event.source, { type: 'ack-preview' }, event);
         break;
       case 'ended':
         if (previewSessionType.value === 'play') {

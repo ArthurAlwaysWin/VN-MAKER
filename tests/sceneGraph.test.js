@@ -188,6 +188,35 @@ describe('scene graph helpers', () => {
     expect(createBranchGraphMermaid(report)).toContain('scene_start -->|choice option| scene_final');
   });
 
+  it('deduplicates traversal adjacency while preserving edge counts', () => {
+    const report = createBranchGraphReport({
+      scenes: {
+        start: {
+          next: 'shared',
+          pages: [{
+            type: 'choice',
+            options: [
+              { target: 'shared' },
+              { target: 'shared' },
+            ],
+          }],
+        },
+        shared: { pages: [] },
+      },
+    });
+
+    expect(report.graph.start).toEqual(['shared']);
+    expect(report.edgeCount).toBe(3);
+    expect(report.nodes.find((node) => node.id === 'start')).toMatchObject({
+      outgoingEdgeCount: 3,
+      incomingEdgeCount: 0,
+    });
+    expect(report.nodes.find((node) => node.id === 'shared')).toMatchObject({
+      outgoingEdgeCount: 0,
+      incomingEdgeCount: 3,
+    });
+  });
+
   it('treats terminal normal pages with page-enter ending unlocks as resolved endings', () => {
     const report = createBranchGraphReport({
       systems: { endings: { quiet_end: {} } },

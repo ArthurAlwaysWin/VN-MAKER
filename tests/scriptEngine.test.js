@@ -70,6 +70,18 @@ describe('startGame', () => {
     }
   });
 
+  it('does not throw when private scene entry is called before loading a script', () => {
+    const engine = new ScriptEngine();
+    const error = console.error;
+    console.error = () => {};
+    try {
+      strictEqual(engine._enterScene('start'), undefined);
+      strictEqual(engine.currentScene, null);
+    } finally {
+      console.error = error;
+    }
+  });
+
   it('resets variables and drops previous history entries', () => {
     const engine = makeEngine();
     engine.variables.set('affection', 10);

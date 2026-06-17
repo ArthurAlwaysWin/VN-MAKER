@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { validateProject } from '../src/shared/projectValidator.js';
 
@@ -92,6 +94,13 @@ function codes(report) {
 }
 
 describe('project validator', () => {
+  it('computes branch graph report once per validation pass', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/shared/projectValidator.js'), 'utf8');
+    const callSites = source.match(/createBranchGraphReport\(script,/g) ?? [];
+
+    expect(callSites).toHaveLength(1);
+  });
+
   it('accepts a canonical page-based project', () => {
     const report = validateProject(createValidScript());
 

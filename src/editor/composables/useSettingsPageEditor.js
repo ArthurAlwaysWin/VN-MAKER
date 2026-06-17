@@ -13,6 +13,7 @@ import { useScriptStore } from '../stores/script.js';
 import { WIDGET_DEFAULTS } from '../../engine/widgetDefaults.js';
 import { WIDGET_STYLES_EDITOR_KEY } from './useWidgetStylesEditor.js';
 import { SCREEN_LAYOUT_EDITOR_KEY } from './useScreenLayoutEditor.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 
 const SETTINGS_PAGE_EDITOR_KEY = Symbol('settingsPageEditor');
 
@@ -79,19 +80,19 @@ export function createSettingsPageEditor() {
       // Send screen layout
       const cfg = getScreenConfig();
       if (cfg) {
-        win.postMessage({
+        postPreviewMessage(win, {
           type: 'update-screen-layout',
           screen: 'settingsScreen',
           config: JSON.parse(JSON.stringify(cfg)),
-        }, '*');
+        });
       }
       // Send widget styles
       const ws = script.getWidgetStyles();
       if (ws) {
-        win.postMessage({
+        postPreviewMessage(win, {
           type: 'update-widget-styles',
           widgetStyles: JSON.parse(JSON.stringify(ws)),
-        }, '*');
+        });
       }
     }, 200);
   }
@@ -102,18 +103,18 @@ export function createSettingsPageEditor() {
     const win = iframeRef.value.contentWindow;
     const cfg = getScreenConfig();
     if (cfg) {
-      win.postMessage({
+      postPreviewMessage(win, {
         type: 'update-screen-layout',
         screen: 'settingsScreen',
         config: JSON.parse(JSON.stringify(cfg)),
-      }, '*');
+      });
     }
     const ws = script.getWidgetStyles();
     if (ws) {
-      win.postMessage({
+      postPreviewMessage(win, {
         type: 'update-widget-styles',
         widgetStyles: JSON.parse(JSON.stringify(ws)),
-      }, '*');
+      });
     }
   }
 
@@ -122,13 +123,13 @@ export function createSettingsPageEditor() {
     if (!script.data) return;
     const snapshot = JSON.parse(JSON.stringify(script.data));
     const firstSceneId = Object.keys(script.data.scenes || {})[0] || null;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'start',
       script: snapshot,
       sceneId: firstSceneId,
       pageIndex: 0,
       previewMode: true,
-    }, '*');
+    });
   }
 
   function onEngineMessage(event) {
@@ -137,14 +138,14 @@ export function createSettingsPageEditor() {
 
     if (event.data.type === 'ready') {
       isEngineReady.value = true;
-      event.source?.postMessage({ type: 'ack-preview' }, '*');
+      postPreviewMessage(event.source, { type: 'ack-preview' }, event);
       startEngine();
       flushPreview();
       // Show settings screen in preview
-      iframeRef.value?.contentWindow?.postMessage({
+      postPreviewMessage(iframeRef.value?.contentWindow, {
         type: 'show-screen',
         screenId: 'settingsScreen',
-      }, '*');
+      });
     }
   }
 

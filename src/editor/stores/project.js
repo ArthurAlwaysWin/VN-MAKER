@@ -168,15 +168,18 @@ export const useProjectStore = defineStore('project', () => {
       return;
     }
 
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(storageKey, JSON.stringify(agentReviewState.value));
-    }
-
     if (window.ipcRenderer && agentHandoff.value) {
-      await window.ipcRenderer.invoke('write-agent-review-state', {
+      const result = await window.ipcRenderer.invoke('write-agent-review-state', {
         handoffCreatedAt: agentHandoff.value.createdAt ?? null,
         items: agentReviewState.value,
       });
+      if (!result?.success) {
+        return;
+      }
+    }
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(storageKey, JSON.stringify(agentReviewState.value));
     }
   }
 

@@ -9,6 +9,7 @@
 
 import { ref, onBeforeUnmount } from 'vue';
 import { useScriptStore } from '../stores/script.js';
+import { postPreviewMessage } from '../utils/previewMessaging.js';
 
 export function useTitlePreview() {
   const script = useScriptStore();
@@ -24,13 +25,13 @@ export function useTitlePreview() {
     if (!iframeRef.value?.contentWindow || !script.data) return;
     const snapshot = JSON.parse(JSON.stringify(script.data));
     const firstSceneId = Object.keys(script.data.scenes || {})[0] || null;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'start',
       script: snapshot,
       sceneId: firstSceneId,
       pageIndex: 0,
       previewMode: true,
-    }, '*');
+    });
   }
 
   // ─── Preview sync ─────────────────────────────────
@@ -41,15 +42,15 @@ export function useTitlePreview() {
       if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
       const cfg = script.getTitleScreen();
       if (!cfg) return;
-      iframeRef.value.contentWindow.postMessage({
+      postPreviewMessage(iframeRef.value.contentWindow, {
         type: 'update-screen-layout',
         screen: 'titleScreen',
         config: JSON.parse(JSON.stringify(cfg)),
-      }, '*');
-      iframeRef.value.contentWindow.postMessage({
+      });
+      postPreviewMessage(iframeRef.value.contentWindow, {
         type: 'show-screen',
         screenId: 'titleScreen',
-      }, '*');
+      });
     }, 200);
   }
 
@@ -58,15 +59,15 @@ export function useTitlePreview() {
     if (!iframeRef.value?.contentWindow || !isEngineReady.value) return;
     const cfg = script.getTitleScreen();
     if (!cfg) return;
-    iframeRef.value.contentWindow.postMessage({
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'update-screen-layout',
       screen: 'titleScreen',
       config: JSON.parse(JSON.stringify(cfg)),
-    }, '*');
-    iframeRef.value.contentWindow.postMessage({
+    });
+    postPreviewMessage(iframeRef.value.contentWindow, {
       type: 'show-screen',
       screenId: 'titleScreen',
-    }, '*');
+    });
   }
 
   // ─── Engine message handler ───────────────────────
@@ -77,7 +78,7 @@ export function useTitlePreview() {
 
     if (event.data.type === 'ready') {
       isEngineReady.value = true;
-      event.source?.postMessage({ type: 'ack-preview' }, '*');
+      postPreviewMessage(event.source, { type: 'ack-preview' }, event);
       startEngine();
       // After engine starts, flush layout + show title screen
       setTimeout(() => flushPreview(), 300);

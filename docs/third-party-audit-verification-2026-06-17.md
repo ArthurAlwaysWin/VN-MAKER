@@ -58,6 +58,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed: S4, S10, S7/S16, S12, S11, B2, B11, P15, M13.
 - Completed in the second repair pass: Q18, S8, B7, B10, B12, B13, B17, S5, S20, S21, M5, M11, P13, P14, and remaining P18 grant cleanup.
 - Completed in the third repair pass: S13, M9, M14.
+- Completed in the fourth repair pass: S9, B8, B15, B19, P2, P6, P8, P9, P10.
 
 Repair validation:
 
@@ -131,14 +132,41 @@ Third repair validation results:
 - `npm run build:web`: passed.
 - Full `npm test`: Vitest 121 files / 1072 tests passed; Node test run 290 tests passed.
 
+Fourth repair validation:
+
+```powershell
+node --check src/editor/utils/previewMessaging.js
+node --check src/engine/ScriptEngine.js
+node --check src/engine/PlayerDataRepository.js
+node --check src/shared/sceneGraph.js
+node --check src/shared/projectValidator.js
+node --check electron/main.js
+npx vitest run tests/pageEditorEffectPreviewState.test.js tests/previewMessaging.test.js tests/agentHandoffEditor.test.js tests/electronIpcHardening.test.js tests/playerDataRepository.test.js tests/projectValidator.test.js tests/sceneGraph.test.js
+node --test tests/scriptEngine.test.js
+npm audit --json
+npm run build
+npm run build:web
+npm test
+```
+
+Fourth repair validation results:
+
+- Syntax checks passed for touched JS entry points.
+- Targeted Vitest run: 7 files, 89 tests passed.
+- Targeted Node test run: 58 tests passed.
+- `npm audit --json`: 0 vulnerabilities.
+- `npm run build`: passed on Vite 8.0.16. Vite still emits the existing `inlineDynamicImports` deprecation warning.
+- `npm run build:web`: passed.
+- Full `npm test`: Vitest 122 files / 1080 tests passed; Node test run 291 tests passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
-- Worth doing when touching nearby code or after measurement: P1, P2, P3, P6, P8, P9, P10, P16, Q5, Q6, Q9, Q10, Q11, Q12, Q17.
+- Worth doing when touching nearby code or after measurement: P1, P3, P16, Q5, Q6, Q9, Q10, Q11, Q12, Q17.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the third pass: preview `postMessage('*')` could be tightened where concrete origins are available (S9), Mermaid/SVG sanitizer hardening remains optional without a confirmed exploit path (S15/S18), Q5/Q6/Q17 cleanup remains useful but lower priority, and large undo/deep-watch/graph optimizations should be handled with measurement rather than audit-driven churn.
+- Residual risk after the fourth pass: Mermaid/SVG sanitizer hardening remains optional without a confirmed exploit path (S15/S18), Q5/Q6/Q17 cleanup remains useful but lower priority, and large undo/deep-watch optimizations should be handled with measurement rather than audit-driven churn.
 
 ## Priority Repair Plan
 
@@ -168,33 +196,33 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | B5: `cloneJsonValue(null)` returns `{}` in `galgameContract` | Partially true | Low | Behavior exists, but helper is private and current null contract normalization works. | Consider only special-casing `undefined`; confirm callers. | Yes. |
 | B6: `normalizeSystems()` mutates input | False positive | Informational | `ensureGalgameContract()` clones before normalizing; repro showed caller object unchanged. | No fix. | No. |
 | B7: `Number(value) || 0` hides invalid numbers | Completed | Low | `setLegacySetVariableCompat()` now rejects non-finite numeric edits instead of silently coercing invalid values to `0`. | Done. | Added. |
-| B8: `_enterScene()` has no null guard | True | Low | Direct call before load throws TypeError; public `startGame()` already guards. | Add private defensive guard. | Optional. |
+| B8: `_enterScene()` has no null guard | Completed | Low | `_enterScene()` now returns safely with a logged error when called before a script is loaded. | Done. | Added. |
 | B9: first scene fallback uses `Object.keys()[0]` | Partially true | Informational | JS order is deterministic insertion order, not random; product may still need explicit start scene. | Add explicit `startScene` contract if desired. | Yes, if adding field. |
 | B10: save slot range not validated in managers | Completed | Low | `SaveManager` and `WebSaveManager` now reject invalid regular slots before IPC/IndexedDB access. | Done. | Added. |
 | B11: cyclic save state throws before catch | Completed | Low | Fixed by moving JSON cloning into the save/quickSave catch path; cyclic-state regression test added for `save()`. | Done. | Added. |
 | B12: `EventEmitter.emit()` stops after thrown handler | Completed | Low | Listener callbacks are isolated; thrown listener errors are logged and later listeners still run. | Done. | Added. |
 | B13: CLI `readScript()` raw JSON.parse error | Completed | Low | `readScript()` wraps parse failures with script path context, and generic `--json` CLI failures now return structured JSON. | Done. | Added. |
 | B14: `ackPendingOpenProjectRequest` empty catch | False positive | Informational | Function not present in current `project.js`; likely stale report. | No fix. | No. |
-| B15: `saveAgentReviewState()` non-atomic double write | True | Low | Writes localStorage before IPC; IPC failure can diverge. | Prefer IPC first or pending marker. | Yes. |
+| B15: `saveAgentReviewState()` non-atomic double write | Completed | Low | Agent review state now writes the project artifact first and updates localStorage only after IPC success; browser/no-IPC fallback still uses localStorage. | Done. | Added. |
 | B16: `useCanvasState` legacy `commands[]` | Partially true | Low | Legacy composable only handles `commands[]`, but current main scene editor uses pages. | Remove or migrate legacy view/composable. | Optional. |
 | B17: effect preview provenance Map not cleaned | Completed | Low | Terminal effect-preview results retain their provenance on the result object, then delete the request entry from the provenance Map. | Done. | Added. |
 | B18: title preview listener registered at module top level | False positive | Informational | Listener is inside `useTitlePreview()` and removed on unmount. | No fix. | No. |
-| B19: macOS `win` stale on `window-all-closed` | True | Low | `win = null` only in non-darwin branch. | Move `win = null` outside platform conditional. | Optional. |
+| B19: macOS `win` stale on `window-all-closed` | Completed | Low | `win = null` now runs before platform-specific quit handling, including macOS. | Done. | Added. |
 
 ### Performance Findings
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
 | P1: undo snapshots full JSON | True | Medium | `pushState()` stringifies and parses all `script.data`. | Incremental snapshots or structured clone with dirty tracking. | Benchmark. |
-| P2: graph report computed twice | True | Low | `projectValidator` calls `createBranchGraphReport()` in branch and ending checks. | Compute once and pass through. | Call-count regression. |
+| P2: graph report computed twice | Completed | Low | `validateProject()` now computes one branch graph report per reachability-enabled validation pass and passes it into branch and ending progression checks. | Done. | Added. |
 | P3: deep watcher on entire script | True | Medium | `App.vue` deep watches `script.data`. | Targeted dirty tracking. | Benchmark. |
 | P4: SE Audio cleanup | Partially true | Low | Creates `new Audio`; not DOM garbage, and GC should collect, but long sessions can retain until playback finishes. | Optional pool / ended cleanup. | Optional. |
 | P5: fixed 20 fade steps | Not planned for audit hardening | Informational | `_fadeVolume()` fixed `steps = 20`; mostly quality, not performance. Impact is visual-tuning level and should not be changed without product/UX intent. | Defer unless tuning nearby fade behavior. | No. |
-| P6: `isPageRead()` O(n) | True | Low | Uses `readHistory.pages.includes`. | Cache Set. | Yes. |
+| P6: `isPageRead()` O(n) | Completed | Low | `PlayerDataRepository` now maintains a read-page Set alongside normalized profile pages; read checks and duplicate guards use the Set. | Done. | Added. |
 | P7: profile double stringify | True | Low | Compares stored and normalized with `JSON.stringify`. | Dirty flag / migration marker. | Optional. |
-| P8: sceneGraph adjacency dedupe O(E*D) | True | Low | Uses array `includes` when building adjacency. | Use Set adjacency. | Large graph. |
-| P9: ending completion nested loop | True | Low | Loops ending refs over all edges. | Pre-index edges. | Large graph. |
-| P10: edge count by repeated filter | True | Low | Filters edges per node for incoming/outgoing counts. | Single-pass counters. | Large graph. |
+| P8: sceneGraph adjacency dedupe O(E*D) | Completed | Low | Scene graph adjacency now uses Set-backed dedupe while preserving edge-count semantics. | Done. | Added. |
+| P9: ending completion nested loop | Completed | Low | Choice-option target edges are pre-indexed for ending completion resolution. | Done. | Added. |
+| P10: edge count by repeated filter | Completed | Low | Incoming/outgoing edge counts are precomputed in one pass before node summary generation. | Done. | Added. |
 | P11: repeated `normalizeEffects` | Not planned for audit hardening | Informational | Some repeated normalization exists, but small and not proven hot. The churn risk is higher than the unmeasured performance benefit. | Defer unless profiling identifies it. | No. |
 | P12: preview script deep clone | True | Low | `buildScriptSnapshot()` clones whole script for preview. | Send minimal scene/page or cache snapshot. | Optional. |
 | P13: font loading serial | Completed | Low | `loadAllFonts()` now loads fonts concurrently with `Promise.allSettled` while preserving the existing loaded/failed result shape. | Done. | Added. |
@@ -216,7 +244,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | S6: BrowserWindow security flags not explicit | Not planned for audit hardening | Informational | Flags are not explicit, but Electron defaults are secure. This is documentation-by-code hardening rather than a confirmed behavior bug. | Defer unless touching BrowserWindow construction. | No. |
 | S7: ThemeManager CSS URL injection | Completed | Medium | Fixed with shared `cssUrl()` / CSS string escaping in `ThemeManager`; escaping regression added. S7 and S16 were grouped because both were CSS string-construction injection risks. | Done. | Added. |
 | S8: `err.message` inside `innerHTML` | Completed | Low | Runtime initialization failure rendering now uses DOM nodes and `textContent` for the error message. | Done. | Added. |
-| S9: postMessage wildcard origin | Partially true | Low | Outbound `*` exists; preview incoming has origin check and editor incoming checks source. | Use concrete target origin where possible. | Optional. |
+| S9: postMessage wildcard origin | Completed | Low | Editor preview senders now use shared preview messaging helpers that target the current concrete origin, falling back to `*` only for opaque/file origins; source coverage prevents literal wildcard target origins in editor preview code. | Done. | Added. |
 | S10: npm audit high vulnerabilities | Completed | High | Fixed by upgrading dependency chain to `vite@^8.0.16` and `tmp@0.2.7`; `npm audit --json` reports 0 vulnerabilities. | Done. | Verified by audit, build, web build, and full tests. |
 | S11: path containment ignores symlinks | Completed | Medium | Added shared realpath-aware path utility and migrated audited import/export call sites; symlink containment regression added. | Done. | Added. |
 | S12: theme ZIP decompression bomb | Completed | Medium | Theme ZIP parsing/install now bounds compressed bytes, total uncompressed bytes, and file count; regression added. | Done. | Added. |
@@ -276,7 +304,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q18, S8, B7, B10, B12, B13, B17, S5, S20, S21, M5, M11, P13, P14, P18, S13, M9, or M14; these are now completed and regression-covered.
-2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as S9, S15, S18, Q5/Q6, or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
+1. Do not restart with Q18, S8, B7, B8, B10, B12, B13, B15, B17, B19, S5, S9, S13, S20, S21, M5, M9, M11, M14, P2, P6, P8, P9, P10, P13, P14, or P18; these are now completed and regression-covered.
+2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as S15, S18, Q5/Q6, or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
 3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, P1/P3, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

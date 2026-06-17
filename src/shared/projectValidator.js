@@ -1224,12 +1224,11 @@ function validatePageCinematics(page, context, report) {
   }
 }
 
-function validateBranchFlow(script, endings, cgs, report, options) {
+function validateBranchFlow(script, endings, cgs, report, options, graphReport) {
   if (options.checkReachability === false) {
     return;
   }
 
-  const graphReport = createBranchGraphReport(script, { entrySceneId: options.entrySceneId });
   for (const sceneId of graphReport.unreachableSceneIds) {
     addWarning(report, 'unreachable-scene', `Scene "${sceneId}" is not reachable from entry scene "${graphReport.entrySceneId}".`, ['scenes', sceneId], {
       sceneId,
@@ -1274,7 +1273,7 @@ function validateBranchFlow(script, endings, cgs, report, options) {
   }
 }
 
-function validateEndingProgression(script, endings, report, options) {
+function validateEndingProgression(script, endings, report, options, graphReport) {
   const endingIds = Object.keys(endings);
   if (endingIds.length === 0) {
     return;
@@ -1308,7 +1307,6 @@ function validateEndingProgression(script, endings, report, options) {
     return;
   }
 
-  const graphReport = createBranchGraphReport(script, { entrySceneId: options.entrySceneId });
   const reachableSceneIds = new Set(graphReport.reachableSceneIds);
   const hasReachableEndingUnlock = references.some((reference) => (
     endings[reference.endingId] && reachableSceneIds.has(reference.sceneId)
@@ -1659,14 +1657,17 @@ export function validateProject(script, options = {}) {
 
   validateTitleScreenVideo(script, report, context);
   validateScenes(script, context, report, config);
+  const graphReport = options.checkReachability === false
+    ? null
+    : createBranchGraphReport(script, { entrySceneId: options.entrySceneId });
   validateBranchFlow(script, endings, cgs, report, {
     checkReachability: options.checkReachability,
     entrySceneId: options.entrySceneId,
-  });
+  }, graphReport);
   validateEndingProgression(script, endings, report, {
     checkReachability: options.checkReachability,
     entrySceneId: options.entrySceneId,
-  });
+  }, graphReport);
   validateCgProgression(script, cgs, report);
 
   report.ok = report.errors.length === 0;

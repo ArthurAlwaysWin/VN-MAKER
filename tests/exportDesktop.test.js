@@ -114,7 +114,12 @@ async function createMockAppRoot(baseDir) {
   await fs.mkdir(path.join(baseDir, 'electron', 'game'), { recursive: true });
   await fs.writeFile(
     path.join(baseDir, 'electron', 'game', 'main.js'),
-    "const GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n// rest of template",
+    "import { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';\nconst GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n// rest of template",
+    'utf-8',
+  );
+  await fs.writeFile(
+    path.join(baseDir, 'electron', 'thumbnailSecurity.js'),
+    'export function normalizeJpegThumbnailBytes(thumbnail) { return thumbnail ?? null; }\n',
     'utf-8',
   );
   await fs.writeFile(
@@ -417,6 +422,16 @@ describe('exportDesktop — template filling', () => {
     const result = await exportDesktop({ ...baseOpts(), outputDir }, noop);
 
     ok(existsSync(path.join(result.outputPath, 'preload.js')));
+  });
+
+  it('copies shared thumbnail security helper used by the desktop game template', async () => {
+    const outputDir = path.join(tempRoot, 'out-template-thumbnail-security');
+    const noop = () => {};
+    const result = await exportDesktop({ ...baseOpts(), outputDir }, noop);
+
+    const mainContent = await fs.readFile(path.join(result.outputPath, 'main.js'), 'utf-8');
+    ok(mainContent.includes("from './thumbnailSecurity.js'"));
+    ok(existsSync(path.join(result.outputPath, 'thumbnailSecurity.js')));
   });
 });
 

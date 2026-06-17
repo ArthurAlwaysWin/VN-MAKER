@@ -10,6 +10,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,28 +39,9 @@ const userDataDir = path.join(
 const savesDir = path.join(userDataDir, 'saves');
 const windowStatePath = path.join(userDataDir, 'window-state.json');
 const crashLogPath = path.join(userDataDir, 'crash.log');
-const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 
 function createIpcErrorResponse() {
   return { success: false, error: 'Operation failed' };
-}
-
-function normalizeJpegThumbnailBytes(thumbnail) {
-  if (!thumbnail) return null;
-  const bytes = Buffer.isBuffer(thumbnail)
-    ? thumbnail
-    : thumbnail instanceof Uint8Array
-      ? Buffer.from(thumbnail)
-      : null;
-  if (!bytes) throw new Error('Invalid thumbnail image');
-  if (bytes.length > MAX_THUMBNAIL_BYTES) throw new Error('Thumbnail image is too large');
-  const hasJpegMarkers = bytes.length >= 4
-    && bytes[0] === 0xff
-    && bytes[1] === 0xd8
-    && bytes[bytes.length - 2] === 0xff
-    && bytes[bytes.length - 1] === 0xd9;
-  if (!hasJpegMarkers) throw new Error('Thumbnail image must be JPEG data');
-  return bytes;
 }
 
 /**

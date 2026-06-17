@@ -632,6 +632,36 @@ describe('player data runtime wiring', () => {
     expect(consoleError).toHaveBeenCalledWith('[SaveManager] Invalid slot number:', 109);
   });
 
+  it('SaveManager returns structured failures for cyclic save state before IPC', async () => {
+    const invoke = vi.fn();
+    globalThis.window = {
+      ipcRenderer: { invoke },
+    };
+    const saveManager = new SaveManager();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleError.mockClear();
+    const state = { currentScene: 'start', history: [] };
+    state.self = state;
+
+    await expect(saveManager.save(1, state, 'preview')).resolves.toMatchObject({
+      success: false,
+    });
+    await expect(saveManager.quickSave(state, 'preview')).resolves.toMatchObject({
+      success: false,
+    });
+
+    expect(invoke).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      '[SaveManager] Save failed:',
+      expect.stringContaining('Converting circular structure to JSON'),
+    );
+    expect(consoleError).toHaveBeenCalledWith(
+      '[SaveManager] Quick save failed:',
+      expect.stringContaining('Converting circular structure to JSON'),
+    );
+    consoleError.mockRestore();
+  });
+
   it('ReadHistory flushes pending debounced writes on page unload', async () => {
     vi.useFakeTimers();
     const listeners = new Map();

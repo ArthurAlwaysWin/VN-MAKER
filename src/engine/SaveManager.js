@@ -45,33 +45,38 @@ export class SaveManager {
       return { success: false, error: 'Invalid slot number' };
     }
 
-    // Deep-clone to strip Vue Proxy wrappers (P11 prevention)
-    const plainState = JSON.parse(JSON.stringify(state));
+    try {
+      // Deep-clone to strip Vue Proxy wrappers (P11 prevention)
+      const plainState = JSON.parse(JSON.stringify(state));
 
-    // Truncate history to 50 entries (D-07, SAVE-08)
-    if (plainState.history && plainState.history.length > 50) {
-      plainState.history = plainState.history.slice(-50);
-    }
+      // Truncate history to 50 entries (D-07, SAVE-08)
+      if (plainState.history && plainState.history.length > 50) {
+        plainState.history = plainState.history.slice(-50);
+      }
 
-    const result = await window.ipcRenderer.invoke('save-slot', {
-      slot,
-      state: plainState,
-      previewText: previewText || '',
-      thumbnail,
-    });
-
-    if (result.success) {
-      this._cache.set(slot, {
+      const result = await window.ipcRenderer.invoke('save-slot', {
         slot,
+        state: plainState,
         previewText: previewText || '',
-        sceneName: plainState.currentScene || '',
-        timestamp: Date.now(),
-        date: new Date().toLocaleString('zh-CN'),
-        hasThumbnail: !!thumbnail,
+        thumbnail,
       });
-    }
 
-    return result;
+      if (result.success) {
+        this._cache.set(slot, {
+          slot,
+          previewText: previewText || '',
+          sceneName: plainState.currentScene || '',
+          timestamp: Date.now(),
+          date: new Date().toLocaleString('zh-CN'),
+          hasThumbnail: !!thumbnail,
+        });
+      }
+
+      return result;
+    } catch (e) {
+      console.error('[SaveManager] Save failed:', e.message);
+      return { success: false, error: e.message };
+    }
   }
 
   /**
@@ -154,25 +159,30 @@ export class SaveManager {
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async quickSave(state, previewText, thumbnail = null) {
-    // Deep-clone to strip Vue Proxy wrappers (same as save())
-    const plainState = JSON.parse(JSON.stringify(state));
+    try {
+      // Deep-clone to strip Vue Proxy wrappers (same as save())
+      const plainState = JSON.parse(JSON.stringify(state));
 
-    // Truncate history to 50 entries (same as save())
-    if (plainState.history && plainState.history.length > 50) {
-      plainState.history = plainState.history.slice(-50);
+      // Truncate history to 50 entries (same as save())
+      if (plainState.history && plainState.history.length > 50) {
+        plainState.history = plainState.history.slice(-50);
+      }
+
+      const result = await window.ipcRenderer.invoke('save-quickslot', {
+        state: plainState,
+        previewText: previewText || '',
+        thumbnail,
+      });
+
+      if (result.success) {
+        this._hasQuickSave = true;
+      }
+
+      return result;
+    } catch (e) {
+      console.error('[SaveManager] Quick save failed:', e.message);
+      return { success: false, error: e.message };
     }
-
-    const result = await window.ipcRenderer.invoke('save-quickslot', {
-      state: plainState,
-      previewText: previewText || '',
-      thumbnail,
-    });
-
-    if (result.success) {
-      this._hasQuickSave = true;
-    }
-
-    return result;
   }
 
   /**

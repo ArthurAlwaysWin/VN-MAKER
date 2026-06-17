@@ -117,9 +117,10 @@ export async function preflightThemePackage({
       canAutoApply: false,
     };
   } catch (error) {
+    console.error('[theme-package-preflight] Failed:', error);
     return {
       success: false,
-      error: error.message,
+      error: 'Operation failed',
     };
   }
 }

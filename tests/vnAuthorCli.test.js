@@ -116,7 +116,12 @@ async function createExportFixture(dir, { missingAsset = false } = {}) {
   await writeFile(path.join(appRoot, 'dist-web', 'engine.css'), '/* engine */', 'utf8');
   await writeFile(
     path.join(appRoot, 'electron', 'game', 'main.js'),
-    "const GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n",
+    "import { normalizeJpegThumbnailBytes } from '../thumbnailSecurity.js';\nconst GAME_TITLE = 'My Game';\nconst GAME_WIDTH = 1280;\nconst GAME_HEIGHT = 720;\n",
+    'utf8',
+  );
+  await writeFile(
+    path.join(appRoot, 'electron', 'thumbnailSecurity.js'),
+    'export function normalizeJpegThumbnailBytes(thumbnail) { return thumbnail ?? null; }\n',
     'utf8',
   );
   await writeFile(path.join(appRoot, 'electron', 'game', 'preload.js'), '// preload', 'utf8');
@@ -2317,6 +2322,8 @@ scene start "Start":
       });
       expect(await readFile(path.join(result.outputPath, 'package.json'), 'utf8')).toContain('"main": "main.js"');
       expect(await readFile(path.join(result.outputPath, 'main.js'), 'utf8')).toContain('CLI Export Fixture');
+      expect(await readFile(path.join(result.outputPath, 'main.js'), 'utf8')).toContain("from './thumbnailSecurity.js'");
+      await expect(stat(path.join(result.outputPath, 'thumbnailSecurity.js'))).resolves.toBeTruthy();
       await expect(stat(path.join(result.outputPath, 'assets', 'characters', 'hero_normal.png'))).resolves.toBeTruthy();
     });
   });

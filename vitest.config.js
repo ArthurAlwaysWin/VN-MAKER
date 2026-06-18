@@ -17,6 +17,7 @@ export default defineConfig({
       '**/tests/effectDsl.test.js',
       '**/tests/exportDesktop.test.js',
       '**/tests/oklch.test.js',
+      '**/tests/packageEditorWin.test.js',
       '**/tests/scanAssets.test.js',
       '**/tests/scriptEngine.test.js',
       '**/tests/smartColorPanel.test.js',

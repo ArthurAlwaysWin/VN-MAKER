@@ -235,6 +235,14 @@ Eighth repair verification and measurement:
 - `npm run build:web`: passed.
 - Full `npm test`: Vitest 124 files / 1097 tests passed; Node test run 296 tests passed.
 
+Post-eighth-pass packaging follow-up:
+
+- Externalizing `png-to-ico` initially fixed the Electron ESM/CommonJS startup failure in the source checkout but exposed a separate portable-package dependency gap: the custom Windows packager did not copy application `node_modules`.
+- `png-to-ico` is now a declared runtime dependency. The Windows editor packager recursively copies its installed dependency closure from package manifests instead of maintaining a fragile manual list, and the generated packaged-app manifest records `png-to-ico`.
+- Added Node regression coverage for the packaged dependency closure, runtime manifest, and rejection of a development-only declaration. A freshly generated portable editor contained the complete five-package closure and remained running after a five-second packaged-EXE startup smoke check instead of failing module resolution.
+- `npm run package:editor:win:dir` passed, including warning-free `npm run build` and `npm run build:web`. Full `npm test` passed with Vitest 124 files / 1097 tests and Node 299 tests.
+- `npm audit --json`: 0 vulnerabilities after moving `png-to-ico` into runtime dependencies.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:

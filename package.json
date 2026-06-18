@@ -13,7 +13,7 @@
     "package:editor:win:dir": "npm run build && npm run build:web && node scripts/package-editor-win.js",
     "preview": "vite preview",
     "test": "npm run test:vitest && npm run test:node",
-    "test:node": "node --test tests/colorRecipe.test.js tests/configurableTabs.test.js tests/decorLayoutEditor.test.js tests/effectDsl.test.js tests/exportDesktop.test.js tests/oklch.test.js tests/scanAssets.test.js tests/scriptEngine.test.js tests/smartColorPanel.test.js tests/tabLayoutEditor.test.js tests/uiImageContract.test.js tests/widgetDefaults.test.js",
+    "test:node": "node --test tests/colorRecipe.test.js tests/configurableTabs.test.js tests/decorLayoutEditor.test.js tests/effectDsl.test.js tests/exportDesktop.test.js tests/oklch.test.js tests/packageEditorWin.test.js tests/scanAssets.test.js tests/scriptEngine.test.js tests/smartColorPanel.test.js tests/tabLayoutEditor.test.js tests/uiImageContract.test.js tests/widgetDefaults.test.js",
     "test:vitest": "vitest run",
     "test:focused": "vitest run tests/branchingContract.test.js tests/variableRegistryContract.test.js tests/sceneGraph.test.js tests/transitionCatalog.test.js tests/cinematicContractCompatibility.test.js tests/backgroundLayerTransitions.test.js tests/backgroundTransitionPreview.test.js tests/cameraContract.test.js tests/cameraRuntimePlayback.test.js tests/characterAnimationContract.test.js tests/characterMotionPlayback.test.js tests/pageInspectorCinematicControls.test.js tests/projectValidator.test.js tests/projectSession.test.js tests/layoutPresets.test.js tests/layoutLint.test.js tests/projectReport.test.js tests/exportReadiness.test.js tests/agentHandoff.test.js tests/agentHandoffEditor.test.js tests/novelDraftImport.test.js tests/vnAuthorCli.test.js tests/themeBrowserService.test.js tests/themePackageImportUx.test.js tests/bgRemoval.test.js",
     "benchmark:script-history": "node --expose-gc scripts/benchmark-script-history.mjs",
@@ -50,7 +50,6 @@
     "jsdom": "^29.1.1",
     "patch-package": "^8.0.1",
     "playwright": "^1.60.0",
-    "png-to-ico": "^3.0.1",
     "vite": "^8.0.16",
     "vite-plugin-electron": "^0.29.1",
     "vite-plugin-electron-renderer": "^0.14.7",
@@ -59,6 +58,7 @@
   "dependencies": {
     "fflate": "^0.8.3",
     "pinia": "^3.0.4",
+    "png-to-ico": "^3.0.1",
     "vue": "^3.5.34"
   }
 }

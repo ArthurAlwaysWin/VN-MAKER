@@ -11,6 +11,7 @@ const appName = 'Galgame Maker';
 const targetDir = path.join(releaseRoot, `${appName}-win32-x64`);
 const resourcesDir = path.join(targetDir, 'resources');
 const appDir = path.join(resourcesDir, 'app');
+export const editorRuntimePackages = Object.freeze(['png-to-ico']);
 
 function hasFlag(name) {
   return process.argv.includes(name);
@@ -24,11 +25,51 @@ async function assertPath(relativePath) {
   return fullPath;
 }
 
-async function copyIntoApp(relativePath) {
+async function copyIntoApp(relativePath, destinationRoot = appDir) {
   const source = await assertPath(relativePath);
-  const destination = path.join(appDir, relativePath);
+  const destination = path.join(destinationRoot, relativePath);
   await fs.mkdir(path.dirname(destination), { recursive: true });
   await fs.cp(source, destination, { recursive: true });
+}
+
+export async function collectEditorRuntimePackages(rootPackages = editorRuntimePackages) {
+  const pending = [...rootPackages];
+  const packageNames = new Set();
+  while (pending.length > 0) {
+    const packageName = pending.shift();
+    if (packageNames.has(packageName)) continue;
+    const manifestPath = await assertPath(path.join('node_modules', packageName, 'package.json'));
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    packageNames.add(packageName);
+    pending.push(...Object.keys(manifest.dependencies || {}));
+  }
+  return [...packageNames];
+}
+
+export async function copyEditorRuntimePackages(destinationRoot = appDir) {
+  const packageNames = await collectEditorRuntimePackages();
+  await Promise.all(packageNames.map((packageName) => (
+    copyIntoApp(path.join('node_modules', packageName), destinationRoot)
+  )));
+  return packageNames;
+}
+
+export function createPackagedAppManifest(rootPackageJson) {
+  const pngToIcoVersion = rootPackageJson?.dependencies?.['png-to-ico'];
+  if (!pngToIcoVersion) {
+    throw new Error('png-to-ico must be declared as a runtime dependency');
+  }
+  return {
+    name: 'galgame-maker-editor',
+    productName: appName,
+    version: '0.1.0',
+    type: 'module',
+    main: 'dist-electron/main.js',
+    private: true,
+    dependencies: {
+      'png-to-ico': pngToIcoVersion,
+    },
+  };
 }
 
 async function createZip(sourceDir, zipPath) {
@@ -81,16 +122,11 @@ async function main() {
     copyIntoApp('dist-web'),
     copyIntoApp('public'),
     copyIntoApp('electron/game'),
+    copyEditorRuntimePackages(),
   ]);
 
-  const packageJson = {
-    name: 'galgame-maker-editor',
-    productName: appName,
-    version: '0.1.0',
-    type: 'module',
-    main: 'dist-electron/main.js',
-    private: true,
-  };
+  const rootPackageJson = JSON.parse(await fs.readFile(path.join(repoRoot, 'package.json'), 'utf8'));
+  const packageJson = createPackagedAppManifest(rootPackageJson);
   await fs.writeFile(path.join(appDir, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
 
   let zipPath = null;
@@ -110,7 +146,9 @@ async function main() {
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`[package-editor-win] ${error.stack || error.message}\n`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(`[package-editor-win] ${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  });
+}

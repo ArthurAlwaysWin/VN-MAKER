@@ -15,3 +15,29 @@ index ab26886..0e5967d 100644
    } else {
      killTree(pidTree({ pid, ppid: process.pid }));
    }
+diff --git a/node_modules/vite-plugin-electron/dist/simple.js b/node_modules/vite-plugin-electron/dist/simple.js
+index 09c4c4b..339c8b6 100644
+--- a/node_modules/vite-plugin-electron/dist/simple.js
++++ b/node_modules/vite-plugin-electron/dist/simple.js
+@@ -78,7 +78,7 @@ async function electronSimple(options) {
+               //  - import(✘): SyntaxError: Cannot use import statement outside a module
+               //  - require(✘): ReferenceError: require is not defined in ES module scope, you can use import instead
+               // Note, however, that `preload.ts` should not be split. 🚧
+-              inlineDynamicImports: true,
++              codeSplitting: false,
+               // When Rollup builds code in `cjs` format, it will automatically split the code into multiple chunks, and use `require()` to load them,
+               // and use `require()` to load other modules when `nodeIntegration: false` in the Main process Errors will occur.
+               // So we need to configure Rollup not to split the code when building to ensure that it works correctly with `nodeIntegration: false`.
+diff --git a/node_modules/vite-plugin-electron/dist/simple.mjs b/node_modules/vite-plugin-electron/dist/simple.mjs
+index 8ce5d16..88dbb8e 100644
+--- a/node_modules/vite-plugin-electron/dist/simple.mjs
++++ b/node_modules/vite-plugin-electron/dist/simple.mjs
+@@ -54,7 +54,7 @@ async function electronSimple(options) {
+               //  - import(✘): SyntaxError: Cannot use import statement outside a module
+               //  - require(✘): ReferenceError: require is not defined in ES module scope, you can use import instead
+               // Note, however, that `preload.ts` should not be split. 🚧
+-              inlineDynamicImports: true,
++              codeSplitting: false,
+               // When Rollup builds code in `cjs` format, it will automatically split the code into multiple chunks, and use `require()` to load them,
+               // and use `require()` to load other modules when `nodeIntegration: false` in the Main process Errors will occur.
+               // So we need to configure Rollup not to split the code when building to ensure that it works correctly with `nodeIntegration: false`.

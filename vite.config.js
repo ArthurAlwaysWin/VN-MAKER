@@ -9,9 +9,16 @@ export default defineConfig({
     electron({
       main: {
         entry: 'electron/main.js',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['png-to-ico']
+            }
+          }
+        }
       },
       preload: {
-        input: 'electron/preload.js',
+        input: 'electron/preload.js'
       },
       // Optional: use electron-renderer to support Node.js API in renderer process
       // renderer: {},

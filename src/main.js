@@ -1135,7 +1135,7 @@ dialogueBox.onAdvance = () => {
 
 // ─── Choice handling ────────────────────────────────────
 choiceMenu.onSelect = (index) => {
-  engine.selectChoice(index);
+  void engine.selectChoice(index);
 };
 
 textInputScreen.onSubmit = (value) => engine.submitInput(value);

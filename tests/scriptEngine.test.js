@@ -241,18 +241,21 @@ describe('selectChoice', () => {
     strictEqual(events[0].options.length, 2);
   });
 
-  it('navigates to correct scene on selection', () => {
+  it('navigates to correct scene on selection', async () => {
     const engine = makeChoiceEngine();
     engine.startGame('start');
-    const scenes = capture(engine, 'scene_enter', () => engine.selectChoice(0));
+    const scenes = [];
+    engine.on('scene_enter', event => scenes.push(event));
+    await engine.selectChoice(0);
     strictEqual(scenes[0].sceneId, 'sceneA');
   });
 
-  it('applies setVariable on choice selection', () => {
+  it('applies setVariable synchronously on choice selection', async () => {
     const engine = makeChoiceEngine();
     engine.startGame('start');
-    engine.selectChoice(1); // legacy option B sets mood: 0 - 2 = -2
+    const selection = engine.selectChoice(1); // legacy option B sets mood: 0 - 2 = -2
     strictEqual(engine.variables.get('mood'), -2);
+    await selection;
   });
 
   it('executes canonical effects[] on choice selection and forwards unlocks through the injected repository seam', async () => {
@@ -264,24 +267,113 @@ describe('selectChoice', () => {
       },
     });
     engine.startGame('start');
-    engine.selectChoice(0);
+    await engine.selectChoice(0);
 
     strictEqual(engine.variables.get('mood'), 1);
-    await Promise.resolve();
     deepStrictEqual(unlockCalls, ['good_end']);
+    strictEqual(engine.currentScene, 'sceneA');
   });
 
-  it('accumulates variable values when the same choice is reached twice in a session', () => {
+  it('waits for delayed unlock persistence before routing while applying variables synchronously', async () => {
+    const engine = makeChoiceEngine();
+    const eventOrder = [];
+    let resolveUnlock;
+    const unlockStarted = new Promise(resolve => {
+      resolveUnlock = resolve;
+    });
+    engine.setPlayerDataRepository({
+      unlockEnding() {
+        return unlockStarted;
+      },
+    });
+    engine.on('scene_enter', () => eventOrder.push('scene_enter'));
+    engine.on('ending_unlocked', () => eventOrder.push('ending_unlocked'));
+    engine.startGame('start');
+    eventOrder.length = 0;
+
+    const selection = engine.selectChoice(0);
+
+    strictEqual(engine.variables.get('mood'), 1);
+    strictEqual(engine.currentScene, 'start');
+    resolveUnlock();
+    await selection;
+    strictEqual(engine.currentScene, 'sceneA');
+    deepStrictEqual(eventOrder, ['scene_enter', 'ending_unlocked']);
+  });
+
+  it('continues routing after unlock persistence fails', async () => {
+    const engine = makeChoiceEngine();
+    let resolveCgUnlock;
+    const cgUnlockPending = new Promise(resolve => {
+      resolveCgUnlock = resolve;
+    });
+    engine.script.scenes.start.pages[0].options[0].effects.push({ type: 'unlock:cg', id: 'cg_after_failure' });
+    const originalConsoleError = console.error;
+    const errors = [];
+    console.error = (...args) => errors.push(args);
+    engine.setPlayerDataRepository({
+      async unlockEnding() {
+        throw new Error('delayed persistence failed');
+      },
+      unlockCg() {
+        return cgUnlockPending;
+      },
+    });
+    engine.startGame('start');
+
+    try {
+      const selection = engine.selectChoice(0);
+      await Promise.resolve();
+      await Promise.resolve();
+      strictEqual(engine.currentScene, 'start');
+      resolveCgUnlock();
+      await selection;
+    } finally {
+      console.error = originalConsoleError;
+    }
+
+    strictEqual(engine.variables.get('mood'), 1);
+    strictEqual(engine.currentScene, 'sceneA');
+    strictEqual(errors.length, 1);
+  });
+
+  it('ignores repeated selection while unlock persistence is pending', async () => {
+    const engine = makeChoiceEngine();
+    let resolveUnlock;
+    let unlockCalls = 0;
+    const unlockPending = new Promise(resolve => {
+      resolveUnlock = resolve;
+    });
+    engine.setPlayerDataRepository({
+      unlockEnding() {
+        unlockCalls++;
+        return unlockPending;
+      },
+    });
+    engine.startGame('start');
+
+    const firstSelection = engine.selectChoice(0);
+    const repeatedSelection = engine.selectChoice(0);
+
+    await repeatedSelection;
+    strictEqual(engine.variables.get('mood'), 1);
+    strictEqual(unlockCalls, 1);
+    resolveUnlock();
+    await firstSelection;
+    strictEqual(engine.currentScene, 'sceneA');
+  });
+
+  it('accumulates variable values when the same choice is reached twice in a session', async () => {
     const engine = makeChoiceEngine();
     engine.startGame('start');
-    engine.selectChoice(0); // mood: 0 + 1 = 1
+    await engine.selectChoice(0); // mood: 0 + 1 = 1
 
     // Manually rewind to the choice page WITHOUT clearing variables (simulates scene loop)
     engine.currentScene = 'start';
     engine.pageIndex = 0;
     engine.waiting = false;
     capture(engine, 'choice', () => engine._processCurrentPage()); // re-enter choice page
-    engine.selectChoice(0); // mood: 1 + 1 = 2
+    await engine.selectChoice(0); // mood: 1 + 1 = 2
     strictEqual(engine.variables.get('mood'), 2);
   });
 

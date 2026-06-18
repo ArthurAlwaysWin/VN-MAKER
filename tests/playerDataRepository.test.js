@@ -430,8 +430,7 @@ describe('player data runtime wiring', () => {
     };
     engine.setPlayerDataRepository(repository);
     engine.startGame('start');
-    engine.selectChoice(0);
-    await Promise.resolve();
+    await engine.selectChoice(0);
 
     expect(storage.state.profiles.get('gm_unlocks').unlocks).toEqual({
       endings: {

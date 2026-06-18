@@ -191,23 +191,25 @@ export class ScriptEngine extends EventEmitter {
    * Handle a choice selection
    * @param {number} optionIndex
    */
-  selectChoice(optionIndex) {
-    if (this.ended) return;
+  async selectChoice(optionIndex) {
+    if (this.ended || !this.waiting) return;
     const page = this._currentPage();
     if (!page || page.type !== 'choice') return;
 
     const option = page.options[optionIndex];
     if (!option) return;
 
-    void this._applyOptionEffects(option);
-
     this.waiting = false;
+    const effectResult = await this._applyOptionEffects(option);
 
     // Jump to target scene
     if (option.target) {
       this._enterScene(option.target);
     } else {
       this._advancePage();
+    }
+    if (effectResult) {
+      this._emitEndingUnlocks(effectResult.effects, { source: 'choice' });
     }
   }
 
@@ -729,13 +731,13 @@ export class ScriptEngine extends EventEmitter {
 
   async _applyOptionEffects(option) {
     try {
-      const result = await applyEffects(option, {
+      return await applyEffects(option, {
         variables: this.variables,
         playerDataRepository: this._playerDataRepository,
       });
-      this._emitEndingUnlocks(result.effects, { source: 'choice' });
     } catch (error) {
       console.error('[ScriptEngine] Failed to apply choice effects:', error);
+      return null;
     }
   }
 

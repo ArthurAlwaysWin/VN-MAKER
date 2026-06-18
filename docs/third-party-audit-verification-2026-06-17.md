@@ -62,6 +62,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the fifth repair pass: desktop B11 parity, the remaining S13 theme-preflight return path, thumbnail helper deduplication and boundary coverage, P16, S15, and S18.
 - Completed in the sixth repair pass: Q6 shared atomic writes, M4 content-hashed script file state, and Q12 shared condition-row helpers. B1 was confirmed with delayed persistence, and P1/P3 were benchmarked at three project sizes.
 - Completed in the seventh repair pass: P1 patch-based undo history and P3 revision-based editor change notification.
+- Completed in the eighth repair pass: B1 choice unlock persistence ordering, P1/P3 desktop-editor smoke verification, and the Vite 8 Electron `inlineDynamicImports` compatibility cleanup.
 
 Repair validation:
 
@@ -220,6 +221,20 @@ Seventh repair verification and measurement:
 - `npm run build:web`: passed.
 - Full `npm test`: Vitest 124 files / 1097 tests passed; Node test run 293 tests passed.
 
+Eighth repair verification and measurement:
+
+- P1/P3 were exercised in a real built Electron editor against a disposable project, not only through store-level tests. Direct nested edits covered page transition data, dialogue text, choice prompt/options, character registry data, video asset metadata, theme tokens, dialogue UI, and settings-screen configuration.
+- The Electron smoke run confirmed immediate dirty state and reactive dialogue preview, no undo commit before 500 ms, one transaction after 500 ms, and autosave completion at 2032 ms. It also covered pending-edit undo, redo, redo-branch truncation, the 50-entry limit, HTML5 page drag reorder followed by editing the moved page by stable ID, and disk/in-memory consistency after close and reopen.
+- `npm run benchmark:script-history` remained effectively size-independent: 500 pages notification 0.006 / 0.023 ms and patch commit 0.002 / 0.009 ms; 2,500 pages 0.003 / 0.007 ms and 0.002 / 0.005 ms; 10,000 pages 0.003 / 0.004 ms and 0.003 / 0.004 ms (median / p95).
+- B1 now treats a choice as one routing transaction: synchronous variable effects still apply immediately, `selectChoice()` waits for every ending/CG write to settle before entering the target scene (including mixed failure/delay cases), failed persistence is logged without trapping the player on the choice, and `waiting` prevents duplicate selection while writes are pending. Navigation still precedes the `ending_unlocked` notification, preserving the prior relative event order.
+- B1 regression coverage includes immediate success, delayed persistence, failure, repeat selection, synchronous variable effects, event ordering, and repository-backed ending/CG durability.
+- The Vite 8 warning was traced to `vite-plugin-electron@0.29.1` configuring deprecated `inlineDynamicImports`. The existing patch-package patch now uses the official Rolldown `codeSplitting: false` replacement for preload output. The main Electron build externalizes `png-to-ico`, so its CommonJS dependencies execute in Node instead of leaving bare `require("util")` calls inside the ESM main bundle.
+- Targeted Node run: 66 tests passed. Targeted Vitest run: 3 files / 26 tests passed. The actual Electron smoke run passed.
+- `npm audit --json`: 0 vulnerabilities.
+- `npm run build`: passed on Vite 8.0.16 with no `inlineDynamicImports` warning; the generated Electron main process also launched successfully.
+- `npm run build:web`: passed.
+- Full `npm test`: Vitest 124 files / 1097 tests passed; Node test run 296 tests passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
@@ -227,7 +242,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 - Worth doing in a measured performance pass or when touching nearby code: Q5, Q9, Q10, Q11, Q17.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the seventh pass: B1 asynchronous unlock persistence remains behaviorally observable, and Q5/Q17 cleanup remains useful but lower priority. The Vite Electron build still emits an `inlineDynamicImports` deprecation warning that should be resolved through a verified plugin/configuration update.
+- Residual risk after the eighth pass: B1, P1/P3 smoke coverage, and the Vite Electron warning are closed. Q5/Q17 cleanup remains useful but lower priority; broader Q1/Q2/Q4 and Q9-Q11 work remains intentionally deferred.
 
 ## Priority Repair Plan
 
@@ -250,7 +265,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
-| B1: choice effects fire-and-forget | True | Low | A delayed-repository repro confirmed that `selectChoice()` routes and returns before asynchronous ending persistence completes. Variable writes remain synchronous and route correctly. | Define whether choice navigation must await unlock persistence; if yes, return/await the effect promise without changing synchronous variable semantics. | Yes, if changing behavior. |
+| B1: choice effects fire-and-forget | Completed | Low | A delayed-repository repro first confirmed routing before persistence. `selectChoice()` now applies variables synchronously, locks repeat selection, awaits ending/CG persistence before routing, continues after logged persistence failure, and preserves scene-enter before ending-unlock notification order. | Done. | Added success, delay, failure, repeat, sync-variable, ordering, and repository durability coverage. |
 | B2: `WebSaveManager._getDb()` race | Completed | Medium | Fixed with pending `_dbPromise` reuse; concurrent regression test added. | Done. | Added. |
 | B3: `Scenes.vue` / `Characters.vue` call nonexistent store APIs | False positive | Informational | `loadScript()` and `saveScript()` deprecated shims exist in `src/editor/stores/script.js`; current `App.vue` routes `scenes` to `PageEditor.vue`. | Optional deletion of legacy views. | No. |
 | B4: `listEffectPacksCommand()` crashes because it passes script directly | False positive | Informational | `createProjectSession()` accepts bare script or `{ script }`; CLI command succeeded. | No fix. | No. |
@@ -274,9 +289,9 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
-| P1: undo snapshots full JSON | Completed | Medium | Replaced full duplicate JSON snapshots with forward/inverse path patches. At 10,000 pages patch commit measured 0.002 ms median / 0.005 ms p95, and 20 entries retained about 0.017 MiB instead of 129.08 MiB. | Done. | Added. |
+| P1: undo snapshots full JSON | Completed | Medium | Replaced full duplicate JSON snapshots with forward/inverse path patches. At 10,000 pages the latest patch commit measured 0.003 ms median / 0.004 ms p95; Electron smoke covered 500 ms grouping, pending undo, redo, branch truncation, drag-then-edit, the 50-entry cap, and close/reopen persistence. | Done. | Added and desktop-smoked. |
 | P2: graph report computed twice | Completed | Low | `validateProject()` now computes one branch graph report per reachability-enabled validation pass and passes it into branch and ending progression checks. | Done. | Added. |
-| P3: deep watcher on entire script | Completed | Medium | Replaced the whole-script deep watcher with explicit `changeRevision` notification emitted by tracked direct nested mutations. At 10,000 pages notification measured 0.005 ms median / 0.005 ms p95. | Done. | Added. |
+| P3: deep watcher on entire script | Completed | Medium | Replaced the whole-script deep watcher with explicit `changeRevision` notification emitted by tracked direct nested mutations. At 10,000 pages the latest notification measured 0.003 ms median / 0.004 ms p95; Electron smoke covered dirty, reactive preview, 2 s autosave, and page/dialogue/choice/character/asset/theme/UI nested edits. | Done. | Added and desktop-smoked. |
 | P4: SE Audio cleanup | Partially true | Low | Creates `new Audio`; not DOM garbage, and GC should collect, but long sessions can retain until playback finishes. | Optional pool / ended cleanup. | Optional. |
 | P5: fixed 20 fade steps | Not planned for audit hardening | Informational | `_fadeVolume()` fixed `steps = 20`; mostly quality, not performance. Impact is visual-tuning level and should not be changed without product/UX intent. | Defer unless tuning nearby fade behavior. | No. |
 | P6: `isPageRead()` O(n) | Completed | Low | `PlayerDataRepository` now maintains a read-page Set alongside normalized profile pages; read checks and duplicate guards use the Set. | Done. | Added. |
@@ -365,7 +380,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q6, Q12, Q18, S8, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered.
+1. Do not restart with Q6, Q12, Q18, S8, B1, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
 2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as Q5 or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
 3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

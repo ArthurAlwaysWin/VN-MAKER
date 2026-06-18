@@ -273,7 +273,11 @@ export async function applyEffects(source = [], {
   }
 
   if (persistenceWrites.length > 0) {
-    await Promise.all(persistenceWrites);
+    const persistenceResults = await Promise.allSettled(persistenceWrites);
+    const failedWrite = persistenceResults.find(result => result.status === 'rejected');
+    if (failedWrite) {
+      throw failedWrite.reason;
+    }
   }
 
   return {

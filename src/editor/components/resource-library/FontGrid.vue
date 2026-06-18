@@ -113,17 +113,7 @@ async function onDelete(filename) {
 async function onRename(oldName, newName) {
   if (oldName !== newName) {
     const result = await assets.renameAsset('fonts', oldName, newName);
-    if (result.success) {
-      // Update font metadata path in script data
-      if (script.data?.assets?.fonts) {
-        const meta = script.data.assets.fonts.find(m => m.file === `fonts/${oldName}`);
-        if (meta) {
-          meta.file = `fonts/${newName}`;
-          script.pushState();
-        }
-      }
-      assets.syncFontMeta(script.data);
-    } else {
+    if (!result.success) {
       alert(result.error);
     }
   }

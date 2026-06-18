@@ -130,10 +130,12 @@
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue';
 import { useProjectStore } from '../stores/project.js';
+import { useScriptStore } from '../stores/script.js';
 import HelpTip from './HelpTip.vue';
 import { HELP_EXPORT } from '../helpTexts.js';
 
 const project = useProjectStore();
+const script = useScriptStore();
 
 const props = defineProps({
   visible: Boolean,
@@ -226,33 +228,49 @@ async function startExport() {
   if (!gameTitle.value.trim() || !outputDir.value) return;
 
   state.value = 'exporting';
-  progress.value = { step: '准备中...', percent: 0 };
-
-  cleanupProgressListener();
-  progressUnsub = window.ipcRenderer.on('export-progress', (event, payload) => {
-    progress.value = payload;
-  });
+  progress.value = { step: '保存当前项目...', percent: 0 };
 
   let res;
-  if (format.value === 'desktop') {
-    res = await window.ipcRenderer.invoke('export-game-desktop', {
-      outputDir: outputDir.value,
-      gameTitle: gameTitle.value.trim(),
-      iconPath: iconPath.value,
-      zip: enableZip.value,
-      gameWidth: project.projectData?.resolution?.width || 1280,
-      gameHeight: project.projectData?.resolution?.height || 720,
-    });
-  } else {
-    res = await window.ipcRenderer.invoke('export-game', {
-      outputDir: outputDir.value,
-      gameTitle: gameTitle.value.trim(),
-      faviconPath: faviconPath.value,
-      zip: enableZip.value,
-    });
-  }
+  try {
+    const saved = await project.saveProject(script.data);
+    if (!saved) {
+      throw new Error('保存当前项目失败，请确认项目路径可写后重试。');
+    }
 
-  cleanupProgressListener();
+    // Cancellation can happen while the save is in flight.
+    if (state.value !== 'exporting') return;
+
+    progress.value = { step: '准备导出...', percent: 0 };
+    cleanupProgressListener();
+    progressUnsub = window.ipcRenderer.on('export-progress', (event, payload) => {
+      progress.value = payload;
+    });
+
+    if (format.value === 'desktop') {
+      res = await window.ipcRenderer.invoke('export-game-desktop', {
+        outputDir: outputDir.value,
+        gameTitle: gameTitle.value.trim(),
+        iconPath: iconPath.value,
+        zip: enableZip.value,
+        gameWidth: project.projectData?.resolution?.width || 1280,
+        gameHeight: project.projectData?.resolution?.height || 720,
+      });
+    } else {
+      res = await window.ipcRenderer.invoke('export-game', {
+        outputDir: outputDir.value,
+        gameTitle: gameTitle.value.trim(),
+        faviconPath: faviconPath.value,
+        zip: enableZip.value,
+      });
+    }
+  } catch (error) {
+    res = {
+      success: false,
+      error: error?.message || '导出前保存项目失败',
+    };
+  } finally {
+    cleanupProgressListener();
+  }
 
   // If user cancelled while waiting, ignore result
   if (state.value !== 'exporting') return;
@@ -262,6 +280,7 @@ async function startExport() {
 }
 
 function cancelExport() {
+  cleanupProgressListener();
   state.value = 'config';
 }
 

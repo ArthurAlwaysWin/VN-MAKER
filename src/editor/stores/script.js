@@ -1681,28 +1681,96 @@ export const useScriptStore = defineStore('script', () => {
 
     let count = 0;
 
-    function walk(node) {
-      if (!node || typeof node !== 'object') return;
+    function replaceField(owner, key) {
+      if (owner?.[key] !== oldPath) return;
+      owner[key] = newPath;
+      count++;
+    }
 
-      if (Array.isArray(node)) {
-        for (const item of node) {
-          walk(item);
-        }
-        return;
-      }
-
-      for (const key of Object.keys(node)) {
-        const value = node[key];
+    function replaceArrayValues(values) {
+      if (!Array.isArray(values)) return;
+      values.forEach((value, index) => {
         if (value === oldPath) {
-          node[key] = newPath;
+          values[index] = newPath;
           count++;
-          continue;
         }
-        walk(value);
+      });
+    }
+
+    function replaceVideoReference(reference) {
+      if (!reference || typeof reference !== 'object') return;
+      replaceField(reference, 'file');
+      replaceField(reference, 'poster');
+    }
+
+    for (const character of Object.values(data.value.characters || {})) {
+      for (const expressionId of Object.keys(character?.expressions || {})) {
+        replaceField(character.expressions, expressionId);
       }
     }
 
-    walk(data.value);
+    for (const scene of Object.values(data.value.scenes || {})) {
+      for (const page of (scene?.pages || [])) {
+        replaceField(page, 'background');
+        replaceField(page?.bgm, 'file');
+        replaceField(page?.se, 'file');
+        replaceVideoReference(page?.video);
+        for (const dialogue of (page?.dialogues || [])) {
+          replaceField(dialogue, 'voice');
+        }
+      }
+    }
+
+    for (const font of (data.value.assets?.fonts || [])) {
+      replaceField(font, 'file');
+    }
+    for (const video of Object.values(data.value.assets?.videos || {})) {
+      replaceVideoReference(video);
+    }
+
+    for (const ending of Object.values(data.value.systems?.endings || {})) {
+      replaceField(ending, 'thumbnail');
+      replaceVideoReference(ending?.endingVideo);
+    }
+    for (const cg of Object.values(data.value.systems?.gallery?.cg || {})) {
+      replaceArrayValues(cg?.images);
+      replaceField(cg, 'thumbnail');
+      replaceField(cg, 'lockedThumbnail');
+    }
+
+    for (const screenKey of ['titleScreen', 'settingsScreen']) {
+      const screen = data.value.ui?.[screenKey];
+      replaceField(screen, 'background');
+      if (screenKey === 'titleScreen') {
+        replaceField(screen, 'bgm');
+        replaceVideoReference(screen?.openingVideo);
+      }
+      for (const element of (screen?.elements || [])) {
+        if (element?.type === 'image') replaceField(element, 'src');
+      }
+    }
+
+    // UI chrome references are contract-owned paths below ui/. Restrict the
+    // recursive pass to that namespace so story copy and arbitrary metadata
+    // that happen to equal another asset path are never rewritten.
+    if (oldPath.startsWith('ui/')) {
+      function walkUi(node) {
+        if (!node || typeof node !== 'object') return;
+        if (Array.isArray(node)) {
+          node.forEach(walkUi);
+          return;
+        }
+        for (const key of Object.keys(node)) {
+          if (node[key] === oldPath) {
+            node[key] = newPath;
+            count++;
+          } else {
+            walkUi(node[key]);
+          }
+        }
+      }
+      walkUi(data.value.ui);
+    }
     return count;
   }
 

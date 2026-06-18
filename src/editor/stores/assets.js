@@ -7,6 +7,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { loadAllFonts, loadSingleFont } from '../../engine/fontLoader.js';
+import { useScriptStore } from './script.js';
 
 export const useAssetStore = defineStore('assets', () => {
   // ─── State ──────────────────────────────────────────────────────────
@@ -105,6 +106,18 @@ export const useAssetStore = defineStore('assets', () => {
     );
     if (result.success) {
       await loadCategory(category);
+      const script = useScriptStore();
+      const savedName = result.newName || newName;
+      const replaced = script.replaceAssetPathReferences(
+        `${category}/${oldName}`,
+        `${category}/${savedName}`,
+      );
+      if (replaced > 0) {
+        script.pushState();
+      }
+      if (category === 'fonts') {
+        syncFontMeta(script.data);
+      }
     }
     return result;
   }

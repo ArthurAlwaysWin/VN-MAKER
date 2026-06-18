@@ -31,7 +31,7 @@ export function useVoiceMatch() {
     sceneEntries.forEach(([sceneId, scene], sceneIdx) => {
       if (scope !== 'all' && scope !== sceneId) return;
       (scene.pages || []).forEach((page, pageIdx) => {
-        if (page.type === 'choice') return; // skip choice pages — no dialogues
+        if (page.type !== 'normal') return; // only dialogue pages participate
         (page.dialogues || []).forEach((dlg, dlgIdx) => {
           const charId = dlg.speaker || '_narrator';
           const key = `${charId}_${sceneIdx}_${pageIdx}_${dlgIdx}`;

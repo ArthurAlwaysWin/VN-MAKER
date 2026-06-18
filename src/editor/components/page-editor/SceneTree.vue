@@ -108,9 +108,15 @@
       </template>
       <template v-else-if="contextMenu.type === 'page'">
         <div class="menu-item" @click="onRenamePageFromMenu">重命名</div>
-        <div class="menu-item" @click="onTogglePageType">
-          {{ contextMenuPageIsChoice ? '转换为普通页' : '转换为选择页' }}
-        </div>
+        <div class="menu-divider"></div>
+        <div
+          v-for="type in pageConversionTypes"
+          :key="type.value"
+          class="menu-item"
+          :class="{ disabled: contextMenuPageType === type.value }"
+          @click="onConvertPageType(type.value)"
+        >{{ contextMenuPageType === type.value ? '✓ ' : '' }}转换为{{ type.label }}</div>
+        <div class="menu-divider"></div>
         <div class="menu-item danger" @click="onDeletePageFromMenu">删除页面</div>
       </template>
     </div>
@@ -133,6 +139,8 @@ import { useVoiceMatch } from '../../composables/useVoiceMatch.js';
 import { useAssetStore } from '../../stores/assets.js';
 import { summarizeHandoffByScene } from '../../utils/agentHandoff.js';
 import { createBranchGraphReport } from '../../../shared/sceneGraph.js';
+import { formatConditionSummary } from '../../../shared/branchingContract.js';
+import { getPageTypeConversionWarning } from '../../utils/pageTypeConversion.js';
 import VoiceMatchPreview from './VoiceMatchPreview.vue';
 import HelpTip from '../HelpTip.vue';
 import { HELP_SCRIPT } from '../../helpTexts.js';
@@ -191,10 +199,15 @@ const contextMenuStyle = computed(() => ({
   top: contextMenu.y + 'px',
 }));
 
-const contextMenuPageIsChoice = computed(() => {
+const contextMenuPageType = computed(() => {
   const scene = script.data?.scenes?.[contextMenu.sceneId];
-  return scene?.pages?.[contextMenu.pageIndex]?.type === 'choice';
+  return scene?.pages?.[contextMenu.pageIndex]?.type || 'normal';
 });
+const pageConversionTypes = Object.freeze([
+  { value: 'normal', label: '普通页' },
+  { value: 'choice', label: '选择页' },
+  { value: 'condition', label: '条件页' },
+]);
 
 const otherScenesForMenu = computed(() => {
   const id = contextMenu.sceneId;
@@ -284,7 +297,13 @@ function pageIcon(type) {
 function pageSnippet(page) {
   if (page.type === 'choice') return '[选择页]';
   if (page.type === 'input') return '[输入页]';
-  if (page.type === 'condition') return '[条件页]';
+  if (page.type === 'condition') {
+    const sceneLabels = Object.fromEntries(sceneEntries.value.map(([sceneId, scene]) => [sceneId, scene.name || sceneId]));
+    return formatConditionSummary(page, {
+      registry: script.data?.systems?.variables ?? {},
+      sceneLabels,
+    });
+  }
   const dlg = page.dialogues?.[0];
   if (!dlg?.text) return '';
   return dlg.text.length > 20 ? dlg.text.slice(0, 20) + '…' : dlg.text;
@@ -439,17 +458,17 @@ function onRenamePageFromMenu() {
   startRenamePage(sceneId, idx, scene.pages[idx]);
 }
 
-function onTogglePageType() {
+function onConvertPageType(targetType) {
   const sceneId = contextMenu.sceneId;
   const idx = contextMenu.pageIndex;
   closeMenu();
   const scene = script.data?.scenes?.[sceneId];
   if (!scene || idx < 0 || idx >= scene.pages.length) return;
   const page = scene.pages[idx];
-  if (page.type === 'choice') {
-    if (!confirm('转换为普通页将丢弃选项数据，确定继续？')) return;
-  }
-  script.convertPageType(sceneId, idx);
+  const warning = getPageTypeConversionWarning(page.type || 'normal', targetType);
+  if (!warning) return;
+  if (!confirm(warning)) return;
+  script.setPageType(sceneId, idx, targetType);
 }
 
 function onMenuSetSceneNext(targetSceneId) {

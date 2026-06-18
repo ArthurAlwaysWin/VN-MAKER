@@ -460,19 +460,13 @@
                       =
                     </button>
                   </div>
-                  <select
-                    class="field-input effect-variable"
-                    :value="effect.id"
-                    @change="setChoiceEffectVariable(idx, effectIdx, $event.target.value)"
-                  >
-                    <option
-                      v-for="variable in variableOptionsForEffect(effect.type)"
-                      :key="variable.id"
-                      :value="variable.id"
-                    >
-                      {{ variable.label }}
-                    </option>
-                  </select>
+                  <VariablePickerField
+                    class="effect-variable-picker"
+                    :model-value="effect.id || ''"
+                    :variables="variableOptionsForEffect(effect.type)"
+                    @update:model-value="setChoiceEffectVariable(idx, effectIdx, $event)"
+                    @go-registry="openVariableRegistry"
+                  />
                   <select
                     v-if="effectValueType(effect) === 'bool'"
                     class="field-input effect-value"
@@ -569,12 +563,13 @@
       <div v-if="sections.input" class="section-body">
         <div class="form-group">
           <label>写入变量</label>
-          <select class="field-input" :value="page.variableId || ''" @change="setInputField('variableId', $event.target.value)">
-            <option value="">选择字符串变量</option>
-            <option v-for="variable in stringVariableOptions" :key="variable.id" :value="variable.id">
-              {{ variable.label }}
-            </option>
-          </select>
+          <VariablePickerField
+            :model-value="page.variableId || ''"
+            :variables="stringVariableOptions"
+            placeholder="选择字符串变量"
+            @update:model-value="setInputField('variableId', $event)"
+            @go-registry="openVariableRegistry"
+          />
         </div>
         <div class="form-group">
           <label>提示文本</label>
@@ -645,16 +640,13 @@
             :key="`${rowIndex}-${condition.variableId}`"
             class="condition-row"
           >
-            <select
-              class="field-input condition-variable"
-              :value="condition.variableId || ''"
-              @change="setConditionVariable(rowIndex, $event.target.value)"
-            >
-              <option value="">选择变量</option>
-              <option v-for="variable in conditionVariableOptions" :key="variable.id" :value="variable.id">
-                {{ variable.label }}
-              </option>
-            </select>
+            <VariablePickerField
+              class="condition-variable-picker"
+              :model-value="condition.variableId || ''"
+              :variables="conditionVariableOptions"
+              @update:model-value="setConditionVariable(rowIndex, $event)"
+              @go-registry="openVariableRegistry"
+            />
             <select
               class="field-input condition-operator"
               :value="condition.operator"
@@ -863,6 +855,7 @@ import { usePageEditor } from '../../composables/usePageEditor.js';
 import { useScriptStore } from '../../stores/script.js';
 import { useAssetStore } from '../../stores/assets.js';
 import AudioPicker from './AudioPicker.vue';
+import VariablePickerField from './VariablePickerField.vue';
 import HelpTip from '../HelpTip.vue';
 import ExpressionDropdown from './ExpressionDropdown.vue';
 import ParticlePanel from './ParticlePanel.vue';
@@ -881,6 +874,7 @@ import {
   getTransitionUiOptions,
 } from '../../../shared/cinematicContract.js';
 import { normalizeParticleConfig } from '../../../shared/particleContract.js';
+import { getPageTypeConversionWarning } from '../../utils/pageTypeConversion.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -902,6 +896,7 @@ const variableOptions = computed(() => Object.entries(script.data?.systems?.vari
   id,
   label: variable.label || variable.name || id,
   type: variable.type || 'number',
+  group: variable.group || '',
   min: variable.min,
   max: variable.max,
   step: variable.step,
@@ -1037,7 +1032,18 @@ function clearBackground() {
 
 function setPageType(type) {
   if (!editor.selectedSceneId.value || !Number.isInteger(editor.selectedPageIndex.value)) return;
+  const warning = getPageTypeConversionWarning(page.value?.type || 'normal', type);
+  if (!warning) return;
+  if (!confirm(warning)) return;
   script.setPageType(editor.selectedSceneId.value, editor.selectedPageIndex.value, type);
+}
+
+function openVariableRegistry(variableId) {
+  script.requestStorySystemsRepair({
+    source: 'missing-variable-reference',
+    variableId: variableId || null,
+    issueId: variableId || 'variable-picker',
+  });
 }
 
 function setVideoReference(reference) {

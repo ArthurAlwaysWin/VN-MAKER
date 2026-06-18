@@ -200,6 +200,17 @@ describe('Config routing — main.js source patterns', () => {
     expect(previewSection).toContain('dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle)');
   });
 
+  it('routes choice badges through preview snapshots, runtime init, and live theme updates', () => {
+    const snapshotSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    const initSection = sourceSection(src, 'async function init', 'function initPreview');
+    const liveUpdateSection = sourceSection(src, "case 'update-theme':", "case 'update-ui-motion':");
+
+    for (const section of [snapshotSection, initSection, liveUpdateSection]) {
+      expect(section).toMatch(/applyChoiceBadge\(/);
+      expect(section).toMatch(/choiceMenu\.setChoiceBadgeConfig\(/);
+    }
+  });
+
   // ── Guard patterns ──
 
   it('all setLayout calls are guarded with optional chaining', () => {

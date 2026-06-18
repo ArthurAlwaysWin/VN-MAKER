@@ -1,8 +1,8 @@
 # Workspace Backup Feature Reimplementation Roadmap
 
-**Status:** Phases 1-3 complete; Phase 4 not started
+**Status:** Phases 1-5 complete; Phase 6 awaiting confirmation
 **Date:** 2026-06-19
-**Baseline:** `main` at `3947f83`
+**Baseline:** `main` at `86934a4`
 **Evidence source:** `b17d890` is requirements evidence only, not an implementation base
 
 ## Purpose
@@ -60,8 +60,8 @@ The following capabilities already exist and should be extended rather than rebu
 | 1 | Export Save Consistency | Web and desktop exports always use the latest saved script. | Low | Complete |
 | 2 | Asset Reference Integrity | Asset renames update canonical references consistently; voice matching only considers dialogue pages. | Medium | Complete |
 | 3 | Condition And Variable Editor Polish | SceneTree and PageInspector expose the remaining useful condition/variable UX without replacing current architecture. | Medium | Complete |
-| 4 | Theme Package Workflow Convergence | All theme UI surfaces reuse the existing full `.gmtheme` and install/apply services. | Medium | Not started |
-| 5 | Choice Badge Capability | Choice badges work through contract, packaging, runtime, preview, and tests using safe URLs. | Medium | Not started |
+| 4 | Theme Package Workflow Convergence | All theme UI surfaces reuse the existing full `.gmtheme` and install/apply services. | Medium | Complete |
+| 5 | Choice Badge Capability | Choice badges work through contract, packaging, runtime, preview, and tests using safe URLs. | Medium | Complete |
 | 6 | Theme Runtime Polish | Multi-selector nine-slice and dialogue decoration fields are supported safely; optional states require real semantics. | Medium | Not started |
 | 7 | Settings Screen Extensions | Single-page settings and reset actions are canonical and editable; drag overlay remains a gated follow-up. | Medium/High | Not started |
 | 8 | Alchemy Rose Built-In Theme | The theme and assets install, render, export, and round-trip as a complete built-in theme. | High | Not started |
@@ -194,6 +194,8 @@ Acceptance:
 
 ## Phase 4 - Theme Package Workflow Convergence
 
+**Status:** Complete.
+
 **Goal:** Make every theme-related editor entry point use the existing full-package services.
 
 Deliver:
@@ -223,7 +225,17 @@ Acceptance:
 - there is one full-theme export path and one install/apply path;
 - no component duplicates ZIP building, extraction, path validation, or asset installation logic.
 
+Completion evidence:
+
+- PresetModal and ProjectSettings export through the save-first `exportCurrentThemePackage()` path;
+- ready PresetModal imports and both built-in theme UI surfaces install and apply through `installAndApplyThemePackage()`;
+- the shared install flow preflights file packages, installs assets, applies one undoable theme change, refreshes UI assets, and saves the project;
+- canceled, blocked, and legacy-partial preflights do not install or mutate project data;
+- behavioral UI coverage plus import, installer, contract, browser, golden round-trip, exporter, and preflight suites pass, and `npm run build` succeeds.
+
 ## Phase 5 - Choice Badge Capability
+
+**Status:** Complete.
 
 **Goal:** Complete the currently partial `ui.theme.choiceBadge` capability end to end.
 
@@ -274,6 +286,15 @@ Acceptance:
 - badge configuration survives export/import and appears in runtime and preview;
 - no raw `url("${value}")` construction is introduced;
 - no persistent selected-choice behavior is implied by decorative badges.
+
+Completion evidence:
+
+- `ui.theme.choiceBadge` canonical A/B/C references are collected for asset export and validated against package namespace and manifest entries;
+- ChoiceMenu renders optional `aria-hidden` decorative spans with fixed A/B/C/A slot mapping, leaving missing slots empty without changing selection semantics;
+- badge CSS uses `resolvePath()` plus `cssUrl()`, includes non-interactive pointer behavior, and clears stale rules when a theme omits badge configuration;
+- runtime init, preview snapshots, and live `update-theme` messages all apply or reset both badge CSS and ChoiceMenu configuration;
+- `.gmtheme` export, parse, and install preserve badge configuration and assets;
+- complete Vitest, Node test, and production build gates pass.
 
 ## Phase 6 - Theme Runtime Polish
 
@@ -433,6 +454,4 @@ For each implementation session:
 
 ## Recommended Next Session
 
-Start with Phase 4 only. Phases 1-3 are complete and independently tested; Phase 4 should converge theme package UI entry points without entering choice-badge work.
-
-Do not begin Phase 5 in the same session unless Phase 4 is complete, tested, reviewed, and the user explicitly asks to continue.
+Phase 5 is complete and independently tested. Wait for explicit user confirmation before starting Phase 6 theme runtime polish.

@@ -38,5 +38,12 @@ export async function installAndApplyThemePackage({
   projectStore?.markDirty?.();
   await assetStore?.loadCategory?.('ui');
 
+  if (projectStore?.saveProject) {
+    const saved = await projectStore.saveProject(scriptStore.data);
+    if (!saved) {
+      throw new Error('主题已安装并应用，但保存项目失败');
+    }
+  }
+
   return installResult;
 }

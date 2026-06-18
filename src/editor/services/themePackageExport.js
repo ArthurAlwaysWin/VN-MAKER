@@ -1,9 +1,20 @@
 export async function exportCurrentThemePackage({
   ipcRenderer,
   scriptStore,
+  projectStore,
 } = {}) {
   if (!ipcRenderer) {
     throw new Error('ipcRenderer is required');
+  }
+
+  if (projectStore?.saveProject) {
+    const saved = await projectStore.saveProject(scriptStore?.data);
+    if (!saved) {
+      return {
+        status: 'error',
+        message: '导出 .gmtheme 失败: 保存项目失败',
+      };
+    }
   }
 
   const themeId = scriptStore?.data?.ui?.theme?.packageMeta?.themeId ?? '';

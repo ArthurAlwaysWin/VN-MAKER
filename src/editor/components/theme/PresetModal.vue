@@ -36,7 +36,7 @@
         <div class="export-import-section">
           <div class="section-divider"></div>
           <div class="export-import-row">
-            <button class="action-btn" @click="onExport" title="将当前主题导出为兼容 .theme 文件（非 v1.6 完整主题）">📤 导出兼容主题</button>
+            <button class="action-btn" @click="onExport" title="将当前已应用主题导出为完整 .gmtheme 包">📤 导出完整 .gmtheme</button>
             <button class="action-btn" @click="onImport" title="选择 .gmtheme 或兼容 .theme，并先生成静态预检摘要">📥 导入主题包</button>
             <span v-if="exportStatus" class="status-text">{{ exportStatus }}</span>
           </div>
@@ -58,6 +58,11 @@
             <ul v-if="importSummary.blockingErrors.length" class="import-summary-errors">
               <li v-for="line in importSummary.blockingErrors" :key="line">{{ line }}</li>
             </ul>
+            <div v-if="importSummary.canAutoApply" class="import-summary-actions">
+              <button class="apply-import-btn" :disabled="isApplyingImport" @click="onApplyImportedTheme">
+                {{ isApplyingImport ? '应用中...' : '应用完整主题' }}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -74,19 +79,26 @@
 <script setup>
 import { ref } from 'vue';
 import { useThemeEditor } from '../../composables/useThemeEditor.js';
+import { useAssetStore } from '../../stores/assets.js';
+import { useProjectStore } from '../../stores/project.js';
 import { useScriptStore } from '../../stores/script.js';
 import { preflightThemePackageImport } from '../../services/themePackageImport.js';
+import { exportCurrentThemePackage } from '../../services/themePackageExport.js';
+import { installAndApplyThemePackage } from '../../services/themePackageInstall.js';
 import { THEME_PRESETS } from '../../../engine/presets.js';
-import { buildThemeZip } from '../../../utils/themePackager.js';
 import HelpTip from '../HelpTip.vue';
 import { HELP_THEME } from '../../helpTexts.js';
 
 const emit = defineEmits(['close']);
 const editor = useThemeEditor();
+const assetStore = useAssetStore();
+const projectStore = useProjectStore();
 const script = useScriptStore();
 const selectedId = ref(null);
 const exportStatus = ref('');
 const importSummary = ref(null);
+const importFilePath = ref('');
+const isApplyingImport = ref(false);
 
 function onSelectPreset(preset) {
   selectedId.value = preset.id;
@@ -103,33 +115,27 @@ function onApply() {
 function onClose() {
   editor.cancelPreview();
   importSummary.value = null;
+  importFilePath.value = '';
   emit('close');
 }
 
 async function onExport() {
   try {
     exportStatus.value = '导出中...';
-    const theme = script.getTheme();
-    if (!theme) { exportStatus.value = '无主题数据'; return; }
-
-    const plain = JSON.parse(JSON.stringify(theme));
-    const zipBuffer = buildThemeZip(plain, {
-      name: '自定义主题',
-      description: '',
-      author: '',
-      createdAt: new Date().toISOString(),
+    const result = await exportCurrentThemePackage({
+      ipcRenderer: window.ipcRenderer,
+      scriptStore: script,
+      projectStore,
     });
-
-    const result = await window.ipcRenderer.invoke('export-theme', { buffer: zipBuffer });
-    if (result.canceled) {
+    if (result.status === 'canceled') {
       exportStatus.value = '';
       return;
     }
-    if (!result.success) {
-      exportStatus.value = '导出失败: ' + result.error;
+    if (result.status === 'error') {
+      exportStatus.value = result.message;
       return;
     }
-    exportStatus.value = '导出成功';
+    exportStatus.value = result.message;
     setTimeout(() => { exportStatus.value = ''; }, 3000);
   } catch (e) {
     console.error('[PresetModal] Export failed:', e);
@@ -139,6 +145,8 @@ async function onExport() {
 
 async function onImport() {
   try {
+    importSummary.value = null;
+    importFilePath.value = '';
     const result = await preflightThemePackageImport({
       ipcRenderer: window.ipcRenderer,
       scriptStore: script,
@@ -148,9 +156,32 @@ async function onImport() {
     }
     exportStatus.value = '';
     importSummary.value = result.summary;
+    importFilePath.value = result.summary?.canAutoApply ? result.filePath : '';
   } catch (e) {
     console.error('[PresetModal] Import failed:', e);
     exportStatus.value = '导入失败: ' + e.message;
+  }
+}
+
+async function onApplyImportedTheme() {
+  if (!importFilePath.value || isApplyingImport.value) return;
+
+  isApplyingImport.value = true;
+  try {
+    await installAndApplyThemePackage({
+      ipcRenderer: window.ipcRenderer,
+      scriptStore: script,
+      projectStore,
+      assetStore,
+      source: 'file',
+      filePath: importFilePath.value,
+    });
+    emit('close');
+  } catch (e) {
+    console.error('[PresetModal] Apply imported theme failed:', e);
+    exportStatus.value = '应用失败: ' + e.message;
+  } finally {
+    isApplyingImport.value = false;
   }
 }
 </script>
@@ -334,5 +365,22 @@ async function onImport() {
 }
 .import-summary-errors {
   color: #ff9b9b;
+}
+.import-summary-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+.apply-import-btn {
+  background: rgba(180, 160, 255, 0.3);
+  color: #e0e0e0;
+  border: 1px solid rgba(180, 160, 255, 0.5);
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.apply-import-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 </style>

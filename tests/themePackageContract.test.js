@@ -203,4 +203,53 @@ describe('theme package contract', () => {
     expect(bgmOnly.refs).not.toContain('audio/title-theme.ogg');
     expect(bgmOnly.missingCoverage).toContain('titleScreen');
   });
+
+  it('collects and validates choice badge asset references', () => {
+    const themeId = 'moonlight';
+    const badgeA = `ui/themes/${themeId}/choices/badge-a.svg`;
+    const badgeC = `ui/themes/${themeId}/choices/badge-c.svg`;
+    const result = validateThemePackageDefinition({
+      mode: 'full',
+      themeId,
+      theme: {
+        ui: {
+          theme: {
+            tokens: { primary: '#fff' },
+            choiceBadge: { a: badgeA, c: badgeC },
+          },
+        },
+      },
+      files: [
+        { path: badgeA, sha256: 'badge-a', bytes: 10 },
+        { path: badgeC, sha256: 'badge-c', bytes: 12 },
+      ],
+    });
+
+    expect(result.blockingErrors).toEqual([]);
+    expect(result.refs).toEqual(expect.arrayContaining([badgeA, badgeC]));
+  });
+
+  it('blocks choice badge references missing from the manifest or outside the theme namespace', () => {
+    const result = validateThemePackageDefinition({
+      mode: 'full',
+      themeId: 'moonlight',
+      theme: {
+        ui: {
+          theme: {
+            tokens: { primary: '#fff' },
+            choiceBadge: {
+              a: 'ui/themes/moonlight/choices/missing.svg',
+              b: 'ui/themes/other/choices/badge-b.svg',
+            },
+          },
+        },
+      },
+      files: [],
+    });
+
+    expect(result.blockingErrors).toEqual(expect.arrayContaining([
+      expect.stringContaining('missing.svg'),
+      expect.stringContaining('必须位于 ui/themes/moonlight/'),
+    ]));
+  });
 });

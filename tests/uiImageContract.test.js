@@ -2,6 +2,7 @@ import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  UI_CHOICE_BADGE_SLOT_KEYS,
   UI_CURSOR_ROOT,
   UI_CURSOR_SLOT_KEYS,
   UI_DIALOGUE_BOX_ROOT,
@@ -260,6 +261,29 @@ describe('uiImageContract shared roots and registry', () => {
     assert.equal(UI_ICON_ROOT, 'ui.theme.icons');
     assert.deepEqual(UI_CURSOR_SLOT_KEYS, ['default', 'pointer']);
     assert.deepEqual(UI_ICON_SLOT_KEYS, ['gameMenu', 'qab', 'close', 'voiceReplay']);
+    assert.deepEqual(UI_CHOICE_BADGE_SLOT_KEYS, ['a', 'b', 'c']);
+  });
+
+  it('collects only canonical choice badge slots', () => {
+    const seen = [];
+
+    collectUiImagePaths({
+      ui: {
+        theme: {
+          choiceBadge: {
+            a: 'ui/themes/moonlight/choices/badge-a.svg',
+            b: 'assets/ui/themes/moonlight/choices/badge-b.svg',
+            c: 'ui/themes/moonlight/choices/badge-c.svg',
+            d: 'ui/themes/moonlight/choices/badge-d.svg',
+          },
+        },
+      },
+    }, value => seen.push(value));
+
+    assert.deepEqual(seen, [
+      'ui/themes/moonlight/choices/badge-a.svg',
+      'ui/themes/moonlight/choices/badge-c.svg',
+    ]);
   });
 
   it('collects cursor and icon canonical image paths', () => {

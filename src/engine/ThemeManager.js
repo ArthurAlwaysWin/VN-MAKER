@@ -261,6 +261,61 @@ export function resetButtonFamilies() {
   if (styleEl) styleEl.textContent = '';
 }
 
+// ─── Choice Badge System ────────────────────────────────
+
+export const CHOICE_BADGE_SELECTORS = Object.freeze({
+  a: '.choice-badge-a',
+  b: '.choice-badge-b',
+  c: '.choice-badge-c',
+});
+
+function buildChoiceBadgeCSS(choiceBadge) {
+  if (!choiceBadge || typeof choiceBadge !== 'object') {
+    return '';
+  }
+
+  const rules = [];
+  for (const [slotKey, selector] of Object.entries(CHOICE_BADGE_SELECTORS)) {
+    const src = typeof choiceBadge[slotKey] === 'string' ? choiceBadge[slotKey].trim() : '';
+    if (!src) {
+      continue;
+    }
+
+    const resolvedSrc = resolvePath(src);
+    rules.push(
+      `${selector} {\n` +
+      `  display: inline-block;\n` +
+      `  width: var(--gm-choice-badge-size, 1.8em);\n` +
+      `  height: var(--gm-choice-badge-size, 1.8em);\n` +
+      `  margin-right: var(--gm-choice-badge-gap, 0.65em);\n` +
+      `  vertical-align: -0.45em;\n` +
+      `  background-image: ${cssUrl(resolvedSrc)};\n` +
+      `  background-repeat: no-repeat;\n` +
+      `  background-position: center;\n` +
+      `  background-size: contain;\n` +
+      `  pointer-events: none;\n` +
+      `}`
+    );
+  }
+
+  return rules.join('\n');
+}
+
+export function applyChoiceBadge(themeData) {
+  let styleEl = document.getElementById('galgame-choice-badge');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'galgame-choice-badge';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = buildChoiceBadgeCSS(themeData?.choiceBadge);
+}
+
+export function resetChoiceBadge() {
+  const styleEl = document.getElementById('galgame-choice-badge');
+  if (styleEl) styleEl.textContent = '';
+}
+
 // ─── Screen Background System (Phase 74) ───────────────
 
 /** CSS selectors for each major screen background (Phase 74) */

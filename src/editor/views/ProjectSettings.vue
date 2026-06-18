@@ -575,6 +575,7 @@ async function onExportThemePackage() {
     const result = await exportCurrentThemePackage({
       ipcRenderer: window.ipcRenderer,
       scriptStore: script,
+      projectStore: project,
     });
     themeExportStatus.value = result.message || '';
     if (result.status === 'success') {

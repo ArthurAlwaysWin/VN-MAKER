@@ -22,7 +22,7 @@ import {
   shouldRecordPlayedMediaOutcome,
 } from './engine/runtimeVideoBehavior.js';
 import { ReadHistory } from './engine/ReadHistory.js';
-import { applyTheme, applyNineSlice, applyButtonFamilies, applyScreenBackgrounds, applyCursors } from './engine/ThemeManager.js';
+import { applyTheme, applyNineSlice, applyButtonFamilies, applyScreenBackgrounds, applyCursors, applyChoiceBadge } from './engine/ThemeManager.js';
 import { detectEnvironment, ENV, BASE_PATH, SCRIPT_PATH, _capturedStartMsg } from './engine/assetPath.js';
 import { WebSaveManager } from './engine/WebSaveManager.js';
 
@@ -205,6 +205,8 @@ function applyPreviewScriptSnapshot(request) {
   applyButtonFamilies(engine.script.ui?.theme);
   applyScreenBackgrounds(gameContainer, engine.script.ui);
   applyCursors(engine.script.ui?.theme);
+  applyChoiceBadge(engine.script.ui?.theme);
+  choiceMenu.setChoiceBadgeConfig(engine.script.ui?.theme?.choiceBadge);
   applyUiMotion(engine.script.ui?.motion);
 
   if (engine.script.ui?.dialogueBox) {
@@ -1770,6 +1772,8 @@ async function init(env) {
     applyButtonFamilies(engine.script.ui?.theme);
     applyScreenBackgrounds(gameContainer, engine.script.ui);
     applyCursors(engine.script.ui?.theme);
+    applyChoiceBadge(engine.script.ui?.theme);
+    choiceMenu.setChoiceBadgeConfig(engine.script.ui?.theme?.choiceBadge);
     applyUiMotion(engine.script.ui?.motion);
 
     // Apply global dialogue box font settings if defined in script
@@ -1851,6 +1855,8 @@ function initPreview() {
         applyButtonFamilies(msg.theme);
         applyScreenBackgrounds(gameContainer, engine.script.ui);
         applyCursors(msg.theme);
+        applyChoiceBadge(msg.theme);
+        choiceMenu.setChoiceBadgeConfig(msg.theme?.choiceBadge);
         // Theme icons may have changed
         const themeIcons = msg.theme?.icons;
         saveLoadScreen.setThemeIcons(themeIcons || null);

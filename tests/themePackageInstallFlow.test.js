@@ -52,6 +52,7 @@ describe('theme package install/apply orchestration', () => {
     };
     const projectStore = {
       markDirty: vi.fn(),
+      saveProject: vi.fn().mockResolvedValue(true),
     };
     const assetStore = {
       loadCategory: vi.fn().mockResolvedValue(undefined),
@@ -77,6 +78,7 @@ describe('theme package install/apply orchestration', () => {
     expect(result.bundle.titleScreen.background).toBe('ui/themes/moonlight/title/background.png');
     expect(projectStore.markDirty).toHaveBeenCalledTimes(1);
     expect(assetStore.loadCategory).toHaveBeenCalledWith('ui');
+    expect(projectStore.saveProject).toHaveBeenCalledWith(scriptStore.data);
   });
 
   it('routes built-in themes through the same install-theme-package surface without preflight', async () => {
@@ -118,6 +120,7 @@ describe('theme package install/apply orchestration', () => {
     };
     const projectStore = {
       markDirty: vi.fn(),
+      saveProject: vi.fn().mockResolvedValue(true),
     };
     const assetStore = {
       loadCategory: vi.fn().mockResolvedValue(undefined),
@@ -148,5 +151,34 @@ describe('theme package install/apply orchestration', () => {
     );
     expect(projectStore.markDirty).toHaveBeenCalledTimes(1);
     expect(assetStore.loadCategory).toHaveBeenCalledWith('ui');
+    expect(projectStore.saveProject).toHaveBeenCalledWith(scriptStore.data);
+  });
+
+  it('does not install, apply, refresh, or save when file preflight is blocked', async () => {
+    const ipcRenderer = {
+      invoke: vi.fn().mockResolvedValue({
+        success: true,
+        status: 'blocked',
+        blockingErrors: ['非法路径'],
+      }),
+    };
+    const scriptStore = { data: { ui: {} }, applyThemeBundle: vi.fn() };
+    const projectStore = { markDirty: vi.fn(), saveProject: vi.fn() };
+    const assetStore = { loadCategory: vi.fn() };
+
+    await expect(installAndApplyThemePackage({
+      ipcRenderer,
+      scriptStore,
+      projectStore,
+      assetStore,
+      source: 'file',
+      filePath: 'E:/themes/blocked.gmtheme',
+    })).rejects.toThrow('非法路径');
+
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+    expect(scriptStore.applyThemeBundle).not.toHaveBeenCalled();
+    expect(projectStore.markDirty).not.toHaveBeenCalled();
+    expect(projectStore.saveProject).not.toHaveBeenCalled();
+    expect(assetStore.loadCategory).not.toHaveBeenCalled();
   });
 });

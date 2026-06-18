@@ -1,4 +1,5 @@
 import {
+  UI_CHOICE_BADGE_SLOT_KEYS,
   UI_CURSOR_SLOT_KEYS,
   UI_ICON_SLOT_KEYS,
   isCanonicalUiImagePath,
@@ -146,6 +147,13 @@ function collectThemeRefs(theme) {
   if (icons && typeof icons === 'object') {
     for (const slotKey of UI_ICON_SLOT_KEYS) {
       pushRef(refs, `ui.theme.icons.${slotKey}`, icons[slotKey]);
+    }
+  }
+
+  const choiceBadge = ui.theme?.choiceBadge;
+  if (choiceBadge && typeof choiceBadge === 'object') {
+    for (const slotKey of UI_CHOICE_BADGE_SLOT_KEYS) {
+      pushRef(refs, `ui.theme.choiceBadge.${slotKey}`, choiceBadge[slotKey]);
     }
   }
 

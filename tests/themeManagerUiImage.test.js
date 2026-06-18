@@ -10,18 +10,22 @@ vi.mock('../src/engine/assetPath.js', () => ({
 
 import {
   BUTTON_FAMILY_SELECTOR_REGISTRY,
+  CHOICE_BADGE_SELECTORS,
   CURSOR_SLOT_SELECTORS,
   SCREEN_BACKGROUND_SELECTORS,
   applyButtonFamilies,
+  applyChoiceBadge,
   applyCursors,
   applyNineSlice,
   applyScreenBackgrounds,
   resetButtonFamilies,
+  resetChoiceBadge,
   resetCursors,
   resetNineSlice,
   resetScreenBackgrounds,
 } from '../src/engine/ThemeManager.js';
 import { resolvePath } from '../src/engine/assetPath.js';
+import { cssUrl } from '../src/engine/cssEscape.js';
 
 function getNineSliceCss() {
   return document.getElementById('galgame-nine-slice')?.textContent ?? '';
@@ -33,6 +37,10 @@ function getButtonFamilyCss() {
 
 function getScreenBackgroundCss() {
   return document.getElementById('galgame-screen-backgrounds')?.textContent ?? '';
+}
+
+function getChoiceBadgeCss() {
+  return document.getElementById('galgame-choice-badge')?.textContent ?? '';
 }
 
 describe('ThemeManager UI image handling', () => {
@@ -272,6 +280,43 @@ describe('ThemeManager UI image handling', () => {
 
     resetButtonFamilies();
     expect(getButtonFamilyCss()).toBe('');
+  });
+
+  it('resolves and applies only configured choice badge slots', () => {
+    expect(CHOICE_BADGE_SELECTORS).toEqual({
+      a: '.choice-badge-a',
+      b: '.choice-badge-b',
+      c: '.choice-badge-c',
+    });
+
+    applyChoiceBadge({
+      choiceBadge: {
+        a: 'ui/themes/moonlight/choices/badge-a.svg',
+        c: 'ui/themes/moonlight/choices/badge-c.svg',
+      },
+    });
+
+    expect(resolvePath).toHaveBeenCalledWith('ui/themes/moonlight/choices/badge-a.svg');
+    expect(resolvePath).toHaveBeenCalledWith('ui/themes/moonlight/choices/badge-c.svg');
+    const css = getChoiceBadgeCss();
+    expect(css).toContain('.choice-badge-a {');
+    expect(css).not.toContain('.choice-badge-b {');
+    expect(css).toContain('.choice-badge-c {');
+    expect(css).toContain('pointer-events: none');
+  });
+
+  it('escapes choice badge URLs through cssUrl and clears stale rules', () => {
+    const dangerousPath = 'ui/themes/moonlight/choices/a"\\\n}.svg';
+    applyChoiceBadge({ choiceBadge: { a: dangerousPath } });
+
+    expect(getChoiceBadgeCss()).toContain(
+      `background-image: ${cssUrl(`resolved:${dangerousPath}`)};`,
+    );
+
+    applyChoiceBadge(null);
+    expect(getChoiceBadgeCss()).toBe('');
+    resetChoiceBadge();
+    expect(getChoiceBadgeCss()).toBe('');
   });
 
   it('exports the locked screen background selectors for all four major screens', () => {

@@ -2,6 +2,7 @@
  * ChoiceMenu — Displays choice options for branching
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
+import { UI_CHOICE_BADGE_SLOT_KEYS } from '../shared/uiImageContract.js';
 
 export class ChoiceMenu {
   /**
@@ -19,12 +20,28 @@ export class ChoiceMenu {
     this.onSelect = null;
     /** @type {object|null} Explicit ui.widgetStyles.button config for choice buttons. */
     this._buttonWidgetStyle = null;
+    /** @type {Record<'a'|'b'|'c', string>|null} Decorative badge image config. */
+    this._choiceBadgeConfig = null;
   }
 
   setWidgetStyles(styles) {
     this._buttonWidgetStyle = styles?.button && typeof styles.button === 'object'
       ? { ...styles.button }
       : null;
+  }
+
+  setChoiceBadgeConfig(config) {
+    if (!config || typeof config !== 'object') {
+      this._choiceBadgeConfig = null;
+      return;
+    }
+
+    const normalized = {};
+    for (const slotKey of UI_CHOICE_BADGE_SLOT_KEYS) {
+      const src = typeof config[slotKey] === 'string' ? config[slotKey].trim() : '';
+      if (src) normalized[slotKey] = src;
+    }
+    this._choiceBadgeConfig = Object.keys(normalized).length > 0 ? normalized : null;
   }
 
   _applyButtonStyle(btn, style = {}) {
@@ -92,6 +109,14 @@ export class ChoiceMenu {
       btn.textContent = option?.text ?? '';
       if (this._buttonWidgetStyle) {
         this._applyButtonStyle(btn, this._buttonWidgetStyle);
+      }
+
+      const badgeSlot = UI_CHOICE_BADGE_SLOT_KEYS[index % UI_CHOICE_BADGE_SLOT_KEYS.length];
+      if (this._choiceBadgeConfig?.[badgeSlot]) {
+        const badge = document.createElement('span');
+        badge.className = `choice-badge choice-badge-${badgeSlot}`;
+        badge.setAttribute('aria-hidden', 'true');
+        btn.prepend(badge);
       }
 
       // Per-button custom style

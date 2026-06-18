@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { exportThemePackage } from '../electron/themePackageExporter.js';
+import { installThemePackage } from '../electron/themePackageInstaller.js';
 import { parseThemeZip } from '../src/utils/themePackager.js';
 
 const tempDirs = [];
@@ -14,6 +15,7 @@ async function createProjectDir() {
   await fs.mkdir(path.join(dir, 'assets', 'ui', 'themes', 'moonlight', 'screens'), { recursive: true });
   await fs.mkdir(path.join(dir, 'assets', 'ui', 'themes', 'moonlight', 'dialogue'), { recursive: true });
   await fs.mkdir(path.join(dir, 'assets', 'ui', 'themes', 'moonlight', 'title'), { recursive: true });
+  await fs.mkdir(path.join(dir, 'assets', 'ui', 'themes', 'moonlight', 'choices'), { recursive: true });
   return dir;
 }
 
@@ -28,6 +30,10 @@ async function writeProjectScript(projectPath) {
           themeId: 'moonlight',
           mode: 'full',
           assetRoot: 'ui/themes/moonlight/',
+        },
+        choiceBadge: {
+          a: 'ui/themes/moonlight/choices/badge-a.svg',
+          c: 'ui/themes/moonlight/choices/badge-c.svg',
         },
       },
       widgetStyles: {},
@@ -65,6 +71,8 @@ async function writeProjectScript(projectPath) {
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'screens', 'save-load-bg.png'), new Uint8Array([5, 6, 7, 8]));
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'title', 'background.png'), new Uint8Array([9, 10, 11, 12]));
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'title', 'logo.png'), new Uint8Array([13, 14, 15, 16]));
+  await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'choices', 'badge-a.svg'), new Uint8Array([17, 18, 19, 20]));
+  await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'choices', 'badge-c.svg'), new Uint8Array([21, 22, 23, 24]));
 }
 
 describe('theme package export round-trip', () => {
@@ -105,7 +113,28 @@ describe('theme package export round-trip', () => {
         },
       ],
     });
+    expect(parsed.theme.ui.theme.choiceBadge).toEqual({
+      a: 'ui/themes/moonlight/choices/badge-a.svg',
+      c: 'ui/themes/moonlight/choices/badge-c.svg',
+    });
     expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/title/background.png');
     expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/title/logo.png');
+    expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/choices/badge-a.svg');
+    expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/choices/badge-c.svg');
+
+    const packagePath = path.join(projectPath, 'moonlight.gmtheme');
+    await fs.writeFile(packagePath, exported.buffer);
+    const freshProjectPath = await createProjectDir();
+    const installed = await installThemePackage({
+      source: 'file',
+      filePath: packagePath,
+      projectPath: freshProjectPath,
+    });
+
+    expect(installed.success).toBe(true);
+    expect(installed.bundle.theme.choiceBadge).toEqual({
+      a: 'ui/themes/moonlight/choices/badge-a.svg',
+      c: 'ui/themes/moonlight/choices/badge-c.svg',
+    });
   });
 });

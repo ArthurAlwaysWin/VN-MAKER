@@ -39,7 +39,9 @@
         <!-- Footer -->
         <div class="modal-footer">
           <button class="cancel-btn" @click="$emit('close')">取消</button>
-          <button class="apply-btn" :disabled="!selectedId" @click="onApply">应用主题包</button>
+          <button class="apply-btn" :disabled="!selectedId || isApplying" @click="onApply">
+            {{ isApplying ? '应用中...' : '应用主题包' }}
+          </button>
         </div>
       </div>
     </div>
@@ -48,18 +50,39 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useAssetStore } from '../../stores/assets.js';
+import { useProjectStore } from '../../stores/project.js';
 import { useScriptStore } from '../../stores/script.js';
+import { installAndApplyThemePackage } from '../../services/themePackageInstall.js';
 import { BUILTIN_THEMES } from '../../builtinThemes.js';
 
 const emit = defineEmits(['close']);
 const script = useScriptStore();
+const project = useProjectStore();
+const assetStore = useAssetStore();
 const selectedId = ref(null);
+const isApplying = ref(false);
 
-function onApply() {
+async function onApply() {
   const theme = BUILTIN_THEMES.find(t => t.id === selectedId.value);
-  if (!theme) return;
-  script.applyBuiltinTheme(theme);
-  emit('close');
+  if (!theme || isApplying.value) return;
+
+  isApplying.value = true;
+  try {
+    await installAndApplyThemePackage({
+      ipcRenderer: window.ipcRenderer,
+      scriptStore: script,
+      projectStore: project,
+      assetStore,
+      source: 'builtin',
+      themeId: theme.id,
+    });
+    emit('close');
+  } catch (error) {
+    console.error('[ThemePackageModal] Failed to apply built-in theme package:', error);
+  } finally {
+    isApplying.value = false;
+  }
 }
 </script>
 

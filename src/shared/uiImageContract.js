@@ -210,6 +210,17 @@ function collectCursorIconUiImages(script, add) {
   }
 }
 
+function collectChoiceBadgeUiImages(script, add) {
+  const choiceBadge = script?.ui?.theme?.choiceBadge;
+  if (!choiceBadge || typeof choiceBadge !== 'object') {
+    return;
+  }
+
+  for (const slotKey of UI_CHOICE_BADGE_SLOT_KEYS) {
+    addCanonicalUiImage(add, choiceBadge[slotKey]);
+  }
+}
+
 function collectDialogueBoxUiImages(script, add) {
   const dialogueBox = script?.ui?.dialogueBox;
   addCanonicalUiImage(add, dialogueBox?.nameplateBackgroundImage);
@@ -237,6 +248,7 @@ export const UI_IMAGE_SCAN_REGISTRY = [
   collectScreenChromeUiImages,
   collectWidgetStyleUiImages,
   collectCursorIconUiImages,
+  collectChoiceBadgeUiImages,
 ];
 
 export function registerUiImageCollector(collector) {

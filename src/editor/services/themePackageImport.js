@@ -103,6 +103,7 @@ export async function preflightThemePackageImport({
 
   return {
     canceled: false,
+    filePath: fileResult.filePath,
     preflight,
     summary: createThemePackageImportSummary(preflight),
     browserEntry: createImportedThemeBrowserEntry({

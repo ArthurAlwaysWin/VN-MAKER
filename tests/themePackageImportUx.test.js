@@ -116,6 +116,7 @@ describe('theme package import UX helpers', () => {
       filePath: 'E:/themes/moonlight.gmtheme',
       canApply: true,
     });
+    expect(result.filePath).toBe('E:/themes/moonlight.gmtheme');
     expect(result.summary.planLines).toEqual([
       '应用后将接管这些主题范围：主题基础、通用控件、标题界面',
     ]);

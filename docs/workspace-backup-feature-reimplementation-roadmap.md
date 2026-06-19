@@ -1,8 +1,8 @@
 # Workspace Backup Feature Reimplementation Roadmap
 
-**Status:** Phases 1-5 complete; Phase 6 awaiting confirmation
+**Status:** Phases 1-6 complete; Phase 7 awaiting confirmation
 **Date:** 2026-06-19
-**Baseline:** `main` at `86934a4`
+**Baseline:** `main` at `45046ef`
 **Evidence source:** `b17d890` is requirements evidence only, not an implementation base
 
 ## Purpose
@@ -62,7 +62,7 @@ The following capabilities already exist and should be extended rather than rebu
 | 3 | Condition And Variable Editor Polish | SceneTree and PageInspector expose the remaining useful condition/variable UX without replacing current architecture. | Medium | Complete |
 | 4 | Theme Package Workflow Convergence | All theme UI surfaces reuse the existing full `.gmtheme` and install/apply services. | Medium | Complete |
 | 5 | Choice Badge Capability | Choice badges work through contract, packaging, runtime, preview, and tests using safe URLs. | Medium | Complete |
-| 6 | Theme Runtime Polish | Multi-selector nine-slice and dialogue decoration fields are supported safely; optional states require real semantics. | Medium | Not started |
+| 6 | Theme Runtime Polish | Multi-selector nine-slice and dialogue decoration fields are supported safely; optional states require real semantics. | Medium | Complete |
 | 7 | Settings Screen Extensions | Single-page settings and reset actions are canonical and editable; drag overlay remains a gated follow-up. | Medium/High | Not started |
 | 8 | Alchemy Rose Built-In Theme | The theme and assets install, render, export, and round-trip as a complete built-in theme. | High | Not started |
 | 9 | Integration, Examples, And Release Closure | Full regression, UI review, docs, and minimal example data close the feature family. | Medium | Not started |
@@ -298,6 +298,8 @@ Completion evidence:
 
 ## Phase 6 - Theme Runtime Polish
 
+**Status:** Complete.
+
 **Goal:** Add only the theme primitives that have clear current-main semantics.
 
 Deliver:
@@ -329,6 +331,17 @@ Acceptance:
 
 - theme primitives have runtime semantics and package coverage;
 - speculative or inert fields are not added merely because they existed in the backup.
+
+Completion evidence:
+
+- nine-slice selector lists are normalized once and each selector independently receives the base, `::before`, `:hover::before`, and `:active::before` suffixes;
+- `titleButton` covers both `.title-button` and `.title-custom-button` without changing either button lifecycle;
+- dialogue decoration opacity and rotation share one numeric contract across the editor and runtime: numeric strings normalize, opacity clamps to `[0, 1]`, rotation clamps to `[-360, 360]`, and missing/invalid values fall back without stale inline styles;
+- runtime init, preview snapshots, dialogue preview refreshes, live full-snapshot updates, and missing-config resets all route through `DialogueBox.applyGlobalStyle()`;
+- decoration and nameplate URLs use `resolvePath()` plus `cssUrl()`, while `.gmtheme` asset collection and round-trip preserve decoration imagery and scalar fields;
+- a Chromium DOM repro against the current `style.css` showed the existing `#game-container` pointer selector wins over standard title, custom title, and QAB class cursor rules with no inline cursor present, so no `!important` change was justified;
+- selected nine-slice imagery is deferred: choice/title nine-slice widgets expose hover and pressed behavior but no stable selected-state lifecycle, so no selected field, package reference, or runtime CSS was added;
+- focused Phase 6, choice badge, theme package contract/round-trip, full Vitest, Node test, and production build gates pass.
 
 ## Phase 7 - Settings Screen Extensions
 
@@ -454,4 +467,4 @@ For each implementation session:
 
 ## Recommended Next Session
 
-Phase 5 is complete and independently tested. Wait for explicit user confirmation before starting Phase 6 theme runtime polish.
+Phase 6 is complete and independently tested. Wait for explicit user confirmation before starting Phase 7 settings screen extensions.

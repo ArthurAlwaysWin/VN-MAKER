@@ -46,9 +46,19 @@ const NINE_SLICE_SELECTORS = {
   menuPanel:     '.game-menu-panel',
   saveSlot:      '.save-slot',
   choiceButton:  '.choice-button',
-  titleButton:   '.title-button',
+  titleButton:   '.title-button, .title-custom-button',
   settingsPanel: '#settings-screen',
 };
+
+/** Apply a pseudo-class/element suffix to every selector in a selector list. */
+function mapSelectorList(selectorList, suffix = '') {
+  return String(selectorList)
+    .split(',')
+    .map(selector => selector.trim())
+    .filter(Boolean)
+    .map(selector => `${selector}${suffix}`)
+    .join(', ');
+}
 
 /** Button keys that support 3-state (normal/hover/active) per D-06, D-07 */
 const BUTTON_KEYS = new Set(['choiceButton', 'titleButton']);
@@ -108,7 +118,7 @@ function buildNineSliceCSS(nineSlice) {
       parentProps.push('backdrop-filter: none');
       parentProps.push('-webkit-backdrop-filter: none');
     }
-    rules.push(`${selector} { ${parentProps.join('; ')}; }`);
+    rules.push(`${mapSelectorList(selector)} { ${parentProps.join('; ')}; }`);
 
     // ::before — normal state (D-01, D-03, D-04)
     const sliceInsets = normalizeNineSliceInsets(config.slice);
@@ -120,7 +130,7 @@ function buildNineSliceCSS(nineSlice) {
     const repeat = config.repeat || 'stretch';
 
     rules.push(
-      `${selector}::before {\n` +
+      `${mapSelectorList(selector, '::before')} {\n` +
       `  content: '';\n` +
       `  position: absolute;\n` +
       `  inset: 0;\n` +
@@ -135,7 +145,7 @@ function buildNineSliceCSS(nineSlice) {
       if (config.states.hover?.src) {
         const resolvedHoverSrc = resolvePath(config.states.hover.src);
         rules.push(
-          `${selector}:hover::before {\n` +
+          `${mapSelectorList(selector, ':hover::before')} {\n` +
           `  border-image-source: ${cssUrl(resolvedHoverSrc)};\n` +
           `}`
         );
@@ -143,7 +153,7 @@ function buildNineSliceCSS(nineSlice) {
       if (config.states.active?.src) {
         const resolvedActiveSrc = resolvePath(config.states.active.src);
         rules.push(
-          `${selector}:active::before {\n` +
+          `${mapSelectorList(selector, ':active::before')} {\n` +
           `  border-image-source: ${cssUrl(resolvedActiveSrc)};\n` +
           `}`
         );

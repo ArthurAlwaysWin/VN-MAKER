@@ -3,6 +3,8 @@
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
+import { cssUrl } from '../engine/cssEscape.js';
+import { normalizeDialogueDecorationNumber } from '../shared/dialogueDecorationContract.js';
 
 export class DialogueBox {
   /**
@@ -217,7 +219,7 @@ export class DialogueBox {
     this.nameplateArtEl.style.cssText = '';
     this.namePlateEl.classList.remove('has-art');
     if (!resolved) return;
-    this.nameplateArtEl.style.backgroundImage = `url("${resolved}")`;
+    this.nameplateArtEl.style.backgroundImage = cssUrl(resolved);
     this.nameplateArtEl.style.backgroundRepeat = 'no-repeat';
     this.nameplateArtEl.style.backgroundSize = '100% 100%';
     this.nameplateArtEl.style.backgroundPosition = 'center';
@@ -241,9 +243,14 @@ export class DialogueBox {
       if (width !== undefined) node.style.width = `${width}px`;
       if (height !== undefined) node.style.height = `${height}px`;
 
+      const opacity = normalizeDialogueDecorationNumber('opacity', decoration?.opacity);
+      const rotation = normalizeDialogueDecorationNumber('rotation', decoration?.rotation);
+      if (opacity !== undefined) node.style.opacity = String(opacity);
+      if (rotation !== undefined) node.style.transform = `rotate(${rotation}deg)`;
+
       const resolved = this._resolveDialogueArtPath(decoration?.src);
       if (resolved) {
-        node.style.backgroundImage = `url("${resolved}")`;
+        node.style.backgroundImage = cssUrl(resolved);
         node.style.backgroundRepeat = 'no-repeat';
         node.style.backgroundSize = 'contain';
         node.style.backgroundPosition = 'center';

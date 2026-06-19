@@ -200,6 +200,16 @@ describe('Config routing — main.js source patterns', () => {
     expect(previewSection).toContain('dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle)');
   });
 
+  it('routes dialogue box snapshots through applyGlobalStyle even when reset to missing config', () => {
+    const snapshotSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
+    const initSection = sourceSection(src, 'async function init', 'function initPreview');
+    const dialoguePreviewSection = sourceSection(src, "case 'show-dialogue-preview':", "case 'show-choice-preview':");
+
+    for (const section of [snapshotSection, initSection, dialoguePreviewSection]) {
+      expect(section).toContain('dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox)');
+    }
+  });
+
   it('routes choice badges through preview snapshots, runtime init, and live theme updates', () => {
     const snapshotSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
     const initSection = sourceSection(src, 'async function init', 'function initPreview');

@@ -39,6 +39,15 @@ async function writeProjectScript(projectPath) {
       widgetStyles: {},
       dialogueBox: {
         nameplateBackgroundImage: 'ui/themes/moonlight/dialogue/nameplate.png',
+        decorations: [{
+          src: 'ui/themes/moonlight/dialogue/corner.png',
+          x: 18,
+          y: -12,
+          width: 120,
+          height: 96,
+          opacity: 0.65,
+          rotation: -24,
+        }],
       },
       saveLoadScreen: {
         chrome: {
@@ -68,6 +77,7 @@ async function writeProjectScript(projectPath) {
 
   await fs.writeFile(path.join(projectPath, 'script.json'), JSON.stringify(script, null, 2), 'utf-8');
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'dialogue', 'nameplate.png'), new Uint8Array([1, 2, 3, 4]));
+  await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'dialogue', 'corner.png'), new Uint8Array([25, 26, 27, 28]));
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'screens', 'save-load-bg.png'), new Uint8Array([5, 6, 7, 8]));
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'title', 'background.png'), new Uint8Array([9, 10, 11, 12]));
   await fs.writeFile(path.join(projectPath, 'assets', 'ui', 'themes', 'moonlight', 'title', 'logo.png'), new Uint8Array([13, 14, 15, 16]));
@@ -99,6 +109,15 @@ describe('theme package export round-trip', () => {
     expect(parsed.themeId).toBe('moonlight');
     expect(parsed.assetRoot).toBe('ui/themes/moonlight/');
     expect(parsed.theme.ui.dialogueBox.nameplateBackgroundImage).toBe('ui/themes/moonlight/dialogue/nameplate.png');
+    expect(parsed.theme.ui.dialogueBox.decorations).toEqual([{
+      src: 'ui/themes/moonlight/dialogue/corner.png',
+      x: 18,
+      y: -12,
+      width: 120,
+      height: 96,
+      opacity: 0.65,
+      rotation: -24,
+    }]);
     expect(parsed.theme.ui.saveLoadScreen.chrome.backgroundImage).toBe('ui/themes/moonlight/screens/save-load-bg.png');
     expect(parsed.theme.ui.titleScreen).toEqual({
       background: 'ui/themes/moonlight/title/background.png',
@@ -121,6 +140,7 @@ describe('theme package export round-trip', () => {
     expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/title/logo.png');
     expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/choices/badge-a.svg');
     expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/choices/badge-c.svg');
+    expect(parsed.files.map(file => file.path)).toContain('ui/themes/moonlight/dialogue/corner.png');
 
     const packagePath = path.join(projectPath, 'moonlight.gmtheme');
     await fs.writeFile(packagePath, exported.buffer);
@@ -135,6 +155,11 @@ describe('theme package export round-trip', () => {
     expect(installed.bundle.theme.choiceBadge).toEqual({
       a: 'ui/themes/moonlight/choices/badge-a.svg',
       c: 'ui/themes/moonlight/choices/badge-c.svg',
+    });
+    expect(installed.bundle.dialogueBox.decorations[0]).toMatchObject({
+      src: 'ui/themes/moonlight/dialogue/corner.png',
+      opacity: 0.65,
+      rotation: -24,
     });
   });
 });

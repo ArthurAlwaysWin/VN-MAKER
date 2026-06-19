@@ -84,6 +84,39 @@ describe('DialogueBox UI skin runtime', () => {
     expect(db.nameEl.style.color).toBe('rgb(255, 136, 170)');
   });
 
+  it('normalizes and clamps decoration opacity/rotation across updates and reset', () => {
+    const db = createDialogueBox();
+
+    db.applyGlobalStyle({
+      decorations: [
+        { src: 'ui/dialogue/high.webp', opacity: '1.75', rotation: '900' },
+        { src: 'ui/dialogue/low.webp', opacity: -2, rotation: -720 },
+        { src: 'ui/dialogue/invalid.webp', opacity: 'not-a-number', rotation: Infinity },
+      ],
+    });
+
+    const high = db.el.querySelector('[data-dialogue-decoration-index="0"]');
+    const low = db.el.querySelector('[data-dialogue-decoration-index="1"]');
+    const invalid = db.el.querySelector('[data-dialogue-decoration-index="2"]');
+    expect(high.style.opacity).toBe('1');
+    expect(high.style.transform).toBe('rotate(360deg)');
+    expect(low.style.opacity).toBe('0');
+    expect(low.style.transform).toBe('rotate(-360deg)');
+    expect(invalid.style.opacity).toBe('');
+    expect(invalid.style.transform).toBe('');
+
+    db.applyGlobalStyle({
+      decorations: [{ src: 'ui/dialogue/updated.webp', opacity: 0.45, rotation: -30 }],
+    });
+    const updated = db.el.querySelector('[data-dialogue-decoration-index="0"]');
+    expect(db.el.querySelectorAll('.dialogue-decoration')).toHaveLength(1);
+    expect(updated.style.opacity).toBe('0.45');
+    expect(updated.style.transform).toBe('rotate(-30deg)');
+
+    db.applyGlobalStyle(undefined);
+    expect(db.el.querySelectorAll('.dialogue-decoration')).toHaveLength(0);
+  });
+
   it('defines explicit layering selectors so art stays under readable foreground content and never steals clicks', () => {
     const dialogueSource = readSource('src/ui/DialogueBox.js');
     const styleSource = readSource('src/style.css');

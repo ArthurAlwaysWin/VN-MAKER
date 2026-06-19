@@ -22,6 +22,11 @@ function createFullTheme(themeId, overrides = {}) {
       },
       dialogueBox: {
         nameplateBackgroundImage: `ui/themes/${themeId}/dialogue/nameplate.png`,
+        decorations: [{
+          src: `ui/themes/${themeId}/dialogue/corner.png`,
+          opacity: 0.65,
+          rotation: -24,
+        }],
       },
       saveLoadScreen: {
         chrome: {
@@ -72,6 +77,7 @@ describe('theme package contract', () => {
       files: [
         { path: `ui/themes/${themeId}/widgets/tab-active.png`, sha256: 'tab', bytes: 10 },
         { path: `ui/themes/${themeId}/dialogue/nameplate.png`, sha256: 'nameplate', bytes: 10 },
+        { path: `ui/themes/${themeId}/dialogue/corner.png`, sha256: 'corner', bytes: 10 },
         { path: `ui/themes/${themeId}/screens/save-load-bg.png`, sha256: 'save', bytes: 10 },
         { path: `ui/themes/${themeId}/screens/backlog-bg.png`, sha256: 'backlog', bytes: 10 },
         { path: `ui/themes/${themeId}/screens/game-menu-bg.png`, sha256: 'menu', bytes: 10 },
@@ -88,6 +94,7 @@ describe('theme package contract', () => {
     expect(valid.coverage).toContain('dialogueBox');
     expect(valid.coverage).toContain('saveLoadScreen');
     expect(valid.coverage).toContain('titleScreen');
+    expect(valid.refs).toContain(`ui/themes/${themeId}/dialogue/corner.png`);
 
     const invalidRefs = [
       'asset://ui/themes/moonlight/dialogue/nameplate.png',

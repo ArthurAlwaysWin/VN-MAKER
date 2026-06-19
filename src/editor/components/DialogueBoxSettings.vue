@@ -194,6 +194,28 @@
                   @change="setDecorationNumber(index, 'height', $event.target.value)"
                 />
               </label>
+              <label>
+                不透明度
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  :value="decoration.opacity ?? 1"
+                  @change="setDecorationNumber(index, 'opacity', $event.target.value)"
+                />
+              </label>
+              <label>
+                旋转角度
+                <input
+                  type="number"
+                  min="-360"
+                  max="360"
+                  step="1"
+                  :value="decoration.rotation ?? 0"
+                  @change="setDecorationNumber(index, 'rotation', $event.target.value)"
+                />
+              </label>
             </div>
           </div>
         </div>
@@ -214,6 +236,7 @@ import {
   getUiImageDisplayValue,
   pickUiImage,
 } from '../utils/uiImageField.js';
+import { normalizeDialogueDecorationNumber } from '../../shared/dialogueDecorationContract.js';
 
 const script = useScriptStore();
 const assets = useAssetStore();
@@ -284,6 +307,8 @@ function addDecoration() {
     y: 0,
     width: 160,
     height: 160,
+    opacity: 1,
+    rotation: 0,
   });
   commitDialogueSettings();
   void triggerDialoguePreview();
@@ -321,7 +346,9 @@ function clearDecorationImage(index) {
 
 function setDecorationNumber(index, field, value) {
   if (!settings.value?.decorations?.[index]) return;
-  settings.value.decorations[index][field] = Number(value);
+  const normalized = normalizeDialogueDecorationNumber(field, value);
+  if ((field === 'opacity' || field === 'rotation') && normalized === undefined) return;
+  settings.value.decorations[index][field] = normalized ?? Number(value);
   commitDialogueSettings();
   void triggerDialoguePreview();
 }

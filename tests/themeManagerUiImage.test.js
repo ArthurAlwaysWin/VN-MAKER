@@ -132,6 +132,29 @@ describe('ThemeManager UI image handling', () => {
     expect(getNineSliceCss()).toBe('');
   });
 
+  it('suffixes every selector independently and covers standard plus custom title buttons', () => {
+    applyNineSlice({
+      nineSlice: {
+        titleButton: {
+          src: 'ui/buttons/title-normal.webp',
+          slice: 12,
+          states: {
+            hover: { src: 'ui/buttons/title-hover.webp' },
+            active: { src: 'ui/buttons/title-active.webp' },
+          },
+        },
+      },
+    });
+
+    const css = getNineSliceCss();
+    expect(css).toContain('.title-button, .title-custom-button {');
+    expect(css).toContain('.title-button::before, .title-custom-button::before {');
+    expect(css).toContain('.title-button:hover::before, .title-custom-button:hover::before {');
+    expect(css).toContain('.title-button:active::before, .title-custom-button:active::before {');
+    expect(css).not.toContain('.title-button, .title-custom-button::before {');
+    expect(css).not.toContain('.selected::before');
+  });
+
   it('normalizes scalar nine-slice insets from imported themes', () => {
     expect(() => applyNineSlice({
       nineSlice: {
@@ -456,6 +479,18 @@ describe('ThemeManager UI image handling', () => {
     expect(css).toContain('cursor: url("resolved:ui/cursors/default.png") 0 0, default;');
     expect(css).toContain('#game-container a, #game-container button');
     expect(css).toContain('cursor: url("resolved:ui/cursors/pointer.png") 0 0, pointer;');
+  });
+
+  it('wins over component class cursor rules without important', async () => {
+    document.head.insertAdjacentHTML('beforeend', '<style>.title-button { cursor: pointer; }</style>');
+    document.body.innerHTML = '<div id="game-container"><button class="title-button">Start</button></div>';
+
+    await applyCursors({ cursor: { pointer: 'ui/cursors/pointer.png' } });
+
+    const button = document.querySelector('.title-button');
+    const css = document.getElementById('galgame-cursors')?.textContent ?? '';
+    expect(getComputedStyle(button).cursor).toContain('resolved:ui/cursors/pointer.png');
+    expect(css).not.toContain('!important');
   });
 
   it('skips cursor slots that are not configured', async () => {

@@ -209,9 +209,7 @@ function applyPreviewScriptSnapshot(request) {
   choiceMenu.setChoiceBadgeConfig(engine.script.ui?.theme?.choiceBadge);
   applyUiMotion(engine.script.ui?.motion);
 
-  if (engine.script.ui?.dialogueBox) {
-    dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
-  }
+  dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
 
   titleScreen.setLayout(engine.script.ui?.titleScreen);
   settingsScreen.setLayout(engine.script.ui?.settingsScreen);
@@ -1777,9 +1775,7 @@ async function init(env) {
     applyUiMotion(engine.script.ui?.motion);
 
     // Apply global dialogue box font settings if defined in script
-    if (engine.script.ui?.dialogueBox) {
-      dialogueBox.applyGlobalStyle(engine.script.ui.dialogueBox);
-    }
+    dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
 
     await showTitle();
 
@@ -1910,11 +1906,9 @@ function initPreview() {
         titleScreen.hide();
         dialogueBox.hide();
 
-        if (engine.script.ui?.dialogueBox) {
-          dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
-          if (engine.script.ui.dialogueBox.nameplateStyle) {
-            dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
-          }
+        dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
+        if (engine.script.ui?.dialogueBox?.nameplateStyle) {
+          dialogueBox.setNameplateStyle(engine.script.ui.dialogueBox.nameplateStyle);
         }
 
         dialogueBox.renderPreviewLine({

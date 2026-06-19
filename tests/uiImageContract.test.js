@@ -89,6 +89,24 @@ describe('uiImageContract shared roots and registry', () => {
     assert.equal(UI_IMAGE_SCAN_REGISTRY.length, DEFAULT_UI_IMAGE_SCAN_REGISTRY.length + 1);
   });
 
+  it('collects dialogue decoration images while leaving opacity and rotation as scalar config', () => {
+    const seen = [];
+
+    collectUiImagePaths({
+      ui: {
+        dialogueBox: {
+          decorations: [{
+            src: 'ui/dialogue/corner.png',
+            opacity: 0.65,
+            rotation: -24,
+          }],
+        },
+      },
+    }, value => seen.push(value));
+
+    assert.deepEqual(seen, ['ui/dialogue/corner.png']);
+  });
+
   it('collects only locked three-state button family canonical paths and ignores empty or legacy values', () => {
     const seen = [];
 

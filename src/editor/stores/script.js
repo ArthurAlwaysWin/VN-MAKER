@@ -20,6 +20,7 @@ import {
 } from '../../shared/variableRegistry.js';
 import { normalizeVideoRegistry } from '../../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../../shared/textTemplate.js';
+import { replaceUiImagePathReferences } from '../../shared/uiImageContract.js';
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 const DRAFT_ENDING_PREFIX = '__draft_ending__';
@@ -1750,27 +1751,7 @@ export const useScriptStore = defineStore('script', () => {
       }
     }
 
-    // UI chrome references are contract-owned paths below ui/. Restrict the
-    // recursive pass to that namespace so story copy and arbitrary metadata
-    // that happen to equal another asset path are never rewritten.
-    if (oldPath.startsWith('ui/')) {
-      function walkUi(node) {
-        if (!node || typeof node !== 'object') return;
-        if (Array.isArray(node)) {
-          node.forEach(walkUi);
-          return;
-        }
-        for (const key of Object.keys(node)) {
-          if (node[key] === oldPath) {
-            node[key] = newPath;
-            count++;
-          } else {
-            walkUi(node[key]);
-          }
-        }
-      }
-      walkUi(data.value.ui);
-    }
+    count += replaceUiImagePathReferences(data.value, oldPath, newPath);
     return count;
   }
 

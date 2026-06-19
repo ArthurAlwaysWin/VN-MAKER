@@ -30,7 +30,7 @@ describe('electron IPC hardening', () => {
     expect(JSON.stringify(result)).not.toContain('missing-theme-package.zip');
     expect(consoleError).toHaveBeenCalledWith(
       '[theme-package-preflight] Failed:',
-      expect.any(Error),
+      expect.objectContaining({ message: expect.any(String) }),
     );
     consoleError.mockRestore();
   });

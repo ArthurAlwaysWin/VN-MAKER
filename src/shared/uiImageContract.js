@@ -271,3 +271,81 @@ export function collectUiImagePaths(script, add, registry = UI_IMAGE_SCAN_REGIST
     collector(script, add);
   }
 }
+
+/**
+ * Replace image paths only in fields owned by the shared UI image contract.
+ * Unlike collectUiImagePaths(), this intentionally accepts legacy non-ui/
+ * values so hand-entered paths keep following filesystem asset renames.
+ */
+export function replaceUiImagePathReferences(script, oldPath, newPath) {
+  if (!script?.ui || !oldPath || !newPath || oldPath === newPath) return 0;
+
+  let count = 0;
+  const replace = (owner, key) => {
+    if (owner?.[key] !== oldPath) return;
+    owner[key] = newPath;
+    count++;
+  };
+
+  const theme = script.ui.theme;
+  for (const config of Object.values(theme?.nineSlice || {})) {
+    replace(config, 'src');
+    replace(config?.states?.hover, 'src');
+    replace(config?.states?.active, 'src');
+  }
+  for (const [familyKey, stateKeys] of Object.entries(UI_BUTTON_FAMILY_STATE_KEYS)) {
+    const family = theme?.buttonFamilies?.[familyKey];
+    for (const stateKey of stateKeys) replace(family, stateKey);
+  }
+  for (const slotKey of UI_CURSOR_SLOT_KEYS) replace(theme?.cursor, slotKey);
+  for (const slotKey of UI_ICON_SLOT_KEYS) replace(theme?.icons, slotKey);
+  for (const slotKey of UI_CHOICE_BADGE_SLOT_KEYS) replace(theme?.choiceBadge, slotKey);
+
+  const dialogueBox = script.ui.dialogueBox;
+  replace(dialogueBox, 'nameplateBackgroundImage');
+  for (const decoration of dialogueBox?.decorations || []) replace(decoration, 'src');
+
+  const titleScreen = script.ui.titleScreen;
+  replace(titleScreen, 'background');
+  for (const element of titleScreen?.elements || []) {
+    if (element?.type === 'image') replace(element, 'src');
+  }
+
+  const saveLoad = script.ui.saveLoadScreen;
+  replace(saveLoad, 'background');
+  replace(saveLoad?.header, 'backgroundImage');
+  replace(saveLoad?.slot, 'backgroundImage');
+  replace(saveLoad?.chrome, 'backgroundImage');
+  for (const decoration of saveLoad?.chrome?.decorations || []) replace(decoration, 'src');
+
+  const backlog = script.ui.backlogScreen;
+  replace(backlog, 'backgroundImage');
+  replace(backlog?.header, 'backgroundImage');
+  replace(backlog?.chrome, 'backgroundImage');
+  for (const decoration of backlog?.chrome?.decorations || []) replace(decoration, 'src');
+
+  const gameMenu = script.ui.gameMenu;
+  replace(gameMenu, 'backgroundImage');
+  for (const button of Object.values(gameMenu?.buttons || {})) replace(button, 'icon');
+  replace(gameMenu?.chrome, 'backgroundImage');
+  for (const decoration of gameMenu?.chrome?.decorations || []) replace(decoration, 'src');
+
+  const settings = script.ui.settingsScreen;
+  replace(settings, 'background');
+  replace(settings?.header, 'backgroundImage');
+  for (const decoration of settings?.header?.decorations || []) replace(decoration, 'src');
+  for (const tab of settings?.tabBar?.tabs || []) replace(tab, 'icon');
+  replace(settings?.chrome, 'backgroundImage');
+  for (const decoration of settings?.chrome?.decorations || []) replace(decoration, 'src');
+
+  const widgetStyles = script.ui.widgetStyles;
+  replace(widgetStyles?.tab, 'activeBackgroundImage');
+  replace(widgetStyles?.tab?.nineSlice, 'src');
+  replace(widgetStyles?.panel, 'backgroundImage');
+  replace(widgetStyles?.panel?.nineSlice, 'src');
+  replace(widgetStyles?.slider, 'thumbImage');
+  replace(widgetStyles?.slider, 'trackImage');
+  replace(widgetStyles?.button?.nineSlice, 'src');
+
+  return count;
+}

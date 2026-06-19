@@ -2,7 +2,8 @@
 
 **Status:** Phases 1-9 complete; feature family closed
 **Date:** 2026-06-19
-**Baseline:** `main` at `51260cb`
+**Feature-family base:** `main` at `3947f83`
+**Final Phase 7-9 batch base:** `main` at `51260cb`
 **Evidence source:** `b17d890` is requirements evidence only, not an implementation base
 
 ## Purpose
@@ -482,10 +483,10 @@ Acceptance:
 Completion evidence:
 
 - no conflict markers in `src`, `tests`, `public`, or `docs` (`rg` clean);
-- `git diff --check` clean (only pre-existing CRLF warnings on Phase 7 files);
+- `git diff --check 3947f83` clean after normalizing the Phase 8 Alchemy Rose block to the repository's LF policy;
 - production build (`npm run build`) and web build (`npm run build:web`) both succeed;
 - node tests: 305/305 pass;
-- vitest: 1097/1148 pass via `pool: 'vmForks'`; 51 failures are all `vi.mock()` not functioning in the VM context — the default `forks` pool is broken on node 24/Windows (runner never initialized, `describe()` throws "Cannot read properties of undefined (reading 'config')"); all 51 failures are mock-verification tests, not behavior or code bugs;
+- vitest: 1148/1148 pass via the `forks` pool on Node 24/Windows;
 - theme export/import verified through `builtinThemeAcceptance.test.js` round-trip for all 6 shipped themes including `alchemy-rose`;
 - `public/game/script.json` left unchanged (Alchemy Rose is a built-in theme, not example content);
 - Phase 7 settings documentation already in `docs/agent-authoring/project-contract.md` and `validation-rules.md`;

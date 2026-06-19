@@ -10,6 +10,7 @@ function makeScriptData() {
     meta: {
       title: 'Asset rename flow',
       note: 'audio/old.wav',
+      uiNote: 'ui/old.png',
     },
     characters: {
       hero: { expressions: { normal: 'characters/hero.png' } },
@@ -18,10 +19,25 @@ function makeScriptData() {
       fonts: [{ id: 'body', name: 'Body', family: 'Body', file: 'fonts/old.ttf' }],
     },
     ui: {
+      theme: {
+        choiceBadge: { a: 'ui/old.png' },
+      },
       titleScreen: {
         background: 'backgrounds/old.png',
         bgm: 'audio/old.wav',
         elements: [{ type: 'text', text: 'backgrounds/old.png' }],
+      },
+      settingsScreen: {
+        header: { backgroundImage: 'backgrounds/old.png' },
+      },
+      saveLoadScreen: {
+        background: 'backgrounds/old.png',
+      },
+      dialogueBox: {
+        nameplateBackgroundImage: 'backgrounds/old.png',
+      },
+      widgetStyles: {
+        panel: { backgroundImage: 'backgrounds/old.png' },
       },
     },
     scenes: {
@@ -52,10 +68,11 @@ describe('asset rename reference integration', () => {
   });
 
   it.each([
-    ['backgrounds', 'old.png', 'old-1.png', 2],
+    ['backgrounds', 'old.png', 'old-1.png', 6],
     ['audio', 'old.wav', 'old-1.wav', 4],
     ['characters', 'hero.png', 'hero-1.png', 1],
     ['fonts', 'old.ttf', 'old-1.ttf', 1],
+    ['ui', 'old.png', 'old-1.png', 1],
   ])('rewrites canonical %s references using the filename returned by IPC', async (category, oldName, savedName, expectedCount) => {
     const invoke = vi.fn(async (channel) => {
       if (channel === 'rename-asset') return { success: true, newName: savedName };
@@ -79,7 +96,17 @@ describe('asset rename reference integration', () => {
     expect(script.changeRevision).toBe(beforeRevision + expectedCount);
     expect(JSON.stringify(script.data)).toContain(`${category}/${savedName}`);
     expect(script.data.meta.note).toBe('audio/old.wav');
+    expect(script.data.meta.uiNote).toBe('ui/old.png');
     expect(script.data.ui.titleScreen.elements[0].text).toBe('backgrounds/old.png');
+    if (category === 'backgrounds') {
+      expect(script.data.ui.settingsScreen.header.backgroundImage).toBe('backgrounds/old-1.png');
+      expect(script.data.ui.saveLoadScreen.background).toBe('backgrounds/old-1.png');
+      expect(script.data.ui.dialogueBox.nameplateBackgroundImage).toBe('backgrounds/old-1.png');
+      expect(script.data.ui.widgetStyles.panel.backgroundImage).toBe('backgrounds/old-1.png');
+    }
+    if (category === 'ui') {
+      expect(script.data.ui.theme.choiceBadge.a).toBe('ui/old-1.png');
+    }
 
     script.undo();
     expect(JSON.stringify(script.data)).toContain(`${category}/${oldName}`);

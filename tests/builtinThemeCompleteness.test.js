@@ -37,7 +37,7 @@ function hasMeaningfulValue(value) {
 }
 
 describe('built-in theme completeness', () => {
-  it('enforces the 8-surface contract for the 5 shipped built-in themes', () => {
+  it('enforces the 8-surface contract for the 6 shipped built-in themes', () => {
     const shippedThemes = SHIPPED_BUILTIN_IDS.map(id => BUILTIN_THEMES.find(theme => theme.id === id));
 
     expect(shippedThemes).toHaveLength(SHIPPED_BUILTIN_IDS.length);

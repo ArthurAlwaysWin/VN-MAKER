@@ -97,6 +97,16 @@ describe('resolveTabSettingKeys', () => {
     assert.ok(resolved[1].settingKeys.includes('text-speed'));
   });
 
+  it('filters unknown keys while preserving valid assignment order', () => {
+    const resolved = resolveTabSettingKeys([
+      { label: 'A', settingKeys: ['unknown', 'text-speed', 'bgm-volume'] },
+      { label: 'B', settingKeys: ['text-speed', 'se-volume'] },
+    ]);
+    assert.deepEqual(resolved[0].settingKeys.slice(0, 2), ['text-speed', 'bgm-volume']);
+    assert.equal(resolved.flatMap(tab => tab.settingKeys).includes('unknown'), false);
+    assert.equal(resolved[1].settingKeys[0], 'se-volume');
+  });
+
   it('all SETTING_DEFS keys appear exactly once across all tabs', () => {
     const tabs = [
       { label: 'A', settingKeys: ['bgm-volume', 'se-volume'] },

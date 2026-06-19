@@ -31,6 +31,15 @@ export function ensureDefaultTabs(cfg) {
   return cfg;
 }
 
+/** Toggle canonical tab mode without discarding existing assignments. */
+export function setTabBarEnabled(cfg, enabled) {
+  if (!cfg) return null;
+  cfg.tabBar ??= {};
+  cfg.tabBar.enabled = enabled !== false;
+  if (cfg.tabBar.enabled) ensureDefaultTabs(cfg);
+  return cfg;
+}
+
 // ─── Tab CRUD ──────────────────────────────────────────
 
 export function addTab(cfg) {

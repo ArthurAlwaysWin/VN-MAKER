@@ -374,6 +374,12 @@ Built-in preset ids are `classic-adv`, `glass-school`, `dark-cinema`, `suspense-
 
 The no-code Project Settings preset cards use the same shared contract as agents. Applying a preset is rollback-friendly because it mutates only these canonical UI sections; validation warns if an opaque `ui.stylePreset` field appears. Title screen preset patches are limited to asset-free text/button `ui.titleScreen.elements`, not BGM, particles, HTML/CSS, or a layout DSL. Preset application returns an `impactSummary` with section labels, changed paths, and whether existing config will be touched; UI and agent flows should present that summary before applying broad visual changes.
 
+## Settings Screen Modes And Actions
+
+`ui.settingsScreen.tabBar.enabled` is the canonical settings layout mode. Omit it or use `true` for tabs; use `false` for a single page with no tab component. Single-page mode renders every known setting once in the engine setting-definition order and retains `tabBar.tabs` for later reuse. When tabs are enabled, valid assignments keep their declared order, duplicate assignments keep the first occurrence, unknown keys are ignored, and unassigned known keys append to the final tab in setting-definition order. Re-enabling with no usable tab list initializes the editor defaults.
+
+Settings button actions are declarative. Custom `elements[]` buttons support only `close` and `reset`; structured `footer.buttons[]` supports `close`, `title`, and `reset`. `reset` calls the built-in `ConfigManager.reset()` path and cannot execute project code.
+
 ## Agent Effect Packs
 
 Milestone 11 shipped a manifest-only + built-in adapter thin slice; see [milestone-11-effect-packs-feasibility-security-audit.md](../milestone-11-effect-packs-feasibility-security-audit.md). Effect-pack project assets are data-only declarations under `assets.effectPacks`, and page references live at `scenes.<sceneId>.pages.<pageIndex>.effectPacks`.

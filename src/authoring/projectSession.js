@@ -36,6 +36,10 @@ import {
 import { normalizeVideoEntry, normalizeVideoRegistry } from '../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
 import { assertStableId } from '../shared/stableId.js';
+import {
+  isKnownSettingsCustomButtonAction,
+  isKnownSettingsFooterButtonAction,
+} from '../shared/settingsScreenContract.js';
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -722,11 +726,27 @@ function mergePlainObjects(base, patch) {
   return result;
 }
 
-function normalizeScreenLayoutConfig(config) {
+function normalizeScreenLayoutConfig(config, screenId) {
   if (!isPlainObject(config)) {
     throw new Error('Screen layout config must be an object');
   }
-  return cloneJsonValue(config);
+  const normalized = cloneJsonValue(config);
+  if (screenId !== 'settingsScreen') return normalized;
+
+  if (normalized.tabBar?.enabled !== undefined && typeof normalized.tabBar.enabled !== 'boolean') {
+    throw new Error('Settings tabBar.enabled must be a boolean');
+  }
+  for (const element of (Array.isArray(normalized.elements) ? normalized.elements : [])) {
+    if (element?.type === 'button' && element.action !== undefined && !isKnownSettingsCustomButtonAction(element.action)) {
+      throw new Error(`Unsupported custom settings button action: ${element.action}`);
+    }
+  }
+  for (const button of (Array.isArray(normalized.footer?.buttons) ? normalized.footer.buttons : [])) {
+    if (button?.action !== undefined && !isKnownSettingsFooterButtonAction(button.action)) {
+      throw new Error(`Unsupported settings footer button action: ${button.action}`);
+    }
+  }
+  return normalized;
 }
 
 function normalizeSharedUiConfig(config, label) {
@@ -1866,7 +1886,7 @@ export function createProjectSession(input = {}) {
 
     setScreenLayout({ screenId, config, merge = true }) {
       const id = assertSupportedScreenLayoutId(screenId);
-      const nextConfig = normalizeScreenLayoutConfig(config ?? {});
+      const nextConfig = normalizeScreenLayoutConfig(config ?? {}, id);
       script.ui ??= {};
       script.ui[id] = merge
         ? mergePlainObjects(script.ui[id] ?? {}, nextConfig)

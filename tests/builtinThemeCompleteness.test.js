@@ -9,6 +9,7 @@ const SHIPPED_BUILTIN_IDS = Object.freeze([
   'modern-sky',
   'fantasy-dark',
   'minimal-white',
+  'alchemy-rose',
 ]);
 
 function hasMeaningfulValue(value) {

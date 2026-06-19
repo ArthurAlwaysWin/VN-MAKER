@@ -1,7 +1,10 @@
 <template>
   <div>
     <h4 class="form-group-title">设置项分配</h4>
-    <div class="matrix-container">
+    <div v-if="!tabsEnabled" class="single-page-notice">
+      单页模式会忽略标签分配并按固定顺序显示全部 {{ allSettingKeys.length }} 个设置项；重新启用标签页后，下方分配仍会保留。
+    </div>
+    <div v-else class="matrix-container">
       <table class="setting-matrix">
         <thead>
           <tr>
@@ -24,7 +27,7 @@
       </table>
     </div>
     <!-- Unassigned indicator (D-14) -->
-    <div v-if="unassignedKeys.length" class="unassigned-notice">
+    <div v-if="tabsEnabled && unassignedKeys.length" class="unassigned-notice">
       未分配: {{ unassignedKeys.map(k => settingLabel(k)).join('、') }}
     </div>
   </div>
@@ -50,6 +53,7 @@ const tabs = computed(() => {
   const raw = tabBar.value.tabs;
   return (Array.isArray(raw) && raw.length > 0) ? raw : DEFAULT_TABS;
 });
+const tabsEnabled = computed(() => tabBar.value.enabled !== false);
 
 const allSettingKeys = Object.keys(SETTING_DEFS);
 
@@ -135,6 +139,15 @@ function onToggle(key, tabIndex) {
   margin-top: 6px;
   padding: 4px 8px;
   background: rgba(201, 122, 42, 0.1);
+  border-radius: 3px;
+}
+.single-page-notice {
+  font-size: 11px;
+  color: #8db8dc;
+  margin: 6px 0;
+  padding: 8px;
+  line-height: 1.5;
+  background: rgba(0, 122, 204, 0.1);
   border-radius: 3px;
 }
 </style>

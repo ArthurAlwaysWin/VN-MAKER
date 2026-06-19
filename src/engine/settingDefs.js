@@ -125,7 +125,7 @@ export const SETTING_DEFS = {
  *
  *   Close/return button (type: 'button')
  *   ─────────────────────────────────────
- *   { id, type: 'button', action: 'close',
+ *   { id, type: 'button', action: 'close' | 'reset',
  *     x, y, width, height, label?, style? }
  *
  *   Content area layout options:
@@ -141,6 +141,7 @@ export const SETTING_DEFS = {
  *
  *   Tab bar position:
  *   ──────────────────
+ *   tabBar.enabled: boolean — false renders all settings on one page without tab UI
  *   tabBar.position: 'top' | 'left' — tab bar orientation (default 'top')
  *   tabBar.width: number — sidebar width in px when position='left' (default 180)
  *

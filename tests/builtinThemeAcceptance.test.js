@@ -11,7 +11,7 @@ import { BUILTIN_THEMES } from '../src/editor/builtinThemes.js';
 import { useScriptStore } from '../src/editor/stores/script.js';
 import { parseThemeZip } from '../src/utils/themePackager.js';
 
-const SHIPPED_THEME_IDS = ['default', 'wafuu', 'modern-sky', 'fantasy-dark', 'minimal-white'];
+const SHIPPED_THEME_IDS = ['default', 'wafuu', 'modern-sky', 'fantasy-dark', 'minimal-white', 'alchemy-rose'];
 const tempDirs = [];
 
 async function createProjectDir(prefix) {
@@ -56,8 +56,8 @@ describe('built-in theme acceptance matrix', () => {
     await Promise.all(tempDirs.splice(0).map(dir => fs.rm(dir, { recursive: true, force: true })));
   });
 
-  it('locks the shipped built-in roster to the 5-theme acceptance target', () => {
-    expect(SHIPPED_THEME_IDS).toEqual(['default', 'wafuu', 'modern-sky', 'fantasy-dark', 'minimal-white']);
+  it('locks the shipped built-in roster to the 6-theme acceptance target', () => {
+    expect(SHIPPED_THEME_IDS).toEqual(['default', 'wafuu', 'modern-sky', 'fantasy-dark', 'minimal-white', 'alchemy-rose']);
     expect(BUILTIN_THEMES.map(theme => theme.id)).toEqual(SHIPPED_THEME_IDS);
   });
 

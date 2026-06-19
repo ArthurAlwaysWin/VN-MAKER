@@ -283,6 +283,7 @@ describe('theme package installer', () => {
       'modern-sky',
       'fantasy-dark',
       'minimal-white',
+      'alchemy-rose',
     ]);
 
     for (const theme of BUILTIN_THEMES) {

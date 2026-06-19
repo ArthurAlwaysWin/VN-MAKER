@@ -8,6 +8,7 @@ const SHIPPED_BUILTIN_IDS = Object.freeze([
   'modern-sky',
   'fantasy-dark',
   'minimal-white',
+  'alchemy-rose',
 ]);
 
 describe('built-in theme visual contract', () => {

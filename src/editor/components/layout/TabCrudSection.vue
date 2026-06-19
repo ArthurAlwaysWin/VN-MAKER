@@ -2,16 +2,31 @@
   <div>
     <h4 class="form-group-title">标签栏</h4>
 
-    <!-- Tab position radio (D-19) -->
-    <div class="config-row">
-      <label class="config-label">位置</label>
+    <div class="mode-options" role="group" aria-label="设置页显示模式">
       <label class="radio-label">
-        <input type="radio" :checked="tabPosition === 'top'" @change="setTabPosition('top')" /> 顶部
+        <input type="radio" :checked="tabsEnabled" @change="setTabsMode(true)" /> 分标签页
       </label>
       <label class="radio-label">
-        <input type="radio" :checked="tabPosition === 'left'" @change="setTabPosition('left')" /> 侧边
+        <input type="radio" :checked="!tabsEnabled" @change="setTabsMode(false)" /> 单页显示
       </label>
     </div>
+    <p class="mode-help">
+      {{ tabsEnabled
+        ? '设置项按下方标签分组；重复项取首次分配，未分配项会稳定补到最后一个标签。'
+        : '不创建标签栏，全部设置项按固定顺序各显示一次；现有标签分配会保留。' }}
+    </p>
+
+    <div v-if="tabsEnabled">
+      <!-- Tab position radio (D-19) -->
+      <div class="config-row">
+        <label class="config-label">位置</label>
+        <label class="radio-label">
+          <input type="radio" :checked="tabPosition === 'top'" @change="setTabPosition('top')" /> 顶部
+        </label>
+        <label class="radio-label">
+          <input type="radio" :checked="tabPosition === 'left'" @change="setTabPosition('left')" /> 侧边
+        </label>
+      </div>
 
     <!-- Sidebar width (D-20, only when left) -->
     <div class="config-row" v-if="tabPosition === 'left'">
@@ -42,8 +57,9 @@
       </div>
     </div>
 
-    <!-- Add tab button (D-04) -->
-    <button class="btn-add" @click="onAddTab">+ 添加标签</button>
+      <!-- Add tab button (D-04) -->
+      <button class="btn-add" @click="onAddTab">+ 添加标签</button>
+    </div>
   </div>
 </template>
 
@@ -57,6 +73,7 @@ import {
   setTabLabel,
   setTabIcon,
   DEFAULT_TABS,
+  setTabBarEnabled,
 } from './tabLayoutHelpers.js';
 
 const editor = useScreenLayoutEditor();
@@ -68,6 +85,14 @@ const tabs = computed(() => {
   return (Array.isArray(raw) && raw.length > 0) ? raw : DEFAULT_TABS;
 });
 const tabPosition = computed(() => tabBar.value.position || 'top');
+const tabsEnabled = computed(() => tabBar.value.enabled !== false);
+
+function setTabsMode(enabled) {
+  const raw = editor.getActiveScreenConfig();
+  setTabBarEnabled(raw, enabled);
+  editor.sendScreenLayoutToPreview();
+  editor.commitScreenLayout();
+}
 
 function rgbaToHex(color) {
   if (!color) return '#888888';
@@ -136,6 +161,8 @@ function commit() {
   border-bottom: 1px solid #333;
 }
 .form-group-title:first-child { margin-top: 0; }
+.mode-options { display: flex; gap: 12px; padding: 4px 0; }
+.mode-help { margin: 2px 0 8px; color: #777; font-size: 11px; line-height: 1.5; }
 .config-row {
   display: flex;
   align-items: center;

@@ -17,6 +17,7 @@ import {
   toggleKeyAssignment,
   getUnassignedKeys,
   isKeyInTab,
+  setTabBarEnabled,
 } from '../src/editor/components/layout/tabLayoutHelpers.js';
 
 // ─── ensureDefaultTabs ─────────────────────────────────
@@ -54,6 +55,30 @@ describe('ensureDefaultTabs', () => {
     ensureDefaultTabs(cfg2);
     cfg1.tabBar.tabs[0].label = 'changed';
     assert.notEqual(cfg2.tabBar.tabs[0].label, 'changed');
+  });
+});
+
+describe('setTabBarEnabled', () => {
+  it('disables tabs without deleting assignments', () => {
+    const tabs = [{ label: 'A', settingKeys: ['text-speed'] }];
+    const cfg = { tabBar: { tabs } };
+    setTabBarEnabled(cfg, false);
+    assert.equal(cfg.tabBar.enabled, false);
+    assert.equal(cfg.tabBar.tabs, tabs);
+  });
+
+  it('re-enables tabs and preserves existing assignments', () => {
+    const cfg = { tabBar: { enabled: false, tabs: [{ label: 'A', settingKeys: ['text-speed'] }] } };
+    setTabBarEnabled(cfg, true);
+    assert.equal(cfg.tabBar.enabled, true);
+    assert.deepEqual(cfg.tabBar.tabs, [{ label: 'A', settingKeys: ['text-speed'] }]);
+  });
+
+  it('initializes deterministic defaults only when re-enabling without tabs', () => {
+    const cfg = { tabBar: { enabled: false } };
+    setTabBarEnabled(cfg, true);
+    assert.deepEqual(cfg.tabBar.tabs, DEFAULT_TABS);
+    assert.notEqual(cfg.tabBar.tabs, DEFAULT_TABS);
   });
 });
 

@@ -43,6 +43,10 @@ import {
 } from './uiMotionContract.js';
 import { isKnownUiStylePreset } from './uiStylePresetContract.js';
 import {
+  isKnownSettingsCustomButtonAction,
+  isKnownSettingsFooterButtonAction,
+} from './settingsScreenContract.js';
+import {
   BACKGROUND_TRANSITION_DURATION_SCHEMA,
   CAMERA_EFFECT_DURATION_SCHEMA,
   isValidNumericTransitionParam,
@@ -1589,6 +1593,40 @@ function validateUiStylePresetField(script, report) {
   });
 }
 
+function validateSettingsScreen(script, report) {
+  const settings = script?.ui?.settingsScreen;
+  if (settings === undefined) return;
+  if (!isPlainObject(settings)) {
+    addWarning(report, 'invalid-settings-screen-config', 'ui.settingsScreen must be an object.', ['ui', 'settingsScreen']);
+    return;
+  }
+
+  const enabled = settings.tabBar?.enabled;
+  if (enabled !== undefined && typeof enabled !== 'boolean') {
+    addWarning(report, 'invalid-settings-tab-mode', 'ui.settingsScreen.tabBar.enabled must be a boolean.', ['ui', 'settingsScreen', 'tabBar', 'enabled'], {
+      value: enabled,
+    });
+  }
+
+  for (const [index, element] of (Array.isArray(settings.elements) ? settings.elements : []).entries()) {
+    if (element?.type === 'button' && element.action !== undefined && !isKnownSettingsCustomButtonAction(element.action)) {
+      addWarning(report, 'invalid-settings-button-action', `Custom settings button action "${element.action}" is not supported.`, ['ui', 'settingsScreen', 'elements', index, 'action'], {
+        value: element.action,
+        allowedValues: ['close', 'reset'],
+      });
+    }
+  }
+
+  for (const [index, button] of (Array.isArray(settings.footer?.buttons) ? settings.footer.buttons : []).entries()) {
+    if (button?.action !== undefined && !isKnownSettingsFooterButtonAction(button.action)) {
+      addWarning(report, 'invalid-settings-footer-action', `Settings footer action "${button.action}" is not supported.`, ['ui', 'settingsScreen', 'footer', 'buttons', index, 'action'], {
+        value: button.action,
+        allowedValues: ['close', 'title', 'reset'],
+      });
+    }
+  }
+}
+
 function validateTitleScreenVideo(script, report, context) {
   const openingVideo = script?.ui?.titleScreen?.openingVideo;
   if (openingVideo === undefined) {
@@ -1627,6 +1665,7 @@ export function validateProject(script, options = {}) {
   const videoRegistry = validateVideoRegistry(script, report, config.assetSet);
   validateUiMotion(script, report);
   validateUiStylePresetField(script, report);
+  validateSettingsScreen(script, report);
 
   const registry = normalizeVariableRegistry(script?.systems?.variables);
   const endings = normalizeEndingRegistry(script?.systems?.endings);

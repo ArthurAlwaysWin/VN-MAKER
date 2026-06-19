@@ -192,6 +192,7 @@ describe('script theme bundle apply flow', () => {
       'modern-sky',
       'fantasy-dark',
       'minimal-white',
+      'alchemy-rose',
     ]);
 
     for (const theme of BUILTIN_THEMES) {

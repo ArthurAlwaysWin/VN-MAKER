@@ -118,6 +118,10 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `invalid-ui-motion-intensity` | `ui.motion.intensity` is not one of `off`, `subtle`, `standard`, or `dramatic`; runtime falls back safely. |
 | `invalid-ui-motion-preset` | One of the `ui.motion` preset fields is unsupported; runtime falls back to the field default. |
 | `noncanonical-ui-style-preset-field` | `ui.stylePreset` was stored as data. Apply presets through `apply-ui-style-preset` so normal editable UI sections are written instead. |
+| `invalid-settings-screen-config` | `ui.settingsScreen` is not an object. |
+| `invalid-settings-tab-mode` | `ui.settingsScreen.tabBar.enabled` is present but is not boolean. |
+| `invalid-settings-button-action` | A custom settings button action is not `close` or `reset`. |
+| `invalid-settings-footer-action` | A structured settings footer action is not `close`, `title`, or `reset`. |
 | `invalid-effect-pack-registry` | `assets.effectPacks` is not an object. |
 | `invalid-effect-pack-manifest` | A data-only effect-pack manifest is malformed or contains blocked executable fields. |
 | `invalid-effect-pack-file-path` | A manifest file path is unsafe or outside `effects/<id>/`. |

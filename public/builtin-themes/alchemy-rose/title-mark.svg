@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="220" viewBox="0 0 600 220">
+  <defs><linearGradient id="r" x1="0" x2="1"><stop offset="0" stop-color="#e7b7bd"/><stop offset=".5" stop-color="#fff0dc"/><stop offset="1" stop-color="#bd7589"/></linearGradient></defs>
+  <g fill="none" stroke="url(#r)" stroke-width="2">
+    <path d="M72 50h456l34 60-34 60H72l-34-60z"/>
+    <path d="M110 76h380M110 144h380"/>
+    <circle cx="300" cy="110" r="86"/><path d="M300 24v172M214 110h172M239 49l122 122M361 49 239 171"/>
+  </g>
+  <text x="300" y="105" text-anchor="middle" font-family="Georgia, 'Noto Serif SC', serif" font-size="54" fill="#ffd8df">炼金蔷薇</text>
+  <text x="300" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#d9a994" letter-spacing="7">ALCHEMY ROSE</text>
+</svg>

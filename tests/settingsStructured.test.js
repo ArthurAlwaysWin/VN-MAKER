@@ -84,6 +84,7 @@ import { createTabBar } from '../src/ui/widgets/TabWidget.js';
 import { createSlider } from '../src/ui/widgets/SliderWidget.js';
 import { createToggle } from '../src/ui/widgets/ToggleWidget.js';
 import { resolvePath } from '../src/engine/assetPath.js';
+import { SETTING_DEFS } from '../src/engine/settingDefs.js';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -106,11 +107,13 @@ function mockConfigManager() {
     windowMode: 'windowed',
     skipMode: 'readOnly',
   };
-  return {
-    get: vi.fn((key) => defaults[key]),
-    set: vi.fn(),
+  const manager = {
+    get: vi.fn((key) => manager.config[key]),
+    set: vi.fn((key, value) => { manager.config[key] = value; }),
+    reset: vi.fn(() => { manager.config = { ...defaults }; }),
     config: { ...defaults },
   };
+  return manager;
 }
 
 /** Full structured layout matching design spec Section 5.4 */
@@ -360,6 +363,46 @@ describe('SettingsScreen structured mode', () => {
       screen.setLayout(structuredLayout());
       screen.show();
       expect(createTabBar).toHaveBeenCalled();
+    });
+
+    it('single-page mode creates no tab UI and renders every setting exactly once', () => {
+      const layout = structuredLayout();
+      layout.tabBar.enabled = false;
+      layout.tabBar.tabs = [
+        { label: 'A', settingKeys: ['text-speed', 'text-speed', 'unknown-setting'] },
+        { label: 'B', settingKeys: ['bgm-volume'] },
+      ];
+      screen.setWidgetStyles({ tab: {} });
+      screen.setLayout(layout);
+      screen.show();
+
+      expect(createTabBar).not.toHaveBeenCalled();
+      expect(screen.el.querySelector('.settings-structured-tab-bar')).toBeNull();
+      expect(screen.el.querySelector('.settings-structured-sidebar')).toBeNull();
+      const labels = Array.from(screen.el.querySelectorAll('.settings-structured-label'), el => el.textContent);
+      expect(labels).toEqual(Object.values(SETTING_DEFS).map(def => def.label));
+      expect(new Set(labels).size).toBe(labels.length);
+    });
+
+    it('live re-enabling tabs preserves assignments and returns to normalized tab rendering', () => {
+      const layout = structuredLayout();
+      layout.tabBar.enabled = false;
+      layout.tabBar.tabs = [
+        { label: 'Speed', settingKeys: ['text-speed'] },
+        { label: 'Audio', settingKeys: ['bgm-volume'] },
+      ];
+      screen.setLayout(layout);
+      screen.show();
+      screen.el.classList.add('visible');
+
+      layout.tabBar.enabled = true;
+      screen.setLayout(layout);
+
+      expect(screen.el.querySelectorAll('.settings-tab-btn')).toHaveLength(2);
+      const labels = Array.from(screen.el.querySelectorAll('.settings-structured-label'), el => el.textContent);
+      expect(labels[0]).toBe(SETTING_DEFS['text-speed'].label);
+      expect(layout.tabBar.tabs[0].settingKeys).toEqual(['text-speed']);
+      expect(layout.tabBar.tabs[1].settingKeys).toEqual(['bgm-volume']);
     });
 
     it('passes correct labels to createTabBar', () => {
@@ -705,6 +748,27 @@ describe('SettingsScreen structured mode', () => {
       // _renderCustom adds settings-custom class, not settings-structured
       expect(screen.el.classList.contains('settings-custom')).toBe(true);
       expect(screen.el.querySelector('.settings-structured-header')).toBeNull();
+    });
+
+    it('custom reset refreshes controls and stays in custom layout mode', () => {
+      cfg.config.bgmVolume = 0.9;
+      screen.setLayout({
+        elements: [
+          { type: 'setting', settingType: 'bgm-volume', x: 20, y: 20, width: 300 },
+          { type: 'button', action: 'reset', label: '恢复默认', x: 20, y: 90, width: 120, height: 40 },
+        ],
+      });
+      screen.onChange = vi.fn();
+      screen.show();
+      expect(screen.el.querySelector('input[type="range"]').value).toBe('0.9');
+
+      screen.el.querySelector('.sc-button button').click();
+
+      expect(cfg.reset).toHaveBeenCalledTimes(1);
+      expect(screen.onChange).toHaveBeenCalledTimes(1);
+      expect(screen.el.classList.contains('settings-custom')).toBe(true);
+      expect(screen.el.classList.contains('settings-structured')).toBe(false);
+      expect(screen.el.querySelector('input[type="range"]').value).toBe('0.5');
     });
 
     it('_activeTab resets behavior: re-show starts at tab 0', () => {

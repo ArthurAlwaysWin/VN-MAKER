@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 
 import { createDefaultGalgameScript, ensureGalgameContract } from '../shared/galgameContract.js';
+import { isInsidePath } from '../shared/pathContainment.js';
 
 const WINDOWS_RESERVED_PROJECT_NAMES = new Set([
   'con', 'prn', 'aux', 'nul',
@@ -36,13 +37,6 @@ function getDocumentsDir({ env = process.env, platform = process.platform, homeD
     return path.join(getEnvValue(env, 'USERPROFILE') || homeDir, 'Documents');
   }
   return path.join(homeDir, 'Documents');
-}
-
-function isPathInside(parentPath, childPath) {
-  const parent = path.resolve(parentPath);
-  const child = path.resolve(childPath);
-  const relative = path.relative(parent, child);
-  return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 export function getRecommendedProjectRootCandidates({
@@ -83,7 +77,7 @@ export function describeUnsafeProjectPath(projectPath, {
     unsafeRoots.push(tmpDir);
   }
 
-  const matched = unsafeRoots.find((root) => isPathInside(root, resolved));
+  const matched = unsafeRoots.find((root) => isInsidePath(resolved, root));
   if (matched) {
     return {
       unsafe: true,

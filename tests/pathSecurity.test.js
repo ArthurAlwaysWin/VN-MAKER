@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { isInsidePath, isPathInsideRealBase } from '../electron/pathSecurity.js';
+import { isInsidePath as sharedIsInsidePath } from '../src/shared/pathContainment.js';
 
 const tempDirs = [];
 
@@ -20,8 +21,10 @@ describe('pathSecurity', () => {
 
   it('rejects lexical path traversal outside the base path', () => {
     const base = path.resolve('/project/assets');
+    expect(isInsidePath).toBe(sharedIsInsidePath);
     expect(isInsidePath(path.join(base, 'ui', 'frame.png'), base)).toBe(true);
     expect(isInsidePath(path.join(base, '..', 'outside.png'), base)).toBe(false);
+    expect(isInsidePath('', base)).toBe(false);
   });
 
   it('allows missing descendants when the nearest real parent is inside base', async () => {

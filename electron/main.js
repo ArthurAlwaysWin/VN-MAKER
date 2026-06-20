@@ -35,6 +35,11 @@ import {
 import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 import { isSameFileState } from '../src/shared/fileState.js';
+import {
+  createIpcCanceledResponse,
+  createIpcFailureResponse,
+  createIpcSuccessResponse,
+} from '../src/shared/ipcResponse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -68,7 +73,7 @@ function getMainWindow() {
 }
 
 function createIpcErrorResponse() {
-  return { success: false, error: 'Operation failed' };
+  return createIpcFailureResponse();
 }
 
 function createAssetResponseHeaders(headers = {}) {
@@ -1360,13 +1365,13 @@ ipcMain.handle('dialog-open-directory', async () => {
       properties: ['openDirectory'],
       title: '选择保存位置'
     });
-    if (result.canceled) return null;
+    if (result.canceled || result.filePaths.length === 0) return createIpcCanceledResponse();
     const selectedPath = result.filePaths[0];
     await rememberDialogDirectoryPath(selectedPath);
-    return selectedPath;
+    return createIpcSuccessResponse(selectedPath);
   } catch (err) {
     console.error('dialog-open-directory error:', err);
-    return null;
+    return createIpcErrorResponse();
   }
 });
 
@@ -1564,24 +1569,26 @@ ipcMain.handle('dialog-open-file', async (event, { title, filters }) => {
       title: title || '选择文件',
       filters: filters || [],
     });
-    if (result.canceled || result.filePaths.length === 0) return null;
+    if (result.canceled || result.filePaths.length === 0) return createIpcCanceledResponse();
     const selectedPath = result.filePaths[0];
     await rememberDialogFilePath(selectedPath);
-    return selectedPath;
+    return createIpcSuccessResponse(selectedPath);
   } catch (e) {
     console.error('[dialog-open-file] Failed:', e);
-    return null;
+    return createIpcErrorResponse();
   }
 });
 
 ipcMain.handle('read-file-base64', async (event, filePath) => {
   try {
-    if (!(await hasDialogFileGrant(filePath))) return null;
+    if (!(await hasDialogFileGrant(filePath))) {
+      return createIpcFailureResponse('Invalid file path');
+    }
     const data = await fs.readFile(filePath);
-    return data.toString('base64');
+    return createIpcSuccessResponse(data.toString('base64'));
   } catch (e) {
     console.error('[read-file-base64] Failed:', e);
-    return null;
+    return createIpcErrorResponse();
   }
 });
 

@@ -51,7 +51,7 @@ Test results:
 
 ## Repair Status Update
 
-Updated: 2026-06-18
+Updated: 2026-06-20
 
 The first repair pass has been completed and validated. It covered the highest-confidence security and robustness items from the priority plan:
 
@@ -63,6 +63,8 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the sixth repair pass: Q6 shared atomic writes, M4 content-hashed script file state, and Q12 shared condition-row helpers. B1 was confirmed with delayed persistence, and P1/P3 were benchmarked at three project sizes.
 - Completed in the seventh repair pass: P1 patch-based undo history and P3 revision-based editor change notification.
 - Completed in the eighth repair pass: B1 choice unlock persistence ordering, P1/P3 desktop-editor smoke verification, and the Vite 8 Electron `inlineDynamicImports` compatibility cleanup.
+- Completed in the ninth repair pass: Q5 lexical path-containment helper consolidation across Electron and project scaffolding.
+- Completed in the tenth repair pass: Q17 response envelopes for the export UI's fallible file/directory IPC boundary.
 
 Repair validation:
 
@@ -243,14 +245,31 @@ Post-eighth-pass packaging follow-up:
 - `npm run package:editor:win:dir` passed, including warning-free `npm run build` and `npm run build:web`. Full `npm test` passed with Vitest 124 files / 1097 tests and Node 299 tests.
 - `npm audit --json`: 0 vulnerabilities after moving `png-to-ico` into runtime dependencies.
 
+Ninth repair validation:
+
+- Q5 is now closed: the remaining project-scaffolding `isPathInside()` duplicate was replaced by shared `src/shared/pathContainment.js`; `electron/pathSecurity.js` re-exports the same lexical helper while retaining realpath-aware symlink/junction checks locally.
+- The shared helper documents its lexical-only contract, and regression coverage confirms that Electron uses the shared function, rejects traversal, preserves missing-descendant handling, and rejects symlink escapes.
+- Targeted Vitest run: 2 files / 116 tests passed. Targeted desktop-export Node run: 30 tests passed.
+- `npm run build`: passed on Vite 8.0.16, including the Electron main and preload builds.
+- Full `npm test`: Vitest 131 files / 1148 tests passed; Node test run 305 tests passed.
+
+Tenth repair validation:
+
+- Q17 is now closed with a bounded contract: export UI file/directory selection and file-content reads consistently return `{ success, data }`, `{ success: false, canceled: true }`, or `{ success: false, error }` instead of mixing raw strings and `null` for success, cancellation, permission rejection, and I/O failure.
+- `ExportModal` consumes the envelope explicitly, including cancel-safe directory selection and base64 icon preview reads. Business-specific RPCs such as the unsaved-changes action prompt retain their typed action result rather than being forced into an unrelated payload shape.
+- Added shared response constructors plus regression coverage for all three envelope states, source coverage preventing legacy `null` returns in the migrated handlers, and DOM coverage for canceled directory selection.
+- Targeted Vitest run: 4 files / 131 tests passed.
+- `npm run build`: passed on Vite 8.0.16, including the Electron main and preload builds.
+- Full `npm test`: Vitest 131 files / 1150 tests passed; Node test run 305 tests passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
-- Worth doing in a measured performance pass or when touching nearby code: Q5, Q9, Q10, Q11, Q17.
+- Worth doing in a measured performance pass or when touching nearby code: Q9, Q10, Q11.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the eighth pass: B1, P1/P3 smoke coverage, and the Vite Electron warning are closed. Q5/Q17 cleanup remains useful but lower priority; broader Q1/Q2/Q4 and Q9-Q11 work remains intentionally deferred.
+- Residual risk after the tenth pass: B1, P1/P3 smoke coverage, the Vite Electron warning, Q5, and the audited Q17 response boundary are closed. Broader Q1/Q2/Q4 and Q9-Q11 work remains intentionally deferred.
 
 ## Priority Repair Plan
 
@@ -350,7 +369,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | Q2: `projectValidator.js` God module | True | Medium | 1674 lines mixing validation domains. | Split domain validators. |
 | Q3: duplicated helper functions | Partially true | Low | Duplication is real, but count/impact is overstated in places. | Extract shared utility carefully. |
 | Q4: `electron/main.js` giant file | True | Medium | 1830 lines with IPC, protocol, window, state, export. | Split into modules. |
-| Q5: duplicated `isInsidePath` | Partially completed | Low | Export/theme duplicates were replaced by shared `electron/pathSecurity.js`; other filesystem helpers can still be consolidated later. | Continue only when touching related Electron file utilities. |
+| Q5: duplicated `isInsidePath` | Completed | Low | Lexical containment now lives in shared `src/shared/pathContainment.js` and is reused by Electron path security and project scaffolding; realpath-aware checks remain in `electron/pathSecurity.js`. | Done. |
 | Q6: duplicated `atomicWrite` | Completed | Low | Editor and exported-game main processes now import `electron/atomicWrite.js`; desktop export copies and rewrites the shared helper import. | Done. |
 | Q7: iframe preview duplication | True | Low | Similar postMessage lifecycle in multiple composables. | Extract preview composable. |
 | Q8: screen editor view duplication | True | Low | Game menu, save/load, backlog editors are similar wrappers. | Parameterized screen editor. |
@@ -362,7 +381,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | Q14: long dialogue limit undocumented | True | Informational | `DEFAULT_LONG_DIALOGUE_LIMIT = 120`. | Comment/config. |
 | Q15: checkpoint limit magic number | True | Informational | Default checkpoint limit `5`. | Named constant. |
 | Q16: changedPaths truncation | Partially true | Informational | `slice(0, 20)` exists but count is also emitted. | Add "and N more" metadata. |
-| Q17: IPC response shapes inconsistent | True | Low | Mix of success envelope, null, canceled, etc. S13 narrowed exception-message leakage but did not attempt the broader response-shape consolidation. | Standard response contract. |
+| Q17: IPC response shapes inconsistent | Completed | Low | Export UI file/directory dialogs and file-content reads now share explicit success, canceled, and failure envelopes; typed business RPCs retain domain-specific payloads. | Done. |
 | Q18: ID validation too weak | Completed | Medium | Added `src/shared/stableId.js` and applied stable ID checks to project-session/CLI entity ID entry points. |
 | Q19: `hexToRgb` duplicated | True | Low | `colorHarmony.js` and `contrast.js`. | Extract color util. |
 
@@ -388,7 +407,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q6, Q12, Q18, S8, B1, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
-2. If continuing audit hardening, choose from the remaining bounded-but-lower-priority items such as Q5 or Q17. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
+1. Do not restart with Q5, Q6, Q12, Q17, Q18, S8, B1, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
+2. If continuing audit cleanup, analyze Q9-Q11 together because they share the giant CLI entry point, but implement them as separate behavior-preserving slices. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
 3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, Q9/Q10/Q11, and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

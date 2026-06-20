@@ -19,7 +19,11 @@ function findButton(title) {
   return [...document.querySelectorAll('button')].find((button) => button.title === title);
 }
 
-async function mountExportModal({ saveProject, exportResult } = {}) {
+async function mountExportModal({
+  saveProject,
+  exportResult,
+  directoryResult = { success: true, data: 'C:\\exports' },
+} = {}) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -38,7 +42,7 @@ async function mountExportModal({ saveProject, exportResult } = {}) {
   const activeProgressListeners = new Set();
   const unsubscribes = [];
   const invoke = vi.fn(async (channel) => {
-    if (channel === 'dialog-open-directory') return 'C:\\exports';
+    if (channel === 'dialog-open-directory') return directoryResult;
     if (channel === 'export-game' || channel === 'export-game-desktop') {
       order.push(channel);
       return typeof exportResult === 'function'
@@ -123,6 +127,15 @@ describe('ExportModal save-before-export behavior', () => {
     expect(harness.unsubscribes[0]).toHaveBeenCalledTimes(1);
     expect(harness.activeProgressListeners).toHaveLength(0);
     expect(document.querySelector('.done-title')?.textContent).toBe('导出成功');
+  });
+
+  it('keeps export disabled when directory selection is canceled', async () => {
+    harness = await mountExportModal({
+      directoryResult: { success: false, canceled: true },
+    });
+
+    expect(findButton('开始导出游戏').disabled).toBe(true);
+    expect(harness.invoke).toHaveBeenCalledWith('dialog-open-directory');
   });
 
   it.each([

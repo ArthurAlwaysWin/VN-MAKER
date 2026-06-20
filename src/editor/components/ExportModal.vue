@@ -192,16 +192,16 @@ onBeforeUnmount(() => {
 // ─── Methods ─────────────────────────────────────────────
 
 async function pickOutputDir() {
-  const dir = await window.ipcRenderer.invoke('dialog-open-directory');
-  if (dir) outputDir.value = dir;
+  const result = await window.ipcRenderer.invoke('dialog-open-directory');
+  if (result?.success && result.data) outputDir.value = result.data;
 }
 
 async function pickFavicon() {
-  const file = await window.ipcRenderer.invoke('dialog-open-file', {
+  const result = await window.ipcRenderer.invoke('dialog-open-file', {
     title: '选择 Favicon',
     filters: [{ name: '图标文件', extensions: ['ico', 'png'] }],
   });
-  if (file) faviconPath.value = file;
+  if (result?.success && result.data) faviconPath.value = result.data;
 }
 
 function clearFavicon() {
@@ -209,14 +209,16 @@ function clearFavicon() {
 }
 
 async function pickIcon() {
-  const file = await window.ipcRenderer.invoke('dialog-open-file', {
+  const fileResult = await window.ipcRenderer.invoke('dialog-open-file', {
     title: '选择游戏图标',
     filters: [{ name: 'PNG 图片', extensions: ['png'] }],
   });
-  if (!file) return;
-  iconPath.value = file;
-  const base64 = await window.ipcRenderer.invoke('read-file-base64', file);
-  if (base64) iconPreviewUrl.value = `data:image/png;base64,${base64}`;
+  if (!fileResult?.success || !fileResult.data) return;
+  iconPath.value = fileResult.data;
+  const contentResult = await window.ipcRenderer.invoke('read-file-base64', fileResult.data);
+  if (contentResult?.success && contentResult.data) {
+    iconPreviewUrl.value = `data:image/png;base64,${contentResult.data}`;
+  }
 }
 
 function clearIcon() {

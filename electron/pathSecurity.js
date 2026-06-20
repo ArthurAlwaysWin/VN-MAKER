@@ -1,27 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-/**
- * Lexical containment check for already-normalized paths.
- *
- * Use isPathInsideRealBase for security-sensitive checks involving existing
- * filesystem paths, especially when symlinks or junctions may be present.
- *
- * @param {string} fullPath
- * @param {string} basePath
- * @returns {boolean}
- */
-export function isInsidePath(fullPath, basePath) {
-  if (!fullPath || !basePath) return false;
-  const resolved = path.resolve(fullPath);
-  const baseResolved = path.resolve(basePath);
-  const relative = path.relative(baseResolved, resolved);
-  return relative === '' || (
-    Boolean(relative)
-    && !relative.startsWith('..')
-    && !path.isAbsolute(relative)
-  );
-}
+import { isInsidePath } from '../src/shared/pathContainment.js';
+
+export { isInsidePath } from '../src/shared/pathContainment.js';
 
 async function realpathIfExists(targetPath) {
   try {

@@ -65,6 +65,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the eighth repair pass: B1 choice unlock persistence ordering, P1/P3 desktop-editor smoke verification, and the Vite 8 Electron `inlineDynamicImports` compatibility cleanup.
 - Completed in the ninth repair pass: Q5 lexical path-containment helper consolidation across Electron and project scaffolding.
 - Completed in the tenth repair pass: Q17 response envelopes for the export UI's fallible file/directory IPC boundary.
+- Completed in the eleventh repair pass: Q10 CLI command registry, Q9 shared JSON/text result emission, and Q11 apply-plan operation registry.
 
 Repair validation:
 
@@ -262,14 +263,24 @@ Tenth repair validation:
 - `npm run build`: passed on Vite 8.0.16, including the Electron main and preload builds.
 - Full `npm test`: Vitest 131 files / 1150 tests passed; Node test run 305 tests passed.
 
+Eleventh repair validation:
+
+- Q10 is closed in `aaaf8b9`: `main()` now dispatches through an explicit 105-name command-handler registry, including project create/open forwarding, the character-transition alias, and author-check/handoff exit-code extraction. Registry parity plus no-command/unknown-command exit behavior are regression-covered.
+- Q9 is closed in `4d9bb49`: the minimal `emitResult()` helper owns JSON/text selection across mutation, query/catalog/report, DSL, preview, and export command families while command-specific callbacks retain the existing text and stderr content. Representative mutation, catalog, and DSL commands are exercised in both modes; `runWithJsonSafeConsole()` and export progress collection/silencing remain unchanged.
+- Q11 is closed in `8b25466`: all 68 apply-plan operations now live in a domain-grouped handler registry, and `SUPPORTED_APPLY_PLAN_COMMANDS` is derived from its keys. Existing aliases/defaults/`requireParam()` calls and structured missing-command, unsupported-command, and missing-param repair metadata remain covered by the apply-plan regression surface.
+- Per-slice checks: `node --check tools/vn-author/index.js` passed, and `npx vitest run tests/vnAuthorCli.test.js` passed after each slice (Q10 114 tests, Q9 115 tests, Q11 116 tests).
+- Final `npm run build`: passed on Vite 8.0.16, including Electron main and preload builds.
+- Final full `npm test`: Vitest 131 files / 1153 tests passed; Node test run 305 tests passed.
+- Residual risk: Q1 remains open because both registries intentionally stay in `tools/vn-author/index.js`. Output wording is still command-owned by design, so future commands must add a registry entry and choose an explicit text emitter; completeness tests guard the current inventories against silent drift.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
 
-- Worth doing in a measured performance pass or when touching nearby code: Q9, Q10, Q11.
+- Worth doing in a dedicated architecture pass when justified: Q1/Q2/Q4.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the tenth pass: B1, P1/P3 smoke coverage, the Vite Electron warning, Q5, and the audited Q17 response boundary are closed. Broader Q1/Q2/Q4 and Q9-Q11 work remains intentionally deferred.
+- Residual risk after the eleventh pass: Q9-Q11 are closed without taking on Q1 file decomposition. Broader Q1/Q2/Q4 architecture work remains intentionally deferred.
 
 ## Priority Repair Plan
 
@@ -373,9 +384,9 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | Q6: duplicated `atomicWrite` | Completed | Low | Editor and exported-game main processes now import `electron/atomicWrite.js`; desktop export copies and rewrites the shared helper import. | Done. |
 | Q7: iframe preview duplication | True | Low | Similar postMessage lifecycle in multiple composables. | Extract preview composable. |
 | Q8: screen editor view duplication | True | Low | Game menu, save/load, backlog editors are similar wrappers. | Parameterized screen editor. |
-| Q9: CLI JSON output duplication | True | Low | Many repeated JSON/text branches. | `outputResult()` helper. |
-| Q10: CLI main dispatch if-chain | True | Low | Long command dispatch in main. | Command map. |
-| Q11: plan operation dispatch if-chain | True | Low | Similar long operation dispatch. | Operation map. |
+| Q9: CLI JSON output duplication | Completed | Low | Shared `emitResult()` now owns JSON/text selection across command families while preserving command-specific text, stderr, exit codes, JSON-safe console handling, and export progress behavior. | Done. |
+| Q10: CLI main dispatch if-chain | Completed | Low | Replaced the 105-name dispatch chain with an explicit command-handler registry, preserving aliases, project forwarding, special exit-code extraction, and help exit behavior. | Done. |
+| Q11: plan operation dispatch if-chain | Completed | Low | Replaced all 68 operation branches with a domain-grouped handler registry; the supported-command list is generated from registry keys and structured repair errors remain intact. | Done. |
 | Q12: condition row helper duplication | Completed | Low | Canonical/legacy row extraction, condition value compatibility, and comparison helpers now live in `branchingContract` and are reused by condition analysis and project validation. | Done. |
 | Q13: condition row limit magic number | True | Informational | Hard-coded condition row limit. | Named constant. |
 | Q14: long dialogue limit undocumented | True | Informational | `DEFAULT_LONG_DIALOGUE_LIMIT = 120`. | Comment/config. |
@@ -407,7 +418,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q5, Q6, Q12, Q17, Q18, S8, B1, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
-2. If continuing audit cleanup, analyze Q9-Q11 together because they share the giant CLI entry point, but implement them as separate behavior-preserving slices. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
-3. Defer broad refactors and performance work unless there is a measured bottleneck or a nearby feature touch: Q1/Q2/Q4, Q9/Q10/Q11, and major IPC response-shape consolidation.
+1. Do not restart with Q5, Q6, Q9, Q10, Q11, Q12, Q17, Q18, S8, B1, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
+2. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
+3. Defer broad refactors unless a separate architecture milestone is approved: Q1/Q2/Q4 and major IPC response-shape consolidation.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

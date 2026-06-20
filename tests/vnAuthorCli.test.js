@@ -139,6 +139,51 @@ async function createExportFixture(dir, { missingAsset = false } = {}) {
 }
 
 describe('vn-author CLI', () => {
+  it('keeps the command registry and dispatcher complete without falling back to an if-chain', async () => {
+    const source = await readFile(cliPath, 'utf8');
+    const registrySource = source.slice(
+      source.indexOf('const CLI_COMMAND_HANDLERS'),
+      source.indexOf('async function dispatchCliCommand'),
+    );
+    const registeredCommands = [...registrySource.matchAll(/^  \['([^']+)'/gm)]
+      .map((match) => match[1]);
+
+    expect(registeredCommands).toEqual([
+      'projects', 'create-project', 'open-project', 'inspect', 'validate', 'list-assets',
+      'list-transitions', 'list-particles', 'list-effect-packs', 'list-ui-style-presets',
+      'graph-report', 'find-dead-ends', 'find-missing-assets', 'find-unused-assets',
+      'author-check', 'import-draft', 'draft-plan', 'dsl-plan', 'dsl-check', 'dsl-diff',
+      'dsl-build', 'dsl-format', 'dsl-skeleton', 'apply-plan', 'restore-checkpoint',
+      'export-report', 'export-readiness', 'export-web', 'export-desktop', 'handoff-report',
+      'review-handoff', 'lint-layout', 'render-preview', 'add-scene', 'set-scene-next',
+      'scene-references', 'retarget-scene', 'repair-scene-target', 'clear-scene-references',
+      'rename-scene', 'delete-scene', 'add-character', 'add-variable', 'update-variable',
+      'rename-variable', 'delete-variable', 'add-affection-variable', 'list-endings',
+      'add-ending', 'update-ending', 'set-ending-video', 'remove-ending', 'add-ending-unlock',
+      'list-cg', 'add-cg', 'update-cg', 'remove-cg', 'add-cg-unlock', 'list-videos',
+      'add-video', 'update-video', 'remove-video', 'add-page', 'remove-page', 'move-page',
+      'add-dialogue', 'set-dialogue', 'remove-dialogue', 'move-dialogue', 'add-choice-option',
+      'set-choice-option', 'set-choice-page', 'remove-choice-option', 'move-choice-option',
+      'set-condition-page', 'set-page-background', 'set-page-media', 'set-page-characters',
+      'set-page-audio', 'set-page-camera', 'set-camera-effect', 'set-page-transition',
+      'set-page-transitions', 'register-effect-pack', 'set-page-effect-pack',
+      'clear-page-effect-packs', 'set-page-particles', 'clear-page-particles',
+      'inherit-page-particles', 'set-character-animation', 'set-character-transition',
+      'set-opening-video', 'set-title-screen', 'add-title-element', 'update-title-element',
+      'remove-title-element', 'set-screen-layout', 'set-dialogue-box', 'set-theme',
+      'set-widget-styles', 'set-ui-motion', 'apply-ui-style-preset', 'add-choice-effect',
+      'set-choice-effect', 'remove-choice-effect',
+    ]);
+    const mainSource = source.slice(source.indexOf('async function main()'));
+    expect(mainSource).not.toContain("if (command === '");
+
+    const noCommand = await execFileAsync(process.execPath, [cliPath]);
+    expect(noCommand.stdout).toContain('vn-author commands:');
+
+    await expect(execFileAsync(process.execPath, [cliPath, 'not-a-command']))
+      .rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('vn-author commands:') });
+  });
+
   it('accepts preview screenshots with visible color variety', () => {
     const png = createPng({
       width: 8,

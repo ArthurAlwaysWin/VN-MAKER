@@ -7597,542 +7597,130 @@ function printHelp() {
 `);
 }
 
+const CLI_COMMAND_HANDLERS = new Map([
+  ['projects', projectsCommand],
+  ['create-project', (args) => projectsCommand(['create', ...args])],
+  ['open-project', (args) => projectsCommand(['open', ...args])],
+  ['inspect', inspect],
+  ['validate', validate],
+  ['list-assets', listAssets],
+  ['list-transitions', listTransitions],
+  ['list-particles', listParticles],
+  ['list-effect-packs', listEffectPacksCommand],
+  ['list-ui-style-presets', listUiStylePresetsCommand],
+  ['graph-report', graphReport],
+  ['find-dead-ends', findDeadEndsCommand],
+  ['find-missing-assets', findMissingAssets],
+  ['find-unused-assets', findUnusedAssets],
+  ['author-check', async (args) => (await authorCheck(args)).exitCode],
+  ['import-draft', importDraft],
+  ['draft-plan', draftPlan],
+  ['dsl-plan', dslPlan],
+  ['dsl-check', dslCheck],
+  ['dsl-diff', dslDiff],
+  ['dsl-build', dslBuild],
+  ['dsl-format', dslFormat],
+  ['dsl-skeleton', dslSkeleton],
+  ['apply-plan', applyPlan],
+  ['restore-checkpoint', restoreCheckpoint],
+  ['export-report', exportReport],
+  ['export-readiness', exportReadiness],
+  ['export-web', exportWebCommand],
+  ['export-desktop', exportDesktopCommand],
+  ['handoff-report', async (args) => (await handoffReport(args)).exitCode],
+  ['review-handoff', reviewHandoff],
+  ['lint-layout', lintLayout],
+  ['render-preview', renderPreview],
+  ['add-scene', addScene],
+  ['set-scene-next', setSceneNext],
+  ['scene-references', sceneReferences],
+  ['retarget-scene', retargetScene],
+  ['repair-scene-target', repairSceneTarget],
+  ['clear-scene-references', clearSceneReferencesCommand],
+  ['rename-scene', renameScene],
+  ['delete-scene', deleteScene],
+  ['add-character', addCharacter],
+  ['add-variable', addVariable],
+  ['update-variable', updateVariable],
+  ['rename-variable', renameVariable],
+  ['delete-variable', deleteVariable],
+  ['add-affection-variable', addAffectionVariable],
+  ['list-endings', listEndings],
+  ['add-ending', addEnding],
+  ['update-ending', updateEnding],
+  ['set-ending-video', setEndingVideo],
+  ['remove-ending', removeEnding],
+  ['add-ending-unlock', addEndingUnlock],
+  ['list-cg', listCgs],
+  ['add-cg', addCg],
+  ['update-cg', updateCg],
+  ['remove-cg', removeCg],
+  ['add-cg-unlock', addCgUnlock],
+  ['list-videos', listVideos],
+  ['add-video', addVideo],
+  ['update-video', updateVideo],
+  ['remove-video', removeVideo],
+  ['add-page', addPage],
+  ['remove-page', removePage],
+  ['move-page', movePage],
+  ['add-dialogue', addDialogue],
+  ['set-dialogue', setDialogue],
+  ['remove-dialogue', removeDialogue],
+  ['move-dialogue', moveDialogue],
+  ['add-choice-option', addChoiceOption],
+  ['set-choice-option', setChoiceOption],
+  ['set-choice-page', setChoicePage],
+  ['remove-choice-option', removeChoiceOption],
+  ['move-choice-option', moveChoiceOption],
+  ['set-condition-page', setConditionPage],
+  ['set-page-background', setPageBackground],
+  ['set-page-media', setPageMedia],
+  ['set-page-characters', setPageCharacters],
+  ['set-page-audio', setPageAudio],
+  ['set-page-camera', setPageCamera],
+  ['set-camera-effect', setCameraEffect],
+  ['set-page-transition', setPageTransition],
+  ['set-page-transitions', setPageTransitions],
+  ['register-effect-pack', registerEffectPack],
+  ['set-page-effect-pack', setPageEffectPack],
+  ['clear-page-effect-packs', clearPageEffectPacks],
+  ['set-page-particles', setPageParticles],
+  ['clear-page-particles', clearPageParticles],
+  ['inherit-page-particles', inheritPageParticles],
+  ['set-character-animation', setCharacterAnimation],
+  ['set-character-transition', setCharacterAnimation],
+  ['set-opening-video', setOpeningVideo],
+  ['set-title-screen', setTitleScreen],
+  ['add-title-element', addTitleElement],
+  ['update-title-element', updateTitleElement],
+  ['remove-title-element', removeTitleElement],
+  ['set-screen-layout', setScreenLayout],
+  ['set-dialogue-box', (args) => setSharedUiConfig(args, 'set-dialogue-box', 'dialogue box', (session, patch) => session.setDialogueBox(patch))],
+  ['set-theme', (args) => setSharedUiConfig(args, 'set-theme', 'theme', (session, patch) => session.setTheme(patch))],
+  ['set-widget-styles', (args) => setSharedUiConfig(args, 'set-widget-styles', 'widget styles', (session, patch) => session.setWidgetStyles(patch))],
+  ['set-ui-motion', setUiMotion],
+  ['apply-ui-style-preset', applyUiStylePreset],
+  ['add-choice-effect', addChoiceEffect],
+  ['set-choice-effect', setChoiceEffect],
+  ['remove-choice-effect', removeChoiceEffect],
+]);
+
+async function dispatchCliCommand(command, args) {
+  const handler = CLI_COMMAND_HANDLERS.get(command);
+  if (!handler) {
+    return null;
+  }
+
+  return { exitCode: await handler(args) };
+}
+
 async function main() {
   const [, , command, ...args] = process.argv;
 
   try {
-    if (command === 'projects') {
-      process.exitCode = await projectsCommand(args);
-      return;
-    }
-
-    if (command === 'create-project') {
-      process.exitCode = await projectsCommand(['create', ...args]);
-      return;
-    }
-
-    if (command === 'open-project') {
-      process.exitCode = await projectsCommand(['open', ...args]);
-      return;
-    }
-
-    if (command === 'inspect') {
-      process.exitCode = await inspect(args);
-      return;
-    }
-
-    if (command === 'validate') {
-      process.exitCode = await validate(args);
-      return;
-    }
-
-    if (command === 'list-assets') {
-      process.exitCode = await listAssets(args);
-      return;
-    }
-
-    if (command === 'list-transitions') {
-      process.exitCode = listTransitions(args);
-      return;
-    }
-
-    if (command === 'list-particles') {
-      process.exitCode = await listParticles(args);
-      return;
-    }
-
-    if (command === 'list-effect-packs') {
-      process.exitCode = await listEffectPacksCommand(args);
-      return;
-    }
-
-    if (command === 'list-ui-style-presets') {
-      process.exitCode = await listUiStylePresetsCommand(args);
-      return;
-    }
-
-    if (command === 'graph-report') {
-      process.exitCode = await graphReport(args);
-      return;
-    }
-
-    if (command === 'find-dead-ends') {
-      process.exitCode = await findDeadEndsCommand(args);
-      return;
-    }
-
-    if (command === 'find-missing-assets') {
-      process.exitCode = await findMissingAssets(args);
-      return;
-    }
-
-    if (command === 'find-unused-assets') {
-      process.exitCode = await findUnusedAssets(args);
-      return;
-    }
-
-    if (command === 'author-check') {
-      process.exitCode = (await authorCheck(args)).exitCode;
-      return;
-    }
-
-    if (command === 'import-draft') {
-      process.exitCode = await importDraft(args);
-      return;
-    }
-
-    if (command === 'draft-plan') {
-      process.exitCode = await draftPlan(args);
-      return;
-    }
-
-    if (command === 'dsl-plan') {
-      process.exitCode = await dslPlan(args);
-      return;
-    }
-
-    if (command === 'dsl-check') {
-      process.exitCode = await dslCheck(args);
-      return;
-    }
-
-    if (command === 'dsl-diff') {
-      process.exitCode = await dslDiff(args);
-      return;
-    }
-
-    if (command === 'dsl-build') {
-      process.exitCode = await dslBuild(args);
-      return;
-    }
-
-    if (command === 'dsl-format') {
-      process.exitCode = await dslFormat(args);
-      return;
-    }
-
-    if (command === 'dsl-skeleton') {
-      process.exitCode = await dslSkeleton(args);
-      return;
-    }
-
-    if (command === 'apply-plan') {
-      process.exitCode = await applyPlan(args);
-      return;
-    }
-
-    if (command === 'restore-checkpoint') {
-      process.exitCode = await restoreCheckpoint(args);
-      return;
-    }
-
-    if (command === 'export-report') {
-      process.exitCode = await exportReport(args);
-      return;
-    }
-
-    if (command === 'export-readiness') {
-      process.exitCode = await exportReadiness(args);
-      return;
-    }
-
-    if (command === 'export-web') {
-      process.exitCode = await exportWebCommand(args);
-      return;
-    }
-
-    if (command === 'export-desktop') {
-      process.exitCode = await exportDesktopCommand(args);
-      return;
-    }
-
-    if (command === 'handoff-report') {
-      process.exitCode = (await handoffReport(args)).exitCode;
-      return;
-    }
-
-    if (command === 'review-handoff') {
-      process.exitCode = await reviewHandoff(args);
-      return;
-    }
-
-    if (command === 'lint-layout') {
-      process.exitCode = await lintLayout(args);
-      return;
-    }
-
-    if (command === 'render-preview') {
-      process.exitCode = await renderPreview(args);
-      return;
-    }
-
-    if (command === 'add-scene') {
-      process.exitCode = await addScene(args);
-      return;
-    }
-
-    if (command === 'set-scene-next') {
-      process.exitCode = await setSceneNext(args);
-      return;
-    }
-
-    if (command === 'scene-references') {
-      process.exitCode = await sceneReferences(args);
-      return;
-    }
-
-    if (command === 'retarget-scene') {
-      process.exitCode = await retargetScene(args);
-      return;
-    }
-
-    if (command === 'repair-scene-target') {
-      process.exitCode = await repairSceneTarget(args);
-      return;
-    }
-
-    if (command === 'clear-scene-references') {
-      process.exitCode = await clearSceneReferencesCommand(args);
-      return;
-    }
-
-    if (command === 'rename-scene') {
-      process.exitCode = await renameScene(args);
-      return;
-    }
-
-    if (command === 'delete-scene') {
-      process.exitCode = await deleteScene(args);
-      return;
-    }
-
-    if (command === 'add-character') {
-      process.exitCode = await addCharacter(args);
-      return;
-    }
-
-    if (command === 'add-variable') {
-      process.exitCode = await addVariable(args);
-      return;
-    }
-
-    if (command === 'update-variable') {
-      process.exitCode = await updateVariable(args);
-      return;
-    }
-
-    if (command === 'rename-variable') {
-      process.exitCode = await renameVariable(args);
-      return;
-    }
-
-    if (command === 'delete-variable') {
-      process.exitCode = await deleteVariable(args);
-      return;
-    }
-
-    if (command === 'add-affection-variable') {
-      process.exitCode = await addAffectionVariable(args);
-      return;
-    }
-
-    if (command === 'list-endings') {
-      process.exitCode = await listEndings(args);
-      return;
-    }
-
-    if (command === 'add-ending') {
-      process.exitCode = await addEnding(args);
-      return;
-    }
-
-    if (command === 'update-ending') {
-      process.exitCode = await updateEnding(args);
-      return;
-    }
-
-    if (command === 'set-ending-video') {
-      process.exitCode = await setEndingVideo(args);
-      return;
-    }
-
-    if (command === 'remove-ending') {
-      process.exitCode = await removeEnding(args);
-      return;
-    }
-
-    if (command === 'add-ending-unlock') {
-      process.exitCode = await addEndingUnlock(args);
-      return;
-    }
-
-    if (command === 'list-cg') {
-      process.exitCode = await listCgs(args);
-      return;
-    }
-
-    if (command === 'add-cg') {
-      process.exitCode = await addCg(args);
-      return;
-    }
-
-    if (command === 'update-cg') {
-      process.exitCode = await updateCg(args);
-      return;
-    }
-
-    if (command === 'remove-cg') {
-      process.exitCode = await removeCg(args);
-      return;
-    }
-
-    if (command === 'add-cg-unlock') {
-      process.exitCode = await addCgUnlock(args);
-      return;
-    }
-
-    if (command === 'list-videos') {
-      process.exitCode = await listVideos(args);
-      return;
-    }
-
-    if (command === 'add-video') {
-      process.exitCode = await addVideo(args);
-      return;
-    }
-
-    if (command === 'update-video') {
-      process.exitCode = await updateVideo(args);
-      return;
-    }
-
-    if (command === 'remove-video') {
-      process.exitCode = await removeVideo(args);
-      return;
-    }
-
-    if (command === 'add-page') {
-      process.exitCode = await addPage(args);
-      return;
-    }
-
-    if (command === 'remove-page') {
-      process.exitCode = await removePage(args);
-      return;
-    }
-
-    if (command === 'move-page') {
-      process.exitCode = await movePage(args);
-      return;
-    }
-
-    if (command === 'add-dialogue') {
-      process.exitCode = await addDialogue(args);
-      return;
-    }
-
-    if (command === 'set-dialogue') {
-      process.exitCode = await setDialogue(args);
-      return;
-    }
-
-    if (command === 'remove-dialogue') {
-      process.exitCode = await removeDialogue(args);
-      return;
-    }
-
-    if (command === 'move-dialogue') {
-      process.exitCode = await moveDialogue(args);
-      return;
-    }
-
-    if (command === 'add-choice-option') {
-      process.exitCode = await addChoiceOption(args);
-      return;
-    }
-
-    if (command === 'set-choice-option') {
-      process.exitCode = await setChoiceOption(args);
-      return;
-    }
-
-    if (command === 'set-choice-page') {
-      process.exitCode = await setChoicePage(args);
-      return;
-    }
-
-    if (command === 'remove-choice-option') {
-      process.exitCode = await removeChoiceOption(args);
-      return;
-    }
-
-    if (command === 'move-choice-option') {
-      process.exitCode = await moveChoiceOption(args);
-      return;
-    }
-
-    if (command === 'set-condition-page') {
-      process.exitCode = await setConditionPage(args);
-      return;
-    }
-
-    if (command === 'set-page-background') {
-      process.exitCode = await setPageBackground(args);
-      return;
-    }
-
-    if (command === 'set-page-media') {
-      process.exitCode = await setPageMedia(args);
-      return;
-    }
-
-    if (command === 'set-page-characters') {
-      process.exitCode = await setPageCharacters(args);
-      return;
-    }
-
-    if (command === 'set-page-audio') {
-      process.exitCode = await setPageAudio(args);
-      return;
-    }
-
-    if (command === 'set-page-camera') {
-      process.exitCode = await setPageCamera(args);
-      return;
-    }
-
-    if (command === 'set-camera-effect') {
-      process.exitCode = await setCameraEffect(args);
-      return;
-    }
-
-    if (command === 'set-page-transition') {
-      process.exitCode = await setPageTransition(args);
-      return;
-    }
-
-    if (command === 'set-page-transitions') {
-      process.exitCode = await setPageTransitions(args);
-      return;
-    }
-
-    if (command === 'register-effect-pack') {
-      process.exitCode = await registerEffectPack(args);
-      return;
-    }
-
-    if (command === 'set-page-effect-pack') {
-      process.exitCode = await setPageEffectPack(args);
-      return;
-    }
-
-    if (command === 'clear-page-effect-packs') {
-      process.exitCode = await clearPageEffectPacks(args);
-      return;
-    }
-
-    if (command === 'set-page-particles') {
-      process.exitCode = await setPageParticles(args);
-      return;
-    }
-
-    if (command === 'clear-page-particles') {
-      process.exitCode = await clearPageParticles(args);
-      return;
-    }
-
-    if (command === 'inherit-page-particles') {
-      process.exitCode = await inheritPageParticles(args);
-      return;
-    }
-
-    if (command === 'set-character-animation' || command === 'set-character-transition') {
-      process.exitCode = await setCharacterAnimation(args);
-      return;
-    }
-
-    if (command === 'set-opening-video') {
-      process.exitCode = await setOpeningVideo(args);
-      return;
-    }
-
-    if (command === 'set-title-screen') {
-      process.exitCode = await setTitleScreen(args);
-      return;
-    }
-
-    if (command === 'add-title-element') {
-      process.exitCode = await addTitleElement(args);
-      return;
-    }
-
-    if (command === 'update-title-element') {
-      process.exitCode = await updateTitleElement(args);
-      return;
-    }
-
-    if (command === 'remove-title-element') {
-      process.exitCode = await removeTitleElement(args);
-      return;
-    }
-
-    if (command === 'set-screen-layout') {
-      process.exitCode = await setScreenLayout(args);
-      return;
-    }
-
-    if (command === 'set-dialogue-box') {
-      process.exitCode = await setSharedUiConfig(
-        args,
-        command,
-        'dialogue box',
-        (session, patch) => session.setDialogueBox(patch),
-      );
-      return;
-    }
-
-    if (command === 'set-theme') {
-      process.exitCode = await setSharedUiConfig(
-        args,
-        command,
-        'theme',
-        (session, patch) => session.setTheme(patch),
-      );
-      return;
-    }
-
-    if (command === 'set-widget-styles') {
-      process.exitCode = await setSharedUiConfig(
-        args,
-        command,
-        'widget styles',
-        (session, patch) => session.setWidgetStyles(patch),
-      );
-      return;
-    }
-
-    if (command === 'set-ui-motion') {
-      process.exitCode = await setUiMotion(args);
-      return;
-    }
-
-    if (command === 'apply-ui-style-preset') {
-      process.exitCode = await applyUiStylePreset(args);
-      return;
-    }
-
-    if (command === 'add-choice-effect') {
-      process.exitCode = await addChoiceEffect(args);
-      return;
-    }
-
-    if (command === 'set-choice-effect') {
-      process.exitCode = await setChoiceEffect(args);
-      return;
-    }
-
-    if (command === 'remove-choice-effect') {
-      process.exitCode = await removeChoiceEffect(args);
+    const result = await dispatchCliCommand(command, args);
+    if (result) {
+      process.exitCode = result.exitCode;
       return;
     }
 

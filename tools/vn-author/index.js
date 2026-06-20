@@ -2380,6 +2380,14 @@ function writeJson(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function emitResult(args, result, emitText) {
+  if (hasFlag(args, '--json')) {
+    writeJson(result);
+  } else {
+    emitText?.(result);
+  }
+}
+
 function printIssue(issue) {
   process.stdout.write(`[${issue.severity}] ${issue.code} ${issue.pathString ? `(${issue.pathString}) ` : ''}${issue.message}\n`);
 }
@@ -2845,18 +2853,15 @@ async function inspect(args) {
     endingCount: Object.keys(script.systems?.endings ?? {}).length,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(summary);
-    return 0;
-  }
-
-  process.stdout.write(`Script: ${summary.scriptPath}\n`);
-  process.stdout.write(`Title: ${summary.title ?? '(untitled)'}\n`);
-  process.stdout.write(`Project ID: ${summary.projectId ?? '(missing)'}\n`);
-  process.stdout.write(`Characters: ${summary.characterCount}\n`);
-  process.stdout.write(`Scenes: ${summary.sceneCount}\n`);
-  process.stdout.write(`Variables: ${summary.variableCount}\n`);
-  process.stdout.write(`Endings: ${summary.endingCount}\n`);
+  emitResult(args, summary, () => {
+    process.stdout.write(`Script: ${summary.scriptPath}\n`);
+    process.stdout.write(`Title: ${summary.title ?? '(untitled)'}\n`);
+    process.stdout.write(`Project ID: ${summary.projectId ?? '(missing)'}\n`);
+    process.stdout.write(`Characters: ${summary.characterCount}\n`);
+    process.stdout.write(`Scenes: ${summary.sceneCount}\n`);
+    process.stdout.write(`Variables: ${summary.variableCount}\n`);
+    process.stdout.write(`Endings: ${summary.endingCount}\n`);
+  });
   return 0;
 }
 
@@ -2876,19 +2881,16 @@ async function listAssets(args) {
     assets,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-    return 0;
-  }
-
-  process.stdout.write(`Project: ${projectPath}\n`);
-  process.stdout.write(`Assets: ${assetRoot}\n`);
-  for (const category of ASSET_LIBRARY_CATEGORIES) {
-    process.stdout.write(`${category}: ${assets[category].length}\n`);
-    for (const asset of assets[category]) {
-      process.stdout.write(`  - ${asset.path}\n`);
+  emitResult(args, output, () => {
+    process.stdout.write(`Project: ${projectPath}\n`);
+    process.stdout.write(`Assets: ${assetRoot}\n`);
+    for (const category of ASSET_LIBRARY_CATEGORIES) {
+      process.stdout.write(`${category}: ${assets[category].length}\n`);
+      for (const asset of assets[category]) {
+        process.stdout.write(`  - ${asset.path}\n`);
+      }
     }
-  }
+  });
 
   return 0;
 }
@@ -2904,16 +2906,13 @@ function listTransitions(args) {
     transitions,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-    return 0;
-  }
-
-  process.stdout.write(`Transitions: ${output.count}\n`);
-  for (const transition of transitions) {
-    const support = transition.runtimeSupported ? 'supported' : `fallback: ${transition.fallbackId ?? 'none'}`;
-    process.stdout.write(`- ${transition.target}:${transition.id} (${support})\n`);
-  }
+  emitResult(args, output, () => {
+    process.stdout.write(`Transitions: ${output.count}\n`);
+    for (const transition of transitions) {
+      const support = transition.runtimeSupported ? 'supported' : `fallback: ${transition.fallbackId ?? 'none'}`;
+      process.stdout.write(`- ${transition.target}:${transition.id} (${support})\n`);
+    }
+  });
   return 0;
 }
 
@@ -3132,14 +3131,12 @@ async function applyPlan(args) {
       };
       await writeApplyPlanResultOut(args, output);
 
-      if (hasFlag(args, '--json')) {
-        writeJson(output);
-      } else {
+      emitResult(args, output, () => {
         process.stderr.write(`Apply plan failed at operation ${index}: ${error.message}\n`);
         if (failure.supportedCommands) {
           process.stderr.write(`Supported commands: ${failure.supportedCommands.join(', ')}\n`);
         }
-      }
+      });
       return 1;
     }
   }
@@ -3229,9 +3226,7 @@ async function applyPlan(args) {
   }
   await writeApplyPlanResultOut(args, output);
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`${validateOnly ? 'Validated' : dryRun ? 'Prepared' : status === 'written' ? 'Applied' : 'Blocked'} plan: ${planPath}\n`);
     process.stdout.write(`Operations: ${operationResults.length}\n`);
     if (output.outPath) {
@@ -3256,7 +3251,7 @@ async function applyPlan(args) {
     for (const issue of validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return validation.ok || (!validateOnly && allowInvalid) ? 0 : 1;
 }
@@ -3293,9 +3288,7 @@ async function validate(args) {
     ...report,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Validation: ${report.ok ? 'OK' : 'FAILED'}\n`);
     process.stdout.write(`Script: ${scriptPath}\n`);
     for (const issue of report.errors) {
@@ -3304,7 +3297,7 @@ async function validate(args) {
     for (const issue of report.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return report.ok ? 0 : 1;
 }
@@ -3368,9 +3361,7 @@ async function importDraft(args) {
     validation: result.validation,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Imported draft: ${draftPath}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -3393,7 +3384,7 @@ async function importDraft(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return result.validation.ok ? 0 : 1;
 }
@@ -3441,9 +3432,7 @@ async function restoreCheckpoint(args) {
     validation,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Restored checkpoint: ${checkpointPath}\n`);
     process.stdout.write(`Wrote script: ${scriptPath}\n`);
     if (writeResult.checkpointPath) {
@@ -3459,7 +3448,7 @@ async function restoreCheckpoint(args) {
     for (const issue of validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return validation.ok ? 0 : 1;
 }
@@ -3504,11 +3493,9 @@ async function draftPlan(args) {
       message: 'A required approved adaptation preview with reviewed assets and beat/choice counts is missing.',
       adaptationPreview,
     };
-    if (hasFlag(args, '--json')) {
-      writeJson(output);
-    } else {
+    emitResult(args, output, () => {
       process.stderr.write(`${output.code}: ${output.message}\n`);
-    }
+    });
     return 1;
   }
   const plan = createNovelDraftPlan(draft, {
@@ -3542,16 +3529,14 @@ async function draftPlan(args) {
     plan,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Draft plan: ${draftPath}\n`);
     process.stdout.write(`Operations: ${output.operationCount}\n`);
     process.stdout.write(`Warnings: ${output.warningCount}\n`);
     if (outPath) {
       process.stdout.write(`Wrote plan: ${outPath}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -3594,9 +3579,7 @@ async function dslPlan(args) {
     sourceMap,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Agent DSL plan: ${dslPath}\n`);
     process.stdout.write(`Operations: ${output.operationCount}\n`);
     process.stdout.write(`Warnings: ${output.warningCount}\n`);
@@ -3606,7 +3589,7 @@ async function dslPlan(args) {
     if (sourceMapPath) {
       process.stdout.write(`Wrote source map: ${sourceMapPath}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -3763,9 +3746,7 @@ async function dslCheck(args) {
     output = createDslCheckFailureOutput({ error, dslPath, project });
   }
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Agent DSL check: ${dslPath}\n`);
     process.stdout.write(`Status: ${output.ok ? 'OK' : 'FAILED'}\n`);
     process.stdout.write(`Operations: ${output.operationCount}\n`);
@@ -3782,7 +3763,7 @@ async function dslCheck(args) {
     for (const issue of output.validation?.warnings ?? []) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.ok ? 0 : 1;
 }
@@ -3841,15 +3822,13 @@ async function dslDiff(args) {
     const output = createDslCheckFailureOutput({ error, dslPath, project });
     output.command = 'dsl-diff';
     output.sourceMapPath = sourceMapPath;
-    if (hasFlag(args, '--json')) {
-      writeJson(output);
-    } else {
+    emitResult(args, output, () => {
       process.stdout.write(`Agent DSL diff: ${dslPath}\n`);
       process.stdout.write('Status: FAILED\n');
       for (const diagnostic of output.diagnostics ?? []) {
         process.stdout.write(`[${diagnostic.severity}] ${diagnostic.code} ${diagnostic.message}\n`);
       }
-    }
+    });
     return 1;
   }
 
@@ -3875,9 +3854,7 @@ async function dslDiff(args) {
     untrackedRegions: filterDslDiffStatus(diff.mappings, 'untracked'),
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Agent DSL diff: ${dslPath}\n`);
     process.stdout.write(`Source map: ${sourceMapPath}\n`);
     process.stdout.write(`Status: ${output.ok ? 'OK' : 'STALE'}\n`);
@@ -3886,7 +3863,7 @@ async function dslDiff(args) {
     process.stdout.write(`Changed: ${summary.changed}\n`);
     process.stdout.write(`Missing: ${summary.missing}\n`);
     process.stdout.write(`Untracked: ${summary.untracked}\n`);
-  }
+  });
 
   return output.ok ? 0 : 1;
 }
@@ -4129,9 +4106,7 @@ async function dslBuild(args) {
     output.command = 'dsl-build';
   }
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Agent DSL build: ${dslPath}\n`);
     process.stdout.write(`Status: ${output.status ?? (output.ok ? 'compiled' : 'failed')}\n`);
     process.stdout.write(`Operations: ${output.operationCount ?? 0}\n`);
@@ -4144,7 +4119,7 @@ async function dslBuild(args) {
     if (output.checkPath) {
       process.stdout.write(`Check: ${output.checkPath}\n`);
     }
-  }
+  });
 
   return output.ok ? 0 : 1;
 }
@@ -4215,16 +4190,16 @@ async function dslFormat(args) {
     }
   }
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else if (output.formattedSource !== undefined) {
-    process.stdout.write(output.formattedSource);
-  } else {
-    process.stdout.write(`Agent DSL format: ${dslPath}\n`);
-    process.stdout.write(`Status: ${output.ok ? 'OK' : 'FAILED'}\n`);
-    process.stdout.write(`Changed: ${output.changed ? 'yes' : 'no'}\n`);
-    process.stdout.write(`Wrote: ${output.wrote ? 'yes' : 'no'}\n`);
-  }
+  emitResult(args, output, () => {
+    if (output.formattedSource !== undefined) {
+      process.stdout.write(output.formattedSource);
+    } else {
+      process.stdout.write(`Agent DSL format: ${dslPath}\n`);
+      process.stdout.write(`Status: ${output.ok ? 'OK' : 'FAILED'}\n`);
+      process.stdout.write(`Changed: ${output.changed ? 'yes' : 'no'}\n`);
+      process.stdout.write(`Wrote: ${output.wrote ? 'yes' : 'no'}\n`);
+    }
+  });
 
   return output.ok ? 0 : 1;
 }
@@ -4271,9 +4246,7 @@ async function dslSkeleton(args) {
     lossy: skeleton.report.lossy,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Agent DSL skeleton: ${scriptPath}\n`);
     process.stdout.write(`Wrote source: ${outPath}\n`);
     if (reportPath) {
@@ -4281,7 +4254,7 @@ async function dslSkeleton(args) {
     }
     process.stdout.write(`Warnings: ${output.warningCount}\n`);
     process.stdout.write('Source map: not created\n');
-  }
+  });
 
   return 0;
 }
@@ -4305,25 +4278,22 @@ async function exportReport(args) {
     }),
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(report);
-    return report.validation.ok ? 0 : 1;
-  }
-
-  process.stdout.write(`Project: ${report.title ?? '(untitled)'}\n`);
-  process.stdout.write(`Script: ${scriptPath}\n`);
-  process.stdout.write(`Project ID: ${report.projectId ?? '(missing)'}\n`);
-  process.stdout.write(`Characters: ${report.counts.characters}\n`);
-  process.stdout.write(`Scenes: ${report.counts.scenes}\n`);
-  process.stdout.write(`Pages: ${report.counts.pages}\n`);
-  process.stdout.write(`Variables: ${report.counts.variables}\n`);
-  process.stdout.write(`Validation: ${report.validation.ok ? 'OK' : 'FAILED'}\n`);
-  for (const issue of report.validation.errors) {
-    printIssue(issue);
-  }
-  for (const issue of report.validation.warnings) {
-    printIssue(issue);
-  }
+  emitResult(args, report, () => {
+    process.stdout.write(`Project: ${report.title ?? '(untitled)'}\n`);
+    process.stdout.write(`Script: ${scriptPath}\n`);
+    process.stdout.write(`Project ID: ${report.projectId ?? '(missing)'}\n`);
+    process.stdout.write(`Characters: ${report.counts.characters}\n`);
+    process.stdout.write(`Scenes: ${report.counts.scenes}\n`);
+    process.stdout.write(`Pages: ${report.counts.pages}\n`);
+    process.stdout.write(`Variables: ${report.counts.variables}\n`);
+    process.stdout.write(`Validation: ${report.validation.ok ? 'OK' : 'FAILED'}\n`);
+    for (const issue of report.validation.errors) {
+      printIssue(issue);
+    }
+    for (const issue of report.validation.warnings) {
+      printIssue(issue);
+    }
+  });
   return report.validation.ok ? 0 : 1;
 }
 
@@ -4334,17 +4304,17 @@ async function graphReport(args) {
   });
   const output = { scriptPath, ...graph };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else if (hasFlag(args, '--mermaid')) {
-    process.stdout.write(graph.mermaid);
-  } else {
-    process.stdout.write(`Branch graph: ${graph.nodeCount} scenes, ${graph.edgeCount} links\n`);
-    process.stdout.write(`Entry: ${graph.entrySceneId ?? '(none)'}\n`);
-    process.stdout.write(`Unreachable: ${graph.unreachableSceneIds.join(', ') || '(none)'}\n`);
-    process.stdout.write(`Dead ends: ${graph.deadEndSceneIds.join(', ') || '(none)'}\n`);
-    process.stdout.write(`Closed cycles: ${graph.cyclesWithoutExit.length}\n`);
-  }
+  emitResult(args, output, () => {
+    if (hasFlag(args, '--mermaid')) {
+      process.stdout.write(graph.mermaid);
+    } else {
+      process.stdout.write(`Branch graph: ${graph.nodeCount} scenes, ${graph.edgeCount} links\n`);
+      process.stdout.write(`Entry: ${graph.entrySceneId ?? '(none)'}\n`);
+      process.stdout.write(`Unreachable: ${graph.unreachableSceneIds.join(', ') || '(none)'}\n`);
+      process.stdout.write(`Dead ends: ${graph.deadEndSceneIds.join(', ') || '(none)'}\n`);
+      process.stdout.write(`Closed cycles: ${graph.cyclesWithoutExit.length}\n`);
+    }
+  });
 
   return 0;
 }
@@ -4356,12 +4326,10 @@ async function findDeadEndsCommand(args) {
   });
   const output = { scriptPath, ...analysis };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Dead ends: ${analysis.deadEndSceneIds.join(', ') || '(none)'}\n`);
     process.stdout.write(`Closed cycles: ${analysis.cyclesWithoutExit.length}\n`);
-  }
+  });
   return 0;
 }
 
@@ -4377,14 +4345,12 @@ async function findMissingAssets(args) {
     count: analysis.missing.length,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Missing assets: ${output.count}\n`);
     for (const missing of output.missing) {
       process.stdout.write(`- ${missing.assetPath} (${missing.pathString})\n`);
     }
-  }
+  });
   return 0;
 }
 
@@ -4400,14 +4366,12 @@ async function findUnusedAssets(args) {
     count: analysis.unused.length,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Unused assets: ${output.count}\n`);
     for (const assetPath of output.unused) {
       process.stdout.write(`- ${assetPath}\n`);
     }
-  }
+  });
   return 0;
 }
 
@@ -4481,9 +4445,7 @@ async function exportReadiness(args) {
     }),
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(report);
-  } else {
+  emitResult(args, report, () => {
     process.stdout.write(`Export readiness: ${report.ready ? 'READY' : 'BLOCKED'}\n`);
     process.stdout.write(`Script: ${scriptPath}\n`);
     for (const issue of report.blockers) {
@@ -4492,7 +4454,7 @@ async function exportReadiness(args) {
     for (const issue of report.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return report.ready ? 0 : 1;
 }
@@ -4599,9 +4561,7 @@ async function exportWebCommand(args) {
     ...result,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Exported web game: ${result.outputPath}\n`);
     if (result.zipPath) {
       process.stdout.write(`ZIP: ${result.zipPath}\n`);
@@ -4609,7 +4569,7 @@ async function exportWebCommand(args) {
     if (result.warnings?.length) {
       process.stdout.write(`Warnings: ${result.warnings.length}\n`);
     }
-  }
+  });
   return result.success ? 0 : 1;
 }
 
@@ -4648,9 +4608,7 @@ async function exportDesktopCommand(args) {
     ...result,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Exported desktop game: ${result.outputPath}\n`);
     if (result.zipPath) {
       process.stdout.write(`ZIP: ${result.zipPath}\n`);
@@ -4658,7 +4616,7 @@ async function exportDesktopCommand(args) {
     if (result.warnings?.length) {
       process.stdout.write(`Warnings: ${result.warnings.length}\n`);
     }
-  }
+  });
   return result.success ? 0 : 1;
 }
 
@@ -4669,15 +4627,13 @@ async function lintLayout(args) {
     ...lintProjectLayout(script),
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(report);
-  } else {
+  emitResult(args, report, () => {
     process.stdout.write(`Layout lint: ${report.ok ? 'OK' : 'WARNINGS'}\n`);
     process.stdout.write(`Script: ${scriptPath}\n`);
     for (const issue of report.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return 0;
 }
@@ -4714,15 +4670,13 @@ async function renderPreview(args) {
       ...result,
     };
 
-    if (hasFlag(args, '--json')) {
-      writeJson(output);
-    } else {
+    emitResult(args, output, () => {
       process.stdout.write(`${dryRun ? 'Prepared' : 'Rendered'} preview: ${output.outPath}\n`);
       process.stdout.write(`Scene: ${output.sceneId}, page: ${output.pageIndex}\n`);
       if (output.planPath) {
         process.stdout.write(`Plan: ${output.planPath}\n`);
       }
-    }
+    });
 
     return 0;
   } catch (error) {
@@ -4735,12 +4689,10 @@ async function renderPreview(args) {
         installHint: 'Install Playwright in this workspace to enable screenshot rendering.',
       };
 
-      if (hasFlag(args, '--json')) {
-        writeJson(output);
-      } else {
+      emitResult(args, output, () => {
         process.stderr.write(`${output.code}: ${output.message}\n`);
         process.stderr.write(`${output.installHint}\n`);
-      }
+      });
       return 1;
     }
 
@@ -4753,12 +4705,10 @@ async function renderPreview(args) {
         installHint: 'Run "npx playwright install chromium" to download the preview browser.',
       };
 
-      if (hasFlag(args, '--json')) {
-        writeJson(output);
-      } else {
+      emitResult(args, output, () => {
         process.stderr.write(`${output.code}: ${output.message}\n`);
         process.stderr.write(`${output.installHint}\n`);
-      }
+      });
       return 1;
     }
 
@@ -4771,14 +4721,12 @@ async function renderPreview(args) {
         quality: error.quality,
       };
 
-      if (hasFlag(args, '--json')) {
-        writeJson(output);
-      } else {
+      emitResult(args, output, () => {
         process.stderr.write(`${output.code}: ${output.message}\n`);
         for (const issue of output.quality?.warnings ?? []) {
           process.stderr.write(`[warning] ${issue.code} ${issue.message}\n`);
         }
-      }
+      });
       return 1;
     }
 
@@ -5064,16 +5012,14 @@ async function reviewHandoff(args) {
     output.outPath = outPath;
   }
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Review and handoff: ${output.ok ? 'OK' : 'NEEDS ATTENTION'}\n`);
     process.stdout.write(`Author check: ${output.gates.authorCheck ? 'OK' : 'FAILED'}\n`);
     process.stdout.write(`Handoff: ${output.gates.handoff ? 'OK' : 'FAILED'}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote review report: ${output.outPath}\n`);
     }
-  }
+  });
 
   return output.ok ? 0 : 1;
 }
@@ -5090,11 +5036,9 @@ async function addScene(args) {
     next: getArgValue(args, '--next', null),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added scene', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5110,11 +5054,9 @@ async function setSceneNext(args) {
     next: getArgValue(args, '--next', null),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set scene next', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5136,14 +5078,12 @@ async function sceneReferences(args) {
       referenceCount: scenes.reduce((count, scene) => count + scene.referenceCount, 0),
     };
 
-    if (hasFlag(args, '--json')) {
-      writeJson(output);
-    } else {
+    emitResult(args, output, () => {
       process.stdout.write('Scene references:\n');
       for (const scene of scenes) {
         process.stdout.write(`- ${scene.sceneId}: ${scene.referenceCount}\n`);
       }
-    }
+    });
     return 0;
   }
 
@@ -5181,15 +5121,13 @@ async function sceneReferences(args) {
       : [],
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Scene references: ${sceneId}\n`);
     process.stdout.write(`References: ${references.length}\n`);
     for (const reference of references) {
       process.stdout.write(`- ${reference.kind} ${reference.pathString}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -5206,15 +5144,13 @@ async function retargetScene(args) {
     toSceneId,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Retargeted scene references: ${fromSceneId}->${toSceneId}\n`);
     printMutationResult('Updated references', {
       ...output,
       result: { updatedReferenceCount: output.result.updatedReferenceCount },
     });
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5232,15 +5168,13 @@ async function repairSceneTarget(args) {
     allowMissingSource: true,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Repaired scene targets: ${fromSceneId}->${toSceneId}\n`);
     printMutationResult('Updated references', {
       ...output,
       result: { updatedReferenceCount: output.result.updatedReferenceCount },
     });
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5256,15 +5190,13 @@ async function clearSceneReferencesCommand(args) {
     allowMissingTarget: true,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Cleared scene references: ${sceneId}\n`);
     printMutationResult('Cleared references', {
       ...output,
       result: { clearedReferenceCount: output.result.clearedReferenceCount },
     });
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5282,15 +5214,13 @@ async function renameScene(args) {
     name: getOptionalArgValue(args, '--name'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Renamed scene: ${output.result.sceneId}->${output.result.newSceneId}\n`);
     printMutationResult('Updated references', {
       ...output,
       result: { updatedReferenceCount: output.result.updatedReferenceCount },
     });
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5306,11 +5236,9 @@ async function deleteScene(args) {
     forceReferences: hasFlag(args, '--force-references'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Deleted scene', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5328,11 +5256,9 @@ async function addCharacter(args) {
     expressions: parseExpressions(args),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added character', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5359,11 +5285,9 @@ async function addVariable(args) {
     step: parseOptionalScalarValue(getArgValue(args, '--step', undefined)),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added variable', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5392,11 +5316,9 @@ async function updateVariable(args) {
     patch,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Updated variable', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5413,11 +5335,9 @@ async function renameVariable(args) {
     newVariableId,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Renamed variable', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5433,11 +5353,9 @@ async function deleteVariable(args) {
     forceReferences: hasFlag(args, '--force-references'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Deleted variable', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5460,11 +5378,9 @@ async function addAffectionVariable(args) {
     step: parseOptionalScalarValue(getArgValue(args, '--step', undefined)),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added affection variable', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5494,14 +5410,12 @@ async function listEndings(args) {
     endings,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Endings: ${endings.length}\n`);
     for (const ending of endings) {
       process.stdout.write(`- ${ending.endingId}: ${ending.title}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -5526,11 +5440,9 @@ async function addEnding(args) {
       : parseScalarValue(hiddenUntilUnlocked),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added ending', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5547,11 +5459,9 @@ async function updateEnding(args) {
     patch,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Updated ending', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5573,11 +5483,9 @@ async function setEndingVideo(args) {
     endingVideo,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set ending video', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5593,11 +5501,9 @@ async function removeEnding(args) {
     forceReferences: hasFlag(args, '--force-references'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Removed ending', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5627,11 +5533,9 @@ async function addEndingUnlock(args) {
     endingId,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added ending unlock', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5658,14 +5562,12 @@ async function listCgs(args) {
     cgs,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`CGs: ${cgs.length}\n`);
     for (const cg of cgs) {
       process.stdout.write(`- ${cg.cgId}: ${cg.title}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -5682,11 +5584,9 @@ async function addCg(args) {
     ...getCgPatchFromArgs(args),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added CG', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5703,11 +5603,9 @@ async function updateCg(args) {
     patch,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Updated CG', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5723,11 +5621,9 @@ async function removeCg(args) {
     forceReferences: hasFlag(args, '--force-references'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Removed CG', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5760,11 +5656,9 @@ async function addCgUnlock(args) {
     cgId,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added CG unlock', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5802,14 +5696,12 @@ async function listVideos(args) {
     videos,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Videos: ${videos.length}\n`);
     for (const video of videos) {
       process.stdout.write(`- ${video.videoId}: ${video.label ?? video.file ?? ''}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -5825,11 +5717,9 @@ async function addVideo(args) {
     ...getVideoPatchFromArgs(args, { requireFile: true }),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Added video', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5846,11 +5736,9 @@ async function updateVideo(args) {
     patch,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Updated video', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5866,11 +5754,9 @@ async function removeVideo(args) {
     forceReferences: hasFlag(args, '--force-references'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Removed video', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -5978,9 +5864,7 @@ async function addPage(args) {
     return session.addNormalPage({ sceneId, page });
   });
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Added ${type} page: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -5992,7 +5876,7 @@ async function addPage(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6004,15 +5888,13 @@ async function removePage(args) {
     pageIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Removed page: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     printMutationResult('Removed page type', {
       ...output,
       result: { removedPageType: output.result.removedPageType },
     });
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6035,15 +5917,13 @@ async function movePage(args) {
     toIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Moved page: ${output.result.sceneId}#${output.result.fromIndex}->${output.result.toIndex}\n`);
     printMutationResult('Moved page', {
       ...output,
       result: { sceneId: output.result.sceneId },
     });
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6070,9 +5950,7 @@ async function addDialogue(args) {
     }),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Added dialogue: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.dialogueIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6084,7 +5962,7 @@ async function addDialogue(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6125,9 +6003,7 @@ async function setDialogue(args) {
     dialogue,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set dialogue: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.dialogueIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6139,7 +6015,7 @@ async function setDialogue(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6171,9 +6047,7 @@ async function removeDialogue(args) {
     dialogueIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Removed dialogue: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.dialogueIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6185,7 +6059,7 @@ async function removeDialogue(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6205,9 +6079,7 @@ async function moveDialogue(args) {
     toIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Moved dialogue: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.fromIndex}->${output.result.toIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6219,7 +6091,7 @@ async function moveDialogue(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6247,9 +6119,7 @@ async function addChoiceOption(args) {
     option,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Added choice option: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.optionIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6261,7 +6131,7 @@ async function addChoiceOption(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6295,9 +6165,7 @@ async function setChoiceOption(args) {
     option,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set choice option: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.optionIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6309,7 +6177,7 @@ async function setChoiceOption(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6324,9 +6192,7 @@ async function setChoicePage(args) {
     options,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set choice page: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6338,7 +6204,7 @@ async function setChoicePage(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6367,9 +6233,7 @@ async function setConditionPage(args) {
     condition,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set condition page: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6381,7 +6245,7 @@ async function setConditionPage(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6399,9 +6263,7 @@ async function removeChoiceOption(args) {
     optionIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Removed choice option: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.optionIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6413,7 +6275,7 @@ async function removeChoiceOption(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6433,9 +6295,7 @@ async function moveChoiceOption(args) {
     toIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Moved choice option: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.fromIndex}->${output.result.toIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6447,7 +6307,7 @@ async function moveChoiceOption(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6469,11 +6329,9 @@ async function setPageBackground(args) {
     background: getArgValue(args, '--background', ''),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set page background', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6507,11 +6365,9 @@ async function setPageCharacters(args) {
     characters,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set page characters', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6536,9 +6392,7 @@ async function setPageAudio(args) {
     se,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set page audio: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6550,7 +6404,7 @@ async function setPageAudio(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6566,9 +6420,7 @@ async function setPageMedia(args) {
     se,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set page media: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6580,7 +6432,7 @@ async function setPageMedia(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6611,9 +6463,7 @@ async function setPageCamera(args) {
     camera,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set page camera: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6625,7 +6475,7 @@ async function setPageCamera(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6666,9 +6516,7 @@ async function setPageTransition(args) {
     transition,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set page transition: ${output.result.sceneId}#${output.result.pageIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6680,7 +6528,7 @@ async function setPageTransition(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6695,14 +6543,12 @@ async function listParticles(args) {
     fields: PARTICLE_FIELD_SCHEMA,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Particle presets: ${presets.length}\n`);
     for (const preset of presets) {
       process.stdout.write(`- ${preset.id}: ${preset.label}\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -6718,14 +6564,12 @@ async function listEffectPacksCommand(args) {
     effectPacks,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Effect packs: ${effectPacks.length}\n`);
     for (const effectPack of effectPacks) {
       process.stdout.write(`- ${effectPack.id}: ${effectPack.label} (${effectPack.adapter})\n`);
     }
-  }
+  });
 
   return 0;
 }
@@ -6740,11 +6584,9 @@ async function registerEffectPack(args) {
     manifest,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Registered effect pack', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6759,11 +6601,9 @@ async function setPageEffectPack(args) {
     enabled: !hasFlag(args, '--disabled'),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set page effect pack', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6775,11 +6615,9 @@ async function clearPageEffectPacks(args) {
     pageIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Cleared page effect packs', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6792,15 +6630,13 @@ async function listUiStylePresetsCommand(args) {
     presets,
   };
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`UI style presets: ${presets.length}\n`);
     for (const preset of presets) {
       process.stdout.write(`- ${preset.id}: ${preset.label} (${preset.category})\n`);
     }
     process.stdout.write(`Scopes: ${UI_STYLE_PRESET_SCOPES.join(', ')}\n`);
-  }
+  });
 
   return 0;
 }
@@ -6809,11 +6645,9 @@ async function applyUiStylePreset(args) {
   const patch = parseUiStylePresetArgs(args);
   const output = await mutateScript(args, (session) => session.applyUiStylePreset(patch));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult(`Applied UI style preset ${output.result.presetId}`, output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6827,11 +6661,9 @@ async function setPageParticles(args) {
     particles,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set page particles', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6843,11 +6675,9 @@ async function clearPageParticles(args) {
     pageIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Cleared page particles', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6859,11 +6689,9 @@ async function inheritPageParticles(args) {
     pageIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Inherited page particles', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6899,9 +6727,7 @@ async function setPageTransitions(args) {
     transition,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set page transitions: ${output.result.sceneId} (${output.result.matchedPageIndexes.length} pages)\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6913,7 +6739,7 @@ async function setPageTransitions(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6941,9 +6767,7 @@ async function setCharacterAnimation(args) {
     animation: getArgValue(args, '--animation', getArgValue(args, '--transition', 'none')),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set character animation: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.characterId}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6955,7 +6779,7 @@ async function setCharacterAnimation(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6964,9 +6788,7 @@ async function setTitleScreen(args) {
   const titleScreenPatch = await parseTitleScreenArgs(args);
   const output = await mutateScript(args, (session) => session.setTitleScreen(titleScreenPatch));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set title screen: ${output.result.elementCount} elements\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -6978,7 +6800,7 @@ async function setTitleScreen(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -6995,11 +6817,9 @@ async function setOpeningVideo(args) {
     openingVideo,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set opening video', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7009,9 +6829,7 @@ async function addTitleElement(args) {
     element: parseTitleElementArgs(args),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Added title element: ${output.result.elementId ?? output.result.elementIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -7023,7 +6841,7 @@ async function addTitleElement(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7036,9 +6854,7 @@ async function updateTitleElement(args) {
     patch,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Updated title element: ${output.result.elementId ?? output.result.elementIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -7050,7 +6866,7 @@ async function updateTitleElement(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7061,9 +6877,7 @@ async function removeTitleElement(args) {
     index: getIntArg(args, '--index', getIntArg(args, '--element-index', null)),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Removed title element: ${output.result.elementId ?? output.result.elementIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -7075,7 +6889,7 @@ async function removeTitleElement(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7084,9 +6898,7 @@ async function setScreenLayout(args) {
   const screenLayoutPatch = await parseScreenLayoutArgs(args);
   const output = await mutateScript(args, (session) => session.setScreenLayout(screenLayoutPatch));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set screen layout: ${output.result.screenId}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -7098,7 +6910,7 @@ async function setScreenLayout(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7107,9 +6919,7 @@ async function setSharedUiConfig(args, command, label, mutator) {
   const patch = await parseSharedUiConfigArgs(args, command);
   const output = await mutateScript(args, (session) => mutator(session, patch));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Set ${label}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -7121,7 +6931,7 @@ async function setSharedUiConfig(args, command, label, mutator) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7130,11 +6940,9 @@ async function setUiMotion(args) {
   const patch = await parseUiMotionArgs(args);
   const output = await mutateScript(args, (session) => session.setUiMotion(patch));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set UI motion', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7166,9 +6974,7 @@ async function addChoiceEffect(args) {
     }),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     process.stdout.write(`Added choice effect: ${output.result.sceneId}#${output.result.pageIndex}.${output.result.optionIndex}.${output.result.effectIndex}\n`);
     if (output.outPath) {
       process.stdout.write(`Wrote script: ${output.outPath}\n`);
@@ -7180,7 +6986,7 @@ async function addChoiceEffect(args) {
     for (const issue of output.validation.warnings) {
       printIssue(issue);
     }
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7218,11 +7024,9 @@ async function setChoiceEffect(args) {
     })),
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Set choice effect', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7255,11 +7059,9 @@ async function removeChoiceEffect(args) {
     effectIndex,
   }));
 
-  if (hasFlag(args, '--json')) {
-    writeJson(output);
-  } else {
+  emitResult(args, output, () => {
     printMutationResult('Removed choice effect', output);
-  }
+  });
 
   return output.validation.ok ? 0 : 1;
 }
@@ -7728,40 +7530,39 @@ async function main() {
     process.exitCode = command ? 1 : 0;
   } catch (error) {
     if (error instanceof AgentDslDiagnosticError || Array.isArray(error?.diagnostics)) {
-      if (hasFlag(args, '--json')) {
-        writeJson({
-          success: false,
-          ok: false,
-          error: error.message,
-          diagnostics: error.diagnostics,
-        });
-      } else {
+      const output = {
+        success: false,
+        ok: false,
+        error: error.message,
+        diagnostics: error.diagnostics,
+      };
+      emitResult(args, output, () => {
         process.stderr.write(`${error.message}\n`);
         for (const diagnostic of error.diagnostics ?? []) {
           process.stderr.write(`${diagnostic.code}: ${diagnostic.message}\n`);
         }
-      }
+      });
       process.exitCode = 1;
       return;
     }
-    if (hasFlag(args, '--json') && error?.readiness) {
-      writeJson({
+    if (error?.readiness) {
+      const output = {
         success: false,
         error: error.message,
         readiness: error.readiness,
+      };
+      emitResult(args, output, () => {
+        process.stderr.write(`${error.stack || error.message}\n`);
       });
       process.exitCode = 1;
       return;
     }
-    if (hasFlag(args, '--json')) {
-      writeJson({
+    emitResult(args, {
         success: false,
         error: error.message,
-      });
-      process.exitCode = 1;
-      return;
-    }
-    process.stderr.write(`${error.stack || error.message}\n`);
+    }, () => {
+      process.stderr.write(`${error.stack || error.message}\n`);
+    });
     process.exitCode = 1;
   }
 }

@@ -184,6 +184,48 @@ describe('vn-author CLI', () => {
       .rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('vn-author commands:') });
   });
 
+  it('keeps JSON and text output parity across mutation, catalog, and DSL command families', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const dslPath = path.join(dir, 'format.gmdsl');
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_output_parity',
+        characters: {},
+        scenes: {},
+      }), 'utf8');
+      await writeFile(dslPath, 'title   "Output Parity"\nscene start "Start":\n    say "Hello."\n', 'utf8');
+
+      const mutationArgs = [cliPath, 'add-scene', '--script', scriptPath, '--id', 'start', '--dry-run'];
+      const mutationJson = await execFileAsync(process.execPath, [...mutationArgs, '--json']);
+      const mutationText = await execFileAsync(process.execPath, mutationArgs);
+      expect(JSON.parse(mutationJson.stdout)).toMatchObject({
+        dryRun: true,
+        result: { sceneId: 'start' },
+      });
+      expect(mutationJson.stderr).toBe('');
+      expect(mutationText).toMatchObject({
+        stderr: '',
+        stdout: expect.stringContaining('Added scene:'),
+      });
+
+      const catalogJson = await execFileAsync(process.execPath, [cliPath, 'list-transitions', '--json']);
+      const catalogText = await execFileAsync(process.execPath, [cliPath, 'list-transitions']);
+      expect(JSON.parse(catalogJson.stdout)).toMatchObject({ count: expect.any(Number) });
+      expect(catalogText).toMatchObject({
+        stderr: '',
+        stdout: expect.stringContaining('Transitions:'),
+      });
+
+      const dslJson = await execFileAsync(process.execPath, [cliPath, 'dsl-format', dslPath, '--json']);
+      const dslText = await execFileAsync(process.execPath, [cliPath, 'dsl-format', dslPath]);
+      expect(JSON.parse(dslJson.stdout)).toMatchObject({ ok: true, formattedSource: expect.any(String) });
+      expect(dslText).toMatchObject({
+        stderr: '',
+        stdout: expect.stringContaining('title "Output Parity"'),
+      });
+    });
+  });
+
   it('accepts preview screenshots with visible color variety', () => {
     const png = createPng({
       width: 8,

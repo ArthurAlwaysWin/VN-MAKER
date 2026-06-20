@@ -1387,76 +1387,593 @@ function normalizePlanCommand(command) {
   return String(command ?? '').trim();
 }
 
-const SUPPORTED_APPLY_PLAN_COMMANDS = [
-  'add-scene',
-  'rename-scene',
-  'delete-scene',
-  'set-scene-next',
-  'retarget-scene',
-  'repair-scene-target',
-  'clear-scene-references',
-  'add-character',
-  'add-variable',
-  'update-variable',
-  'rename-variable',
-  'delete-variable',
-  'add-affection-variable',
-  'add-ending',
-  'update-ending',
-  'remove-ending',
-  'add-ending-unlock',
-  'add-cg',
-  'update-cg',
-  'remove-cg',
-  'add-cg-unlock',
-  'add-video',
-  'update-video',
-  'remove-video',
-  'add-page',
-  'remove-page',
-  'move-page',
-  'add-dialogue',
-  'set-dialogue',
-  'remove-dialogue',
-  'move-dialogue',
-  'add-choice-option',
-  'set-choice-page',
-  'set-choice-option',
-  'remove-choice-option',
-  'move-choice-option',
-  'set-condition-page',
-  'set-page-background',
-  'set-page-characters',
-  'set-page-audio',
-  'set-page-media',
-  'set-page-camera',
-  'set-camera-effect',
-  'set-page-transition',
-  'set-page-transitions',
-  'register-effect-pack',
-  'set-page-effect-pack',
-  'clear-page-effect-packs',
-  'set-page-particles',
-  'clear-page-particles',
-  'inherit-page-particles',
-  'set-character-animation',
-  'set-character-transition',
-  'set-opening-video',
-  'set-ending-video',
-  'set-title-screen',
-  'add-title-element',
-  'update-title-element',
-  'remove-title-element',
-  'set-screen-layout',
-  'set-dialogue-box',
-  'set-theme',
-  'set-widget-styles',
-  'set-ui-motion',
-  'apply-ui-style-preset',
-  'add-choice-effect',
-  'set-choice-effect',
-  'remove-choice-effect',
-];
+const APPLY_PLAN_OPERATION_HANDLERS = new Map([
+  // scene
+  ['add-scene', (session, params, command) => {
+    const id = requireParam(params, command, 'id', 'sceneId', 'scene');
+    return session.addScene({
+      id,
+      name: getParam(params, 'name') ?? id,
+      next: getParam(params, 'next') ?? null,
+    });
+  }],
+  ['rename-scene', (session, params, command) => {
+    return session.renameScene({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      newSceneId: requireParam(params, command, 'newSceneId', 'newId', 'new-id', 'to'),
+      name: getParam(params, 'name'),
+    });
+  }],
+  ['delete-scene', (session, params, command) => {
+    return session.deleteScene({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }],
+  ['set-scene-next', (session, params, command) => {
+    return session.setSceneNext({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      next: getParam(params, 'next') ?? null,
+    });
+  }],
+  ['retarget-scene', (session, params, command) => {
+    return session.retargetSceneReferences({
+      fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
+      toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
+    });
+  }],
+  ['repair-scene-target', (session, params, command) => {
+    return session.retargetSceneReferences({
+      fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
+      toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
+      allowMissingSource: true,
+    });
+  }],
+  ['clear-scene-references', (session, params, command) => {
+    return session.clearSceneReferences({
+      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
+      allowMissingTarget: true,
+    });
+  }],
+  // character and variable
+  ['add-character', (session, params, command) => {
+    const id = requireParam(params, command, 'id', 'characterId', 'character');
+    return session.addCharacter({
+      id,
+      name: getParam(params, 'name') ?? id,
+      color: getParam(params, 'color') ?? '#ffffff',
+      expressions: getParam(params, 'expressions') ?? {},
+    });
+  }],
+  ['add-variable', (session, params, command) => {
+    const id = requireParam(params, command, 'id', 'variableId', 'variable');
+    const type = getParam(params, 'type') ?? 'number';
+    return session.addVariable({
+      id,
+      type,
+      initial: getParam(params, 'initial') ?? (type === 'bool' ? false : 0),
+      label: getParam(params, 'label', 'name') ?? id,
+      group: getParam(params, 'group'),
+      notes: getParam(params, 'notes'),
+      kind: getParam(params, 'kind'),
+      characterId: getParam(params, 'characterId', 'character'),
+      min: getParam(params, 'min'),
+      max: getParam(params, 'max'),
+      step: getParam(params, 'step'),
+    });
+  }],
+  ['update-variable', (session, params, command) => {
+    return session.updateVariable({
+      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
+      patch: getParam(params, 'patch') ?? dropUndefinedFields({
+        type: getParam(params, 'type'),
+        initial: getParam(params, 'initial'),
+        label: getParam(params, 'label', 'name'),
+        group: getParam(params, 'group'),
+        notes: getParam(params, 'notes'),
+        kind: getParam(params, 'kind'),
+        characterId: getParam(params, 'characterId', 'character'),
+        min: getParam(params, 'min'),
+        max: getParam(params, 'max'),
+        step: getParam(params, 'step'),
+      }),
+    });
+  }],
+  ['rename-variable', (session, params, command) => {
+    return session.renameVariable({
+      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
+      newVariableId: requireParam(params, command, 'newVariableId', 'newId', 'new-id', 'to'),
+    });
+  }],
+  ['delete-variable', (session, params, command) => {
+    return session.deleteVariable({
+      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }],
+  ['add-affection-variable', (session, params, command) => {
+    return session.addAffectionVariable({
+      characterId: requireParam(params, command, 'characterId', 'character'),
+      id: getParam(params, 'id', 'variableId', 'variable'),
+      initial: getParam(params, 'initial'),
+      label: getParam(params, 'label', 'name'),
+      group: getParam(params, 'group'),
+      notes: getParam(params, 'notes'),
+      min: getParam(params, 'min'),
+      max: getParam(params, 'max'),
+      step: getParam(params, 'step'),
+    });
+  }],
+  // ending, CG, and video
+  ['add-ending', (session, params, command) => {
+    const id = requireParam(params, command, 'id', 'endingId', 'ending');
+    return session.addEnding({
+      id,
+      title: getParam(params, 'title', 'name') ?? id,
+      category: getParam(params, 'category'),
+      order: getParam(params, 'order'),
+      description: getParam(params, 'description'),
+      thumbnail: getParam(params, 'thumbnail'),
+      hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
+      endingVideo: getParam(params, 'endingVideo', 'ending-video'),
+    });
+  }],
+  ['update-ending', (session, params, command) => {
+    return session.updateEnding({
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+      patch: getParam(params, 'patch') ?? dropUndefinedFields({
+        title: getParam(params, 'title', 'name'),
+        category: getParam(params, 'category'),
+        order: getParam(params, 'order'),
+        description: getParam(params, 'description'),
+        thumbnail: getParam(params, 'thumbnail'),
+        hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
+        endingVideo: getParam(params, 'endingVideo', 'ending-video'),
+      }),
+    });
+  }],
+  ['remove-ending', (session, params, command) => {
+    return session.removeEnding({
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }],
+  ['add-ending-unlock', (session, params, command) => {
+    return session.addEndingUnlock({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: getParam(params, 'optionIndex', 'option'),
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+    });
+  }],
+  ['add-cg', (session, params, command) => {
+    const id = requireParam(params, command, 'id', 'cgId', 'cg');
+    return session.addCg({
+      id,
+      title: getParam(params, 'title', 'name') ?? id,
+      images: getParam(params, 'images'),
+      thumbnail: getParam(params, 'thumbnail'),
+      lockedThumbnail: getParam(params, 'lockedThumbnail', 'locked-thumbnail'),
+      category: getParam(params, 'category'),
+      order: getParam(params, 'order'),
+      description: getParam(params, 'description'),
+    });
+  }],
+  ['update-cg', (session, params, command) => {
+    return session.updateCg({
+      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
+      patch: getParam(params, 'patch') ?? dropUndefinedFields({
+        title: getParam(params, 'title', 'name'),
+        images: getParam(params, 'images'),
+        thumbnail: getParam(params, 'thumbnail'),
+        lockedThumbnail: getParam(params, 'lockedThumbnail', 'locked-thumbnail'),
+        category: getParam(params, 'category'),
+        order: getParam(params, 'order'),
+        description: getParam(params, 'description'),
+      }),
+    });
+  }],
+  ['remove-cg', (session, params, command) => {
+    return session.removeCg({
+      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }],
+  ['add-cg-unlock', (session, params, command) => {
+    return session.addCgUnlock({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: Number(requireParam(params, command, 'pageIndex', 'page')),
+      optionIndex: Number(requireParam(params, command, 'optionIndex', 'option')),
+      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
+    });
+  }],
+  ['add-video', (session, params, command) => {
+    const id = requireParam(params, command, 'id', 'videoId', 'video');
+    return session.addVideo({
+      id,
+      ...buildVideoEntry(command, params, { requireFile: true }),
+    });
+  }],
+  ['update-video', (session, params, command) => {
+    return session.updateVideo({
+      videoId: requireParam(params, command, 'videoId', 'id', 'video'),
+      patch: getParam(params, 'patch') ?? buildVideoEntry(command, params),
+    });
+  }],
+  ['remove-video', (session, params, command) => {
+    return session.removeVideo({
+      videoId: requireParam(params, command, 'videoId', 'id', 'video'),
+      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
+    });
+  }],
+  // page, dialogue, and choice
+  ['add-page', (session, params, command) => {
+    const sceneId = requireParam(params, command, 'sceneId', 'scene');
+    const { type, page } = buildPlanPage(command, params);
+    if (type === 'choice') {
+      return session.addChoicePage({ sceneId, page });
+    }
+    if (type === 'condition') {
+      return session.addConditionPage({ sceneId, page });
+    }
+    if (type === 'input') {
+      return session.addInputPage({ sceneId, page });
+    }
+    if (type === 'video') {
+      return session.addVideoPage({ sceneId, page });
+    }
+    return session.addNormalPage({ sceneId, page });
+  }],
+  ['remove-page', (session, params, command) => {
+    return session.removePage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }],
+  ['move-page', (session, params, command) => {
+    return session.movePage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
+      toIndex: requireParam(params, command, 'toIndex', 'to'),
+    });
+  }],
+  ['add-dialogue', (session, params, command) => {
+    return session.addDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      dialogue: getParam(params, 'dialogue') ?? {
+        speaker: getParam(params, 'speaker') ?? null,
+        text: getParam(params, 'text') ?? '',
+        expression: getParam(params, 'expression') ?? null,
+        voice: getParam(params, 'voice') ?? null,
+      },
+    });
+  }],
+  ['set-dialogue', (session, params, command) => {
+    return session.setDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      dialogueIndex: requireParam(params, command, 'dialogueIndex', 'dialogue'),
+      dialogue: dropUndefinedFields(getParam(params, 'dialogue') ?? {
+        speaker: getParam(params, 'speaker'),
+        text: getParam(params, 'text'),
+        expression: getParam(params, 'expression'),
+        voice: getParam(params, 'voice'),
+      }),
+    });
+  }],
+  ['remove-dialogue', (session, params, command) => {
+    return session.removeDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      dialogueIndex: requireParam(params, command, 'dialogueIndex', 'dialogue'),
+    });
+  }],
+  ['move-dialogue', (session, params, command) => {
+    return session.moveDialogue({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
+      toIndex: requireParam(params, command, 'toIndex', 'to'),
+    });
+  }],
+  ['add-choice-option', (session, params, command) => {
+    return session.addChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      option: getParam(params, 'option') ?? {
+        text: getParam(params, 'text') ?? '',
+        target: getParam(params, 'target') ?? null,
+        effects: getParam(params, 'effects') ?? [],
+      },
+    });
+  }],
+  ['set-choice-page', (session, params, command) => {
+    return session.setChoicePage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      prompt: getParam(params, 'prompt'),
+      options: getParam(params, 'options'),
+    });
+  }],
+  ['set-choice-option', (session, params, command) => {
+    return session.setChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      option: getParam(params, 'option') ?? dropUndefinedFields({
+        text: getParam(params, 'text'),
+        target: getParam(params, 'clearTarget', 'clear-target') ? null : getParam(params, 'target'),
+        effects: getParam(params, 'effects'),
+      }),
+    });
+  }],
+  ['remove-choice-option', (session, params, command) => {
+    return session.removeChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+    });
+  }],
+  ['move-choice-option', (session, params, command) => {
+    return session.moveChoiceOption({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
+      toIndex: requireParam(params, command, 'toIndex', 'to'),
+    });
+  }],
+  ['set-condition-page', (session, params, command) => {
+    return session.setConditionPage({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      condition: getParam(params, 'condition') ?? dropUndefinedFields({
+        conditionMode: getParam(params, 'conditionMode', 'condition-mode'),
+        conditions: getParam(params, 'conditions'),
+        trueTarget: getParam(params, 'clearTrueTarget', 'clear-true-target') ? null : getParam(params, 'trueTarget', 'true-target'),
+        falseTarget: getParam(params, 'clearFalseTarget', 'clear-false-target') ? null : getParam(params, 'falseTarget', 'false-target'),
+      }),
+    });
+  }],
+  // cinematic and effect
+  ['set-page-background', (session, params, command) => {
+    return session.setPageBackground({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      background: getParam(params, 'background') ?? '',
+    });
+  }],
+  ['set-page-characters', (session, params, command) => {
+    return session.setPageCharacters({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      characters: getParam(params, 'characters') ?? [],
+    });
+  }],
+  ['set-page-audio', (session, params, command) => {
+    return session.setPageAudio({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      bgm: getParam(params, 'bgm'),
+      se: getParam(params, 'se'),
+    });
+  }],
+  ['set-page-media', (session, params, command) => {
+    return session.setPageMedia({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      background: getParam(params, 'clearBackground', 'clear-background') ? '' : getParam(params, 'background'),
+      bgm: getParam(params, 'bgm'),
+      se: getParam(params, 'se'),
+    });
+  }],
+  ['set-page-camera', (session, params, command) => {
+    const effect = getParam(params, 'effect');
+    return session.setPageCamera({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      camera: getParam(params, 'clearCamera', 'clear-camera')
+        ? null
+        : getParam(params, 'camera') ?? (effect !== undefined ? {
+          effect,
+          direction: getParam(params, 'direction'),
+          intensity: getParam(params, 'intensity') ?? 'medium',
+          durationMs: getParam(params, 'durationMs', 'duration-ms') ?? 800,
+        } : null),
+    });
+  }],
+  ['set-camera-effect', (session, params, command) => {
+    return session.setPageCamera({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      camera: getParam(params, 'clearCamera', 'clear-camera')
+        ? null
+        : getParam(params, 'camera') ?? {
+          effect: requireParam(params, command, 'effect', 'id'),
+          direction: getParam(params, 'direction'),
+          intensity: getParam(params, 'intensity') ?? 'medium',
+          durationMs: getParam(params, 'durationMs', 'duration-ms') ?? 800,
+        },
+    });
+  }],
+  ['set-page-transition', (session, params, command) => {
+    const type = getParam(params, 'type');
+    const duration = getParam(params, 'duration');
+    return session.setPageTransition({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      transition: getParam(params, 'clearTransition', 'clear-transition')
+        ? null
+        : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
+          type: type ?? 'fade',
+          duration: duration ?? 800,
+        } : null),
+    });
+  }],
+  ['set-page-transitions', (session, params, command) => {
+    const type = getParam(params, 'type');
+    const duration = getParam(params, 'duration');
+    const predicate = getParam(params, 'predicate') ?? {};
+    return session.setPageTransitions({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      fromPageIndex: getParam(params, 'fromPageIndex', 'fromPage', 'from-page'),
+      toPageIndex: getParam(params, 'toPageIndex', 'toPage', 'to-page'),
+      pageType: getParam(params, 'pageType', 'page-type') ?? predicate.pageType,
+      hasBackground: getParam(params, 'hasBackground', 'has-background') ?? predicate.hasBackground,
+      transition: getParam(params, 'clearTransition', 'clear-transition')
+        ? null
+        : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
+          type: type ?? 'fade',
+          duration: duration ?? 800,
+        } : null),
+    });
+  }],
+  ['register-effect-pack', (session, params, command) => {
+    return session.registerEffectPack({
+      manifest: requireParam(params, command, 'manifest'),
+    });
+  }],
+  ['set-page-effect-pack', (session, params, command) => {
+    return session.setPageEffectPack({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      effectPackId: requireParam(params, command, 'effectPackId', 'effectPack', 'id'),
+      params: getParam(params, 'params') ?? {},
+      enabled: getParam(params, 'enabled') ?? true,
+    });
+  }],
+  ['clear-page-effect-packs', (session, params, command) => {
+    return session.clearPageEffectPacks({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }],
+  ['set-page-particles', (session, params, command) => {
+    return session.setPageParticles({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      particles: buildParticleConfigFromPlanParams(command, params),
+    });
+  }],
+  ['clear-page-particles', (session, params, command) => {
+    return session.clearPageParticles({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }],
+  ['inherit-page-particles', (session, params, command) => {
+    return session.inheritPageParticles({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+    });
+  }],
+  ['set-character-animation', (session, params, command) => {
+    return session.setCharacterAnimation({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      characterId: requireParam(params, command, 'characterId', 'character'),
+      animation: getParam(params, 'animation') ?? 'none',
+    });
+  }],
+  ['set-character-transition', (session, params, command) => {
+    return session.setCharacterAnimation({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      characterId: requireParam(params, command, 'characterId', 'character'),
+      animation: getParam(params, 'transition', 'animation', 'id') ?? 'none',
+    });
+  }],
+  // opening, ending, and UI/theme
+  ['set-opening-video', (session, params, command) => {
+    return session.setOpeningVideo({
+      openingVideo: getParam(params, 'clear', 'clearOpeningVideo', 'clear-opening-video')
+        ? null
+        : requireParam(params, command, 'openingVideo', 'opening-video', 'video'),
+    });
+  }],
+  ['set-ending-video', (session, params, command) => {
+    return session.setEndingVideo({
+      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
+      endingVideo: getParam(params, 'clear', 'clearEndingVideo', 'clear-ending-video')
+        ? null
+        : requireParam(params, command, 'endingVideo', 'ending-video', 'video'),
+    });
+  }],
+  ['set-title-screen', (session, params, command) => {
+    return session.setTitleScreen(buildTitleScreenPatch(params));
+  }],
+  ['add-title-element', (session, params, command) => {
+    return session.addTitleElement({
+      element: buildTitleElement(command, params),
+    });
+  }],
+  ['update-title-element', (session, params, command) => {
+    return session.updateTitleElement({
+      elementId: getParam(params, 'elementId', 'element-id', 'id'),
+      index: getParam(params, 'index', 'elementIndex', 'element-index'),
+      patch: getParam(params, 'patch') ?? buildTitleElement(command, params, { requireType: false }),
+    });
+  }],
+  ['remove-title-element', (session, params, command) => {
+    return session.removeTitleElement({
+      elementId: getParam(params, 'elementId', 'element-id', 'id'),
+      index: getParam(params, 'index', 'elementIndex', 'element-index'),
+    });
+  }],
+  ['set-screen-layout', (session, params, command) => {
+    return session.setScreenLayout(buildScreenLayoutPatch(command, params));
+  }],
+  ['set-dialogue-box', (session, params, command) => {
+    return session.setDialogueBox(buildSharedUiConfigPatch(command, params));
+  }],
+  ['set-theme', (session, params, command) => {
+    return session.setTheme(buildSharedUiConfigPatch(command, params));
+  }],
+  ['set-widget-styles', (session, params, command) => {
+    return session.setWidgetStyles(buildSharedUiConfigPatch(command, params));
+  }],
+  ['set-ui-motion', (session, params, command) => {
+    return session.setUiMotion(buildUiMotionPatch(params));
+  }],
+  ['apply-ui-style-preset', (session, params, command) => {
+    return session.applyUiStylePreset(buildUiStylePresetPatch(command, params));
+  }],
+  ['add-choice-effect', (session, params, command) => {
+    return session.addChoiceEffect({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      effect: getParam(params, 'effect') ?? {
+        type: getParam(params, 'effectType', 'effect-type') ?? 'var:add',
+        id: getParam(params, 'effectId', 'effect-id', 'variable'),
+        value: getParam(params, 'value') ?? 1,
+      },
+    });
+  }],
+  ['set-choice-effect', (session, params, command) => {
+    return session.setChoiceEffect({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      effectIndex: requireParam(params, command, 'effectIndex', 'effect-index', 'effect'),
+      effect: getParam(params, 'effect') ?? {
+        type: getParam(params, 'effectType', 'effect-type') ?? 'var:add',
+        id: getParam(params, 'effectId', 'effect-id', 'variable'),
+        value: getParam(params, 'value') ?? 1,
+      },
+    });
+  }],
+  ['remove-choice-effect', (session, params, command) => {
+    return session.removeChoiceEffect({
+      sceneId: requireParam(params, command, 'sceneId', 'scene'),
+      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
+      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
+      effectIndex: requireParam(params, command, 'effectIndex', 'effect-index', 'effect'),
+    });
+  }],
+]);
+
+const SUPPORTED_APPLY_PLAN_COMMANDS = Object.freeze([...APPLY_PLAN_OPERATION_HANDLERS.keys()]);
 
 function createPlanOperationError(code, message, details = {}) {
   const error = new Error(message);
@@ -1700,656 +2217,16 @@ function applyPlanOperation(session, operation = {}, index = 0) {
     );
   }
 
-  if (command === 'add-scene') {
-    const id = requireParam(params, command, 'id', 'sceneId', 'scene');
-    return session.addScene({
-      id,
-      name: getParam(params, 'name') ?? id,
-      next: getParam(params, 'next') ?? null,
-    });
-  }
-
-  if (command === 'rename-scene') {
-    return session.renameScene({
-      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
-      newSceneId: requireParam(params, command, 'newSceneId', 'newId', 'new-id', 'to'),
-      name: getParam(params, 'name'),
-    });
-  }
-
-  if (command === 'delete-scene') {
-    return session.deleteScene({
-      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
-      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
-    });
-  }
-
-  if (command === 'set-scene-next') {
-    return session.setSceneNext({
-      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
-      next: getParam(params, 'next') ?? null,
-    });
-  }
-
-  if (command === 'retarget-scene') {
-    return session.retargetSceneReferences({
-      fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
-      toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
-    });
-  }
-
-  if (command === 'repair-scene-target') {
-    return session.retargetSceneReferences({
-      fromSceneId: requireParam(params, command, 'fromSceneId', 'from', 'scene'),
-      toSceneId: requireParam(params, command, 'toSceneId', 'to', 'target'),
-      allowMissingSource: true,
-    });
-  }
-
-  if (command === 'clear-scene-references') {
-    return session.clearSceneReferences({
-      sceneId: requireParam(params, command, 'sceneId', 'scene', 'id'),
-      allowMissingTarget: true,
-    });
-  }
-
-  if (command === 'add-character') {
-    const id = requireParam(params, command, 'id', 'characterId', 'character');
-    return session.addCharacter({
-      id,
-      name: getParam(params, 'name') ?? id,
-      color: getParam(params, 'color') ?? '#ffffff',
-      expressions: getParam(params, 'expressions') ?? {},
-    });
-  }
-
-  if (command === 'add-variable') {
-    const id = requireParam(params, command, 'id', 'variableId', 'variable');
-    const type = getParam(params, 'type') ?? 'number';
-    return session.addVariable({
-      id,
-      type,
-      initial: getParam(params, 'initial') ?? (type === 'bool' ? false : 0),
-      label: getParam(params, 'label', 'name') ?? id,
-      group: getParam(params, 'group'),
-      notes: getParam(params, 'notes'),
-      kind: getParam(params, 'kind'),
-      characterId: getParam(params, 'characterId', 'character'),
-      min: getParam(params, 'min'),
-      max: getParam(params, 'max'),
-      step: getParam(params, 'step'),
-    });
-  }
-
-  if (command === 'update-variable') {
-    return session.updateVariable({
-      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
-      patch: getParam(params, 'patch') ?? dropUndefinedFields({
-        type: getParam(params, 'type'),
-        initial: getParam(params, 'initial'),
-        label: getParam(params, 'label', 'name'),
-        group: getParam(params, 'group'),
-        notes: getParam(params, 'notes'),
-        kind: getParam(params, 'kind'),
-        characterId: getParam(params, 'characterId', 'character'),
-        min: getParam(params, 'min'),
-        max: getParam(params, 'max'),
-        step: getParam(params, 'step'),
-      }),
-    });
-  }
-
-  if (command === 'rename-variable') {
-    return session.renameVariable({
-      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
-      newVariableId: requireParam(params, command, 'newVariableId', 'newId', 'new-id', 'to'),
-    });
-  }
-
-  if (command === 'delete-variable') {
-    return session.deleteVariable({
-      variableId: requireParam(params, command, 'variableId', 'id', 'variable'),
-      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
-    });
-  }
-
-  if (command === 'add-affection-variable') {
-    return session.addAffectionVariable({
-      characterId: requireParam(params, command, 'characterId', 'character'),
-      id: getParam(params, 'id', 'variableId', 'variable'),
-      initial: getParam(params, 'initial'),
-      label: getParam(params, 'label', 'name'),
-      group: getParam(params, 'group'),
-      notes: getParam(params, 'notes'),
-      min: getParam(params, 'min'),
-      max: getParam(params, 'max'),
-      step: getParam(params, 'step'),
-    });
-  }
-
-  if (command === 'add-ending') {
-    const id = requireParam(params, command, 'id', 'endingId', 'ending');
-    return session.addEnding({
-      id,
-      title: getParam(params, 'title', 'name') ?? id,
-      category: getParam(params, 'category'),
-      order: getParam(params, 'order'),
-      description: getParam(params, 'description'),
-      thumbnail: getParam(params, 'thumbnail'),
-      hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
-      endingVideo: getParam(params, 'endingVideo', 'ending-video'),
-    });
-  }
-
-  if (command === 'update-ending') {
-    return session.updateEnding({
-      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
-      patch: getParam(params, 'patch') ?? dropUndefinedFields({
-        title: getParam(params, 'title', 'name'),
-        category: getParam(params, 'category'),
-        order: getParam(params, 'order'),
-        description: getParam(params, 'description'),
-        thumbnail: getParam(params, 'thumbnail'),
-        hiddenUntilUnlocked: getParam(params, 'hiddenUntilUnlocked', 'hidden-until-unlocked'),
-        endingVideo: getParam(params, 'endingVideo', 'ending-video'),
-      }),
-    });
-  }
-
-  if (command === 'set-ending-video') {
-    return session.setEndingVideo({
-      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
-      endingVideo: getParam(params, 'clear', 'clearEndingVideo', 'clear-ending-video')
-        ? null
-        : requireParam(params, command, 'endingVideo', 'ending-video', 'video'),
-    });
-  }
-
-  if (command === 'remove-ending') {
-    return session.removeEnding({
-      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
-      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
-    });
-  }
-
-  if (command === 'add-ending-unlock') {
-    return session.addEndingUnlock({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: getParam(params, 'optionIndex', 'option'),
-      endingId: requireParam(params, command, 'endingId', 'id', 'ending'),
-    });
-  }
-
-  if (command === 'add-cg') {
-    const id = requireParam(params, command, 'id', 'cgId', 'cg');
-    return session.addCg({
-      id,
-      title: getParam(params, 'title', 'name') ?? id,
-      images: getParam(params, 'images'),
-      thumbnail: getParam(params, 'thumbnail'),
-      lockedThumbnail: getParam(params, 'lockedThumbnail', 'locked-thumbnail'),
-      category: getParam(params, 'category'),
-      order: getParam(params, 'order'),
-      description: getParam(params, 'description'),
-    });
-  }
-
-  if (command === 'update-cg') {
-    return session.updateCg({
-      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
-      patch: getParam(params, 'patch') ?? dropUndefinedFields({
-        title: getParam(params, 'title', 'name'),
-        images: getParam(params, 'images'),
-        thumbnail: getParam(params, 'thumbnail'),
-        lockedThumbnail: getParam(params, 'lockedThumbnail', 'locked-thumbnail'),
-        category: getParam(params, 'category'),
-        order: getParam(params, 'order'),
-        description: getParam(params, 'description'),
-      }),
-    });
-  }
-
-  if (command === 'remove-cg') {
-    return session.removeCg({
-      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
-      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
-    });
-  }
-
-  if (command === 'add-cg-unlock') {
-    return session.addCgUnlock({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: Number(requireParam(params, command, 'pageIndex', 'page')),
-      optionIndex: Number(requireParam(params, command, 'optionIndex', 'option')),
-      cgId: requireParam(params, command, 'cgId', 'id', 'cg'),
-    });
-  }
-
-  if (command === 'add-video') {
-    const id = requireParam(params, command, 'id', 'videoId', 'video');
-    return session.addVideo({
-      id,
-      ...buildVideoEntry(command, params, { requireFile: true }),
-    });
-  }
-
-  if (command === 'update-video') {
-    return session.updateVideo({
-      videoId: requireParam(params, command, 'videoId', 'id', 'video'),
-      patch: getParam(params, 'patch') ?? buildVideoEntry(command, params),
-    });
-  }
-
-  if (command === 'remove-video') {
-    return session.removeVideo({
-      videoId: requireParam(params, command, 'videoId', 'id', 'video'),
-      forceReferences: Boolean(getParam(params, 'forceReferences', 'force-references')),
-    });
-  }
-
-  if (command === 'add-page') {
-    const sceneId = requireParam(params, command, 'sceneId', 'scene');
-    const { type, page } = buildPlanPage(command, params);
-    if (type === 'choice') {
-      return session.addChoicePage({ sceneId, page });
-    }
-    if (type === 'condition') {
-      return session.addConditionPage({ sceneId, page });
-    }
-    if (type === 'input') {
-      return session.addInputPage({ sceneId, page });
-    }
-    if (type === 'video') {
-      return session.addVideoPage({ sceneId, page });
-    }
-    return session.addNormalPage({ sceneId, page });
-  }
-
-  if (command === 'remove-page') {
-    return session.removePage({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-    });
-  }
-
-  if (command === 'move-page') {
-    return session.movePage({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
-      toIndex: requireParam(params, command, 'toIndex', 'to'),
-    });
-  }
-
-  if (command === 'add-dialogue') {
-    return session.addDialogue({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      dialogue: getParam(params, 'dialogue') ?? {
-        speaker: getParam(params, 'speaker') ?? null,
-        text: getParam(params, 'text') ?? '',
-        expression: getParam(params, 'expression') ?? null,
-        voice: getParam(params, 'voice') ?? null,
-      },
-    });
-  }
-
-  if (command === 'set-dialogue') {
-    return session.setDialogue({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      dialogueIndex: requireParam(params, command, 'dialogueIndex', 'dialogue'),
-      dialogue: dropUndefinedFields(getParam(params, 'dialogue') ?? {
-        speaker: getParam(params, 'speaker'),
-        text: getParam(params, 'text'),
-        expression: getParam(params, 'expression'),
-        voice: getParam(params, 'voice'),
-      }),
-    });
-  }
-
-  if (command === 'remove-dialogue') {
-    return session.removeDialogue({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      dialogueIndex: requireParam(params, command, 'dialogueIndex', 'dialogue'),
-    });
-  }
-
-  if (command === 'move-dialogue') {
-    return session.moveDialogue({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
-      toIndex: requireParam(params, command, 'toIndex', 'to'),
-    });
-  }
-
-  if (command === 'add-choice-option') {
-    return session.addChoiceOption({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      option: getParam(params, 'option') ?? {
-        text: getParam(params, 'text') ?? '',
-        target: getParam(params, 'target') ?? null,
-        effects: getParam(params, 'effects') ?? [],
-      },
-    });
-  }
-
-  if (command === 'set-choice-page') {
-    return session.setChoicePage({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      prompt: getParam(params, 'prompt'),
-      options: getParam(params, 'options'),
-    });
-  }
-
-  if (command === 'set-choice-option') {
-    return session.setChoiceOption({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
-      option: getParam(params, 'option') ?? dropUndefinedFields({
-        text: getParam(params, 'text'),
-        target: getParam(params, 'clearTarget', 'clear-target') ? null : getParam(params, 'target'),
-        effects: getParam(params, 'effects'),
-      }),
-    });
-  }
-
-  if (command === 'remove-choice-option') {
-    return session.removeChoiceOption({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
-    });
-  }
-
-  if (command === 'move-choice-option') {
-    return session.moveChoiceOption({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      fromIndex: requireParam(params, command, 'fromIndex', 'from'),
-      toIndex: requireParam(params, command, 'toIndex', 'to'),
-    });
-  }
-
-  if (command === 'set-condition-page') {
-    return session.setConditionPage({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      condition: getParam(params, 'condition') ?? dropUndefinedFields({
-        conditionMode: getParam(params, 'conditionMode', 'condition-mode'),
-        conditions: getParam(params, 'conditions'),
-        trueTarget: getParam(params, 'clearTrueTarget', 'clear-true-target') ? null : getParam(params, 'trueTarget', 'true-target'),
-        falseTarget: getParam(params, 'clearFalseTarget', 'clear-false-target') ? null : getParam(params, 'falseTarget', 'false-target'),
-      }),
-    });
-  }
-
-  if (command === 'set-page-background') {
-    return session.setPageBackground({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      background: getParam(params, 'background') ?? '',
-    });
-  }
-
-  if (command === 'set-page-characters') {
-    return session.setPageCharacters({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      characters: getParam(params, 'characters') ?? [],
-    });
-  }
-
-  if (command === 'set-page-audio') {
-    return session.setPageAudio({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      bgm: getParam(params, 'bgm'),
-      se: getParam(params, 'se'),
-    });
-  }
-
-  if (command === 'set-page-media') {
-    return session.setPageMedia({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      background: getParam(params, 'clearBackground', 'clear-background') ? '' : getParam(params, 'background'),
-      bgm: getParam(params, 'bgm'),
-      se: getParam(params, 'se'),
-    });
-  }
-
-  if (command === 'set-page-camera') {
-    const effect = getParam(params, 'effect');
-    return session.setPageCamera({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      camera: getParam(params, 'clearCamera', 'clear-camera')
-        ? null
-        : getParam(params, 'camera') ?? (effect !== undefined ? {
-          effect,
-          direction: getParam(params, 'direction'),
-          intensity: getParam(params, 'intensity') ?? 'medium',
-          durationMs: getParam(params, 'durationMs', 'duration-ms') ?? 800,
-        } : null),
-    });
-  }
-
-  if (command === 'set-camera-effect') {
-    return session.setPageCamera({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      camera: getParam(params, 'clearCamera', 'clear-camera')
-        ? null
-        : getParam(params, 'camera') ?? {
-          effect: requireParam(params, command, 'effect', 'id'),
-          direction: getParam(params, 'direction'),
-          intensity: getParam(params, 'intensity') ?? 'medium',
-          durationMs: getParam(params, 'durationMs', 'duration-ms') ?? 800,
-        },
-    });
-  }
-
-  if (command === 'set-page-transition') {
-    const type = getParam(params, 'type');
-    const duration = getParam(params, 'duration');
-    return session.setPageTransition({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      transition: getParam(params, 'clearTransition', 'clear-transition')
-        ? null
-        : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
-          type: type ?? 'fade',
-          duration: duration ?? 800,
-        } : null),
-    });
-  }
-
-  if (command === 'set-page-transitions') {
-    const type = getParam(params, 'type');
-    const duration = getParam(params, 'duration');
-    const predicate = getParam(params, 'predicate') ?? {};
-    return session.setPageTransitions({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      fromPageIndex: getParam(params, 'fromPageIndex', 'fromPage', 'from-page'),
-      toPageIndex: getParam(params, 'toPageIndex', 'toPage', 'to-page'),
-      pageType: getParam(params, 'pageType', 'page-type') ?? predicate.pageType,
-      hasBackground: getParam(params, 'hasBackground', 'has-background') ?? predicate.hasBackground,
-      transition: getParam(params, 'clearTransition', 'clear-transition')
-        ? null
-        : getParam(params, 'transition') ?? (type !== undefined || duration !== undefined ? {
-          type: type ?? 'fade',
-          duration: duration ?? 800,
-        } : null),
-    });
-  }
-
-  if (command === 'set-page-particles') {
-    return session.setPageParticles({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      particles: buildParticleConfigFromPlanParams(command, params),
-    });
-  }
-
-  if (command === 'register-effect-pack') {
-    return session.registerEffectPack({
-      manifest: requireParam(params, command, 'manifest'),
-    });
-  }
-
-  if (command === 'set-page-effect-pack') {
-    return session.setPageEffectPack({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      effectPackId: requireParam(params, command, 'effectPackId', 'effectPack', 'id'),
-      params: getParam(params, 'params') ?? {},
-      enabled: getParam(params, 'enabled') ?? true,
-    });
-  }
-
-  if (command === 'clear-page-effect-packs') {
-    return session.clearPageEffectPacks({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-    });
-  }
-
-  if (command === 'clear-page-particles') {
-    return session.clearPageParticles({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-    });
-  }
-
-  if (command === 'inherit-page-particles') {
-    return session.inheritPageParticles({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-    });
-  }
-
-  if (command === 'set-character-animation') {
-    return session.setCharacterAnimation({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      characterId: requireParam(params, command, 'characterId', 'character'),
-      animation: getParam(params, 'animation') ?? 'none',
-    });
-  }
-
-  if (command === 'set-character-transition') {
-    return session.setCharacterAnimation({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      characterId: requireParam(params, command, 'characterId', 'character'),
-      animation: getParam(params, 'transition', 'animation', 'id') ?? 'none',
-    });
-  }
-
-  if (command === 'set-opening-video') {
-    return session.setOpeningVideo({
-      openingVideo: getParam(params, 'clear', 'clearOpeningVideo', 'clear-opening-video')
-        ? null
-        : requireParam(params, command, 'openingVideo', 'opening-video', 'video'),
-    });
-  }
-
-  if (command === 'set-title-screen') {
-    return session.setTitleScreen(buildTitleScreenPatch(params));
-  }
-
-  if (command === 'add-title-element') {
-    return session.addTitleElement({
-      element: buildTitleElement(command, params),
-    });
-  }
-
-  if (command === 'update-title-element') {
-    return session.updateTitleElement({
-      elementId: getParam(params, 'elementId', 'element-id', 'id'),
-      index: getParam(params, 'index', 'elementIndex', 'element-index'),
-      patch: getParam(params, 'patch') ?? buildTitleElement(command, params, { requireType: false }),
-    });
-  }
-
-  if (command === 'remove-title-element') {
-    return session.removeTitleElement({
-      elementId: getParam(params, 'elementId', 'element-id', 'id'),
-      index: getParam(params, 'index', 'elementIndex', 'element-index'),
-    });
-  }
-
-  if (command === 'set-screen-layout') {
-    return session.setScreenLayout(buildScreenLayoutPatch(command, params));
-  }
-
-  if (command === 'set-dialogue-box') {
-    return session.setDialogueBox(buildSharedUiConfigPatch(command, params));
-  }
-
-  if (command === 'set-theme') {
-    return session.setTheme(buildSharedUiConfigPatch(command, params));
-  }
-
-  if (command === 'set-widget-styles') {
-    return session.setWidgetStyles(buildSharedUiConfigPatch(command, params));
-  }
-
-  if (command === 'set-ui-motion') {
-    return session.setUiMotion(buildUiMotionPatch(params));
-  }
-
-  if (command === 'apply-ui-style-preset') {
-    return session.applyUiStylePreset(buildUiStylePresetPatch(command, params));
-  }
-
-  if (command === 'add-choice-effect') {
-    return session.addChoiceEffect({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
-      effect: getParam(params, 'effect') ?? {
-        type: getParam(params, 'effectType', 'effect-type') ?? 'var:add',
-        id: getParam(params, 'effectId', 'effect-id', 'variable'),
-        value: getParam(params, 'value') ?? 1,
-      },
-    });
-  }
-
-  if (command === 'set-choice-effect') {
-    return session.setChoiceEffect({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
-      effectIndex: requireParam(params, command, 'effectIndex', 'effect-index', 'effect'),
-      effect: getParam(params, 'effect') ?? {
-        type: getParam(params, 'effectType', 'effect-type') ?? 'var:add',
-        id: getParam(params, 'effectId', 'effect-id', 'variable'),
-        value: getParam(params, 'value') ?? 1,
-      },
-    });
-  }
-
-  if (command === 'remove-choice-effect') {
-    return session.removeChoiceEffect({
-      sceneId: requireParam(params, command, 'sceneId', 'scene'),
-      pageIndex: requireParam(params, command, 'pageIndex', 'page'),
-      optionIndex: requireParam(params, command, 'optionIndex', 'option'),
-      effectIndex: requireParam(params, command, 'effectIndex', 'effect-index', 'effect'),
-    });
-  }
-
-  throw createPlanOperationError(
-    'unsupported-apply-plan-command',
-    `Unsupported apply-plan command: ${command}`,
-    { supportedCommands: SUPPORTED_APPLY_PLAN_COMMANDS },
-  );
+  const handler = APPLY_PLAN_OPERATION_HANDLERS.get(command);
+  if (!handler) {
+    throw createPlanOperationError(
+      'unsupported-apply-plan-command',
+      `Unsupported apply-plan command: ${command}`,
+      { supportedCommands: SUPPORTED_APPLY_PLAN_COMMANDS },
+    );
+  }
+
+  return handler(session, params, command);
 }
 
 async function writeScriptFile(filePath, script, { force = false, backup = false, checkpoint = false } = {}) {

@@ -226,6 +226,44 @@ describe('vn-author CLI', () => {
     });
   });
 
+  it('derives the complete apply-plan support list from the operation registry', async () => {
+    const source = await readFile(cliPath, 'utf8');
+    const registrySource = source.slice(
+      source.indexOf('const APPLY_PLAN_OPERATION_HANDLERS'),
+      source.indexOf('const SUPPORTED_APPLY_PLAN_COMMANDS'),
+    );
+    const operationNames = [...registrySource.matchAll(/^  \['([^']+)'/gm)]
+      .map((match) => match[1]);
+
+    expect(operationNames).toEqual([
+      'add-scene', 'rename-scene', 'delete-scene', 'set-scene-next', 'retarget-scene',
+      'repair-scene-target', 'clear-scene-references', 'add-character', 'add-variable',
+      'update-variable', 'rename-variable', 'delete-variable', 'add-affection-variable',
+      'add-ending', 'update-ending', 'remove-ending', 'add-ending-unlock', 'add-cg',
+      'update-cg', 'remove-cg', 'add-cg-unlock', 'add-video', 'update-video', 'remove-video',
+      'add-page', 'remove-page', 'move-page', 'add-dialogue', 'set-dialogue',
+      'remove-dialogue', 'move-dialogue', 'add-choice-option', 'set-choice-page',
+      'set-choice-option', 'remove-choice-option', 'move-choice-option', 'set-condition-page',
+      'set-page-background', 'set-page-characters', 'set-page-audio', 'set-page-media',
+      'set-page-camera', 'set-camera-effect', 'set-page-transition', 'set-page-transitions',
+      'register-effect-pack', 'set-page-effect-pack', 'clear-page-effect-packs',
+      'set-page-particles', 'clear-page-particles', 'inherit-page-particles',
+      'set-character-animation', 'set-character-transition', 'set-opening-video',
+      'set-ending-video', 'set-title-screen', 'add-title-element', 'update-title-element',
+      'remove-title-element', 'set-screen-layout', 'set-dialogue-box', 'set-theme',
+      'set-widget-styles', 'set-ui-motion', 'apply-ui-style-preset', 'add-choice-effect',
+      'set-choice-effect', 'remove-choice-effect',
+    ]);
+    expect(source).toContain(
+      'const SUPPORTED_APPLY_PLAN_COMMANDS = Object.freeze([...APPLY_PLAN_OPERATION_HANDLERS.keys()]);',
+    );
+    const dispatchSource = source.slice(
+      source.indexOf('function applyPlanOperation'),
+      source.indexOf('async function writeScriptFile'),
+    );
+    expect(dispatchSource).not.toContain("if (command === '");
+  });
+
   it('accepts preview screenshots with visible color variety', () => {
     const png = createPng({
       width: 8,

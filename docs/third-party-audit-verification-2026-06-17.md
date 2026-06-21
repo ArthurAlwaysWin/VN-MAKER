@@ -376,7 +376,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction | Add test |
 |---|---|---|---|---|---|
-| S1: CLI paths can read outside repo | Partially true | Low | CLI resolves user-provided paths against repo root without containment checks. This is local CLI authority, not P0 remote exploit. | Add containment/confirmation for project-scoped paths. | Yes. |
+| S1: CLI paths can read outside repo | False positive | Informational | The paths are explicitly supplied by the local CLI caller, so they represent caller authority rather than an untrusted traversal boundary. Projects and authoring inputs are intentionally allowed outside the source checkout; repo-root containment would break supported workflows. No project-content-derived path escape was identified. | No fix. Reopen only if an indirectly controlled project-scoped path is shown to escape its own root. | No. |
 | S2: recursive directory traversal follows symlinks | False positive | Informational | `Dirent.isDirectory()` does not follow symlink entries. Root symlink remains separate concern. | No fix for stated issue. | Optional. |
 | S3: unvalidated editor binary spawn | False positive | Informational | `--editor` and env var are explicit local execution controls. Not a vulnerability by itself. | Optional UX warning. | No. |
 | S4: `import-assets` accepts arbitrary native paths | Completed | High | Fixed with preload-issued one-time import grants consumed by `import-assets`; source-level wiring regression added. | Done. | Added. |

@@ -1,12 +1,13 @@
+import { isSafeObjectMapKey } from './objectMapKey.js';
+
 export const TEXT_TEMPLATE_PATTERN = /\$\{([A-Za-z_][A-Za-z0-9_-]*)\}/g;
 const VARIABLE_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 function isValidTemplateVariableId(variableId) {
   return Boolean(
     typeof variableId === 'string'
     && VARIABLE_ID_PATTERN.test(variableId)
-    && !UNSAFE_OBJECT_MAP_KEYS.has(variableId),
+    && isSafeObjectMapKey(variableId),
   );
 }
 

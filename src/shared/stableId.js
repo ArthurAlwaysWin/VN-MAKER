@@ -1,10 +1,11 @@
+import { isSafeObjectMapKey } from './objectMapKey.js';
+
 const STABLE_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 export function isStableId(value) {
   return typeof value === 'string'
     && STABLE_ID_PATTERN.test(value)
-    && !UNSAFE_OBJECT_MAP_KEYS.has(value);
+    && isSafeObjectMapKey(value);
 }
 
 export function assertStableId(value, label = 'id') {

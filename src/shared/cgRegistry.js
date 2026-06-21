@@ -1,5 +1,6 @@
+import { isSafeObjectMapKey } from './objectMapKey.js';
+
 export const CG_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -46,7 +47,7 @@ export function isValidCgId(cgId) {
   return Boolean(
     normalized
     && CG_ID_PATTERN.test(normalized)
-    && !UNSAFE_OBJECT_MAP_KEYS.has(normalized),
+    && isSafeObjectMapKey(normalized),
   );
 }
 
@@ -90,7 +91,7 @@ export function normalizeCgRegistry(registry = {}) {
   const normalized = {};
   for (const [rawId, entry] of Object.entries(registry)) {
     const id = normalizeCgId(rawId);
-    if (!id || UNSAFE_OBJECT_MAP_KEYS.has(id)) {
+    if (!id || !isSafeObjectMapKey(id)) {
       continue;
     }
     normalized[id] = normalizeCgEntry(entry, id);

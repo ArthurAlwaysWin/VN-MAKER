@@ -1,3 +1,5 @@
+import { isSafeObjectMapKey } from './objectMapKey.js';
+
 export const VIDEO_ASSET_ROOT = 'videos';
 export const VIDEO_EXTENSIONS = Object.freeze(['.mp4', '.webm']);
 export const VIDEO_AUDIO_MODES = Object.freeze(['replace', 'duck', 'mix']);
@@ -7,7 +9,6 @@ export const ENDING_VIDEO_PLAY_MODES = Object.freeze(['after-unlock', 'manual'])
 export const VIDEO_KIND_OPTIONS = Object.freeze(['op', 'ed', 'story', 'other']);
 
 const VIDEO_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -39,7 +40,7 @@ export function isValidVideoId(videoId) {
   return Boolean(
     normalized
     && VIDEO_ID_PATTERN.test(normalized)
-    && !UNSAFE_OBJECT_MAP_KEYS.has(normalized),
+    && isSafeObjectMapKey(normalized),
   );
 }
 
@@ -92,7 +93,7 @@ export function normalizeVideoRegistry(registry = {}) {
   const normalized = {};
   for (const [rawId, entry] of Object.entries(registry)) {
     const id = normalizeVideoId(rawId);
-    if (!id || UNSAFE_OBJECT_MAP_KEYS.has(id)) {
+    if (!id || !isSafeObjectMapKey(id)) {
       continue;
     }
     normalized[id] = normalizeVideoEntry(entry, id);

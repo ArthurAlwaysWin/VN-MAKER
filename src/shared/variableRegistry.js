@@ -9,6 +9,7 @@
 import { normalizeEffects } from './effectDsl.js';
 import { normalizeConditionPage } from './branchingContract.js';
 import { collectTextTemplateVariableIds } from './textTemplate.js';
+import { isSafeObjectMapKey } from './objectMapKey.js';
 
 export const VARIABLE_TYPES = Object.freeze([
   'bool',
@@ -22,7 +23,6 @@ export const VARIABLE_KINDS = Object.freeze([
 ]);
 
 export const VARIABLE_ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const UNSAFE_OBJECT_MAP_KEYS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -50,7 +50,7 @@ export function isValidVariableId(variableId) {
   return Boolean(
     normalized
     && VARIABLE_ID_PATTERN.test(normalized)
-    && !UNSAFE_OBJECT_MAP_KEYS.has(normalized),
+    && isSafeObjectMapKey(normalized),
   );
 }
 
@@ -230,7 +230,7 @@ export function normalizeVariableRegistry(registry = {}) {
   const normalized = {};
   for (const [rawId, entry] of Object.entries(registry)) {
     const variableId = normalizeVariableId(rawId);
-    if (!variableId || UNSAFE_OBJECT_MAP_KEYS.has(variableId)) {
+    if (!variableId || !isSafeObjectMapKey(variableId)) {
       continue;
     }
 

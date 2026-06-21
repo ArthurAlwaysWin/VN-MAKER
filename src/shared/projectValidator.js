@@ -77,6 +77,11 @@ export const PROJECT_VALIDATION_SEVERITIES = Object.freeze({
 const KNOWN_PAGE_TYPES = new Set(['normal', 'choice', 'input', 'condition', 'video']);
 const VARIABLE_EFFECT_TYPES = new Set(['var:set', 'var:add', 'var:sub']);
 const UNLOCK_EFFECT_TYPES = new Set(['unlock:ending', 'unlock:cg']);
+/**
+ * Default warning threshold in JavaScript string code units for dialogue and
+ * choice-option text. Callers can override it with
+ * `validateProject(script, { longDialogueLimit })`.
+ */
 const DEFAULT_LONG_DIALOGUE_LIMIT = 120;
 
 function isPlainObject(value) {

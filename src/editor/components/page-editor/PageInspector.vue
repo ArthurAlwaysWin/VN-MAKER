@@ -682,7 +682,7 @@
         <button
           class="secondary-add-btn"
           type="button"
-          :disabled="!conditionVariableOptions.length || (page.conditions || []).length >= 3"
+          :disabled="!conditionVariableOptions.length || !canAddConditionRow(page.conditions)"
           @click="addConditionRow"
         >+ 添加条件</button>
 
@@ -875,6 +875,7 @@ import {
 } from '../../../shared/cinematicContract.js';
 import { normalizeParticleConfig } from '../../../shared/particleContract.js';
 import { getPageTypeConversionWarning } from '../../utils/pageTypeConversion.js';
+import { canAddConditionRow } from '../../utils/conditionRowLimit.js';
 
 const editor = usePageEditor();
 const script = useScriptStore();
@@ -1732,7 +1733,7 @@ function setConditionMode(mode) {
 function addConditionRow() {
   if (!page.value || page.value.type !== 'condition' || !conditionVariableOptions.value.length) return;
   const conditions = [...(page.value.conditions ?? [])];
-  if (conditions.length >= 3) return;
+  if (!canAddConditionRow(conditions)) return;
   const variable = conditionVariableOptions.value[0];
   conditions.push({
     variableId: variable.id,

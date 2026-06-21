@@ -73,6 +73,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const defaultScriptPath = path.join(repoRoot, 'public', 'game', 'script.json');
+const DEFAULT_HANDOFF_CHECKPOINT_LIMIT = 5;
 
 function readEqualsArg(arg, name) {
   const prefix = `${name}=`;
@@ -733,7 +734,7 @@ function resolveAssetProjectPath(args) {
   return path.dirname(defaultScriptPath);
 }
 
-async function collectCheckpointEntries(checkpointDir, limit = 5) {
+async function collectCheckpointEntries(checkpointDir, limit = DEFAULT_HANDOFF_CHECKPOINT_LIMIT) {
   if (!await pathExists(checkpointDir)) {
     return [];
   }
@@ -4263,7 +4264,7 @@ async function handoffReport(args, { emit = true } = {}) {
     repoRoot,
     getArgValue(args, '--checkpoint-dir', path.join(path.dirname(scriptPath), '.checkpoints')),
   );
-  const checkpointLimit = getIntArg(args, '--checkpoint-limit', 5);
+  const checkpointLimit = getIntArg(args, '--checkpoint-limit', DEFAULT_HANDOFF_CHECKPOINT_LIMIT);
   const transactionPath = getArgValue(args, '--transaction', null);
   const transaction = transactionPath
     ? JSON.parse(await readFile(path.resolve(repoRoot, transactionPath), 'utf8'))

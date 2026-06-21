@@ -26,6 +26,7 @@ const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 const DRAFT_ENDING_PREFIX = '__draft_ending__';
 const DRAFT_CG_PREFIX = '__draft_cg__';
 const DRAFT_VIDEO_PREFIX = '__draft_video__';
+const MAX_UNDO_HISTORY_ENTRIES = 50;
 
 function slugifyVariableId(value) {
   return String(value ?? '')
@@ -338,7 +339,7 @@ export const useScriptStore = defineStore('script', () => {
     pendingPatches = [];
     pendingInversePatches = [];
     historyIndex.value++;
-    if (history.value.length > 50) {
+    if (history.value.length > MAX_UNDO_HISTORY_ENTRIES) {
       history.value = history.value.slice(1);
       historyIndex.value--;
     }

@@ -465,6 +465,16 @@ describe('project validator', () => {
     ]));
   });
 
+  it('uses the 120-character dialogue threshold by default and accepts an override', () => {
+    const script = createValidScript();
+    script.scenes.start.pages[0].dialogues[0].text = 'x'.repeat(120);
+    expect(codes(validateProject(script))).not.toContain('long-dialogue-text');
+
+    script.scenes.start.pages[0].dialogues[0].text += 'x';
+    expect(codes(validateProject(script))).toContain('long-dialogue-text');
+    expect(codes(validateProject(script, { longDialogueLimit: 121 }))).not.toContain('long-dialogue-text');
+  });
+
   it('optionally warns when referenced assets are not in the known asset set', () => {
     const script = createValidScript();
     script.scenes.start.pages[0].bgm = { file: 'audio/theme.mp3' };

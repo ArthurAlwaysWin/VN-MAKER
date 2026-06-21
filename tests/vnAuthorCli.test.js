@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -7997,6 +7997,62 @@ scene start "Start":
           referenceCount: 1,
         }),
       ]));
+    });
+  });
+
+  it('keeps five handoff checkpoints by default and honors --checkpoint-limit', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const checkpointDir = path.join(dir, '.checkpoints');
+      await mkdir(checkpointDir);
+      await writeFile(scriptPath, JSON.stringify({
+        projectId: 'gm_cli_checkpoint_limit',
+        characters: {},
+        scenes: { start: { pages: [{ type: 'normal', characters: [], dialogues: [] }] } },
+      }), 'utf8');
+
+      for (let index = 0; index < 7; index += 1) {
+        const checkpointPath = path.join(checkpointDir, `checkpoint-${index}.json`);
+        await writeFile(checkpointPath, '{}', 'utf8');
+        const timestamp = new Date(Date.UTC(2026, 0, 1, 0, 0, index));
+        await utimes(checkpointPath, timestamp, timestamp);
+      }
+
+      async function writeHandoff(name, extraArgs = []) {
+        const outPath = path.join(dir, name);
+        try {
+          await execFileAsync('node', [
+            cliPath,
+            'handoff-report',
+            '--script', scriptPath,
+            '--checkpoint-dir', checkpointDir,
+            '--out', outPath,
+            '--skip-asset-check',
+            '--json',
+            ...extraArgs,
+          ]);
+        } catch (error) {
+          expect(error.stdout).toEqual(expect.any(String));
+        }
+        return JSON.parse(await readFile(outPath, 'utf8'));
+      }
+
+      const defaultHandoff = await writeHandoff('default-handoff.json');
+      expect(defaultHandoff.checkpoints).toHaveLength(5);
+      expect(defaultHandoff.checkpoints.map(entry => entry.name)).toEqual([
+        'checkpoint-6.json',
+        'checkpoint-5.json',
+        'checkpoint-4.json',
+        'checkpoint-3.json',
+        'checkpoint-2.json',
+      ]);
+
+      const limitedHandoff = await writeHandoff('limited-handoff.json', ['--checkpoint-limit', '2']);
+      expect(limitedHandoff.checkpoints).toHaveLength(2);
+      expect(limitedHandoff.checkpoints.map(entry => entry.name)).toEqual([
+        'checkpoint-6.json',
+        'checkpoint-5.json',
+      ]);
     });
   });
 

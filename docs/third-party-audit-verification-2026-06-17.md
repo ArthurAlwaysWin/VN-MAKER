@@ -10,9 +10,9 @@ Scope: This document records Codex's independent verification of the third-party
 
 - Audit report reliability: Medium
 - Fully confirmed issues: 60
-- Partially confirmed issues: 22
-- False positives: 9
-- Unconfirmed / needs more context: 1
+- Partially confirmed issues: 21
+- False positives: 11
+- Unconfirmed / needs more context: 0
 - Highest priority fixes: S4, S10, S7/S16, S12, S11, B2, P15, Q18, M13, S8
 
 The report is useful, but it overstates several local CLI or hardening concerns as P0 security vulnerabilities. The most credible immediate risks are renderer-reachable file import behavior, vulnerable dependencies, CSS URL construction, theme ZIP decompression bounds, symlink-aware path checks, and a few robustness gaps with straightforward tests.
@@ -299,14 +299,25 @@ Thirteenth repair validation and M3 completion:
 - Electron smoke was not run because the repository has no Electron E2E seam that can intentionally delay `save-project` while driving close/reopen. The deterministic mounted-App test covers the exact timing window and serialized IPC payloads, but a future repo-owned Electron harness should repeat delayed save, immediate close, disk reopen, normal autosave, and external-conflict flows.
 - Remaining risk is limited to integration beyond the renderer harness: the Electron main close bridge is still source-verified rather than driven end to end under an intentionally delayed native IPC save. Direct `project.saveProject()` callers are generation-guarded; the App lifecycle adds the stronger script-revision check, while the export path retains its synchronous save-before-export behavior.
 
+Final audit-hardening closure (2026-06-21):
+
+- S1 is finally classified as a false positive / informational finding. Explicit local CLI paths exercise caller authority, and supported projects and authoring inputs may live outside the source checkout. Repo-root containment would break that workflow. No project-content-derived path was found escaping its own project-scoped root; reopen S1 only if such an indirect path is demonstrated.
+- S17 was re-verified from the real call graph instead of treating the limited blacklist as proof of exploitation. CodeGraph found 31 caller methods. Canonical script data, imported-project/theme data, and editor-authored screen, widget, choice, and dialogue configuration reach `sanitizeCssValue()`, then land in individual CSSOM properties (`background`, `border`, `color`, `fontFamily`, and similar), CSS custom properties through `style.setProperty()`, numeric properties after `clampField()`, `img.src` after `resolvePath()`, or individual `backgroundImage` values. No sanitizer output reaches a user-controlled `style.cssText`, HTML `style` attribute, or `innerHTML`; the observed `cssText` writes in these components only reset styles with the empty string.
+- The S17 diagnostic repro used jsdom/CSSOM with resource loading disabled and a real `createStyledButton()` caller. It covered semicolons, closing quotes, backslashes, newlines, CSS comments, case/whitespace variants of `url(...)` and `expression(...)`, escaped function/delimiter spellings, `var(...)`, and `image-set(...)`. Straight declaration payloads were rejected; accepted values either remained one property value or were rejected by the destination property's parser. No payload set a second declaration, changed the probe's sibling property, produced HTML/DOM injection, or executed script.
+- URL construction was evaluated separately from ordinary color/font/border assignments. S7/S16's shared `cssUrl()` escaping protects the confirmed ThemeManager and FontFace string-construction sinks and is also used by dialogue artwork. Several older UI asset fields still use `resolvePath()` followed by one CSSOM `backgroundImage`/`borderImage` assignment, while other image fields use `img.src`. Direct `url(...)`-injection attempts were rejected by `sanitizeCssValue()` where that sanitizer is present; quote, newline, and alternate-function probes did not produce an observable second declaration in jsdom. These URL fields already represent project-selected asset URLs, so URL value capability is not by itself declaration injection or privilege escalation.
+- S17 is therefore closed as a false positive / informational finding under the current threat model. The blacklist remains intentionally modest, but there is no evidence for declaration escape, HTML injection, or script execution through a real caller and sink. A global CSS allowlist would add broad compatibility and migration risk without addressing a demonstrated exploit. Reopen only with a minimal payload that produces an observable dangerous result through a named production field and sink.
+- This closure session changed no production or test code. Its focused verification was the temporary jsdom/CSSOM repro above plus `npx vitest run tests/gameMenuLayout.test.js tests/saveLoadScreenLayout.test.js tests/widgetsNineSlice.test.js` (3 files / 101 tests passed). The latest pre-existing full baseline remains Vitest 134 files / 1179 tests, Node 305 tests, and a passing `npm run build`; those full commands and the delayed-save Electron smoke were not rerun in this documentation-only closure.
+- With S17 requiring no repair, this audit-hardening round is formally closed. The delayed-save Electron close/reopen smoke described under M3 remains a future validation enhancement, not evidence that M3 is open.
+
 Remaining-fix recommendation:
 
-Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
+The hardening queue is complete. Remaining true or partially true entries are not implicit security tails:
 
-- Worth doing in a dedicated architecture pass when justified: Q1/Q2/Q4.
-- Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
-- Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the thirteenth pass: Q9-Q19 and M3 are closed without taking on Q1/Q2/Q4 decomposition. M3's remaining risk is the unavailable delayed-save Electron close/reopen smoke described above, not a known renderer dirty-state defect.
+- Q1/Q2/Q4 are independent architecture candidates. They require separately approved decomposition milestones and are not unfinished audit or security fixes.
+- Q3/Q7/Q8 are consider-on-touch cleanup candidates only. Re-evaluate them if their respective shared-helper, preview, or screen-editor modules are changed for product work.
+- B5, P4, P7, P12, M7, and M8 are low-value, optional, or measurement-sensitive items and are not tails of this hardening round. They need a dedicated product/performance justification and fresh evidence before implementation.
+- S6, S14, S19, P5, P11, P17, M10, and M15 remain not planned for audit hardening.
+- M3 is closed. A repo-owned Electron delayed-save close/reopen smoke would strengthen integration evidence but is an enhancement, not an open correctness finding.
 
 ## Priority Repair Plan
 
@@ -392,7 +403,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | S14: global console replacement | Not planned for audit hardening | Low | `runWithJsonSafeConsole()` mutates global console, but CLI commands run in a short single-command lifecycle. Refactoring logger injection is not worth the audit-hardening churn. | Defer unless CLI logging is refactored. | No. |
 | S15: Mermaid escaping incomplete | Completed | Low | Mermaid labels now normalize control whitespace and encode ampersands, quotes, angle brackets, and square brackets; regression coverage prevents label text from injecting another graph statement. | Done. | Added. |
 | S16: FontFace URL single-quote injection | Completed | Medium | Fixed with shared `cssUrl()` in `fontLoader`; FontFace source escaping regression added. S7 and S16 were grouped because both were CSS string-construction injection risks. | Done. | Added. |
-| S17: CSS sanitizer blacklist bypass | Unconfirmed | Informational | Blacklist is limited, but most usage is via `style.setProperty`; no concrete exploit path confirmed. | Prefer allowlists for high-risk fields. | Needs threat model. |
+| S17: CSS sanitizer blacklist bypass | False positive | Informational | Threat-model verification traced 31 caller methods from canonical/imported/editor-authored UI configuration to single-property CSSOM assignments, custom properties, clamped numeric styles, `img.src`, or individual CSS URL values. A no-network jsdom repro covering declaration delimiters, quotes, backslashes, newlines, comments, case/whitespace variants, `var()`, escaped tokens, and alternate image functions found no second-declaration escape, HTML injection, or script execution. S7/S16's `cssUrl()` covers their confirmed string-construction sinks. | No fix. Reopen only with a production source-to-sink payload and observable dangerous result. | Temporary behavior repro completed; no permanent test needed. |
 | S18: SVG fallback passthrough | Completed | Low | Fallback markup is escaped by default; the Quick Action Bar must explicitly opt into `trustedSvgFallback` for its code-owned SVG constants. | Done. | Added. |
 | S19: `executeJavaScript` bypasses isolation | Not planned for audit hardening | Informational | Fixed internal snippets are used for dirty/save checks; no user data interpolation was found. Replacing with IPC would be architectural cleanup, not a confirmed security fix. | Defer to architecture cleanup. | No. |
 | S20: thumbnail bytes not JPEG-validated | Completed | Low | Save IPC now uses one shared helper to normalize bounded JPEG bytes before writing `.jpg` thumbnails in editor and exported game main processes; tests cover Buffer, Uint8Array, non-JPEG, and oversized input. | Done. | Added. |
@@ -402,14 +413,14 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction |
 |---|---|---|---|---|
-| Q1: `tools/vn-author/index.js` giant file | True | Medium | 8137 lines with parsing, dispatch, commands, helpers. | Split commands, operations, and utils. |
-| Q2: `projectValidator.js` God module | True | Medium | 1674 lines mixing validation domains. | Split domain validators. |
-| Q3: duplicated helper functions | Partially true | Low | Duplication is real, but count/impact is overstated in places. | Extract shared utility carefully. |
-| Q4: `electron/main.js` giant file | True | Medium | 1830 lines with IPC, protocol, window, state, export. | Split into modules. |
+| Q1: `tools/vn-author/index.js` giant file | Independent architecture candidate | Medium | 8137 lines with parsing, dispatch, commands, helpers. This is not an unfinished security repair. | Consider only in a separately approved CLI decomposition milestone. |
+| Q2: `projectValidator.js` God module | Independent architecture candidate | Medium | 1674 lines mixing validation domains. This is not an unfinished security repair. | Consider only in a separately approved validator-architecture milestone. |
+| Q3: duplicated helper functions | Defer until related modules change | Low | Duplication is real, but count/impact is overstated in places. | Consider on touch; do not run a standalone audit cleanup. |
+| Q4: `electron/main.js` giant file | Independent architecture candidate | Medium | 1830 lines with IPC, protocol, window, state, export. This is not an unfinished security repair. | Consider only in a separately approved Electron-main decomposition milestone. |
 | Q5: duplicated `isInsidePath` | Completed | Low | Lexical containment now lives in shared `src/shared/pathContainment.js` and is reused by Electron path security and project scaffolding; realpath-aware checks remain in `electron/pathSecurity.js`. | Done. |
 | Q6: duplicated `atomicWrite` | Completed | Low | Editor and exported-game main processes now import `electron/atomicWrite.js`; desktop export copies and rewrites the shared helper import. | Done. |
-| Q7: iframe preview duplication | True | Low | Similar postMessage lifecycle in multiple composables. | Extract preview composable. |
-| Q8: screen editor view duplication | True | Low | Game menu, save/load, backlog editors are similar wrappers. | Parameterized screen editor. |
+| Q7: iframe preview duplication | Defer until related modules change | Low | Similar postMessage lifecycle in multiple composables. | Consider on touch during a scoped preview-lifecycle change. |
+| Q8: screen editor view duplication | Defer until related modules change | Low | Game menu, save/load, backlog editors are similar wrappers. | Consider on touch during a scoped screen-editor change. |
 | Q9: CLI JSON output duplication | Completed | Low | Shared `emitResult()` now owns JSON/text selection across command families while preserving command-specific text, stderr, exit codes, JSON-safe console handling, and export progress behavior. | Done. |
 | Q10: CLI main dispatch if-chain | Completed | Low | Replaced the 105-name dispatch chain with an explicit command-handler registry, preserving aliases, project forwarding, special exit-code extraction, and help exit behavior. | Done. |
 | Q11: plan operation dispatch if-chain | Completed | Low | Replaced all 68 operation branches with a domain-grouped handler registry; the supported-command list is generated from registry keys and structured repair errors remain intact. | Done. |
@@ -444,7 +455,9 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q5, Q6, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, S8, B1, B7, B8, B10, B11, B12, B13, B15, B16, B17, B19, S5, S9, S13, S15, S18, S20, S21, M1, M3, M4, M5, M6, M9, M11, M12, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
-2. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
-3. Defer broad refactors unless a separate architecture milestone is approved: Q1/Q2/Q4 and major IPC response-shape consolidation. Do not extract the M3 persistence lifecycle unless a future scoped change justifies the additional seam.
-4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.
+This audit-hardening round is finished. Do not generate another issue-by-issue repair queue from this report.
+
+1. Treat Q1/Q2/Q4 as independent architecture candidates requiring separate approval, scope, migration planning, and validation; they are not audit closure work.
+2. Consider Q3/Q7/Q8 only when related modules are already being changed. Do not start a standalone cleanup from this ledger.
+3. Treat B5, P4, P7, P12, M7/M8 and the other explicitly deferred informational/optional entries as outside the completed hardening round unless new measurements or a product requirement materially change their priority.
+4. Optionally add a repo-owned Electron harness for M3's delayed-save close/reopen smoke when investing in E2E infrastructure. Keep M3 closed unless that smoke or a real report reveals a regression.

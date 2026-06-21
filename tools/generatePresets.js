@@ -15,6 +15,7 @@
 import { generatePalette, hexToHsl, hslToHex } from '../src/engine/colorHarmony.js';
 import { contrastRatio, autoFix } from '../src/engine/contrast.js';
 import { DEFAULT_TOKENS } from '../src/engine/tokens.js';
+import { hexToRgb } from '../src/shared/color.js';
 
 // ─── Preset Definitions (D-04) ─────────────────────────
 
@@ -59,15 +60,6 @@ const RADIUS_MAP = {
 };
 
 // ─── Helpers ───────────────────────────────────────────
-
-function hexToRgb(hex) {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.substring(0, 2), 16),
-    parseInt(h.substring(2, 4), 16),
-    parseInt(h.substring(4, 6), 16),
-  ];
-}
 
 /**
  * Extract alpha from an rgba() string.

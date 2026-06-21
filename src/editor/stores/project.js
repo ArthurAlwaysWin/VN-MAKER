@@ -23,6 +23,7 @@ export const useProjectStore = defineStore('project', () => {
   const externalScriptChange = ref(null);
   const externalScriptDiff = ref(null);
   const _saving = ref(false);
+  let dirtyGeneration = 0;
   let sceneNavigationRequestCounter = 0;
   let agentPathNavigationRequestCounter = 0;
 
@@ -184,8 +185,9 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
-  async function saveProject(scriptData) {
+  async function saveProject(scriptData, { shouldClearDirty = () => true } = {}) {
     if (_saving.value || !window.ipcRenderer || !projectPath.value) return false;
+    const saveDirtyGeneration = dirtyGeneration;
     _saving.value = true;
     try {
       const result = await window.ipcRenderer.invoke('save-project', {
@@ -207,7 +209,9 @@ export const useProjectStore = defineStore('project', () => {
         scriptFileState.value = result.scriptFileState || scriptFileState.value;
         externalScriptChange.value = null;
         externalScriptDiff.value = null;
-        isDirty.value = false;
+        if (dirtyGeneration === saveDirtyGeneration && shouldClearDirty()) {
+          isDirty.value = false;
+        }
       }
       return result.success;
     } finally {
@@ -232,6 +236,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function markDirty() {
+    dirtyGeneration += 1;
     isDirty.value = true;
   }
 

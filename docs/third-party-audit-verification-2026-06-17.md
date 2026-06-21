@@ -67,6 +67,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the tenth repair pass: Q17 response envelopes for the export UI's fallible file/directory IPC boundary.
 - Completed in the eleventh repair pass: Q10 CLI command registry, Q9 shared JSON/text result emission, and Q11 apply-plan operation registry.
 - Completed in the twelfth repair pass: Q19 shared hex conversion, Q13/Q14/Q15/M12 named limits and documentation, Q16 changed-path omission metadata, M6 shared object-map key defense, and B16/M1 legacy editor removal. M3 was analyzed only.
+- Completed in the thirteenth repair pass: M3 save-lifecycle race hardening with mounted-App behavior coverage and a revision-aware dirty-clear rule.
 
 Repair validation:
 
@@ -288,6 +289,16 @@ Twelfth repair validation and M3 analysis:
 - M3 residual risk: `project.saveProject()` clears `isDirty` on any successful response. If a new edit occurs after the saved snapshot is cloned but before that response, the response can temporarily clear the newer dirty state. A later autosave normally repairs disk state, but closing in that window can miss the newer edit. Timer extraction should not proceed without a save-revision token or equivalent dirty-after-save rule.
 - Final validation: `npm run build` passed on Vite 8.0.16, full `npm test` passed with Vitest 134 files / 1165 tests and Node 305 tests, and `git diff --check` passed.
 
+Thirteenth repair validation and M3 completion:
+
+- The race was reproduced before implementation with a mounted `App`, real Pinia project/script stores, fake timers, and a delayed `save-project` IPC Promise: edit A started a save whose cloned payload contained A; edit B incremented `changeRevision` while that save remained pending; the successful A response then set `isDirty = false`; the awaitable Electron close query consequently resolved `false` before the 2 s autosave could persist B.
+- The minimal repair gives `project.saveProject()` an internal dirty-generation token and also records `script.changeRevision` after pending patch flush for the App lifecycle call. A successful response still refreshes file state and clears external-conflict metadata, but clears dirty only when both the store generation and live script revision still match the save start. If B occurs in flight, the old response cannot mark the project clean; Electron close sees dirty and its save path sends a new payload containing B. Direct store callers receive the generation guard by default.
+- No persistence-lifecycle composable was extracted. The bounded revision guard fixes the correctness defect without moving navigation, external-open/reload, preview, or condition-repair control flow. Extraction would enlarge this repair and should be reconsidered only if another lifecycle change needs the same seam.
+- `editorSaveClose.test.js` now has mounted-App behavior coverage for immediate dirty tracking, 500 ms transaction grouping, 2 s autosave debounce, save-button and Ctrl+S timer cancellation plus pending-patch flush, concurrent save deduplication, the condition-page gate and source label, failure/conflict dirty retention, go-home save/discard/cancel, external-open/reload/unmount timer cleanup, the delayed-save revision race, newest-revision close save, and the awaitable Electron close bridge. The two Electron-main bridge expressions remain checked as wiring evidence, not as the race acceptance test.
+- Targeted validation passed: all involved JavaScript files passed `node --check`; `npx vitest run tests/editorSaveClose.test.js tests/variableRegistryWorkspace.test.js tests/scriptHistory.test.js` passed 3 files / 40 tests; `npm run build` passed; full `npm test` passed with Vitest 134 files / 1179 tests and Node 305 tests; `git diff --check` passed.
+- Electron smoke was not run because the repository has no Electron E2E seam that can intentionally delay `save-project` while driving close/reopen. The deterministic mounted-App test covers the exact timing window and serialized IPC payloads, but a future repo-owned Electron harness should repeat delayed save, immediate close, disk reopen, normal autosave, and external-conflict flows.
+- Remaining risk is limited to integration beyond the renderer harness: the Electron main close bridge is still source-verified rather than driven end to end under an intentionally delayed native IPC save. Direct `project.saveProject()` callers are generation-guarded; the App lifecycle adds the stronger script-revision check, while the export path retains its synchronous save-before-export behavior.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
@@ -295,7 +306,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 - Worth doing in a dedicated architecture pass when justified: Q1/Q2/Q4.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the twelfth pass: Q9-Q19 maintenance items covered by this pass are closed without taking on Q1/Q2/Q4 decomposition. M3 remains intentionally unimplemented until its edit-during-save race and lifecycle behavior have a dedicated harness.
+- Residual risk after the thirteenth pass: Q9-Q19 and M3 are closed without taking on Q1/Q2/Q4 decomposition. M3's remaining risk is the unavailable delayed-save Electron close/reopen smoke described above, not a known renderer dirty-state defect.
 
 ## Priority Repair Plan
 
@@ -417,7 +428,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 |---|---|---|---|---|
 | M1: legacy views use old `commands[]` | Completed | Low | The unreachable legacy views/composable and their unique dependencies were removed after CodeGraph/import/build proof; no `commands[]` migration was introduced. | Done. |
 | M2: `onBeforeUnmount` outside factory | False positive | Informational | Checked related composables; cleanup is registered inside factory functions. | No fix. |
-| M3: manual debounce timers | Analyzed; implementation deferred | Informational | A bounded persistence-lifecycle composable is justified, but current behavior needs race-focused tests first. The edit-during-save dirty-state race is the main residual risk; timer/autosave/undo behavior was not changed in this pass. | Add behavior harness and save-revision rule before extraction. |
+| M3: manual debounce timers | Completed | Informational | Mounted-App fake-timer tests now cover the save lifecycle and reproduce the edit-during-save race. Dirty-generation and saved-revision guards prevent an older successful response from clearing dirty after a newer edit, without changing the 500/2000 ms delays or IPC payload. | Done; composable extraction deferred because it would expand scope without improving the bounded fix. |
 | M4: file state compares only mtime and size | Completed | Low | Script file state now includes SHA-256 and shared comparison prefers hashes while retaining compatibility with pre-hash mtime/size states. | Done. |
 | M5: exported global regex lastIndex | Completed | Low | Text template operations reset the exported global regex before use. |
 | M6: unsafe key set duplicated | Completed | Low | Stable ID, video, variable, text-template, ending, and CG contracts now share `isSafeObjectMapKey()` while retaining their distinct format/normalization/error rules. | Done. |
@@ -433,7 +444,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q5, Q6, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, S8, B1, B7, B8, B10, B11, B12, B13, B15, B16, B17, B19, S5, S9, S13, S15, S18, S20, S21, M1, M4, M5, M6, M9, M11, M12, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
+1. Do not restart with Q5, Q6, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, S8, B1, B7, B8, B10, B11, B12, B13, B15, B16, B17, B19, S5, S9, S13, S15, S18, S20, S21, M1, M3, M4, M5, M6, M9, M11, M12, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
 2. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
-3. Defer broad refactors unless a separate architecture milestone is approved: Q1/Q2/Q4 and major IPC response-shape consolidation. Treat M3 as a separate behavior-hardening task: first add the save-race harness and revision-aware dirty rule, then consider extracting the persistence lifecycle composable.
+3. Defer broad refactors unless a separate architecture milestone is approved: Q1/Q2/Q4 and major IPC response-shape consolidation. Do not extract the M3 persistence lifecycle unless a future scoped change justifies the additional seam.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

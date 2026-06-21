@@ -499,7 +499,10 @@ async function runSave({ silent = false, source = 'manual' } = {}) {
 
   await flushPendingSnapshotBeforeSave();
 
-  const saved = await project.saveProject(script.data);
+  const saveRevision = script.changeRevision;
+  const saved = await project.saveProject(script.data, {
+    shouldClearDirty: () => script.changeRevision === saveRevision,
+  });
   if (!saved && project.externalScriptChange && !silent) {
     alert('检测到 script.json 已被外部工具修改。请先重新载入项目，确认外部 Agent 的更改后再继续保存。');
   }

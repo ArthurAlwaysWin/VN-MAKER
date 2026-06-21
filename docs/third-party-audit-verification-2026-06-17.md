@@ -66,6 +66,7 @@ The first repair pass has been completed and validated. It covered the highest-c
 - Completed in the ninth repair pass: Q5 lexical path-containment helper consolidation across Electron and project scaffolding.
 - Completed in the tenth repair pass: Q17 response envelopes for the export UI's fallible file/directory IPC boundary.
 - Completed in the eleventh repair pass: Q10 CLI command registry, Q9 shared JSON/text result emission, and Q11 apply-plan operation registry.
+- Completed in the twelfth repair pass: Q19 shared hex conversion, Q13/Q14/Q15/M12 named limits and documentation, Q16 changed-path omission metadata, M6 shared object-map key defense, and B16/M1 legacy editor removal. M3 was analyzed only.
 
 Repair validation:
 
@@ -273,6 +274,20 @@ Eleventh repair validation:
 - Final full `npm test`: Vitest 131 files / 1153 tests passed; Node test run 305 tests passed.
 - Residual risk: Q1 remains open because both registries intentionally stay in `tools/vn-author/index.js`. Output wording is still command-owned by design, so future commands must add a registry entry and choose an explicit text emitter; completeness tests guard the current inventories against silent drift.
 
+Twelfth repair validation and M3 analysis:
+
+- Q19 is closed in `b836fbd`: `src/shared/color.js` now owns the existing six-digit `hexToRgb()` behavior used by color harmony, contrast, and the preset generator. The helper intentionally preserves hash-optional parsing, tuple output, and permissive `NaN` channels for malformed input; no short-hex or normalization semantics were added. Targeted run: 1 file / 4 tests passed.
+- Q13/Q14/Q15/M12 are closed in `e2e485b`: the condition editor limit remains 3, the validator's 120-code-unit warning threshold is documented together with `longDialogueLimit` override usage, the handoff checkpoint default remains 5, and patch undo history remains capped at 50. Targeted run: 4 files / 152 tests passed; `npm run build` passed.
+- Q16 is closed in `abad8a3`: both handoff artifacts and `author-check` transaction summaries retain `changedPaths` and `changedPathCount` while adding stable `omittedChangedPathCount` metadata. Tests cover no truncation (`0`) and 25-to-20 / 22-to-20 truncation, including CLI JSON and the written handoff artifact. Targeted run: 2 files / 133 tests passed.
+- M6 is closed in `b0633c5`: `src/shared/objectMapKey.js` owns the Object.prototype collision check reused by stable IDs, video, variable, text-template, ending, and CG contracts. Their ID patterns, normalization, and error messages are unchanged. Player profile cleanup and effect-pack manifest checks were deliberately not migrated because they enforce different contracts. Targeted prototype-pollution run: 7 files / 63 tests passed.
+- B16/M1 are closed in `779ec79`: CodeGraph and literal import checks showed that `Scenes.vue`, `Characters.vue`, `Assets.vue`, `useCanvasState.js`, `CanvasPreview.vue`, and `AssetPanel.vue` had no runtime, dynamic-import, test, build-entry, or documentation dependency beyond the legacy cluster itself. The active scenes route remains `PageEditor.vue`; shared `DraggableElement.vue` remains live through `PageCanvas` and `TitleDesigner`. The six unreachable files (1,422 lines) were deleted. Targeted editor run: 5 files / 40 tests passed; `npm run build` passed.
+- M3 remains analysis-only. `changeRevision` currently marks dirty immediately, restarts a 500 ms patch-transaction timer, and restarts a 2 s autosave timer. Manual, shortcut, go-home, external-open, and Electron-close saves converge through one in-flight `attemptSave()`, clear autosave, flush pending patches, enforce the condition-page gate, and then call `project.saveProject()`. Go-home/external-open/reload/unmount clear both timers; Electron close uses awaitable renderer globals before teardown.
+- Existing M3 coverage is uneven: `scriptHistory.test.js` behaviorally covers patch grouping/undo/redo/truncation, and a prior Electron smoke covered dirty state, the 500 ms/2 s timing, close/reopen, and persisted consistency. `editorSaveClose.test.js`, however, only asserts source strings, and the committed App mount tests do not exercise timer/save races.
+- A dedicated composable is worthwhile only as a bounded persistence-lifecycle extraction, with injected `script`/`project`, configurable 500/2000 ms delays, and an API such as `saving`, `attemptSave`, `flushPendingTransaction`, `cancelPendingTimers`, `hasDirtyProject`, `saveCurrentProject`, and `dispose`. It must preserve the condition repair callback/source labels and the single-active-save contract.
+- Required behavior tests before extraction: fake-timer transaction/autosave reset, manual-save flush, save deduplication, failed/blocked save retaining dirty state, edit-during-save revision handling, go-home save/discard/cancel, external-open/reload cancellation, and unmount cleanup. Electron smoke should edit during an intentionally delayed save, close before the next autosave, then reopen and verify the newest revision on disk; it should also repeat the normal 500 ms/2 s and external-conflict paths.
+- M3 residual risk: `project.saveProject()` clears `isDirty` on any successful response. If a new edit occurs after the saved snapshot is cloned but before that response, the response can temporarily clear the newer dirty state. A later autosave normally repairs disk state, but closing in that window can miss the newer edit. Timer extraction should not proceed without a save-revision token or equivalent dirty-after-save rule.
+- Final validation: `npm run build` passed on Vite 8.0.16, full `npm test` passed with Vitest 134 files / 1165 tests and Node 305 tests, and `git diff --check` passed.
+
 Remaining-fix recommendation:
 
 Not every remaining confirmed item should be fixed immediately. The worthwhile path is to defer broad refactors and measurement-sensitive performance changes rather than chase every informational, false-positive, or architecture cleanup item as part of this hardening pass. Recommended buckets:
@@ -280,7 +295,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 - Worth doing in a dedicated architecture pass when justified: Q1/Q2/Q4.
 - Do not spend immediate hardening time on: false positives, informational findings, broad architecture cleanup such as Q1/Q2/Q4 unless a separate refactor milestone is planned, or low-value optional cleanups now marked "Not planned for audit hardening".
 - Not planned for audit hardening: S6, S14, S19, P5, P11, P17, M10, M15.
-- Residual risk after the eleventh pass: Q9-Q11 are closed without taking on Q1 file decomposition. Broader Q1/Q2/Q4 architecture work remains intentionally deferred.
+- Residual risk after the twelfth pass: Q9-Q19 maintenance items covered by this pass are closed without taking on Q1/Q2/Q4 decomposition. M3 remains intentionally unimplemented until its edit-during-save race and lifecycle behavior have a dedicated harness.
 
 ## Priority Repair Plan
 
@@ -305,7 +320,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 |---|---|---|---|---|---|
 | B1: choice effects fire-and-forget | Completed | Low | A delayed-repository repro first confirmed routing before persistence. `selectChoice()` now applies variables synchronously, locks repeat selection, awaits ending/CG persistence before routing, continues after logged persistence failure, and preserves scene-enter before ending-unlock notification order. | Done. | Added success, delay, failure, repeat, sync-variable, ordering, and repository durability coverage. |
 | B2: `WebSaveManager._getDb()` race | Completed | Medium | Fixed with pending `_dbPromise` reuse; concurrent regression test added. | Done. | Added. |
-| B3: `Scenes.vue` / `Characters.vue` call nonexistent store APIs | False positive | Informational | `loadScript()` and `saveScript()` deprecated shims exist in `src/editor/stores/script.js`; current `App.vue` routes `scenes` to `PageEditor.vue`. | Optional deletion of legacy views. | No. |
+| B3: `Scenes.vue` / `Characters.vue` call nonexistent store APIs | Closed by dead-code removal | Informational | The claim was false for the historical files because compatibility shims existed. The unreachable legacy views were subsequently removed with B16/M1 after reachability proof; current routes use `PageEditor.vue` and `ResourceLibrary.vue`. | Done. | Covered by current-route tests/build. |
 | B4: `listEffectPacksCommand()` crashes because it passes script directly | False positive | Informational | `createProjectSession()` accepts bare script or `{ script }`; CLI command succeeded. | No fix. | No. |
 | B5: `cloneJsonValue(null)` returns `{}` in `galgameContract` | Partially true | Low | Behavior exists, but helper is private and current null contract normalization works. | Consider only special-casing `undefined`; confirm callers. | Yes. |
 | B6: `normalizeSystems()` mutates input | False positive | Informational | `ensureGalgameContract()` clones before normalizing; repro showed caller object unchanged. | No fix. | No. |
@@ -318,7 +333,7 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | B13: CLI `readScript()` raw JSON.parse error | Completed | Low | `readScript()` wraps parse failures with script path context, and generic `--json` CLI failures now return structured JSON. | Done. | Added. |
 | B14: `ackPendingOpenProjectRequest` empty catch | False positive | Informational | Function not present in current `project.js`; likely stale report. | No fix. | No. |
 | B15: `saveAgentReviewState()` non-atomic double write | Completed | Low | Agent review state now writes the project artifact first and updates localStorage only after IPC success; browser/no-IPC fallback still uses localStorage. | Done. | Added. |
-| B16: `useCanvasState` legacy `commands[]` | Partially true | Low | Legacy composable only handles `commands[]`, but current main scene editor uses pages. | Remove or migrate legacy view/composable. | Optional. |
+| B16: `useCanvasState` legacy `commands[]` | Completed | Low | CodeGraph and import/build evidence proved the legacy view cluster unreachable. Removed `useCanvasState`, its only caller `Scenes.vue`, unique `CanvasPreview`/`AssetPanel` dependencies, and the similarly unreachable `Characters.vue`/`Assets.vue`; the current pages editor remains unchanged. | Done. | Current route/UI/build coverage passed. |
 | B17: effect preview provenance Map not cleaned | Completed | Low | Terminal effect-preview results retain their provenance on the result object, then delete the request entry from the provenance Map. | Done. | Added. |
 | B18: title preview listener registered at module top level | False positive | Informational | Listener is inside `useTitlePreview()` and removed on unmount. | No fix. | No. |
 | B19: macOS `win` stale on `window-all-closed` | Completed | Low | `win = null` now runs before platform-specific quit handling, including macOS. | Done. | Added. |
@@ -388,37 +403,37 @@ Not every remaining confirmed item should be fixed immediately. The worthwhile p
 | Q10: CLI main dispatch if-chain | Completed | Low | Replaced the 105-name dispatch chain with an explicit command-handler registry, preserving aliases, project forwarding, special exit-code extraction, and help exit behavior. | Done. |
 | Q11: plan operation dispatch if-chain | Completed | Low | Replaced all 68 operation branches with a domain-grouped handler registry; the supported-command list is generated from registry keys and structured repair errors remain intact. | Done. |
 | Q12: condition row helper duplication | Completed | Low | Canonical/legacy row extraction, condition value compatibility, and comparison helpers now live in `branchingContract` and are reused by condition analysis and project validation. | Done. |
-| Q13: condition row limit magic number | True | Informational | Hard-coded condition row limit. | Named constant. |
-| Q14: long dialogue limit undocumented | True | Informational | `DEFAULT_LONG_DIALOGUE_LIMIT = 120`. | Comment/config. |
-| Q15: checkpoint limit magic number | True | Informational | Default checkpoint limit `5`. | Named constant. |
-| Q16: changedPaths truncation | Partially true | Informational | `slice(0, 20)` exists but count is also emitted. | Add "and N more" metadata. |
+| Q13: condition row limit magic number | Completed | Informational | The editor's unchanged three-row limit now has a semantic constant/helper and exact-boundary behavior coverage. | Done. |
+| Q14: long dialogue limit undocumented | Completed | Informational | The existing `DEFAULT_LONG_DIALOGUE_LIMIT = 120` now documents its JavaScript string code-unit unit, warning purpose, and `validateProject(..., { longDialogueLimit })` override. It remains private because no reuse requires export. | Done. |
+| Q15: checkpoint limit magic number | Completed | Informational | The unchanged default of 5 now uses `DEFAULT_HANDOFF_CHECKPOINT_LIMIT`; CLI coverage verifies default and `--checkpoint-limit 2`. | Done. |
+| Q16: changedPaths truncation | Completed | Informational | Existing fields remain intact and both summary producers now report `omittedChangedPathCount`, including stable zero when nothing is omitted. | Done. |
 | Q17: IPC response shapes inconsistent | Completed | Low | Export UI file/directory dialogs and file-content reads now share explicit success, canceled, and failure envelopes; typed business RPCs retain domain-specific payloads. | Done. |
 | Q18: ID validation too weak | Completed | Medium | Added `src/shared/stableId.js` and applied stable ID checks to project-session/CLI entity ID entry points. |
-| Q19: `hexToRgb` duplicated | True | Low | `colorHarmony.js` and `contrast.js`. | Extract color util. |
+| Q19: `hexToRgb` duplicated | Completed | Low | Three identical implementations, including the preset generator, now use `src/shared/color.js` without changing parsing tolerance or adding color normalization. | Done. |
 
 ### Maintainability Findings
 
 | Issue | Judgment | Severity | Evidence / notes | Fix direction |
 |---|---|---|---|---|
-| M1: legacy views use old `commands[]` | Partially true | Low | Old `Scenes.vue` does; current App uses `PageEditor.vue`. | Delete or mark deprecated. |
+| M1: legacy views use old `commands[]` | Completed | Low | The unreachable legacy views/composable and their unique dependencies were removed after CodeGraph/import/build proof; no `commands[]` migration was introduced. | Done. |
 | M2: `onBeforeUnmount` outside factory | False positive | Informational | Checked related composables; cleanup is registered inside factory functions. | No fix. |
-| M3: manual debounce timers | True | Informational | `App.vue` manages timers manually. | Optional composable. |
+| M3: manual debounce timers | Analyzed; implementation deferred | Informational | A bounded persistence-lifecycle composable is justified, but current behavior needs race-focused tests first. The edit-during-save dirty-state race is the main residual risk; timer/autosave/undo behavior was not changed in this pass. | Add behavior harness and save-revision rule before extraction. |
 | M4: file state compares only mtime and size | Completed | Low | Script file state now includes SHA-256 and shared comparison prefers hashes while retaining compatibility with pre-hash mtime/size states. | Done. |
 | M5: exported global regex lastIndex | Completed | Low | Text template operations reset the exported global regex before use. |
-| M6: unsafe key set duplicated | True | Low | Repeated in registry contracts. | Shared object-map guard. |
+| M6: unsafe key set duplicated | Completed | Low | Stable ID, video, variable, text-template, ending, and CG contracts now share `isSafeObjectMapKey()` while retaining their distinct format/normalization/error rules. | Done. |
 | M7: `unique().filter(Boolean)` drops falsy values | Partially true | Informational | True but current call sites mostly expect strings. | Rename or preserve semantics. |
 | M8: fallback project ID collision | Partially true | Informational | Theoretical; default crypto UUID path is fine, fallback 10000-run repro had no collision. | Optional longer random/counter. |
 | M9: ConfigManager set accepts any key/value | Completed | Low | `ConfigManager` now applies a key/type/range schema when loading persisted settings and when setting values at runtime; invalid and unknown keys are ignored with regression coverage. | Done. |
 | M10: EventEmitter lacks `once/removeAllListeners` | Not planned for audit hardening | Informational | Missing convenience API, not a correctness or security defect. | Add only when a real caller needs it. |
 | M11: BGM fadeIn ignored | Completed | Low | `ScriptEngine` now emits `page.bgm.fadeIn ?? 0` in `play_bgm` events. |
-| M12: undo limit 50 magic number | True | Informational | Hard-coded in `script.js`. | Named constant. |
+| M12: undo limit 50 magic number | Completed | Informational | The unchanged patch-history cap now uses `MAX_UNDO_HISTORY_ENTRIES`; existing undo/redo, branch truncation, and 50-entry behavior coverage passed. | Done. |
 | M13: CLI lacks `--flag=value` parsing | Completed | Low | CLI helpers now parse equals-form values and boolean flags; `list-transitions --target=background` regression added. | Done. |
 | M14: `getMainWindow()` may return wrong fallback | Completed | Low | `getMainWindow()` now returns only the tracked main `win` and rejects missing/destroyed windows; source regression coverage prevents focused/all-window fallback from returning. | Done. |
 | M15: Chinese UI strings hard-coded | Not planned for audit hardening | Informational | Many hard-coded strings. Product may be Chinese-first, so i18n is a product milestone rather than an audit repair. | Defer unless localization becomes a product goal. |
 
 ## Suggested Next Session Start
 
-1. Do not restart with Q5, Q6, Q9, Q10, Q11, Q12, Q17, Q18, S8, B1, B7, B8, B10, B11, B12, B13, B15, B17, B19, S5, S9, S13, S15, S18, S20, S21, M4, M5, M9, M11, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
+1. Do not restart with Q5, Q6, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, S8, B1, B7, B8, B10, B11, B12, B13, B15, B16, B17, B19, S5, S9, S13, S15, S18, S20, S21, M1, M4, M5, M6, M9, M11, M12, M14, P1, P2, P3, P6, P8, P9, P10, P13, P14, P16, or P18; these are now completed and regression-covered. The Vite Electron `inlineDynamicImports` warning is also closed.
 2. Do not continue with S6, S14, S19, P5, P11, P17, M10, or M15 unless nearby product work makes one of them relevant.
-3. Defer broad refactors unless a separate architecture milestone is approved: Q1/Q2/Q4 and major IPC response-shape consolidation.
+3. Defer broad refactors unless a separate architecture milestone is approved: Q1/Q2/Q4 and major IPC response-shape consolidation. Treat M3 as a separate behavior-hardening task: first add the save-race harness and revision-aware dirty rule, then consider extracting the persistence lifecycle composable.
 4. For each future repair batch, keep the pattern from the first two passes: add minimal repro/regression tests, run targeted suites, run `npm audit --json` if dependencies or supply-chain surfaces changed, then finish with full `npm test`.

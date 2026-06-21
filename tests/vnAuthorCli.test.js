@@ -7432,7 +7432,11 @@ scene start "Start":
         changeSummary: {
           command: 'apply-plan',
           operationCount: 1,
-          changedPaths: ['scenes.start.pages.0', 'scenes.start.pages.1'],
+          changedPaths: [
+            'scenes.start.pages.0',
+            'scenes.start.pages.1',
+            ...Array.from({ length: 20 }, (_, index) => `meta.audit.path${index}`),
+          ],
           validation: { ok: true, errorCount: 0, warningCount: 0 },
         },
       }), 'utf8');
@@ -7457,7 +7461,7 @@ scene start "Start":
       expect(result.focus).toMatchObject({
         mode: 'transaction',
         transactionPath,
-        changedPaths: ['scenes.start.pages.0', 'scenes.start.pages.1'],
+        changedPaths: expect.arrayContaining(['scenes.start.pages.0', 'scenes.start.pages.1']),
         checkedSceneIds: ['start'],
         pageTargets: [{ sceneId: 'start', pageIndex: 0 }, { sceneId: 'start', pageIndex: 1 }],
         branchGraphTargets: [{
@@ -7477,8 +7481,11 @@ scene start "Start":
         status: 'written',
         wrote: true,
         operationCount: 1,
-        changedPathCount: 2,
+        changedPathCount: 22,
+        omittedChangedPathCount: 2,
       });
+      expect(result.transactionSummary.changedPaths).toHaveLength(20);
+      expect(result.focus.changedPaths).toHaveLength(22);
       expect(result.summary).toMatchObject({
         layoutWarnings: 0,
         readinessBlockers: 0,
@@ -7944,31 +7951,35 @@ scene start "Start":
         },
         changeSummary: {
           operationCount: 3,
-          changedPaths: ['scenes.start', 'scenes.unused_checkpoint_scene'],
+          changedPaths: [
+            'scenes.start',
+            'scenes.unused_checkpoint_scene',
+            ...Array.from({ length: 23 }, (_, index) => `meta.audit.path${index}`),
+          ],
           validation: { ok: true, errorCount: 0, warningCount: 0 },
         },
       }), 'utf8');
 
-      await expect(execFileAsync('node', [
-        cliPath,
-        'handoff-report',
-        '--script',
-        scriptPath,
-        '--transaction',
-        transactionPath,
-        '--checkpoint-dir',
-        checkpointDir,
-        '--write-editor-handoff',
-        '--skip-asset-check',
-        '--note',
-        'Review the agent-authored changes.',
-        '--json',
-      ])).rejects.toMatchObject({
-        code: 1,
-        stdout: expect.any(String),
-      });
+      let handoffFailure;
+      try {
+        await execFileAsync('node', [
+          cliPath,
+          'handoff-report',
+          '--script', scriptPath,
+          '--transaction', transactionPath,
+          '--checkpoint-dir', checkpointDir,
+          '--write-editor-handoff',
+          '--skip-asset-check',
+          '--note', 'Review the agent-authored changes.',
+          '--json',
+        ]);
+      } catch (error) {
+        handoffFailure = error;
+      }
+      expect(handoffFailure).toMatchObject({ code: 1, stdout: expect.any(String) });
 
       const handoff = JSON.parse(await readFile(outPath, 'utf8'));
+      const cliHandoff = JSON.parse(handoffFailure.stdout);
       expect(handoff).toMatchObject({
         kind: 'agent-authoring-handoff',
         projectId: 'gm_cli_handoff',
@@ -7984,10 +7995,13 @@ scene start "Start":
         transactionSummary: {
           command: 'apply-plan',
           operationCount: 3,
-          changedPathCount: 2,
+          changedPathCount: 25,
+          omittedChangedPathCount: 5,
         },
         notes: ['Review the agent-authored changes.'],
       });
+      expect(handoff.transactionSummary.changedPaths).toHaveLength(20);
+      expect(cliHandoff.transactionSummary).toEqual(handoff.transactionSummary);
       expect(handoff.reviewItems).toEqual(expect.arrayContaining([
         expect.objectContaining({ source: 'layout', code: 'layout-blank-page' }),
         expect.objectContaining({

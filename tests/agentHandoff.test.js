@@ -74,6 +74,7 @@ describe('agent handoff report', () => {
         wrote: true,
         operationCount: 2,
         changedPathCount: 2,
+        omittedChangedPathCount: 0,
         changedPaths: ['scenes.reviewed_scene', 'scenes.reviewed_scene.pages.0'],
       },
       checkpoints: [
@@ -100,6 +101,24 @@ describe('agent handoff report', () => {
         referenceCount: 1,
       }),
     ]));
+  });
+
+  it('reports how many changed paths were omitted from the transaction summary', () => {
+    const changedPaths = Array.from({ length: 25 }, (_, index) => `meta.audit.path${index}`);
+    const handoff = createAgentHandoff({
+      projectId: 'gm_handoff_truncation',
+      characters: {},
+      scenes: { start: { pages: [{ type: 'normal', dialogues: [] }] } },
+    }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: { changeSummary: { changedPaths } },
+    });
+
+    expect(handoff.transactionSummary).toMatchObject({
+      changedPathCount: 25,
+      omittedChangedPathCount: 5,
+      changedPaths: changedPaths.slice(0, 20),
+    });
   });
 
   it('includes preview targets for changed scene pages and screen UI paths', () => {

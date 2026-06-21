@@ -4,6 +4,8 @@ import { createProjectReport } from './projectReport.js';
 import { collectSceneReferenceDiagnostics } from './sceneReferenceDiagnostics.js';
 import { collectEffectPackAssetPaths } from '../shared/effectPackContract.js';
 
+const CHANGED_PATH_SUMMARY_LIMIT = 20;
+
 function summarizeCheckpoint(entry = {}) {
   return {
     path: entry.path,
@@ -19,18 +21,17 @@ function summarizeTransaction(transaction = null) {
   }
 
   const changeSummary = transaction.changeSummary ?? {};
+  const changedPaths = Array.isArray(changeSummary.changedPaths) ? changeSummary.changedPaths : [];
+  const summarizedChangedPaths = changedPaths.slice(0, CHANGED_PATH_SUMMARY_LIMIT);
   return {
     command: transaction.transaction?.command ?? changeSummary.command ?? transaction.command ?? null,
     status: transaction.transaction?.status ?? changeSummary.writeStatus ?? null,
     wrote: transaction.transaction?.wrote ?? null,
     dryRun: transaction.dryRun ?? changeSummary.dryRun ?? null,
     operationCount: changeSummary.operationCount ?? transaction.operations?.length ?? null,
-    changedPaths: Array.isArray(changeSummary.changedPaths)
-      ? changeSummary.changedPaths.slice(0, 20)
-      : [],
-    changedPathCount: Array.isArray(changeSummary.changedPaths)
-      ? changeSummary.changedPaths.length
-      : 0,
+    changedPaths: summarizedChangedPaths,
+    changedPathCount: changedPaths.length,
+    omittedChangedPathCount: changedPaths.length - summarizedChangedPaths.length,
     checkpointPath: transaction.transaction?.checkpointPath ?? changeSummary.checkpointPath ?? null,
     backupPath: transaction.transaction?.backupPath ?? changeSummary.backupPath ?? null,
     validation: changeSummary.validation ?? transaction.validation ?? null,

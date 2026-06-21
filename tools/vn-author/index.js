@@ -74,6 +74,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const defaultScriptPath = path.join(repoRoot, 'public', 'game', 'script.json');
 const DEFAULT_HANDOFF_CHECKPOINT_LIMIT = 5;
+const CHANGED_PATH_SUMMARY_LIMIT = 20;
 
 function readEqualsArg(arg, name) {
   const prefix = `${name}=`;
@@ -4747,8 +4748,9 @@ async function authorCheck(args, { emit = true } = {}) {
         wrote: transaction.data.transaction?.wrote ?? null,
         dryRun: transaction.data.dryRun ?? transaction.data.changeSummary?.dryRun ?? null,
         operationCount: transaction.data.changeSummary?.operationCount ?? transaction.data.operations?.length ?? null,
-        changedPaths: focus.changedPaths.slice(0, 20),
+        changedPaths: focus.changedPaths.slice(0, CHANGED_PATH_SUMMARY_LIMIT),
         changedPathCount: focus.changedPaths.length,
+        omittedChangedPathCount: Math.max(0, focus.changedPaths.length - CHANGED_PATH_SUMMARY_LIMIT),
       }
       : null,
     dslSourceMap: summarizeOptionalAgentDslSourceMap(dslSourceMap),

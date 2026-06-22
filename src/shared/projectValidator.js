@@ -42,6 +42,7 @@ import {
   isKnownUiMotionPreset,
 } from './uiMotionContract.js';
 import { isKnownUiStylePreset } from './uiStylePresetContract.js';
+import { validateUiProjectContract } from './uiDocumentContract.js';
 import {
   isKnownSettingsCustomButtonAction,
   isKnownSettingsFooterButtonAction,
@@ -1671,6 +1672,13 @@ export function validateProject(script, options = {}) {
   validateUiMotion(script, report);
   validateUiStylePresetField(script, report);
   validateSettingsScreen(script, report);
+  for (const diagnostic of validateUiProjectContract(script, { capabilities: options.uiCapabilities })) {
+    if (diagnostic.severity === PROJECT_VALIDATION_SEVERITIES.WARNING) {
+      report.warnings.push(diagnostic);
+    } else {
+      report.errors.push(diagnostic);
+    }
+  }
 
   const registry = normalizeVariableRegistry(script?.systems?.variables);
   const endings = normalizeEndingRegistry(script?.systems?.endings);

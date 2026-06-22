@@ -149,7 +149,8 @@ describe('vn-author CLI', () => {
       .map((match) => match[1]);
 
     expect(registeredCommands).toEqual([
-      'projects', 'create-project', 'open-project', 'inspect', 'validate', 'list-assets',
+      'projects', 'create-project', 'open-project', 'inspect', 'list-ui-screens',
+      'inspect-ui-screen', 'list-ui-nodes', 'inspect-ui-schema', 'validate', 'list-assets',
       'list-transitions', 'list-particles', 'list-effect-packs', 'list-ui-style-presets',
       'graph-report', 'find-dead-ends', 'find-missing-assets', 'find-unused-assets',
       'author-check', 'import-draft', 'draft-plan', 'dsl-plan', 'dsl-check', 'dsl-diff',

@@ -135,6 +135,31 @@ Errors mean the project contract is broken and should be fixed before handoff. W
 | `effect-pack-reference-missing` | A page references an effect pack that is not registered in `assets.effectPacks`. |
 | `invalid-effect-pack-params` | A page effect-pack reference contains unsupported params; known params are normalized through the manifest schema. |
 
+## Canonical UI Diagnostic Codes
+
+| Code | Meaning |
+| --- | --- |
+| `ui-schema-version-invalid` | Canonical UI schema is not supported version 2. |
+| `ui-registry-invalid` / `ui-registry-key-unknown` | A screen/overlay registry or id is invalid. |
+| `ui-authority-invalid` / `ui-authority-conflict` / `ui-authority-document-missing` | Authority is unknown, dual-writer, or missing its canonical document. |
+| `ui-document-*` | Canonical document envelope, id, or kind is invalid. |
+| `ui-node-id-invalid` / `ui-node-id-duplicate` | Node identity is unstable or duplicated. |
+| `ui-root-*` / `ui-node-parent-missing` / `ui-node-unreachable` / `ui-hierarchy-cycle` | Hierarchy root, parent, reachability, or acyclic rules failed. |
+| `ui-node-order-invalid` | Deterministic node order is invalid. |
+| `ui-widget-type-unknown` / `ui-required-part-missing` | Widget type is unknown or a protected semantic part is missing. |
+| `ui-layout-*` | Typed anchor, pivot, offset, size, constraint, padding, or alignment failed. |
+| `ui-style-*` / `ui-state-*` | Typed style or lifecycle state data is unsafe or unknown. |
+| `ui-action-*` | Canonical action id or typed parameters are invalid. |
+| `ui-binding-unknown` | Binding source is outside the closed semantic registry. |
+| `ui-asset-reference-invalid` | Asset kind/path/id is invalid or unsafe. |
+| `ui-capability-unregistered` | Advanced data was persisted before matching renderer/validator support. |
+| `ui-component-instance-invalid` / `ui-variant-invalid` / `ui-predicate-invalid` / `ui-animation-track-invalid` | An enabled advanced envelope violates its bounded schema. |
+| `ui-legacy-field-unsupported` / `ui-legacy-value-loss` | Pure legacy normalization found unsupported or lossy data and did not silently drop it. |
+| `ui-legacy-source-empty` / `ui-legacy-overlay-synthetic` | Read-only inspection used an empty/synthetic compatibility envelope. |
+| `ui-theme-projection-unsupported` | Phase 2 `.gmtheme` projection excluded advanced detail pending its vertical slice. |
+
+All canonical UI diagnostics contain stable `severity`, `code`, `path`, `pathString`, and actionable `message`. Diagnostics never trigger automatic migration writes.
+
 ## Effect Pack Boundary
 
 Milestone 11 effect packs are manifest-only. Validator support exists for data-only manifests under `assets.effectPacks`, page references under `scenes.*.pages.*.effectPacks`, and path-safe files under `effects/<id>/`.

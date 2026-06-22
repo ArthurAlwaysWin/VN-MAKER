@@ -764,6 +764,20 @@ describe('SaveLoadScreen.setLayout', () => {
     });
 
     describe('Phase 1 destructive and route behavior baseline', () => {
+      it('renders populated shared fixtures with runtime preview text, dates, and inline thumbnails', async () => {
+        sm = stubSaveManager(SAVE_LOAD_FIXTURES.populatedSlots);
+        screen = new SaveLoadScreen(container, sm);
+        screen.show('load', 'menu');
+
+        await vi.waitFor(() => expect(screen.el.querySelectorAll('.save-slot:not(.empty)')).toHaveLength(2));
+        const occupied = screen.el.querySelectorAll('.save-slot:not(.empty)');
+        expect(occupied[0].querySelector('.save-slot-text').textContent).toBe('Arrival at the observatory');
+        expect(occupied[0].querySelector('.save-slot-time').textContent).toBe('2026-06-22 20:00');
+        expect(occupied[1].querySelector('.save-slot-text').textContent).toBe('The sealed archive');
+        expect(occupied[1].querySelector('.save-slot-time').textContent).toBe('2026-06-22 21:15');
+        expect(occupied[1].querySelector('.save-slot-thumb').getAttribute('src')).toBe('data:image/png;base64,AAAA');
+      });
+
       it('cancels and confirms deletion through the rendered confirmation overlay', async () => {
         sm = stubSaveManager(SAVE_LOAD_FIXTURES.populatedSlots);
         screen = new SaveLoadScreen(container, sm);

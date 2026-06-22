@@ -1,8 +1,9 @@
 # Unified Screen Designer Architecture
 
-**Status:** Proposed; implementation not started
+**Status:** Phase 0-2 complete; Phase 3+ not started
 **Date:** 2026-06-22
-**Current-main baseline:** `7cf2e9a`
+**Planning baseline:** `7cf2e9a`
+**Phase 1 completion:** `fa11d14`
 **Roadmap:** [unified-screen-designer-roadmap.md](./unified-screen-designer-roadmap.md)
 
 ## Purpose
@@ -121,6 +122,17 @@ Buttons use built-in actions such as:
 
 Widgets bind only to named runtime data sources such as `save.slots`, `backlog.entries`, `gallery.items`, `settings.controls`, or `choice.options`. The contract does not accept arbitrary expressions, selectors, event handlers, or executable strings.
 
+The ids above are semantic design targets, not a claim that current runtime strings already use those names. Current legacy surfaces use screen-local strings such as `start`, `continue`, `load`, `settings`, `gallery`, `play-opening-video`, `quit`, `save`, `backlog`, `title`, `close`, and `reset`.
+
+Phase 2 must lock one public canonical action contract before the shared router is implemented:
+
+- define whether canonical ids retain current names or use semantic names with typed parameters;
+- define a pure, screen-aware legacy-to-canonical mapping for every supported current action;
+- distinguish actions that share a legacy word but have different context, such as title `load` and save-slot `load`;
+- reject unknown ids and parameters through the normal validator;
+- keep preview actions on the same router while substituting safe diagnostics for destructive or persistent effects;
+- avoid exposing two long-lived public action vocabularies after migration.
+
 ### 7. State styling follows real lifecycles
 
 Common style states may include `default`, `hover`, `pressed`, `focused`, `disabled`, and `selected`. A widget exposes a state only when runtime semantics own that lifecycle. The contract must not add decorative state fields that no runtime component can enter or leave deterministically.
@@ -136,6 +148,27 @@ The editor provides viewport presets and safe-area visualization. Absolute place
 Existing `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, `ui.backlogScreen`, `ui.dialogueBox`, and `ui.widgetStyles` data must continue to load during migration.
 
 Legacy configuration is normalized through pure adapters. Migration must support validation, dry-run reporting, checkpointed writes, and changed-path summaries. No phase may silently drop unsupported legacy detail.
+
+## Contract Perimeter And Authority
+
+`ui.screens` and `ui.overlays` own canonical screen composition: node hierarchy, layout, semantic widget placement, variants, typed overrides, data-slot bindings, and allowlisted actions. They reference rather than embed project assets.
+
+Shared project UI remains a dependency layer unless a later migration decision explicitly replaces it:
+
+- `ui.theme` owns project tokens, icon families, button families, and theme asset references;
+- `ui.motion` owns current surface motion presets until the animation-track contract defines a validated relationship with them;
+- `ui.widgetStyles` remains a shared legacy/style dependency while its consumers migrate screen by screen;
+- `assets.fonts`, `assets.videos`, and `assets.effectPacks` remain canonical asset registries outside screen documents.
+
+Each screen has exactly one authoritative composition writer at a time:
+
+1. **legacy-only:** the current screen-specific `ui.*` field is authoritative and a pure adapter may produce an in-memory canonical document;
+2. **canonical-active:** an explicit migration has persisted `ui.screens.<id>` or `ui.overlays.<id>`, which becomes the only composition writer for that surface; retained legacy data is compatibility/rollback evidence, not a second editable schema;
+3. **retired:** legacy read support is removed only after migration, export, preview, and rollback gates pass.
+
+Opening a project never changes its authority state. Migration is explicit and reports changed paths and unsupported detail. Runtime, editor, CLI, preview, and export must resolve the same authority for a given screen.
+
+`.gmtheme` is a theme exchange format, not a second canonical project contract. Phase 2 must define the theme-owned projection of canonical screens. The first persisted screen migration must prove that projection through export/import round-trip tests. Do not blindly package complete runtime state or indefinitely dual-write full canonical and legacy screen documents.
 
 ## Proposed Canonical Contract
 
@@ -162,6 +195,8 @@ The following shape is a design target, not a currently supported field:
   }
 }
 ```
+
+`screenSchemaVersion: 2` is provisional until Phase 2 locks the persisted shape. Existing projects are currently unversioned at the screen-document level; Phase 2 must define their legacy interpretation and must not assume that an undocumented persisted version 1 already exists.
 
 A representative node shape is:
 
@@ -292,6 +327,16 @@ Theme precedence is:
 
 Existing theme assets and widget-style contracts should be adapted, not duplicated. Screen documents reference theme families by stable names. Missing references fall back predictably and produce validation warnings.
 
+Animation ownership must also remain singular and testable. `ui.motion` currently selects surface-level presets. Typed node animation tracks are not a second unrestricted animation engine; before tracks may be persisted or written by the CLI, Phase 2 and Phase 3 must define and prove:
+
+- allowlisted properties, triggers, durations, easing, sequencing, and reduced-motion behavior;
+- precedence between engine defaults, `ui.motion`, node tracks, and runtime widget state;
+- deterministic normalization and validation;
+- one renderer path for runtime and preview;
+- predictable behavior when a track is unsupported by a host or semantic widget.
+
+Phase 2 locks the precedence model and validation contract. Phase 3 must prove it in the shared renderer before any mutation command may write tracks; if renderer evidence forces a contract change, the contract and fixtures are revised before that write gate opens.
+
 ## Agent Authoring
 
 Agents are expected to be the primary creators of complete screen compositions. They must support all common safe editor operations:
@@ -394,12 +439,33 @@ Required evidence layers:
 
 These questions must be answered during the named roadmap phases rather than guessed now:
 
-- exact persisted shape for node ordering and variants;
-- whether editor-only lock/visibility state belongs in portable project metadata or local editor state;
-- how much internal structure each semantic widget safely exposes;
-- whether gallery uses one mixed grid or explicit CG/ending tabs;
-- which video controls are authorable for each playback policy;
-- when a project is considered fully migrated and eligible for legacy-field cleanup.
+- **Phase 2:** exact persisted shape for node ordering and variants;
+- **Phase 2:** canonical action ids, typed parameters, and complete legacy mappings;
+- **Phase 2:** per-screen authority markers and the boundary between screen documents, `ui.theme`, `ui.motion`, and shared/legacy widget styles;
+- **Phase 2:** resolution-aware legacy layout/style mapping and loss diagnostics;
+- **Phase 2:** minimum contract shapes and capability gates for responsive variants, bounded predicates, typed animation tracks, and reusable component instances;
+- **Phase 2/P4:** whether editor-only lock/visibility state belongs in portable project metadata or local editor state;
+- **Phase 2 and each widget slice:** how much internal structure each semantic widget safely exposes;
+- **Phase 3:** whether the editor authoring canvas mounts the shared renderer in-process, through an iframe, or through a measured hybrid host;
+- **Phase 5:** the `.gmtheme` theme-owned projection and round-trip behavior for canonical screens;
+- **Phase 10:** whether gallery uses one mixed grid or explicit CG/ending tabs;
+- **Phase 10:** which video controls are authorable for each playback policy;
+- **Phase 11:** when a project is considered fully migrated and eligible for legacy-field cleanup.
+
+## Phase 2 Canonical Decisions
+
+- Persisted schema version is `2`; legacy projects are unversioned.
+- `nodes[]` is the persisted shape. Stable `id` is identity; `parentId` is hierarchy; non-negative `order` plus id is deterministic sibling ordering.
+- The public action namespace is semantic and typed. Legacy action strings are adapter input only, with screen context distinguishing title/game-menu/save-slot `load`.
+- Seven screens and three overlays are closed registries. Primitive, semantic-widget, binding, lifecycle-state, style, action, context-key, and predicate registries are also closed.
+- Semantic widgets declare protected `parts`; missing required parts are contract errors.
+- Authority is `legacy-only`, `canonical-active`, or `retired`. Canonical-active requires a canonical document and is the only editable writer. Project open is read-only.
+- Layout uses one anchor/pivot/offset/size/constraint model. Legacy pixel layout is resolved against project resolution; CSS-like values are converted only when typed and otherwise produce loss diagnostics.
+- Component instances, responsive variants, predicates, and animation tracks are bounded envelopes gated by registered renderer/validator capabilities. No Phase 2 mutation path enables them.
+- Motion precedence is engine defaults, `ui.motion`, registered node tracks, runtime widget state, then reduced-motion policy.
+- `.gmtheme` receives a pure theme-owned projection, excluding actions, bindings, runtime/player data, and unregistered advanced detail. Persisted round-trip integration remains Phase 5.
+- Layout recipes remain compile-to-plan inputs, never runtime dependencies.
+- Phase 2 exposes read-only screen/node/schema inspection only. Renderer, editor shell, production migration, and automatic writes remain absent.
 
 ## Definition Of Architecture Complete
 

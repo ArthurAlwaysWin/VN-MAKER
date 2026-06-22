@@ -2744,6 +2744,41 @@ async function inspect(args) {
   return 0;
 }
 
+async function listUiScreensCommand(args) {
+  const { scriptPath, script } = await readScript(args);
+  const result = createProjectSession({ script }).listUiScreens();
+  emitResult(args, { scriptPath, ...result }, output => {
+    for (const screen of [...output.screens, ...output.overlays]) process.stdout.write(`- ${screen.id}: ${screen.authority} (${screen.nodeCount} nodes)\n`);
+  });
+  return 0;
+}
+
+async function inspectUiScreenCommand(args) {
+  const { scriptPath, script } = await readScript(args);
+  const screenId = getArgValue(args, '--screen', getArgValue(args, '--overlay', null));
+  if (!screenId) throw new Error('inspect-ui-screen requires --screen <id> or --overlay <id>');
+  const result = createProjectSession({ script }).inspectUiScreen(screenId, { overlay: hasFlag(args, '--overlay') });
+  emitResult(args, { scriptPath, ...result }, output => process.stdout.write(`${output.kind} ${output.id}: ${output.authority}, ${output.document?.nodes?.length ?? 0} nodes, ${output.diagnostics.length} diagnostics\n`));
+  return result.diagnostics.some(item => item.severity === 'error') ? 1 : 0;
+}
+
+async function listUiNodesCommand(args) {
+  const { scriptPath, script } = await readScript(args);
+  const screenId = getArgValue(args, '--screen', getArgValue(args, '--overlay', null));
+  if (!screenId) throw new Error('list-ui-nodes requires --screen <id> or --overlay <id>');
+  const result = createProjectSession({ script }).listUiNodes(screenId, { overlay: hasFlag(args, '--overlay') });
+  emitResult(args, { scriptPath, ...result }, output => {
+    for (const node of output.nodes) process.stdout.write(`- ${node.id}: ${node.type} parent=${node.parentId ?? '(root)'} order=${node.order}\n`);
+  });
+  return result.diagnostics.some(item => item.severity === 'error') ? 1 : 0;
+}
+
+async function inspectUiSchemaCommand(args) {
+  const result = createProjectSession({ script: {} }).inspectUiSchema();
+  emitResult(args, result, output => process.stdout.write(`Canonical UI schema v${output.schemaVersion}: ${output.screens.length} screens, ${output.overlays.length} overlays\n`));
+  return 0;
+}
+
 async function listAssets(args) {
   const projectPath = resolveAssetProjectPath(args);
   const assetRoot = path.join(projectPath, 'assets');
@@ -7172,6 +7207,10 @@ function printHelp() {
     projects create [--out dir] [--title title] [--author author] [--width px] [--height px] [--open] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
     projects open [name] [--project dir] [--launch] [--editor exe] [--registry path|--user-data dir] [--json]
   inspect [--script path] [--json]
+  list-ui-screens [--script path] [--json]
+  inspect-ui-screen (--screen id|--overlay id) [--script path] [--json]
+  list-ui-nodes (--screen id|--overlay id) [--script path] [--json]
+  inspect-ui-schema [--json]
   validate [--script path] [--check-assets] [--asset-root path] [--json]
   list-assets [--project path|--script path] [--json]
   list-transitions [--target background|character|camera] [--supported-only] [--json]
@@ -7284,6 +7323,10 @@ const CLI_COMMAND_HANDLERS = new Map([
   ['create-project', (args) => projectsCommand(['create', ...args])],
   ['open-project', (args) => projectsCommand(['open', ...args])],
   ['inspect', inspect],
+  ['list-ui-screens', listUiScreensCommand],
+  ['inspect-ui-screen', inspectUiScreenCommand],
+  ['list-ui-nodes', listUiNodesCommand],
+  ['inspect-ui-schema', inspectUiSchemaCommand],
   ['validate', validate],
   ['list-assets', listAssets],
   ['list-transitions', listTransitions],

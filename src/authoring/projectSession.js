@@ -40,6 +40,7 @@ import {
   isKnownSettingsCustomButtonAction,
   isKnownSettingsFooterButtonAction,
 } from '../shared/settingsScreenContract.js';
+import { inspectUiSchema, inspectUiScreen, listUiNodes, listUiScreens } from './uiDocumentInspection.js';
 
 function cloneJsonValue(value) {
   if (value === undefined) {
@@ -2133,6 +2134,22 @@ export function createProjectSession(input = {}) {
 
     validate(options) {
       return validateProject(script, options);
+    },
+
+    listUiScreens() {
+      return listUiScreens(script);
+    },
+
+    inspectUiScreen(screenId, options = {}) {
+      return inspectUiScreen(script, screenId, options);
+    },
+
+    listUiNodes(screenId, options = {}) {
+      return listUiNodes(script, screenId, options);
+    },
+
+    inspectUiSchema() {
+      return inspectUiSchema();
     },
 
     toJSON() {

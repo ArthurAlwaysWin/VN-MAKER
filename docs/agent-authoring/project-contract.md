@@ -389,3 +389,27 @@ Supported manifest fields include `id`, `kind: "postprocess"`, `version: 1`, `la
 Agents may use `register-effect-pack`, `list-effect-packs`, `set-page-effect-pack`, and `clear-page-effect-packs`, including through `apply-plan`. Changed page paths route to author-check preview targets and `effect-pack-preview` handoff review items. Export scans the `effects` bucket and copies only manifest-listed referenced files.
 
 Agents must not add project-local `runtime.js` references, arbitrary JavaScript, CSS/HTML snippets, WebGL/shader code, plugin marketplace metadata, generic visual DSL data, or AI chat fields to `script.json`. The runtime boundary remains built-in Canvas 2D adapters only.
+
+## Canonical Screen Documents (Unified Screen Designer Phase 2)
+
+`ui.screenSchemaVersion: 2` is the first persisted canonical screen-document schema. Older projects are unversioned legacy projects; opening them never writes migration data.
+
+- `ui.screens`: `title`, `gameplay`, `gameMenu`, `settings`, `saveLoad`, `backlog`, `gallery`.
+- `ui.overlays`: `textInput`, `confirmation`, `videoControls`.
+- `ui.screenAuthorities.<screenId>`: `legacy-only`, `canonical-active`, or `retired`.
+
+Documents use `schemaVersion`, matching `id`, `kind`, `authority: "canonical-active"`, `rootId`, `viewport`, and ordered `nodes[]`. Nodes have stable ids, parent ids, non-negative integer order, allowlisted widget types, typed layout, and protected semantic parts. Ordering is deterministic by parent, order, then id; array position is not identity. Hierarchies are acyclic and fully reachable from the root.
+
+Layout is resolution-aware and typed: anchors, pivot, numeric offsets, numeric/`auto` size, min/max constraints, padding, and alignment. Styles, state overrides, bindings, actions, and assets are allowlisted objects, never CSS declarations, selectors, event handlers, URLs, or executable expressions.
+
+The only public action vocabulary is the canonical semantic namespace. Legacy strings exist only at the pure, screen-aware adapter boundary; title `load`, game-menu `load`, and save-slot `load` normalize to distinct canonical actions. Unknown action ids and parameters are errors.
+
+Authority is singular. `legacy-only` reads existing screen-specific `ui.*` data and may build an in-memory document. `canonical-active` requires `ui.screens.<id>` and makes it the sole editable composition writer; retained legacy data is rollback evidence. `retired` is reserved for a later compatibility-removal gate. A legacy-only/canonical-document conflict is invalid.
+
+Screen documents own hierarchy, layout, variants, typed overrides, bindings, actions, and composition asset references. `ui.theme` owns shared tokens and families; `ui.motion` owns surface presets; `ui.widgetStyles` remains a migration dependency; asset registries remain external.
+
+Responsive variants, closed context predicates, reusable component instances, and typed animation tracks have minimum envelopes, but writes are rejected until matching renderer/validator capabilities are registered. Motion precedence is engine defaults -> `ui.motion` -> node tracks -> runtime widget state -> reduced-motion policy. Layout recipes are compile-to-plan only.
+
+The Phase 2 `.gmtheme` projection may contain canonical hierarchy, viewport, typed layout/style/state, style references, and assets. It excludes actions, bindings, transient runtime state, player/save/profile data, and unsupported advanced data. It is not a second project schema; persisted round-trip integration begins with Title in Phase 5.
+
+Read-only commands are `list-ui-screens`, `inspect-ui-screen`, `list-ui-nodes`, and `inspect-ui-schema`. They normalize legacy data in memory and never migrate or write the project.

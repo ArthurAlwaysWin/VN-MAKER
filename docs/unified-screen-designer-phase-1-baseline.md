@@ -207,4 +207,12 @@ Browser availability: available and used first.
 - Known gaps are recorded rather than fixed or hidden.
 - The parity ledger explicitly distinguishes preserve, migrate, and retire decisions.
 
+## Phase 1 Closure Batch
+
+Completed on 2026-06-22 before Phase 2:
+
+- aligned the shared populated Save/Load fixture with the runtime `previewText` slot shape;
+- added DOM behavior evidence for populated preview text, timestamps, and inline thumbnails;
+- retained the missing sample `projectId` as an explicit Phase 3 browser-harness prerequisite rather than a Phase 1 blocker.
+
 Phase 1 is complete. Phase 2 has not started.

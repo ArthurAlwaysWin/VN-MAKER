@@ -4,6 +4,20 @@ This reference documents the deterministic `apply-plan` commands external agents
 
 Use `params` in new plans. The parser also accepts `args`. Aliases are listed where they are commonly useful.
 
+## Unified Screen Designer Read-only Inspection
+
+Phase 2 exposes canonical and legacy-normalized inspection without mutation:
+
+```bash
+npm run vn -- list-ui-screens --script public/game/script.json --json
+npm run vn -- inspect-ui-screen --screen title --script public/game/script.json --json
+npm run vn -- inspect-ui-screen --overlay confirmation --script public/game/script.json --json
+npm run vn -- list-ui-nodes --screen saveLoad --script public/game/script.json --json
+npm run vn -- inspect-ui-schema --json
+```
+
+These commands do not persist `ui.screens`, change authority, or migrate legacy data. Canonical mutation remains gated until later renderer/editor phases.
+
 ## Planning Pattern
 
 ```json

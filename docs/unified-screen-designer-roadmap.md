@@ -1,8 +1,9 @@
 # Unified Screen Designer Roadmap
 
-**Status:** Proposed; implementation not started
+**Status:** Phase 0-2 complete; Phase 3+ not started
 **Date:** 2026-06-22
 **Planning base:** `main` at `7cf2e9a`
+**Phase 1 completion:** `fa11d14`
 **Architecture:** [unified-screen-designer-architecture.md](./unified-screen-designer-architecture.md)
 
 ## Purpose
@@ -44,7 +45,7 @@ Every phase must preserve these rules:
 | --- | --- | --- | --- | --- |
 | 0 | Scope And Decision Lock | Seven screens, overlays, terminology, boundaries, and non-goals are fixed. | Low | Complete in docs |
 | 1 | Baseline And Parity Harness | Current screen behavior and visual baselines are captured before structural change. | Medium | Complete |
-| 2 | Canonical UI Document Contract | Versioned nodes, layout, actions, bindings, validation, and legacy adapters exist. | High | Not started |
+| 2 | Canonical UI Document Contract | Versioned nodes, layout, actions, bindings, validation, and legacy adapters exist. | High | Complete |
 | 3 | Shared Renderer And Semantic Widget Host | Runtime and preview can render canonical documents through one path. | High | Not started |
 | 4 | Unified Editor Shell | Palette, hierarchy, canvas, inspector, context menu, keyboard, geometry, and undo work. | High | Not started |
 | 5 | Title Vertical Slice | Title becomes the first end-to-end canonical screen and proves migration. | High | Not started |
@@ -120,23 +121,38 @@ Completion evidence:
 - Browser verified title identity, non-blank DOM, settings open/close interaction, and a clean current-page console;
 - screenshots captured under `.tmp` at 1280x720 and 1440x900; in-app screenshot capture timed out, so only screenshot capture used the installed Playwright CLI fallback;
 - recorded current focus, preview-fixture, standalone sample-project, and editor/runtime parity gaps without changing runtime or contract behavior.
+- closure batch aligned the populated Save/Load fixture with runtime `previewText` and added rendered preview text, timestamp, and inline-thumbnail assertions.
+
+Remaining non-blocking prerequisite carried forward:
+
+- `public/game/script.json` has no stable `projectId`, so Phase 3 must establish a repeatable runnable browser fixture before renderer/browser acceptance depends on it.
 
 ## Phase 2 - Canonical UI Document Contract
 
 **Goal:** Define the safe, versioned data model before building a general editor around it.
 
+**Status:** Complete on 2026-06-22.
+
 Deliver:
 
 - add shared contracts for screen documents, nodes, hierarchy, layout constraints, style references, typed overrides, states, variants, semantic data slots, and allowlisted actions;
+- lock one canonical action namespace with typed parameters and a complete, screen-aware mapping from current runtime action strings;
+- define the contract perimeter between `ui.screens` / `ui.overlays`, `ui.theme`, `ui.motion`, shared or legacy widget styles, and external asset registries;
+- define per-screen authority states so canonical and legacy layouts never act as simultaneous editable writers;
 - define stable ids and deterministic node ordering;
 - define primitive and semantic widget registries with field schemas and required parts;
 - define capability tiers for common editor operations, advanced Agent composition, and registered built-in adapters;
 - define the seven screen registry and shared overlay registry;
 - normalize and validate anchors, pivot, offsets, sizes, constraints, padding, alignment, and safe areas;
-- add pure legacy-to-document adapters for existing title, game menu, settings, save/load, backlog, dialogue, widget-style, and theme data;
+- add resolution-aware, pure legacy-to-document adapters for existing title, game menu, settings, save/load, backlog, dialogue, widget-style, theme, and motion data;
 - produce migration diagnostics for data that cannot yet map without loss;
 - add changed-path and asset-reference collection for proposed canonical documents;
-- define reusable component instances, responsive variants, bounded context predicates, and typed animation tracks as canonical data rather than opaque Agent metadata;
+- define minimum canonical contract envelopes and capability gates for reusable component instances, responsive variants, bounded context predicates, and typed animation tracks rather than opaque Agent metadata;
+- define a closed runtime context-key registry and bounded predicate operators; screen-specific keys may be added only with matching renderer and validator support;
+- define the relationship and precedence requirements between `ui.motion`, typed animation tracks, runtime widget state, and reduced-motion preferences;
+- define the theme-owned `.gmtheme` projection for canonical screen documents without treating the package as a second project schema;
+- keep layout recipes and procedural component expansion compile-to-plan only; they may not become runtime dependencies and mutation commands remain gated until their normalized output is renderable and validated;
+- update `project-contract.md` and `validation-rules.md` with the new read-only canonical shape, authority rules, and stable diagnostic codes; mutation command documentation remains gated with mutation support;
 - expose read-only inspect/list operations to the authoring layer; mutation may remain gated until Phase 4.
 
 Tests:
@@ -147,6 +163,10 @@ Tests:
 - normalization is idempotent;
 - fixtures preserve meaningful legacy configuration;
 - unsupported fields are reported rather than silently dropped.
+- every current action maps to one canonical action or produces an explicit diagnostic;
+- the same screen cannot resolve both legacy and canonical composition as active writers;
+- advanced capability data is rejected until its renderer and validator capability is registered;
+- `.gmtheme` projection excludes transient runtime state and reports unsupported canonical screen detail.
 
 Acceptance:
 
@@ -155,8 +175,20 @@ Acceptance:
 - no runtime screen is switched to the new renderer yet;
 - `script.json` does not gain arbitrary executable or presentation strings;
 - the migration report is good enough for human review before a write.
+- Phase 2 decision gates are recorded in the architecture and resolved in contract tests rather than deferred as implicit renderer behavior.
 
 **Stop boundary:** Do not build the editor shell or persist automatic migrations in Phase 2.
+
+Completion evidence:
+
+- added shared action, layout, document, authority, capability, and legacy-adapter contracts;
+- locked seven screens, three overlays, ordered stable nodes, protected semantic parts, typed actions/bindings/styles/assets, and version 2 semantics;
+- integrated canonical diagnostics into `validateProject` without changing production renderer selection;
+- added pure resolution-aware legacy inspection for all seven screens and shared overlay envelopes, with explicit unsupported/loss diagnostics;
+- added pure `.gmtheme` canonical-screen projection excluding transient/action/binding data; persisted round-trip remains Phase 5;
+- added read-only screen/node/schema session and CLI inspection; no canonical mutation or migration command was added;
+- Phase 2 focused contract/adapter/inspection tests pass without source-string acceptance assertions;
+- Phase 1 six-file matrix remains 195 passing tests.
 
 ## Phase 3 - Shared Renderer And Semantic Widget Host
 
@@ -165,11 +197,13 @@ Acceptance:
 Deliver:
 
 - create the shared renderer host and node lifecycle;
+- prototype and measure the editor host, then lock an in-process, iframe, or hybrid integration without introducing a second renderer implementation;
 - render primitive layout/visual widgets;
 - add `data-gm-ui-node-id` or an equivalent stable selection bridge;
 - implement typed style resolution and theme precedence;
 - implement action routing and named data-source injection;
 - define semantic-widget host boundaries and required-part enforcement;
+- provide reusable host-level focus acquisition, restoration, accessible-name, and modal primitives for later semantic widgets;
 - add deterministic editor fixtures and runtime adapters;
 - support incremental screen updates without retaining stale listeners or async work;
 - extend preview messaging with document snapshots, fixtures, renderer diagnostics, and safe action reporting.
@@ -182,6 +216,7 @@ Tests:
 - unknown future-safe data degrades predictably;
 - destructive/persistent actions are inert or diagnostic in ordinary preview mode;
 - focus and accessible names survive renderer updates.
+- renderer-host measurements cover snapshot size, update frequency, pointer-gesture behavior, and selection latency before the editor host mode is locked.
 
 Acceptance:
 
@@ -195,6 +230,10 @@ Acceptance:
 
 **Goal:** Build the reusable authoring experience before migrating individual screens.
 
+Internal delivery boundary: Phase 4 may be completed as two separately reviewed sessions while remaining one roadmap phase.
+
+### Phase 4a - Canvas, Hierarchy, And Inspection
+
 Deliver:
 
 - screen selector and viewport toolbar;
@@ -203,13 +242,21 @@ Deliver:
 - renderer-backed canvas with selection overlay;
 - typed inspector generated from widget and field schemas;
 - synchronized canvas/hierarchy selection;
+- validation and migration-diagnostic panels;
+- advanced-feature badges and read-only inspector summaries that prove unknown/advanced fields survive unrelated edits.
+
+**Phase 4a stop boundary:** A synthetic fixture can be rendered, selected, inspected, and patched without implementing geometry gestures or migrating a production screen.
+
+### Phase 4b - Interaction, Geometry, And Undo
+
+Deliver:
+
 - context menu that selects its target before offering valid actions;
 - duplicate, delete, reorder, wrap/group, reset override, copy/paste, and keyboard nudge where valid;
 - anchors, pivot, resize, snapping, grid, safe-area, zoom, scrolling, and letterbox-aware coordinate conversion;
 - focus-safe Delete/Backspace and shortcuts;
 - one patch-history transaction per completed gesture;
-- validation and migration-diagnostic panels.
-- advanced-feature badges and inspector summaries that preserve unsupported detailed fields and warn before flattening them.
+- schema-aware path patches that preserve fields the GUI does not directly edit and warn only when an operation would intentionally delete, reset, replace, or flatten them.
 
 Tests:
 
@@ -238,6 +285,8 @@ Deliver:
 - expose title hierarchy, palette, canvas, inspector, right-click, keyboard, layer order, anchors, and responsive preview;
 - add canonical add/update/move/duplicate/remove operations with validate-only, dry-run, checkpoint, and result output;
 - add explicit title migration preview and write paths;
+- implement the canonical Title theme-owned `.gmtheme` projection and import preference rules;
+- route canonical Title assets through export/readiness and packaged/web runtime collection;
 - retain legacy read compatibility.
 
 Tests:
@@ -246,6 +295,8 @@ Tests:
 - every built-in title action routes correctly;
 - right-click deletion and keyboard deletion operate on the intended selected element;
 - migration round-trip and rollback preserve data;
+- `.gmtheme` export/import preserves the theme-owned canonical Title composition without reviving legacy data as a second writer;
+- export/readiness and packaged/web runtime collect every referenced canonical Title asset;
 - runtime/editor parity screenshots cover multiple aspect ratios;
 - opening-video policy remains unchanged.
 
@@ -290,16 +341,31 @@ Acceptance:
 
 **Goal:** Migrate the two stateful list screens while preserving engine-owned data behavior.
 
+Phase 7 is delivered through two independent internal slices so each stateful screen has its own evidence and stop boundary.
+
+### Phase 7a - Save/Load
+
 Deliver:
 
 - canonical save/load document with `save` and `load` variants;
 - semantic save-slot grid with protected pagination, thumbnail, empty-slot, metadata, and mode-correct action parts;
 - preserve async refresh cancellation, cached slot behavior, source routing, save/load/delete callbacks, and confirmation;
+- migrate existing background, header, grid, pagination, decoration, icon, and style fields;
+- add Save/Load authoring operations, migration reports, accessibility, export, and `.gmtheme` projection evidence.
+
+**Phase 7a stop boundary:** Save/Load passes its persistence, confirmation, routing, browser, migration, and export gates before Backlog migration begins.
+
+### Phase 7b - Backlog
+
+Deliver:
+
 - canonical backlog document and semantic history list;
 - preserve scrolling, speaker/text presentation, empty state, voice replay, and playback errors;
-- migrate existing background, header, grid/list, pagination, decoration, icon, and style fields;
+- migrate existing background, header, list, decoration, icon, and style fields;
 - expose valid slots/parts in hierarchy and inspector without allowing invariants to be deleted;
-- add screen-specific authoring operations and migration reports.
+- add Backlog authoring operations, migration reports, accessibility, export, and `.gmtheme` projection evidence.
+
+**Phase 7b stop boundary:** Backlog passes voice lifecycle, browser, migration, and export gates before Settings migration begins.
 
 Tests:
 
@@ -414,17 +480,18 @@ Acceptance:
 
 ## Phase 11 - Migration, Authoring, Export, And Release Closure
 
-**Goal:** Close every integration path and decide legacy retirement from evidence.
+**Goal:** Audit and close every integration path, fill only remaining cross-screen gaps, and decide legacy retirement from evidence. Per-screen CLI, accessibility, asset collection, and package support must already have shipped with their owning screen phases.
 
 Deliver:
 
 - explicit whole-project migration command and desktop workflow with validate-only, dry-run, checkpoint, result artifact, changed paths, warnings, and rollback guidance;
-- complete node-level CLI/apply-plan operations and documentation;
+- audit node-level CLI/apply-plan operations delivered by P4-P10 and fill only identified gaps;
 - optional Agent DSL compile-to-plan syntax only if the normal operation contract is stable;
-- complete advanced CLI coverage for reusable components, layout recipes, responsive variants, bounded visibility rules, typed animation tracks, fixture matrices, and batch refactors;
+- complete cross-screen tooling that could not belong to one vertical slice: batch refactors, impact reports, fixture-matrix generation, and reusable/layout recipe ergonomics;
+- audit responsive variants, bounded visibility rules, and typed animation tracks already enabled by earlier screen phases; do not introduce their first runtime implementation here;
 - update project contract, validation rules, command reference, screen UI skill, examples, preview plans, and review handoff;
-- complete asset-reference collection, `.gmtheme` round-trip, export, desktop packaging, and web runtime coverage;
-- accessibility and gamepad pass across all screens and overlays;
+- run whole-project asset-reference, `.gmtheme`, export, desktop packaging, and web runtime audits over the per-screen coverage established in P5-P10;
+- run the final accessibility and gamepad audit across all screens and overlays, fixing only gaps against per-screen acceptance;
 - performance audit for renderer updates, editor gestures, list screens, hidden-screen cleanup, and preview messaging;
 - run full Vitest, Node, browser, preview, export, and production build gates;
 - use migration telemetry from fixtures and supported samples to decide whether legacy writers/renderers can be removed;
@@ -459,6 +526,7 @@ Acceptance:
 ## Recommended Session Boundaries
 
 - Implement only one phase per session unless the user explicitly expands scope.
+- Phase 4a/4b and Phase 7a/7b are explicit internal stop boundaries and may be implemented in separate sessions without renumbering the roadmap.
 - Start each continuation with `git status --short --branch`, recent `git log`, this roadmap, the architecture document, and CodeGraph context for the phase.
 - Keep the roadmap status and completion evidence current in the same change that closes a phase.
 - End each phase with exact files changed, commands run, evidence obtained, known risks, and a paste-ready next-phase prompt.

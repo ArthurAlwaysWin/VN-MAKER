@@ -99,8 +99,8 @@ export const SAVE_LOAD_FIXTURES = Object.freeze({
   sources: Object.freeze(['bar', 'menu', 'title']),
   emptySlots: Object.freeze([]),
   populatedSlots: Object.freeze([
-    Object.freeze({ slot: 1, preview: 'Arrival at the observatory', date: '2026-06-22 20:00', thumbnail: null }),
-    Object.freeze({ slot: 9, preview: 'The sealed archive', date: '2026-06-22 21:15', thumbnail: 'data:image/png;base64,AAAA' }),
+    Object.freeze({ slot: 1, previewText: 'Arrival at the observatory', date: '2026-06-22 20:00', thumbnail: null }),
+    Object.freeze({ slot: 9, previewText: 'The sealed archive', date: '2026-06-22 21:15', thumbnail: 'data:image/png;base64,AAAA' }),
   ]),
 });
 

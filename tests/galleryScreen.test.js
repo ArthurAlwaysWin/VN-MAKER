@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GalleryScreen } from '../src/ui/GalleryScreen.js';
 import { TitleScreen } from '../src/ui/TitleScreen.js';
+import { GALLERY_FIXTURES } from './fixtures/unifiedScreenDesignerLegacyFixtures.js';
 
 describe('runtime CG gallery', () => {
   beforeEach(() => {
@@ -37,6 +38,25 @@ describe('runtime CG gallery', () => {
     expect(cards[1].textContent).toContain('LOCKED');
     cards[0].click();
     expect(screen.el.querySelector('.gallery-focus-title').textContent).toBe('Confession');
+  });
+
+  it('renders deterministic empty and mixed fixture states', () => {
+    const screen = new GalleryScreen(document.getElementById('game'));
+    screen.show(GALLERY_FIXTURES.empty.cg, GALLERY_FIXTURES.empty.cgUnlocks, {
+      endings: GALLERY_FIXTURES.empty.endings,
+      endingUnlocks: GALLERY_FIXTURES.empty.endingUnlocks,
+    });
+    expect(screen.el.querySelector('.gallery-empty').textContent).toBe('尚未配置 CG 图库。');
+
+    screen.show(GALLERY_FIXTURES.mixed.cg, GALLERY_FIXTURES.mixed.cgUnlocks, {
+      endings: GALLERY_FIXTURES.mixed.endings,
+      endingUnlocks: GALLERY_FIXTURES.mixed.endingUnlocks,
+    });
+    const cgGrid = screen.el.querySelector('.gallery-library > .gallery-grid');
+    expect(cgGrid.querySelectorAll(':scope > .gallery-card')).toHaveLength(2);
+    expect(cgGrid.querySelectorAll(':scope > .gallery-card.locked')).toHaveLength(1);
+    expect(cgGrid.querySelectorAll(':scope > .gallery-card.unlocked')).toHaveLength(1);
+    expect(screen.el.querySelectorAll('.gallery-ending-card.unlocked')).toHaveLength(1);
   });
 
   it('navigates all images of an unlocked multi-image CG', () => {

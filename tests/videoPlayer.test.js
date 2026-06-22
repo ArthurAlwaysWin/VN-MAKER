@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VideoPlayer, resolveRuntimeVideoRequest } from '../src/ui/VideoPlayer.js';
+import { OVERLAY_FIXTURES } from './fixtures/unifiedScreenDesignerLegacyFixtures.js';
 
 describe('resolveRuntimeVideoRequest', () => {
   it('resolves registered videos through the runtime asset resolver', () => {
@@ -89,5 +90,20 @@ describe('VideoPlayer', () => {
       type: 'error',
       code: 'unsafe-video-path',
     });
+  });
+
+  it('shows policy-allowed controls and lets Escape skip a skippable video', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const player = new VideoPlayer(container);
+    const promise = player.play(OVERLAY_FIXTURES.videoControls);
+
+    expect(player.video.controls).toBe(true);
+    expect(player.skipButton.classList.contains('hidden')).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    await expect(promise).resolves.toMatchObject({ type: 'skipped' });
+    expect(player.isPlaying).toBe(false);
+    expect(player.el.getAttribute('aria-hidden')).toBe('true');
   });
 });

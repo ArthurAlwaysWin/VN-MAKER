@@ -85,6 +85,7 @@ import { createSlider } from '../src/ui/widgets/SliderWidget.js';
 import { createToggle } from '../src/ui/widgets/ToggleWidget.js';
 import { resolvePath } from '../src/engine/assetPath.js';
 import { SETTING_DEFS } from '../src/engine/settingDefs.js';
+import { SETTINGS_FIXTURES } from './fixtures/unifiedScreenDesignerLegacyFixtures.js';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -358,6 +359,17 @@ describe('SettingsScreen structured mode', () => {
   // ─── Tab bar with widgetStyles ────────────────────────
 
   describe('tab bar with widgetStyles', () => {
+    it('renders the shared tabbed and single-page baseline fixtures', () => {
+      screen.setLayout(SETTINGS_FIXTURES.tabbed);
+      screen.show();
+      expect(screen.el.querySelectorAll('.settings-tab-btn')).toHaveLength(3);
+
+      screen.setLayout(SETTINGS_FIXTURES.singlePage);
+      screen.show();
+      expect(screen.el.querySelector('.settings-structured-tab-bar')).toBeNull();
+      expect(screen.el.querySelectorAll('.settings-structured-label')).toHaveLength(Object.keys(SETTING_DEFS).length);
+    });
+
     it('calls createTabBar when widgetStyles is set', () => {
       screen.setWidgetStyles({ tab: { shape: 'pill' } });
       screen.setLayout(structuredLayout());

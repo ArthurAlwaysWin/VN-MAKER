@@ -30,6 +30,7 @@ vi.mock('../src/engine/assetPath.js', () => ({
 
 import { BacklogScreen } from '../src/ui/BacklogScreen.js';
 import { resolvePath } from '../src/engine/assetPath.js';
+import { BACKLOG_FIXTURES } from './fixtures/unifiedScreenDesignerLegacyFixtures.js';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -120,6 +121,20 @@ describe('BacklogScreen.setLayout', () => {
   // ─── COMPAT-02: null config = identical rendering ──────
 
   describe('COMPAT-02: null config rendering', () => {
+    it('renders an empty content region for empty history', () => {
+      screen.show(BACKLOG_FIXTURES.empty, BACKLOG_FIXTURES.characters);
+      expect(screen.el.querySelector('.backlog-content')).not.toBeNull();
+      expect(screen.el.querySelectorAll('.backlog-entry')).toHaveLength(0);
+    });
+
+    it('renders recorded and voiced fixtures with replay controls only for voiced entries', () => {
+      const audio = makeAudio();
+      screen = new BacklogScreen(container, audio);
+      screen.show([...BACKLOG_FIXTURES.recorded, ...BACKLOG_FIXTURES.voiced], BACKLOG_FIXTURES.characters);
+      expect(screen.el.querySelectorAll('.backlog-entry')).toHaveLength(3);
+      expect(screen.el.querySelectorAll('.backlog-voice-btn')).toHaveLength(1);
+      expect(screen.el.querySelector('.backlog-has-voice .backlog-text').textContent).toBe('Listen carefully.');
+    });
 
     it('renders header with default title 回 想', () => {
       screen.show(SAMPLE_HISTORY, CHARACTERS);

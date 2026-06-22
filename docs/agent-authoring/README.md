@@ -55,6 +55,8 @@ These documents describe planned larger features before their contracts are acti
 | --- | --- |
 | OP, ED, and story video architecture | [video-op-ed-plan.md](./video-op-ed-plan.md) |
 | OP, ED, and story video roadmap | [video-op-ed-roadmap.md](./video-op-ed-roadmap.md) |
+| Unified Screen Designer architecture | [unified-screen-designer-architecture.md](../unified-screen-designer-architecture.md) |
+| Unified Screen Designer roadmap | [unified-screen-designer-roadmap.md](../unified-screen-designer-roadmap.md) |
 
 ## Examples
 

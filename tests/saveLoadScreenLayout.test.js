@@ -19,6 +19,7 @@ vi.mock('../src/engine/assetPath.js', () => ({
 
 import { SaveLoadScreen } from '../src/ui/SaveLoadScreen.js';
 import { applyButtonFamilies, resetButtonFamilies } from '../src/engine/ThemeManager.js';
+import { SAVE_LOAD_FIXTURES } from './fixtures/unifiedScreenDesignerLegacyFixtures.js';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -759,6 +760,41 @@ describe('SaveLoadScreen.setLayout', () => {
         await vi.waitFor(() => {
           expect(screen.el.querySelectorAll('.screen-decoration').length).toBe(0);
         });
+      });
+    });
+
+    describe('Phase 1 destructive and route behavior baseline', () => {
+      it('cancels and confirms deletion through the rendered confirmation overlay', async () => {
+        sm = stubSaveManager(SAVE_LOAD_FIXTURES.populatedSlots);
+        screen = new SaveLoadScreen(container, sm);
+        screen.onDelete = vi.fn().mockResolvedValue(undefined);
+        screen.show('load', 'menu');
+        await vi.waitFor(() => expect(screen.el.querySelector('.save-slot:not(.empty)')).not.toBeNull());
+
+        const occupied = screen.el.querySelector('.save-slot:not(.empty)');
+        occupied.querySelector('.save-slot-delete').click();
+        expect(occupied.querySelector('.save-confirm-text').textContent).toBe('确定删除?');
+        occupied.querySelector('.save-confirm-btn.cancel').click();
+        expect(screen.onDelete).not.toHaveBeenCalled();
+        expect(screen.el.querySelector('.save-confirm-overlay')).toBeNull();
+
+        occupied.querySelector('.save-slot-delete').click();
+        occupied.querySelector('.save-confirm-btn.confirm-delete').click();
+        await vi.waitFor(() => expect(screen.onDelete).toHaveBeenCalledWith(1));
+      });
+
+      it.each(SAVE_LOAD_FIXTURES.sources)('reports %s as the close-routing source', (source) => {
+        screen.onClose = vi.fn();
+        screen.show('load', source);
+        screen.hide();
+        expect(screen.onClose).toHaveBeenCalledWith(source);
+      });
+
+      it('suppresses source routing after a successful load', () => {
+        screen.onClose = vi.fn();
+        screen.show('load', 'menu');
+        screen.hide(true);
+        expect(screen.onClose).not.toHaveBeenCalled();
       });
     });
   });

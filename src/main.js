@@ -44,6 +44,7 @@ import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
 import { VideoPlayer } from './ui/VideoPlayer.js';
 import { createUiPreviewHost } from './ui/renderer/createUiRendererHost.js';
+import { adaptLegacyUiScreen } from './shared/uiLegacyAdapters.js';
 import { createUiPreviewBridge, UI_PREVIEW_MESSAGE_TYPES } from './ui/renderer/uiPreviewBridge.js';
 import { attachResponsiveGameContainer } from './ui/runtimeViewport.js';
 import { loadAllFonts } from './engine/fontLoader.js';
@@ -122,6 +123,27 @@ gameContainer.appendChild(skipIndicator);
 
 // Title screen is appended to the game container itself (z-index 100)
 const titleScreen = new TitleScreen(gameContainer, '');
+
+function getResolvedTitleScreen() {
+  const result = adaptLegacyUiScreen(engine.script ?? {}, 'title');
+  return {
+    legacyLayout: engine.script?.ui?.titleScreen ?? null,
+    canonicalDocument: result.authority === 'canonical-active' ? result.document : null,
+  };
+}
+
+function applyTitleScreenLayout(layoutOverride = null) {
+  if (layoutOverride) {
+    titleScreen.setLayout(layoutOverride);
+    return;
+  }
+  const resolved = getResolvedTitleScreen();
+  titleScreen.setLayout(resolved.legacyLayout, { canonicalDocument: resolved.canonicalDocument });
+}
+
+function getTitleBehavior() {
+  return getResolvedTitleScreen().canonicalDocument?.behavior ?? engine.script?.ui?.titleScreen ?? {};
+}
 const galleryScreen = new GalleryScreen(gameContainer);
 const videoPlayer = new VideoPlayer(gameContainer, { audioManager: audio });
 
@@ -236,7 +258,7 @@ function applyPreviewScriptSnapshot(request) {
 
   dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
 
-  titleScreen.setLayout(engine.script.ui?.titleScreen);
+  applyTitleScreenLayout();
   settingsScreen.setLayout(engine.script.ui?.settingsScreen);
   settingsScreen.setWidgetStyles(engine.script.ui?.widgetStyles);
   choiceMenu.setWidgetStyles(engine.script.ui?.widgetStyles);
@@ -735,7 +757,7 @@ async function playProfileTrackedVideo(reference, mediaKey, {
 }
 
 function getOpeningVideoConfig() {
-  const openingVideo = engine.script?.ui?.titleScreen?.openingVideo;
+  const openingVideo = getTitleBehavior()?.openingVideo;
   return openingVideo && typeof openingVideo === 'object' ? openingVideo : null;
 }
 
@@ -1623,7 +1645,7 @@ async function showTitle() {
   cancelRuntimeVideo();
   galleryScreen.hide();
   await playOpeningVideo('before-title');
-  const titleLayout = engine.script?.ui?.titleScreen;
+  const titleLayout = getTitleBehavior();
   if (titleLayout?.bgm) {
     audio.playBgm({ file: titleLayout.bgm, volume: 1, loop: true });
   }
@@ -1748,9 +1770,7 @@ async function init(env) {
     titleScreen.gameTitle = engine.script.meta?.title || '';
 
     // Apply custom title screen layout if defined in script
-    if (engine.script.ui?.titleScreen) {
-      titleScreen.setLayout(engine.script.ui.titleScreen);
-    }
+    applyTitleScreenLayout();
 
     // Apply custom settings screen layout if defined in script
     if (engine.script.ui?.settingsScreen) {
@@ -1912,7 +1932,7 @@ function initPreview() {
           case 'backlogScreen': backlogScreen.setLayout(cfg); break;
           case 'gameMenu': gameMenu.setLayout(cfg); break;
           case 'settingsScreen': settingsScreen.setLayout(cfg); break;
-          case 'titleScreen': titleScreen.setLayout(cfg); break;
+          case 'titleScreen': applyTitleScreenLayout(cfg); break;
         }
         break;
       }

@@ -17,6 +17,16 @@ const SYNTHETIC_PATCH_PATHS = Object.freeze(new Set([
   'layout.offset.y',
   'layout.size.width',
   'layout.size.height',
+  'asset.path',
+  'style.backgroundColor',
+  'style.fontFamily',
+  'style.fontSize',
+  'style.borderColor',
+  'style.borderWidth',
+  'style.borderRadius',
+  'style.opacity',
+  'style.letterSpacing',
+  'style.textShadow',
 ]));
 
 export const UNIFIED_EDITOR_SHELL_SCREENS = Object.freeze([
@@ -153,6 +163,21 @@ export function createUnifiedEditorShellState() {
   };
 }
 
+export function createUnifiedEditorShellStateFromDocument(document, { screenId = 'title' } = {}) {
+  const normalized = normalizeUiDocument(document);
+  return {
+    screenId,
+    viewportId: UNIFIED_EDITOR_SHELL_VIEWPORTS[0].id,
+    zoom: 1,
+    selectedNodeId: normalized.rootId,
+    document: normalized,
+    patches: [],
+    history: [{ operation: 'initial', document: clone(normalized), selectedNodeId: normalized.rootId }],
+    historyIndex: 0,
+    transactions: [],
+  };
+}
+
 export function getNodeById(document, nodeId) {
   return document?.nodes?.find(node => node.id === nodeId) ?? null;
 }
@@ -220,9 +245,16 @@ export function applySyntheticNodePatch(document, nodeId, patch) {
   if (patch.path === 'content.text') {
     node.content ??= {};
     node.content.text = String(patch.value ?? '');
+  } else if (patch.path === 'asset.path') {
+    node.asset ??= { kind: node.type === 'image' ? 'image' : 'image' };
+    node.asset.path = String(patch.value ?? '');
   } else if (patch.path === 'style.color') {
     node.style ??= {};
     node.style.color = String(patch.value ?? '');
+  } else if (patch.path.startsWith('style.')) {
+    node.style ??= {};
+    const property = patch.path.slice('style.'.length);
+    node.style[property] = typeof patch.value === 'number' ? patch.value : String(patch.value ?? '');
   } else {
     setByPath(node, patch.path, Number(patch.value));
     node.layout = normalizeUiLayout(node.layout);

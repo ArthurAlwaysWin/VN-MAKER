@@ -222,7 +222,7 @@ describe('UI style preset contract-first flow', () => {
     expect(source).not.toContain('textarea v-model="uiStyle');
 
     const mainSource = await readFile(path.resolve('src/main.js'), 'utf8');
-    expect(mainSource).toContain('titleScreen.setLayout(engine.script.ui?.titleScreen)');
+    expect(mainSource).toContain('applyTitleScreenLayout()');
     expect(mainSource).toContain('choiceMenu.setWidgetStyles(engine.script.ui?.widgetStyles)');
     expect(mainSource).toContain('choiceMenu.setWidgetStyles(msg.widgetStyles)');
     expect(mainSource).toContain("case 'titleScreen': titleScreen.show(false); break;");

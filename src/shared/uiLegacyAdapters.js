@@ -12,7 +12,7 @@ const LEGACY_PATHS = Object.freeze({
 });
 
 const HANDLED_LEGACY_KEYS = Object.freeze({
-  title: new Set(['background', 'elements']), gameplay: new Set(['x', 'y', 'width', 'height', 'background', 'backgroundImage', 'opacity', 'borderRadius', 'gap', 'nameplate']),
+  title: new Set(['background', 'bgm', 'openingVideo', 'elements']), gameplay: new Set(['x', 'y', 'width', 'height', 'background', 'backgroundImage', 'opacity', 'borderRadius', 'gap', 'nameplate']),
   gameMenu: new Set(['position', 'width', 'background', 'backgroundImage', 'opacity', 'borderRadius', 'backdropBlur', 'buttonGap', 'gap', 'buttons', 'chrome']),
   settings: new Set(['background', 'backgroundImage', 'header', 'tabBar', 'contentArea', 'footer', 'elements', 'chrome']),
   saveLoad: new Set(['background', 'backgroundImage', 'backdropBlur', 'header', 'slotGrid', 'slot', 'pagination', 'chrome']),
@@ -26,7 +26,7 @@ function reportUnsupportedLegacyFields(screenId, legacy, diagnostics) {
     if (!HANDLED_LEGACY_KEYS[screenId].has(key)) diagnostics.push(issue('warning', 'ui-legacy-field-unsupported', `Legacy field "${key}" is preserved in source but is not representable in the Phase 2 canonical composition adapter.`, [...base, key]));
   }
   if (screenId === 'title') for (const [index, element] of (legacy.elements ?? []).entries()) {
-    for (const key of Object.keys(element ?? {}).sort()) if (!['id', 'type', 'text', 'action', 'src', 'x', 'y', 'width', 'height', 'fontSize', 'color', 'opacity'].includes(key)) diagnostics.push(issue('warning', 'ui-legacy-field-unsupported', `Legacy title element field "${key}" is not representable.`, [...base, 'elements', index, key]));
+    for (const key of Object.keys(element ?? {}).sort()) if (!['id', 'type', 'content', 'text', 'action', 'src', 'x', 'y', 'anchor', 'width', 'height', 'fontSize', 'fontFamily', 'color', 'backgroundColor', 'borderRadius', 'border', 'hoverColor', 'letterSpacing', 'textShadow', 'opacity'].includes(key)) diagnostics.push(issue('warning', 'ui-legacy-field-unsupported', `Legacy title element field "${key}" is not representable.`, [...base, 'elements', index, key]));
   }
 }
 
@@ -65,6 +65,16 @@ function addLegacyVisuals(node, legacy, path, diagnostics) {
   if (Object.keys(style).length) node.style = { ...(node.style ?? {}), ...style };
 }
 
+function parseSimpleBorder(value, path, diagnostics) {
+  if (typeof value !== 'string' || !value.trim()) return {};
+  const match = value.trim().match(/^(\d+(?:\.\d+)?)px\s+solid\s+(.+)$/i);
+  if (!match) {
+    diagnostics.push(issue('warning', 'ui-legacy-value-loss', 'Legacy border string cannot be represented as typed borderWidth/borderColor.', path, { value }));
+    return {};
+  }
+  return { borderWidth: Number(match[1]), borderColor: match[2].trim() };
+}
+
 function titleNodes(legacy, resolution, diagnostics) {
   const nodes = [root('title', 'screen', resolution)];
   addLegacyVisuals(nodes[0], legacy, ['ui', 'titleScreen'], diagnostics);
@@ -73,16 +83,24 @@ function titleNodes(legacy, resolution, diagnostics) {
     if (!type) { diagnostics.push(issue('warning', 'ui-legacy-field-unsupported', 'Unsupported title element type was not mapped.', ['ui', 'titleScreen', 'elements', index, 'type'], { value: element?.type })); continue; }
     const id = `title.${cleanId(element.id ?? `${type}-${index + 1}`)}`;
     const node = { id, type, parentId: 'title.root', order: index, layout: absoluteLegacyLayout(element, resolution), parts: [] };
-    if (type === 'text' || type === 'button') node.content = { text: String(element.text ?? '') };
+    if (type === 'text' || type === 'button') node.content = { text: String(element.content ?? element.text ?? '') };
     const style = {};
     if (Number.isFinite(element.fontSize)) style.fontSize = element.fontSize;
+    if (typeof element.fontFamily === 'string') style.fontFamily = element.fontFamily;
     if (typeof element.color === 'string') style.color = element.color;
+    if (typeof element.backgroundColor === 'string') style.backgroundColor = element.backgroundColor;
     if (Number.isFinite(element.opacity)) style.opacity = element.opacity;
+    if (Number.isFinite(element.borderRadius)) style.borderRadius = element.borderRadius;
+    if (Number.isFinite(element.letterSpacing)) style.letterSpacing = element.letterSpacing;
+    if (typeof element.textShadow === 'string' && element.textShadow.trim()) style.textShadow = element.textShadow;
+    if (type === 'image') style.objectFit = 'contain';
+    Object.assign(style, parseSimpleBorder(element.border, ['ui', 'titleScreen', 'elements', index, 'border'], diagnostics));
     if (Object.keys(style).length) node.style = style;
     if (type === 'image' && typeof element.src === 'string') node.asset = { kind: 'image', path: element.src };
     if (type === 'button') {
       const mapped = mapLegacyUiAction('title', element.action);
       if (mapped.action) node.action = mapped.action;
+      if (typeof element.hoverColor === 'string') node.states = { hover: { backgroundColor: element.hoverColor } };
       diagnostics.push(...mapped.diagnostics.map(d => ({ ...d, path: ['ui', 'titleScreen', 'elements', index, 'action'], pathString: `ui.titleScreen.elements.${index}.action` })));
     }
     nodes.push(node);
@@ -151,7 +169,18 @@ export function adaptLegacyUiScreen(script, screenId) {
   if (screenId === 'gallery' && !script?.systems?.gallery && !script?.systems?.endings) diagnostics.push(issue('warning', 'ui-legacy-source-empty', 'Gallery has no legacy layout; canonical preview uses registered gallery/ending data only.', ['systems', 'gallery']));
   return {
     authority: 'legacy-only', diagnostics,
-    document: normalizeUiDocument({ schemaVersion: UI_SCREEN_SCHEMA_VERSION, id: screenId, kind: 'screen', authority: 'canonical-active', rootId: `${screenId}.root`, viewport: resolution, nodes }),
+    document: normalizeUiDocument({
+      schemaVersion: UI_SCREEN_SCHEMA_VERSION,
+      id: screenId,
+      kind: 'screen',
+      authority: 'canonical-active',
+      rootId: `${screenId}.root`,
+      viewport: resolution,
+      nodes,
+      ...(screenId === 'title'
+        ? { behavior: { ...(legacy?.bgm ? { bgm: legacy.bgm } : {}), ...(legacy?.openingVideo ? { openingVideo: clone(legacy.openingVideo) } : {}) } }
+        : {}),
+    }),
   };
 }
 
@@ -168,7 +197,10 @@ export function adaptLegacyUiOverlay(script, overlayId) {
 }
 
 export function collectCanonicalUiAssetReferences(document) {
-  return (document?.nodes ?? []).flatMap((node, index) => node?.asset ? [{ path: node.asset.path ?? node.asset.id, kind: node.asset.kind, documentPath: ['nodes', index, 'asset'] }] : []);
+  const references = (document?.nodes ?? []).flatMap((node, index) => node?.asset ? [{ path: node.asset.path ?? node.asset.id, kind: node.asset.kind, documentPath: ['nodes', index, 'asset'] }] : []);
+  if (document?.id === 'title' && document?.behavior?.bgm) references.push({ path: document.behavior.bgm, kind: 'audio', documentPath: ['behavior', 'bgm'] });
+  if (document?.id === 'title' && document?.behavior?.openingVideo) references.push({ path: document.behavior.openingVideo.file ?? document.behavior.openingVideo.videoId, kind: 'video', documentPath: ['behavior', 'openingVideo'] });
+  return references;
 }
 
 export function projectCanonicalThemeScreens(script) {

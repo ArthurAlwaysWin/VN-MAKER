@@ -4,6 +4,7 @@
  */
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
+import { createUiRuntimeHost } from './renderer/createUiRendererHost.js';
 
 export class TitleScreen {
   /**
@@ -14,6 +15,8 @@ export class TitleScreen {
     this.container = container;
     this.gameTitle = gameTitle;
     this.layout = null;
+    this.canonicalDocument = null;
+    this.canonicalHost = null;
 
     this.el = document.createElement('div');
     this.el.id = 'title-screen';
@@ -34,8 +37,9 @@ export class TitleScreen {
    * Set custom layout configuration from script.json
    * @param {Object|null} layout — ui.titleScreen config object
    */
-  setLayout(layout) {
+  setLayout(layout, { canonicalDocument = null } = {}) {
     this.layout = layout;
+    this.canonicalDocument = canonicalDocument;
     if (this.isVisible) this.show(this.hasSave, this.hasGallery);
   }
 
@@ -53,9 +57,11 @@ export class TitleScreen {
     this.hasSave = hasSave;
     this.hasGallery = hasGallery;
     if (this.layout && this.layout.elements) {
-      this._renderCustom();
+      if (this.canonicalDocument) this._renderCanonical();
+      else this._renderCustom();
     } else {
-      this._renderDefault();
+      if (this.canonicalDocument) this._renderCanonical();
+      else this._renderDefault();
     }
     this.el.classList.remove('hidden');
     requestAnimationFrame(() => this.el.classList.add('visible'));
@@ -71,6 +77,7 @@ export class TitleScreen {
   }
 
   _renderDefault() {
+    this._unmountCanonical();
     this.el.style.cssText = '';
     this.el.innerHTML = `
       <div class="title-game-name"></div>
@@ -88,6 +95,7 @@ export class TitleScreen {
   }
 
   _renderCustom() {
+    this._unmountCanonical();
     this.el.innerHTML = '';
     this.el.style.position = 'absolute';
     this.el.style.inset = '0';
@@ -111,6 +119,58 @@ export class TitleScreen {
         this._createImageElement(elem);
       }
     });
+  }
+
+  _renderCanonical() {
+    this.el.innerHTML = '';
+    this.el.style.cssText = '';
+    this.el.style.position = 'absolute';
+    this.el.style.inset = '0';
+    this._unmountCanonical();
+    this.canonicalHost = createUiRuntimeHost({
+      container: this.el,
+      resolveAssetUrl: path => resolvePath(path),
+      actions: {
+        'start-game': () => { if (this.onStart) this.onStart(); },
+        'continue-game': () => { if (this.hasSave && this.onContinue) this.onContinue(); },
+        'open-screen': ({ screenId, mode }) => {
+          if (screenId === 'saveLoad' && mode === 'load') {
+            if (this.hasSave && this.onContinue) this.onContinue();
+          } else if (screenId === 'settings' && this.onSettings) this.onSettings();
+          else if (screenId === 'gallery' && this.hasGallery && this.onGallery) this.onGallery();
+        },
+        'replay-opening-video': () => { if (this.onPlayOpeningVideo) this.onPlayOpeningVideo(); },
+        'quit-game': () => { if (window.close) window.close(); },
+      },
+    });
+    this.canonicalHost.mount(this.canonicalDocument);
+    this._applyCanonicalRuntimeState();
+  }
+
+  _applyCanonicalRuntimeState() {
+    const root = this.canonicalHost?.renderer?.root;
+    if (!root) return;
+    for (const element of root.querySelectorAll('[data-gm-ui-node-id]')) {
+      const node = this.canonicalDocument?.nodes?.find(item => item.id === element.dataset.gmUiNodeId);
+      const action = node?.action;
+      const needsSave = action?.type === 'continue-game'
+        || (action?.type === 'open-screen' && action?.params?.screenId === 'saveLoad' && action?.params?.mode === 'load');
+      if (needsSave && !this.hasSave) {
+        element.style.opacity = '0.3';
+        element.style.pointerEvents = 'none';
+        element.setAttribute('aria-disabled', 'true');
+      }
+      if (action?.type === 'open-screen' && action?.params?.screenId === 'gallery' && !this.hasGallery) {
+        element.style.opacity = '0.3';
+        element.style.pointerEvents = 'none';
+        element.setAttribute('aria-disabled', 'true');
+      }
+    }
+  }
+
+  _unmountCanonical() {
+    this.canonicalHost?.unmount();
+    this.canonicalHost = null;
   }
 
   _createTextElement(cfg) {

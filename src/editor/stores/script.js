@@ -21,6 +21,10 @@ import {
 import { normalizeVideoRegistry } from '../../shared/videoContract.js';
 import { replaceTextTemplateVariableId } from '../../shared/textTemplate.js';
 import { replaceUiImagePathReferences } from '../../shared/uiImageContract.js';
+import {
+  UI_SCREEN_SCHEMA_VERSION,
+  normalizeUiDocument,
+} from '../../shared/uiDocumentContract.js';
 
 const DRAFT_VARIABLE_PREFIX = '__draft_variable__';
 const DRAFT_ENDING_PREFIX = '__draft_ending__';
@@ -1297,6 +1301,17 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function updateCanonicalTitleScreen(document) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+    data.value.ui.screens ??= {};
+    data.value.ui.screenAuthorities ??= {};
+    data.value.ui.screens.title = normalizeUiDocument(document);
+    data.value.ui.screenAuthorities.title = 'canonical-active';
+    pushState();
+  }
+
   /** Get or initialize the ui.dialogueBox font settings */
   function getDialogueBox() {
     if (!data.value) return null;
@@ -1820,14 +1835,31 @@ export const useScriptStore = defineStore('script', () => {
     data.value.ui.backlogScreen = JSON.parse(JSON.stringify(bundleConfig?.backlogScreen ?? {}));
     data.value.ui.gameMenu = JSON.parse(JSON.stringify(bundleConfig?.gameMenu ?? {}));
     data.value.ui.settingsScreen = JSON.parse(JSON.stringify(bundleConfig?.settingsScreen ?? {}));
-    const currentTitleScreen = JSON.parse(JSON.stringify(data.value.ui.titleScreen ?? {}));
-    const nextTitleScreen = JSON.parse(JSON.stringify(bundleConfig?.titleScreen ?? {}));
-    data.value.ui.titleScreen = {
-      background: nextTitleScreen.background ?? null,
-      bgm: currentTitleScreen.bgm ?? null,
-      openingVideo: currentTitleScreen.openingVideo ? JSON.parse(JSON.stringify(currentTitleScreen.openingVideo)) : undefined,
-      elements: Array.isArray(nextTitleScreen.elements) ? nextTitleScreen.elements : [],
-    };
+    const canonicalTitle = bundleConfig?.canonicalScreens?.title;
+    if (canonicalTitle) {
+      const currentTitleScreen = JSON.parse(JSON.stringify(data.value.ui.titleScreen ?? {}));
+      const currentCanonical = JSON.parse(JSON.stringify(data.value.ui.screens?.title ?? {}));
+      data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+      data.value.ui.screens ??= {};
+      data.value.ui.screenAuthorities ??= {};
+      data.value.ui.screens.title = normalizeUiDocument({
+        ...JSON.parse(JSON.stringify(canonicalTitle)),
+        behavior: currentCanonical.behavior ?? {
+          ...(currentTitleScreen.bgm ? { bgm: currentTitleScreen.bgm } : {}),
+          ...(currentTitleScreen.openingVideo ? { openingVideo: currentTitleScreen.openingVideo } : {}),
+        },
+      });
+      data.value.ui.screenAuthorities.title = 'canonical-active';
+    } else {
+      const currentTitleScreen = JSON.parse(JSON.stringify(data.value.ui.titleScreen ?? {}));
+      const nextTitleScreen = JSON.parse(JSON.stringify(bundleConfig?.titleScreen ?? {}));
+      data.value.ui.titleScreen = {
+        background: nextTitleScreen.background ?? null,
+        bgm: currentTitleScreen.bgm ?? null,
+        openingVideo: currentTitleScreen.openingVideo ? JSON.parse(JSON.stringify(currentTitleScreen.openingVideo)) : undefined,
+        elements: Array.isArray(nextTitleScreen.elements) ? nextTitleScreen.elements : [],
+      };
+    }
 
     pushState();
   }
@@ -1846,7 +1878,7 @@ export const useScriptStore = defineStore('script', () => {
     createCgDraft, updateCgFields, renameCg, findCgReferences, deleteCg,
     ensureVideoRegistryState, createVideoDraft, updateVideoFields, renameVideo, deleteVideo,
     getSettingsScreen, updateSettingsScreen,
-    getTitleScreen, updateTitleScreen,
+    getTitleScreen, updateTitleScreen, updateCanonicalTitleScreen,
     getDialogueBox, updateDialogueBox,
     getTheme, updateTheme,
     getWidgetStyles, updateWidgetStyles,

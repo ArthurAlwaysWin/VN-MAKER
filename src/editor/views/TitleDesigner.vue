@@ -50,62 +50,13 @@
         </div>
       </div>
 
-      <div v-if="!showPreview" class="canvas-wrapper" ref="wrapperRef" @click="deselect" @dragover.prevent @drop="onCanvasDrop">
-        <div class="canvas-artboard" ref="artboardRef" :style="artboardStyle">
-          <div class="canvas-bg" :style="bgStyle"></div>
-
-          <!-- Grid overlay -->
-          <svg v-if="gridVisible" class="canvas-grid-overlay" :width="GAME_W" :height="GAME_H">
-            <line v-for="gx in titleGridLinesX" :key="'gx-'+gx" :x1="gx" y1="0" :x2="gx" :y2="GAME_H" />
-            <line v-for="gy in titleGridLinesY" :key="'gy-'+gy" x1="0" :y1="gy" :x2="GAME_W" :y2="gy" />
-          </svg>
-
-          <!-- Snap guide overlay -->
-          <svg class="canvas-guide-overlay" :width="GAME_W" :height="GAME_H" v-if="localGuides.length">
-            <line v-for="(g, i) in localGuides" :key="'g-'+i"
-              :x1="g.axis === 'x' ? g.at : 0"
-              :y1="g.axis === 'y' ? g.at : 0"
-              :x2="g.axis === 'x' ? g.at : GAME_W"
-              :y2="g.axis === 'y' ? g.at : GAME_H"
-              class="guide-line"
-            />
-          </svg>
-
-          <DraggableElement
-            v-for="elem in layout.elements"
-            :key="elem.id"
-            :x="elem.x"
-            :y="elem.y"
-            :width="elem.width || null"
-            :height="elem.height || null"
-            :is-selected="selectedId === elem.id"
-            :resizable="elem.type !== 'text'"
-            :canvas-scale="canvasScale"
-            :snap-fn="buildTitleSnapFn(elem.id)"
-            @select="selectedId = elem.id"
-            @move="onElementMove(elem, $event)"
-            @move-end="onElementMoveCommit(elem, $event)"
-            @resize="onElementResize(elem, $event)"
-            @resize-end="onElementResizeCommit(elem, $event)"
-            @guides="onGuidesUpdate">
-            <!-- Button preview -->
-            <div v-if="elem.type === 'button'" class="elem-preview elem-button-title"
-              :class="{ 'continue-disabled': elem.action === 'continue' }"
-              :style="buttonPreviewStyle(elem)">
-              {{ elem.text || '' }}
-            </div>
-            <!-- Text preview -->
-            <div v-else-if="elem.type === 'text'" class="elem-preview elem-text-title"
-              :style="textPreviewStyle(elem)">
-              {{ elem.content || '标题文字' }}
-            </div>
-            <!-- Image preview -->
-            <div v-else-if="elem.type === 'image'" class="elem-preview elem-image-title">
-              <img v-if="resolveAsset(elem.src)" :src="resolveAsset(elem.src)" />
-              <span v-else class="elem-placeholder">🖼️</span>
-            </div>
-          </DraggableElement>
-        </div>
+      <div v-if="!showPreview" class="canvas-wrapper unified-title-wrapper">
+        <UnifiedScreenDesignerShell
+          v-if="titleInitialDocument"
+          :initial-document="titleInitialDocument"
+          production-title
+          @document-change="onCanonicalTitleDocumentChange"
+        />
       </div>
 
       <!-- Engine iframe preview -->
@@ -307,10 +258,12 @@ import { useAssetStore } from '../stores/assets.js';
 import DraggableElement from '../components/canvas/DraggableElement.vue';
 import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
 import VideoReferenceFields from '../components/resource-library/VideoReferenceFields.vue';
+import UnifiedScreenDesignerShell from '../components/screen-designer/UnifiedScreenDesignerShell.vue';
 import { computeSnap } from '../utils/snapGuides.js';
 import HelpTip from '../components/HelpTip.vue';
 import { HELP_DESIGNER } from '../helpTexts.js';
 import { useTitlePreview } from '../composables/useTitlePreview.js';
+import { adaptLegacyUiScreen } from '../../shared/uiLegacyAdapters.js';
 
 const scriptStore = useScriptStore();
 const assetStore = useAssetStore();
@@ -340,6 +293,7 @@ const presetButtons = PRESET_BUTTONS;
 // ─── Layout State ───────────────────────────────────────
 const layout = reactive({ background: null, bgm: null, openingVideo: null, elements: [] });
 const selectedId = ref(null);
+const titleInitialDocument = ref(null);
 const openingPlayModes = ['after-start', 'before-title', 'manual'];
 const openingPlayLabels = {
   'after-start': '开始游戏后',
@@ -434,6 +388,7 @@ let _syncing = false;
 
 onMounted(() => {
   const screen = scriptStore.getTitleScreen();
+  titleInitialDocument.value = adaptLegacyUiScreen(scriptStore.data ?? {}, 'title').document;
   if (screen) {
     layout.background = screen.background || null;
     layout.bgm = screen.bgm || null;
@@ -785,6 +740,10 @@ function saveLayout() {
   nextTick(() => { _syncing = false; });
 }
 
+function onCanonicalTitleDocumentChange({ document }) {
+  scriptStore.updateCanonicalTitleScreen(document);
+}
+
 // ─── Auto-sync layout changes to iframe preview ─────────
 watch(layout, () => {
   if (showPreview.value) sendTitleLayoutToPreview();
@@ -983,6 +942,16 @@ function rgbaToHex(rgba) {
   overflow: hidden;
   padding: 20px;
   background: #111;
+}
+
+.unified-title-wrapper {
+  display: block;
+  padding: 0;
+}
+
+.unified-title-wrapper :deep(.usd-shell) {
+  height: 100%;
+  min-height: 0;
 }
 
 .canvas-artboard {

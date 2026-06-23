@@ -171,7 +171,9 @@ describe('vn-author CLI', () => {
       'clear-page-effect-packs', 'set-page-particles', 'clear-page-particles',
       'inherit-page-particles', 'set-character-animation', 'set-character-transition',
       'set-opening-video', 'set-title-screen', 'add-title-element', 'update-title-element',
-      'remove-title-element', 'set-screen-layout', 'set-dialogue-box', 'set-theme',
+      'remove-title-element', 'migrate-title-screen', 'set-title-document', 'add-title-node',
+      'update-title-node', 'move-title-node', 'duplicate-title-node', 'remove-title-node',
+      'set-screen-layout', 'set-dialogue-box', 'set-theme',
       'set-widget-styles', 'set-ui-motion', 'apply-ui-style-preset', 'add-choice-effect',
       'set-choice-effect', 'remove-choice-effect',
     ]);
@@ -251,7 +253,9 @@ describe('vn-author CLI', () => {
       'set-page-particles', 'clear-page-particles', 'inherit-page-particles',
       'set-character-animation', 'set-character-transition', 'set-opening-video',
       'set-ending-video', 'set-title-screen', 'add-title-element', 'update-title-element',
-      'remove-title-element', 'set-screen-layout', 'set-dialogue-box', 'set-theme',
+      'remove-title-element', 'migrate-title-screen', 'set-title-document', 'add-title-node',
+      'update-title-node', 'move-title-node', 'duplicate-title-node', 'remove-title-node',
+      'set-screen-layout', 'set-dialogue-box', 'set-theme',
       'set-widget-styles', 'set-ui-motion', 'apply-ui-style-preset', 'add-choice-effect',
       'set-choice-effect', 'remove-choice-effect',
     ]);

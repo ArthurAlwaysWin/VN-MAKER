@@ -46,7 +46,20 @@ function renderPrimitiveContent(element, node, resolveAssetUrl) {
     const source = node.asset?.path ?? node.asset?.id;
     if (source) element.src = resolveAssetUrl(source, node.asset);
     element.alt = node.content?.alt ?? node.content?.accessibleName ?? '';
+    element.style.objectFit = node.style?.objectFit ?? 'contain';
     return;
+  }
+  if (node.asset?.kind === 'image') {
+    const source = node.asset.path ?? node.asset.id;
+    if (source) {
+      element.style.backgroundImage = `url("${resolveAssetUrl(source, node.asset)}")`;
+      element.style.backgroundSize = node.content?.backgroundSize ?? 'cover';
+      element.style.backgroundPosition = node.content?.backgroundPosition ?? 'center';
+    }
+  } else {
+    element.style.backgroundImage = '';
+    element.style.backgroundSize = '';
+    element.style.backgroundPosition = '';
   }
   if (['text', 'button'].includes(node.type)) element.textContent = node.content?.text ?? '';
 }

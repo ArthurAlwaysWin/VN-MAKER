@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { collectUiImagePaths } from '../src/shared/uiImageContract.js';
+import { projectCanonicalThemeScreens } from '../src/shared/uiLegacyAdapters.js';
 import { buildFullThemeZip } from '../src/utils/themePackager.js';
 import { isInsidePath, isPathInsideRealBase } from './pathSecurity.js';
 
@@ -81,6 +82,10 @@ function extractThemeSnapshot(scriptData) {
       continue;
     }
     snapshot.ui[key] = clone(scriptData?.ui?.[key]);
+  }
+  const canonicalProjection = projectCanonicalThemeScreens(scriptData);
+  if (canonicalProjection.screens?.title) {
+    snapshot.ui.canonicalScreens = { title: canonicalProjection.screens.title };
   }
   if (packageMeta.preview && typeof packageMeta.preview === 'object') {
     snapshot.preview = clone(packageMeta.preview);

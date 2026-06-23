@@ -69,10 +69,12 @@ describe('Phase 4a unified editor shell', () => {
       value: 10,
     });
     expect(moved.nodes.find(node => node.id === 'title.start').layout.offset.x).toBe(10);
-    expect(() => applySyntheticNodePatch(fixture, 'title.persist', {
+    const assetPatched = applySyntheticNodePatch(fixture, 'title.persist', {
       path: 'asset.path',
       value: 'unsafe.png',
-    })).toThrow(/Unsupported Phase 4b synthetic patch path/);
+    });
+    expect(assetPatched.nodes.find(node => node.id === 'title.persist').asset.path).toBe('unsafe.png');
+    expect(assetPatched.nodes.find(node => node.id === 'title.persist').advanced).toEqual(before.advanced);
   });
 
   it('renders the synthetic fixture through SharedUiRenderer and syncs canvas selection to hierarchy and inspector', async () => {

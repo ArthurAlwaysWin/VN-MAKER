@@ -105,6 +105,11 @@ function getTitleScreenVisualSnapshot(titleScreen) {
   };
 }
 
+function getCanonicalTitleProjection(ui) {
+  const title = ui?.canonicalScreens?.title;
+  return title && typeof title === 'object' ? title : null;
+}
+
 function collectThemeRefs(theme) {
   const refs = [];
   const ui = theme?.ui ?? {};
@@ -214,6 +219,12 @@ function collectThemeRefs(theme) {
       pushRef(refs, `ui.titleScreen.elements.${index}.src`, element?.src);
     }
   }
+  const canonicalTitle = getCanonicalTitleProjection(ui);
+  for (const [index, node] of (canonicalTitle?.nodes ?? []).entries()) {
+    if (node?.asset?.kind === 'image') {
+      pushRef(refs, `ui.canonicalScreens.title.nodes.${index}.asset.path`, node.asset.path ?? node.asset.id);
+    }
+  }
 
   return refs;
 }
@@ -243,7 +254,7 @@ function detectCoverage(theme) {
   if (hasMeaningfulValue(ui.settingsScreen)) {
     coverage.push('settingsScreen');
   }
-  if (hasMeaningfulValue(getTitleScreenVisualSnapshot(ui.titleScreen))) {
+  if (hasMeaningfulValue(getTitleScreenVisualSnapshot(ui.titleScreen)) || hasMeaningfulValue(getCanonicalTitleProjection(ui))) {
     coverage.push('titleScreen');
   }
 

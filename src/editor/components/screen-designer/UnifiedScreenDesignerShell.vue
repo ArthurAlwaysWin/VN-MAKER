@@ -162,13 +162,22 @@ import {
   applySyntheticNodeOperation,
   applySyntheticNodePatch,
   buildHierarchy,
+  createUnifiedEditorShellStateFromDocument,
   createUnifiedEditorShellState,
   getNodeById,
   getSyntheticNodeOperations,
   summarizeNode,
 } from '../../screen-designer/unifiedEditorShellModel.js';
 
-const screens = UNIFIED_EDITOR_SHELL_SCREENS;
+const props = defineProps({
+  initialDocument: { type: Object, default: null },
+  productionTitle: { type: Boolean, default: false },
+});
+const emit = defineEmits(['document-change', 'action']);
+
+const screens = props.productionTitle
+  ? Object.freeze([{ id: 'title', label: 'Title', source: 'canonical' }])
+  : UNIFIED_EDITOR_SHELL_SCREENS;
 const viewports = UNIFIED_EDITOR_SHELL_VIEWPORTS;
 const palette = UNIFIED_EDITOR_SHELL_PALETTE;
 const zoomLevels = Object.freeze([
@@ -176,7 +185,9 @@ const zoomLevels = Object.freeze([
   { value: 1, label: '100%' },
   { value: 1.25, label: '125%' },
 ]);
-const state = reactive(createUnifiedEditorShellState());
+const state = reactive(props.initialDocument
+  ? createUnifiedEditorShellStateFromDocument(props.initialDocument, { screenId: 'title' })
+  : createUnifiedEditorShellState());
 const canvasRef = ref(null);
 const canvasFrameRef = ref(null);
 const diagnostics = ref([]);
@@ -242,6 +253,7 @@ function commitSyntheticTransaction(operation, nextDocument, selectedNodeId = st
   state.selectedNodeId = selectedNodeId;
   closeContextMenu();
   renderDocument();
+  emit('document-change', { operation, document: clone(nextDocument), selectedNodeId });
 }
 
 function patchSelected(path, value) {
@@ -355,7 +367,11 @@ onMounted(() => {
     dataSources: UNIFIED_EDITOR_SHELL_DATA,
     styles: UNIFIED_EDITOR_SHELL_STYLES,
     actions: {
-      'start-game': () => {},
+      'start-game': params => emit('action', { type: 'start-game', params }),
+      'continue-game': params => emit('action', { type: 'continue-game', params }),
+      'open-screen': params => emit('action', { type: 'open-screen', params }),
+      'replay-opening-video': params => emit('action', { type: 'replay-opening-video', params }),
+      'quit-game': params => emit('action', { type: 'quit-game', params }),
     },
     onDiagnostic: item => {
       diagnostics.value = [...diagnostics.value, item];

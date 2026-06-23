@@ -19,6 +19,7 @@
  */
 
 import { collectEffectPackAssetPaths } from '../shared/effectPackContract.js';
+import { collectCanonicalUiAssetReferences } from '../shared/uiLegacyAdapters.js';
 import { collectUiImagePaths } from '../shared/uiImageContract.js';
 import { normalizeVideoRegistry, resolveVideoReference } from '../shared/videoContract.js';
 
@@ -132,6 +133,16 @@ export function scanAssets(script) {
         _add(bg, elem.src);
       }
     }
+  }
+
+  const titleAuthority = script.ui?.screenAuthorities?.title
+    ?? (script.ui?.screens?.title ? 'canonical-active' : 'legacy-only');
+  if (titleAuthority === 'canonical-active' && script.ui?.screens?.title) {
+    for (const reference of collectCanonicalUiAssetReferences(script.ui.screens.title)) {
+      if (reference.kind === 'image') _add(bg, reference.path);
+      if (reference.kind === 'audio') _add(audio, reference.path);
+    }
+    addVideoReference(script.ui.screens.title.behavior?.openingVideo);
   }
 
   collectUiImagePaths(script, (value) => _add(ui, value));

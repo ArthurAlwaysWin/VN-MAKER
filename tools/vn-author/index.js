@@ -606,6 +606,27 @@ function parseTitleElementArgs(args, { requireType = true } = {}) {
   });
 }
 
+function parseCanonicalTitleNodeArgs(args) {
+  const jsonNode = parseJsonArg(args, '--node', null);
+  if (jsonNode) return jsonNode;
+  const src = getOptionalArgValue(args, '--src');
+  return dropUndefinedFields({
+    id: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    type: getArgValue(args, '--type', null),
+    parentId: getOptionalArgValue(args, '--parent-id') ?? getOptionalArgValue(args, '--parent'),
+    order: parseOptionalScalarValue(getOptionalArgValue(args, '--order')),
+    parts: parseJsonArg(args, '--parts', []),
+    layout: parseJsonArg(args, '--layout', undefined),
+    content: parseJsonArg(args, '--content', dropUndefinedFields({
+      text: getOptionalArgValue(args, '--text') ?? getOptionalArgValue(args, '--label'),
+      alt: getOptionalArgValue(args, '--alt'),
+    })),
+    style: parseJsonArg(args, '--style', undefined),
+    asset: parseJsonArg(args, '--asset', src ? { kind: 'image', path: src } : undefined),
+    action: parseJsonArg(args, '--action', undefined),
+  });
+}
+
 async function readScript(args) {
   const scriptPath = path.resolve(repoRoot, getArgValue(args, '--script', defaultScriptPath));
   const raw = await readFile(scriptPath, 'utf8');
@@ -1922,6 +1943,46 @@ const APPLY_PLAN_OPERATION_HANDLERS = new Map([
       index: getParam(params, 'index', 'elementIndex', 'element-index'),
     });
   }],
+  ['migrate-title-screen', (session) => {
+    return session.migrateTitleScreen();
+  }],
+  ['set-title-document', (session, params, command) => {
+    return session.setTitleDocument({
+      document: requireParam(params, command, 'document'),
+    });
+  }],
+  ['add-title-node', (session, params, command) => {
+    return session.addTitleNode({
+      node: buildCanonicalTitleNode(command, params),
+      parentId: getParam(params, 'parentId', 'parent-id', 'parent'),
+    });
+  }],
+  ['update-title-node', (session, params, command) => {
+    return session.updateTitleNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+      path: getParam(params, 'path'),
+      value: getParam(params, 'value'),
+      patch: getParam(params, 'patch'),
+    });
+  }],
+  ['move-title-node', (session, params, command) => {
+    return session.moveTitleNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+      parentId: getParam(params, 'parentId', 'parent-id', 'parent'),
+      order: getParam(params, 'order'),
+    });
+  }],
+  ['duplicate-title-node', (session, params, command) => {
+    return session.duplicateTitleNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+      id: getParam(params, 'newId', 'new-id'),
+    });
+  }],
+  ['remove-title-node', (session, params, command) => {
+    return session.removeTitleNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+    });
+  }],
   ['set-screen-layout', (session, params, command) => {
     return session.setScreenLayout(buildScreenLayoutPatch(command, params));
   }],
@@ -2168,6 +2229,26 @@ function buildTitleElement(command, params, { requireType = true } = {}) {
     hoverColor: getParam(params, 'hoverColor', 'hover-color'),
     letterSpacing: getParam(params, 'letterSpacing', 'letter-spacing'),
     textShadow: getParam(params, 'textShadow', 'text-shadow'),
+  });
+}
+
+function buildCanonicalTitleNode(command, params) {
+  return getParam(params, 'node') ?? dropUndefinedFields({
+    id: requireParam(params, command, 'id', 'nodeId', 'node-id'),
+    type: requireParam(params, command, 'type'),
+    parentId: getParam(params, 'parentId', 'parent-id', 'parent'),
+    order: getParam(params, 'order'),
+    parts: getParam(params, 'parts') ?? [],
+    layout: getParam(params, 'layout'),
+    content: getParam(params, 'content') ?? dropUndefinedFields({
+      text: getParam(params, 'text', 'label'),
+      alt: getParam(params, 'alt'),
+    }),
+    style: getParam(params, 'style'),
+    asset: getParam(params, 'asset') ?? (getParam(params, 'src')
+      ? { kind: 'image', path: getParam(params, 'src') }
+      : undefined),
+    action: getParam(params, 'action'),
   });
 }
 
@@ -6809,6 +6890,81 @@ async function removeTitleElement(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function migrateTitleScreen(args) {
+  const output = await mutateScript(args, (session) => session.migrateTitleScreen());
+  emitResult(args, output, () => {
+    printMutationResult('Migrated title screen', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function setTitleDocument(args) {
+  const document = await parseJsonFileArg(args, '--document', parseJsonArg(args, '--document-json', null));
+  if (!document) throw new Error('set-title-document requires --document or --document-json');
+  const output = await mutateScript(args, (session) => session.setTitleDocument({ document }));
+  emitResult(args, output, () => {
+    printMutationResult('Set canonical title document', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function addTitleNode(args) {
+  const output = await mutateScript(args, (session) => session.addTitleNode({
+    node: parseCanonicalTitleNodeArgs(args),
+    parentId: getArgValue(args, '--parent-id', getArgValue(args, '--parent', undefined)),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Added canonical title node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateTitleNode(args) {
+  const output = await mutateScript(args, (session) => session.updateTitleNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    path: getOptionalArgValue(args, '--path'),
+    value: parseOptionalScalarValue(getOptionalArgValue(args, '--value')),
+    patch: parseJsonArg(args, '--patch', undefined),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Updated canonical title node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function moveTitleNode(args) {
+  const output = await mutateScript(args, (session) => session.moveTitleNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    parentId: getOptionalArgValue(args, '--parent-id') ?? getOptionalArgValue(args, '--parent'),
+    order: getIntArg(args, '--order', undefined),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Moved canonical title node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function duplicateTitleNode(args) {
+  const output = await mutateScript(args, (session) => session.duplicateTitleNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    id: getOptionalArgValue(args, '--new-id'),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Duplicated canonical title node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeTitleNode(args) {
+  const output = await mutateScript(args, (session) => session.removeTitleNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Removed canonical title node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
 async function setScreenLayout(args) {
   const screenLayoutPatch = await parseScreenLayoutArgs(args);
   const output = await mutateScript(args, (session) => session.setScreenLayout(screenLayoutPatch));
@@ -7305,6 +7461,13 @@ function printHelp() {
   add-title-element --type text|button|image [--id id] [--content text] [--text text] [--label text] [--action start|continue|settings|quit] [--src path] [--x number] [--y number] [--anchor center|top-left] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-title-element --id id|--index index [--patch json] [--content text] [--text text] [--x number] [--y number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-title-element --id id|--index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  migrate-title-screen [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-title-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-title-node --id node_id --type panel|text|image|button [--parent-id node_id] [--node json] [--layout json] [--style json] [--content json] [--asset json] [--action json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-title-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  move-title-node --id node_id [--parent-id node_id] [--order index] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  duplicate-title-node --id node_id [--new-id node_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-title-node --id node_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-screen-layout --screen settingsScreen|gameMenu|saveLoadScreen|backlogScreen --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-dialogue-box --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-theme --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -7419,6 +7582,13 @@ const CLI_COMMAND_HANDLERS = new Map([
   ['add-title-element', addTitleElement],
   ['update-title-element', updateTitleElement],
   ['remove-title-element', removeTitleElement],
+  ['migrate-title-screen', migrateTitleScreen],
+  ['set-title-document', setTitleDocument],
+  ['add-title-node', addTitleNode],
+  ['update-title-node', updateTitleNode],
+  ['move-title-node', moveTitleNode],
+  ['duplicate-title-node', duplicateTitleNode],
+  ['remove-title-node', removeTitleNode],
   ['set-screen-layout', setScreenLayout],
   ['set-dialogue-box', (args) => setSharedUiConfig(args, 'set-dialogue-box', 'dialogue box', (session, patch) => session.setDialogueBox(patch))],
   ['set-theme', (args) => setSharedUiConfig(args, 'set-theme', 'theme', (session, patch) => session.setTheme(patch))],

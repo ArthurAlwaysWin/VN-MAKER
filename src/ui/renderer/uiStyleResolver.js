@@ -34,7 +34,7 @@ export function resolveUiNodeStyle(node, {
   );
 }
 
-const PIXEL_PROPERTIES = new Set(['fontSize', 'borderWidth', 'borderRadius', 'gap']);
+const PIXEL_PROPERTIES = new Set(['fontSize', 'borderWidth', 'borderRadius', 'gap', 'letterSpacing']);
 
 export function applyUiNodeStyle(element, style) {
   for (const property of Object.keys(UI_STYLE_SCHEMA)) {

@@ -165,9 +165,9 @@ describe('Config routing — main.js source patterns', () => {
 
   // ── initPreview() patterns ──
 
-  it('initPreview() has titleScreen.setLayout for preview', () => {
+  it('initPreview() has canonical-aware title layout routing for preview', () => {
     const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
-    expect(previewSection).toContain('titleScreen.setLayout(engine.script.ui?.titleScreen)');
+    expect(previewSection).toContain('applyTitleScreenLayout()');
   });
 
   it('initPreview() has settingsScreen.setLayout for preview', () => {
@@ -233,12 +233,12 @@ describe('Config routing — main.js source patterns', () => {
 
   // ── No duplication ──
 
-  it('init() does not duplicate titleScreen.setLayout', () => {
+  it('init() does not duplicate title layout routing', () => {
     // Extract only the init() function body
     const initStart = src.indexOf('async function init');
     const initEnd = src.indexOf('function initPreview()');
     const initBody = src.slice(initStart, initEnd);
-    const matches = initBody.match(/titleScreen\.setLayout/g) || [];
+    const matches = initBody.match(/applyTitleScreenLayout/g) || [];
     expect(matches.length).toBe(1);
   });
 

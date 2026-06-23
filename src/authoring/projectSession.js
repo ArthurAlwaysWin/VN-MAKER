@@ -37,6 +37,12 @@ import { normalizeVideoEntry, normalizeVideoRegistry } from '../shared/videoCont
 import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
 import { assertStableId } from '../shared/stableId.js';
 import {
+  UI_SCREEN_SCHEMA_VERSION,
+  normalizeUiDocument,
+  validateUiDocument,
+} from '../shared/uiDocumentContract.js';
+import { adaptLegacyUiScreen } from '../shared/uiLegacyAdapters.js';
+import {
   isKnownSettingsCustomButtonAction,
   isKnownSettingsFooterButtonAction,
 } from '../shared/settingsScreenContract.js';
@@ -660,7 +666,7 @@ function normalizeTitleElement(element, index = 0) {
     if (normalized.action === 'load') {
       normalized.action = 'continue';
     }
-    if (normalized.action !== undefined && !['start', 'continue', 'gallery', 'settings', 'quit'].includes(normalized.action)) {
+    if (normalized.action !== undefined && !['start', 'continue', 'gallery', 'settings', 'play-opening-video', 'quit'].includes(normalized.action)) {
       throw new Error(`Unsupported title button action: ${normalized.action}`);
     }
   }
@@ -707,6 +713,34 @@ const SUPPORTED_SCREEN_LAYOUT_IDS = [
   'backlogScreen',
 ];
 
+const CANONICAL_TITLE_PATCH_PATHS = Object.freeze(new Set([
+  'content.text',
+  'content.alt',
+  'asset.path',
+  'style.color',
+  'style.backgroundColor',
+  'style.fontFamily',
+  'style.fontSize',
+  'style.fontWeight',
+  'style.borderColor',
+  'style.borderWidth',
+  'style.borderRadius',
+  'style.opacity',
+  'style.letterSpacing',
+  'style.textShadow',
+  'layout.anchor.minX',
+  'layout.anchor.minY',
+  'layout.anchor.maxX',
+  'layout.anchor.maxY',
+  'layout.pivot.x',
+  'layout.pivot.y',
+  'layout.offset.x',
+  'layout.offset.y',
+  'layout.size.width',
+  'layout.size.height',
+  'action',
+]));
+
 function assertSupportedScreenLayoutId(screenId) {
   const id = assertNonEmptyString(screenId, 'screenId');
   if (!SUPPORTED_SCREEN_LAYOUT_IDS.includes(id)) {
@@ -725,6 +759,74 @@ function mergePlainObjects(base, patch) {
     }
   }
   return result;
+}
+
+function setPathValue(target, path, value) {
+  const parts = String(path).split('.');
+  let cursor = target;
+  for (const part of parts.slice(0, -1)) {
+    cursor[part] ??= {};
+    cursor = cursor[part];
+  }
+  cursor[parts.at(-1)] = cloneJsonValue(value);
+}
+
+function normalizeCanonicalTitleDocument(document) {
+  const normalized = normalizeUiDocument({
+    ...cloneJsonValue(document ?? {}),
+    schemaVersion: UI_SCREEN_SCHEMA_VERSION,
+    id: 'title',
+    kind: 'screen',
+    authority: 'canonical-active',
+  });
+  const errors = validateUiDocument(normalized, { screenId: 'title', kind: 'screen' })
+    .filter(item => item.severity === 'error');
+  if (errors.length) {
+    throw new Error(`Canonical title document is invalid: ${errors.map(item => item.code).join(', ')}`);
+  }
+  return normalized;
+}
+
+function ensureCanonicalTitleRegistry(script) {
+  script.ui ??= {};
+  script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+  script.ui.screens ??= {};
+  script.ui.screenAuthorities ??= {};
+}
+
+function ensureCanonicalTitleDocument(script) {
+  ensureCanonicalTitleRegistry(script);
+  if (!script.ui.screens.title) {
+    const adapted = adaptLegacyUiScreen(script, 'title');
+    script.ui.screens.title = adapted.document;
+  }
+  script.ui.screens.title = normalizeCanonicalTitleDocument(script.ui.screens.title);
+  script.ui.screenAuthorities.title = 'canonical-active';
+  return script.ui.screens.title;
+}
+
+function findCanonicalTitleNode(document, nodeId) {
+  const node = document.nodes.find(item => item.id === nodeId);
+  if (!node) throw new Error(`Canonical title node not found: ${nodeId}`);
+  return node;
+}
+
+function nextCanonicalNodeId(document, baseId) {
+  const ids = new Set(document.nodes.map(node => node.id));
+  let candidate = baseId;
+  let index = 2;
+  while (ids.has(candidate)) {
+    candidate = `${baseId}.${index}`;
+    index += 1;
+  }
+  return candidate;
+}
+
+function renumberCanonicalSiblings(document, parentId) {
+  document.nodes
+    .filter(node => node.parentId === parentId)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.id).localeCompare(String(b.id)))
+    .forEach((node, index) => { node.order = index; });
 }
 
 function normalizeScreenLayoutConfig(config, screenId) {
@@ -1882,6 +1984,142 @@ export function createProjectSession(input = {}) {
         screenId: 'titleScreen',
         elementId: removed?.id ?? null,
         elementIndex,
+      };
+    },
+
+    migrateTitleScreen() {
+      ensureCanonicalTitleRegistry(script);
+      const adapted = adaptLegacyUiScreen(script, 'title');
+      script.ui.screens.title = normalizeCanonicalTitleDocument(adapted.document);
+      script.ui.screenAuthorities.title = 'canonical-active';
+      return {
+        screenId: 'title',
+        authority: 'canonical-active',
+        nodeCount: script.ui.screens.title.nodes.length,
+        diagnostics: cloneJsonValue(adapted.diagnostics ?? []),
+        changedPaths: ['ui.screenSchemaVersion', 'ui.screenAuthorities.title', 'ui.screens.title'],
+      };
+    },
+
+    setTitleDocument({ document }) {
+      ensureCanonicalTitleRegistry(script);
+      script.ui.screens.title = normalizeCanonicalTitleDocument(document);
+      script.ui.screenAuthorities.title = 'canonical-active';
+      return {
+        screenId: 'title',
+        authority: 'canonical-active',
+        nodeCount: script.ui.screens.title.nodes.length,
+        changedPaths: ['ui.screenSchemaVersion', 'ui.screenAuthorities.title', 'ui.screens.title'],
+      };
+    },
+
+    addTitleNode({ node, parentId = 'title.root' }) {
+      const document = ensureCanonicalTitleDocument(script);
+      const nextNode = {
+        ...cloneJsonValue(node ?? {}),
+        parentId: node?.parentId ?? parentId,
+        order: Number.isInteger(node?.order)
+          ? node.order
+          : document.nodes.filter(item => item.parentId === (node?.parentId ?? parentId)).length,
+        parts: Array.isArray(node?.parts) ? node.parts : [],
+      };
+      if (!nextNode.id) throw new Error('Canonical title node requires id');
+      document.nodes.push(nextNode);
+      script.ui.screens.title = normalizeCanonicalTitleDocument(document);
+      return {
+        screenId: 'title',
+        nodeId: nextNode.id,
+        changedPaths: [`ui.screens.title.nodes.${nextNode.id}`],
+      };
+    },
+
+    updateTitleNode({ nodeId, patch = {}, path, value }) {
+      const document = ensureCanonicalTitleDocument(script);
+      const node = findCanonicalTitleNode(document, nodeId);
+      if (path !== undefined) {
+        if (!CANONICAL_TITLE_PATCH_PATHS.has(path)) {
+          throw new Error(`Unsupported canonical title patch path: ${path}`);
+        }
+        setPathValue(node, path, value);
+      } else {
+        for (const [patchPath, patchValue] of Object.entries(patch ?? {})) {
+          if (!CANONICAL_TITLE_PATCH_PATHS.has(patchPath)) {
+            throw new Error(`Unsupported canonical title patch path: ${patchPath}`);
+          }
+          setPathValue(node, patchPath, patchValue);
+        }
+      }
+      script.ui.screens.title = normalizeCanonicalTitleDocument(document);
+      return {
+        screenId: 'title',
+        nodeId,
+        changedPaths: [`ui.screens.title.nodes.${nodeId}`],
+      };
+    },
+
+    moveTitleNode({ nodeId, parentId, order }) {
+      const document = ensureCanonicalTitleDocument(script);
+      const node = findCanonicalTitleNode(document, nodeId);
+      if (node.id === document.rootId) throw new Error('Cannot move canonical title root node');
+      const nextParentId = parentId ?? node.parentId;
+      if (!document.nodes.some(item => item.id === nextParentId)) throw new Error(`Canonical title parent not found: ${nextParentId}`);
+      node.parentId = nextParentId;
+      node.order = Number.isInteger(order) && order >= 0 ? order : node.order;
+      renumberCanonicalSiblings(document, node.parentId);
+      script.ui.screens.title = normalizeCanonicalTitleDocument(document);
+      return {
+        screenId: 'title',
+        nodeId,
+        changedPaths: [`ui.screens.title.nodes.${nodeId}.parentId`, `ui.screens.title.nodes.${nodeId}.order`],
+      };
+    },
+
+    duplicateTitleNode({ nodeId, id }) {
+      const document = ensureCanonicalTitleDocument(script);
+      const node = findCanonicalTitleNode(document, nodeId);
+      if (node.id === document.rootId) throw new Error('Cannot duplicate canonical title root node');
+      const nextId = id ?? nextCanonicalNodeId(document, `${node.id}.copy`);
+      const copy = {
+        ...cloneJsonValue(node),
+        id: nextId,
+        order: (node.order ?? 0) + 1,
+      };
+      for (const sibling of document.nodes) {
+        if (sibling.parentId === node.parentId && (sibling.order ?? 0) > (node.order ?? 0)) sibling.order += 1;
+      }
+      document.nodes.push(copy);
+      renumberCanonicalSiblings(document, node.parentId);
+      script.ui.screens.title = normalizeCanonicalTitleDocument(document);
+      return {
+        screenId: 'title',
+        nodeId: nextId,
+        changedPaths: [`ui.screens.title.nodes.${nextId}`],
+      };
+    },
+
+    removeTitleNode({ nodeId }) {
+      const document = ensureCanonicalTitleDocument(script);
+      const node = findCanonicalTitleNode(document, nodeId);
+      if (node.id === document.rootId) throw new Error('Cannot remove canonical title root node');
+      const removeIds = new Set([nodeId]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const candidate of document.nodes) {
+          if (removeIds.has(candidate.parentId) && !removeIds.has(candidate.id)) {
+            removeIds.add(candidate.id);
+            changed = true;
+          }
+        }
+      }
+      script.ui.screens.title.nodes = document.nodes.filter(item => !removeIds.has(item.id));
+      renumberCanonicalSiblings(script.ui.screens.title, node.parentId);
+      script.ui.screens.title = normalizeCanonicalTitleDocument(script.ui.screens.title);
+      return {
+        screenId: 'title',
+        nodeId,
+        removedNodeCount: removeIds.size,
+        changedPaths: [`ui.screens.title.nodes.${nodeId}`],
       };
     },
 

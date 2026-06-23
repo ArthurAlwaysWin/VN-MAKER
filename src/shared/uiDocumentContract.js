@@ -27,7 +27,7 @@ export const UI_CONTEXT_KEYS = Object.freeze(['viewport.width', 'viewport.height
 export const UI_PREDICATE_OPERATORS = Object.freeze(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in']);
 export const UI_STYLE_SCHEMA = Object.freeze({
   color: 'color', backgroundColor: 'color', opacity: 'number', fontFamily: 'string', fontSize: 'number', fontWeight: 'number',
-  borderColor: 'color', borderWidth: 'number', borderRadius: 'number', gap: 'number', visible: 'boolean',
+  borderColor: 'color', borderWidth: 'number', borderRadius: 'number', gap: 'number', letterSpacing: 'number', textShadow: 'string', objectFit: 'string', visible: 'boolean',
 });
 export const UI_STATE_IDS = Object.freeze(['default', 'hover', 'pressed', 'focused', 'disabled', 'selected']);
 export const UI_CAPABILITIES = Object.freeze({
@@ -59,6 +59,7 @@ export function normalizeUiDocument(document) {
     ...(plain(document.variants) ? { variants: clone(document.variants) } : {}),
     ...(Array.isArray(document.components) ? { components: clone(document.components) } : {}),
     ...(Array.isArray(document.tracks) ? { tracks: clone(document.tracks) } : {}),
+    ...(plain(document.behavior) ? { behavior: clone(document.behavior) } : {}),
   };
 }
 

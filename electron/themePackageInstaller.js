@@ -58,6 +58,9 @@ function normalizeInstalledBundle(ui = {}) {
       ? cloneThemeOwnedTitleScreen(ui[key])
       : clone(ui[key]);
   }
+  if (ui.canonicalScreens?.title) {
+    bundle.canonicalScreens = { title: clone(ui.canonicalScreens.title) };
+  }
   return bundle;
 }
 

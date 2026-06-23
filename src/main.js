@@ -43,6 +43,8 @@ import { GalleryScreen } from './ui/GalleryScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
 import { VideoPlayer } from './ui/VideoPlayer.js';
+import { createUiPreviewHost } from './ui/renderer/createUiRendererHost.js';
+import { createUiPreviewBridge, UI_PREVIEW_MESSAGE_TYPES } from './ui/renderer/uiPreviewBridge.js';
 import { attachResponsiveGameContainer } from './ui/runtimeViewport.js';
 import { loadAllFonts } from './engine/fontLoader.js';
 import {
@@ -62,6 +64,29 @@ const charLayer = document.getElementById('character-layer');
 const dialogueLayer = document.getElementById('dialogue-layer');
 const uiOverlay = document.getElementById('ui-overlay');
 attachResponsiveGameContainer(gameContainer);
+
+let canonicalUiPreviewRoot = null;
+let canonicalUiPreviewBridge = null;
+
+function ensureCanonicalUiPreviewBridge() {
+  if (canonicalUiPreviewBridge) return canonicalUiPreviewBridge;
+  canonicalUiPreviewRoot = document.createElement('div');
+  canonicalUiPreviewRoot.id = 'canonical-ui-preview-host';
+  canonicalUiPreviewRoot.hidden = true;
+  canonicalUiPreviewRoot.style.position = 'absolute';
+  canonicalUiPreviewRoot.style.inset = '0';
+  uiOverlay.appendChild(canonicalUiPreviewRoot);
+  const targetOrigin = window.location.origin === 'null' ? '*' : window.location.origin;
+  const host = createUiPreviewHost({
+    container: canonicalUiPreviewRoot,
+    onDiagnostic: diagnostic => window.parent.postMessage({ type: 'ui-preview-diagnostic', diagnostic }, targetOrigin),
+    onSelectNode: ({ nodeId }) => window.parent.postMessage({ type: 'ui-preview-selection', nodeId }, targetOrigin),
+  });
+  canonicalUiPreviewBridge = createUiPreviewBridge(host, {
+    postResult: result => window.parent.postMessage(result, targetOrigin),
+  });
+  return canonicalUiPreviewBridge;
+}
 
 // ─── Engine instances ───────────────────────────────────
 const engine = new ScriptEngine();
@@ -1804,6 +1829,15 @@ function initPreview() {
     if (e.origin !== 'null' && e.origin !== window.location.origin) return;
     const msg = e.data;
     if (!msg || !msg.type) return;
+
+    if ([UI_PREVIEW_MESSAGE_TYPES.MOUNT, UI_PREVIEW_MESSAGE_TYPES.UPDATE, UI_PREVIEW_MESSAGE_TYPES.UNMOUNT].includes(msg.type)) {
+      if (msg.type !== UI_PREVIEW_MESSAGE_TYPES.UNMOUNT) {
+        hidePreviewUiSurfaces();
+      }
+      const handled = ensureCanonicalUiPreviewBridge().handle(msg);
+      if (canonicalUiPreviewRoot) canonicalUiPreviewRoot.hidden = msg.type === UI_PREVIEW_MESSAGE_TYPES.UNMOUNT;
+      if (handled) return;
+    }
 
     switch (msg.type) {
       case 'start': {

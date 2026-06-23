@@ -1,7 +1,7 @@
 # Unified Screen Designer Architecture
 
-**Status:** Phase 0-2 complete; Phase 3+ not started
-**Date:** 2026-06-22
+**Status:** Phase 0-3 complete; Phase 4+ not started
+**Date:** 2026-06-23
 **Planning baseline:** `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
 **Roadmap:** [unified-screen-designer-roadmap.md](./unified-screen-designer-roadmap.md)
@@ -315,6 +315,8 @@ Exact filenames may change during implementation, but ownership must remain clea
 
 Runtime and preview must both exercise the same action router. Preview replaces destructive or persistent actions with safe diagnostics unless a dedicated test explicitly enables them.
 
+Phase 3 locks the host integration as **in-process** for the synthetic renderer host. Runtime and preview hosts both instantiate `SharedUiRenderer`; the host mode changes action side-effect policy, deterministic data sources, diagnostics, and selection instrumentation, not the DOM renderer implementation. Production legacy screens remain on their existing paths until their owning migration phases.
+
 ## Theme And Style Ownership
 
 Theme precedence is:
@@ -446,7 +448,7 @@ These questions must be answered during the named roadmap phases rather than gue
 - **Phase 2:** minimum contract shapes and capability gates for responsive variants, bounded predicates, typed animation tracks, and reusable component instances;
 - **Phase 2/P4:** whether editor-only lock/visibility state belongs in portable project metadata or local editor state;
 - **Phase 2 and each widget slice:** how much internal structure each semantic widget safely exposes;
-- **Phase 3:** whether the editor authoring canvas mounts the shared renderer in-process, through an iframe, or through a measured hybrid host;
+- **Phase 3:** resolved for the synthetic host as in-process; later editor canvas work may add chrome around the same renderer but must not introduce a second renderer implementation;
 - **Phase 5:** the `.gmtheme` theme-owned projection and round-trip behavior for canonical screens;
 - **Phase 10:** whether gallery uses one mixed grid or explicit CG/ending tabs;
 - **Phase 10:** which video controls are authorable for each playback policy;

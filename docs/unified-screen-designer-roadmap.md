@@ -1,7 +1,7 @@
 # Unified Screen Designer Roadmap
 
-**Status:** Phase 0-2 complete; Phase 3+ not started
-**Date:** 2026-06-22
+**Status:** Phase 0-3 complete; Phase 4+ not started
+**Date:** 2026-06-23
 **Planning base:** `main` at `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
 **Architecture:** [unified-screen-designer-architecture.md](./unified-screen-designer-architecture.md)
@@ -46,7 +46,7 @@ Every phase must preserve these rules:
 | 0 | Scope And Decision Lock | Seven screens, overlays, terminology, boundaries, and non-goals are fixed. | Low | Complete in docs |
 | 1 | Baseline And Parity Harness | Current screen behavior and visual baselines are captured before structural change. | Medium | Complete |
 | 2 | Canonical UI Document Contract | Versioned nodes, layout, actions, bindings, validation, and legacy adapters exist. | High | Complete |
-| 3 | Shared Renderer And Semantic Widget Host | Runtime and preview can render canonical documents through one path. | High | Not started |
+| 3 | Shared Renderer And Semantic Widget Host | Runtime and preview can render canonical documents through one path. | High | Complete |
 | 4 | Unified Editor Shell | Palette, hierarchy, canvas, inspector, context menu, keyboard, geometry, and undo work. | High | Not started |
 | 5 | Title Vertical Slice | Title becomes the first end-to-end canonical screen and proves migration. | High | Not started |
 | 6 | Game Menu And Shared Confirmation | Menu navigation and reusable confirmation overlay migrate safely. | Medium/High | Not started |
@@ -194,6 +194,8 @@ Completion evidence:
 
 **Goal:** Render canonical documents through one implementation usable by runtime and editor preview.
 
+**Status:** Complete on 2026-06-23.
+
 Deliver:
 
 - create the shared renderer host and node lifecycle;
@@ -225,6 +227,22 @@ Acceptance:
 - current production screens still use their existing renderer paths.
 
 **Stop boundary:** Do not migrate a production screen or remove legacy rendering in Phase 3.
+
+Completion evidence:
+
+- added `SharedUiRenderer` plus runtime and preview hosts that share one DOM renderer and differ only by host policy;
+- rendered primitive nodes, semantic-widget placeholders, stable `data-gm-ui-node-id`, typed layout, typed style/state precedence, and accessible names;
+- added canonical action routing, named data-source injection, preview-safe diagnostics for persistent/destructive actions, and semantic required-part enforcement;
+- added host-level focus acquisition/restoration, modal trap primitives, lifecycle/update abort signals, incremental update reuse, unmount cleanup, and selection-latency measurements;
+- added deterministic renderer fixtures and a stable browser fixture at `/ui-renderer-fixture.html`;
+- fixed the committed sample `public/game/script.json` prerequisite by adding a stable `projectId`;
+- integrated canonical preview snapshot/update/unmount messages through the existing preview dispatch seam without switching any production screen;
+- focused renderer/host tests pass and browser evidence confirms runtime/preview node parity plus preview-safe diagnostics.
+
+Remaining boundary:
+
+- no production screen uses the shared renderer yet;
+- no Unified Editor Shell, Title vertical slice, migration write path, or production screen migration was started.
 
 ## Phase 4 - Unified Editor Shell
 

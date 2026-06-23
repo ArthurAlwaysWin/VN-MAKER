@@ -1,6 +1,6 @@
 # Unified Screen Designer Roadmap
 
-**Status:** Phase 0-4 complete; Phase 5 not started
+**Status:** Phase 0-5 complete; Phase 6 not started
 **Date:** 2026-06-23
 **Planning base:** `main` at `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
@@ -48,7 +48,7 @@ Every phase must preserve these rules:
 | 2 | Canonical UI Document Contract | Versioned nodes, layout, actions, bindings, validation, and legacy adapters exist. | High | Complete |
 | 3 | Shared Renderer And Semantic Widget Host | Runtime and preview can render canonical documents through one path. | High | Complete |
 | 4 | Unified Editor Shell | Palette, hierarchy, canvas, inspector, context menu, keyboard, geometry, and undo work. | High | Complete |
-| 5 | Title Vertical Slice | Title becomes the first end-to-end canonical screen and proves migration. | High | Not started |
+| 5 | Title Vertical Slice | Title becomes the first end-to-end canonical screen and proves migration. | High | Complete |
 | 6 | Game Menu And Shared Confirmation | Menu navigation and reusable confirmation overlay migrate safely. | Medium/High | Not started |
 | 7 | Save/Load And Backlog | Stateful list screens migrate without breaking persistence, pagination, or voice replay. | High | Not started |
 | 8 | Settings | Structured settings widgets migrate without weakening ConfigManager or accessibility. | High | Not started |
@@ -363,6 +363,25 @@ Acceptance:
 - legacy Title rendering is not removed until compatibility gates pass.
 
 **Stop boundary:** Review the vertical slice before migrating any other screen.
+
+**Status:** Complete on 2026-06-23.
+
+Completion evidence:
+
+- added canonical Title adapters for existing legacy text, image, and button elements while preserving title actions, BGM, opening-video behavior, custom fonts, backgrounds, motion, and theme-owned assets;
+- routed canonical Title editor and runtime rendering through `SharedUiRenderer`, with `TitleDesigner` using the Unified Editor Shell for hierarchy, palette, canvas, inspector, context menu, keyboard deletion, layer/order changes, anchors, responsive preview, and undo/redo transactions;
+- added explicit Title migration and canonical add/update/move/duplicate/remove authoring paths with validate-only, dry-run, checkpoint, rollback, and result-output coverage;
+- implemented canonical Title `.gmtheme` projection/import preference rules and kept legacy title data from becoming a second writer when canonical Title data exists;
+- routed canonical Title asset references, including screen behavior BGM and opening video, through validation, export/readiness, and packaged/web runtime collection;
+- retained legacy Title read/render compatibility and did not silently migrate projects on open;
+- focused Phase 5 tests covered legacy-to-canonical mapping, runtime/editor behavior, actions, asset references, migration preview/write safety, and rollback/checkpoint behavior; Phase 4 shell tests and Phase 3 renderer/host/bridge tests remained green; full `npm run test:vitest` passed;
+- browser evidence covered canonical Title render/edit behavior, right-click context menu, keyboard deletion on the selected element, undo/redo transaction behavior, title action routing, responsive preview, console health, and screenshot capture at 1280x720 plus 390x844 under `.tmp/unified-screen-designer-phase5/`.
+
+Remaining boundary:
+
+- Phase 6 Game Menu and shared confirmation migration remain not started;
+- Save/Load, Backlog, Settings, Gameplay UI, Gallery, and shared overlays remain outside this slice;
+- legacy Title rendering and read support remain in place until later compatibility gates authorize cleanup.
 
 ## Phase 6 - Game Menu And Shared Confirmation
 

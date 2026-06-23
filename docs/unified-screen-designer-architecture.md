@@ -1,6 +1,6 @@
 # Unified Screen Designer Architecture
 
-**Status:** Phase 0-3 complete; Phase 4 complete; Phase 5 not started
+**Status:** Phase 0-5 complete; Phase 6 not started
 **Date:** 2026-06-23
 **Planning baseline:** `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
@@ -54,7 +54,7 @@ This is a horizontal UI-platform refactor. The story engine, save data engine, r
 
 | Surface | Current editor | Current runtime | Main gap |
 | --- | --- | --- | --- |
-| Title | Direct Vue canvas plus runtime preview | `TitleScreen` | Canvas interaction incomplete; editor and runtime have separate visual interpretations |
+| Title | Unified Editor Shell backed by canonical Title document | `TitleScreen` via `SharedUiRenderer` when canonical-active, with legacy read/render compatibility retained | Phase 5 vertical slice complete; later phases must not remove legacy compatibility before migration gates |
 | Gameplay UI | Page canvas plus separate theme/dialogue settings | `DialogueBox`, `ChoiceMenu`, `QuickActionBar` | Persistent UI has no unified hierarchy or canvas |
 | Game menu | Fixed configuration form plus runtime iframe | `GameMenu` | No element hierarchy or direct manipulation |
 | Settings | Rich structured form plus runtime iframe | `SettingsScreen` and widget helpers | No unified canvas; large bespoke schema |
@@ -449,7 +449,7 @@ These questions must be answered during the named roadmap phases rather than gue
 - **Phase 2/P4:** whether editor-only lock/visibility state belongs in portable project metadata or local editor state;
 - **Phase 2 and each widget slice:** how much internal structure each semantic widget safely exposes;
 - **Phase 3:** resolved for the synthetic host as in-process; later editor canvas work may add chrome around the same renderer but must not introduce a second renderer implementation;
-- **Phase 5:** the `.gmtheme` theme-owned projection and round-trip behavior for canonical screens;
+- **Phase 5:** resolved for Title canonical screens: `.gmtheme` receives a pure theme-owned Title projection, import prefers canonical Title data without reviving legacy data as a second writer, and later screens must prove the same behavior in their own slices;
 - **Phase 10:** whether gallery uses one mixed grid or explicit CG/ending tabs;
 - **Phase 10:** which video controls are authorable for each playback policy;
 - **Phase 11:** when a project is considered fully migrated and eligible for legacy-field cleanup.

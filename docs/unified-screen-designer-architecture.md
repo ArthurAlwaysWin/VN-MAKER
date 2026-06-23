@@ -1,6 +1,6 @@
 # Unified Screen Designer Architecture
 
-**Status:** Phase 0-3 complete; Phase 4+ not started
+**Status:** Phase 0-3 complete; Phase 4 complete; Phase 5 not started
 **Date:** 2026-06-23
 **Planning baseline:** `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
@@ -468,6 +468,36 @@ These questions must be answered during the named roadmap phases rather than gue
 - `.gmtheme` receives a pure theme-owned projection, excluding actions, bindings, runtime/player data, and unregistered advanced detail. Persisted round-trip integration remains Phase 5.
 - Layout recipes remain compile-to-plan inputs, never runtime dependencies.
 - Phase 2 exposes read-only screen/node/schema inspection only. Renderer, editor shell, production migration, and automatic writes remain absent.
+
+## Phase 4a Editor Shell Evidence
+
+Phase 4a adds the first reusable Unified Editor Shell for synthetic canonical documents only. It provides a screen selector, viewport toolbar, read-only palette, hierarchy tree, renderer-backed canvas, synchronized canvas/hierarchy selection, typed inspector summary, advanced/unknown field badges, and safe synthetic patching for explicit editor-state fields.
+
+The canvas uses `SharedUiRenderer` through the preview host. It does not introduce a second renderer implementation, switch production screens, persist migrations, or write production `ui.screens`.
+
+Completion evidence:
+
+- synthetic canonical fixture renders in the shell and browser fixture;
+- canvas `pointerdown` selection selects the deepest renderer node and syncs hierarchy plus inspector state;
+- hierarchy selection updates editor-only canvas selection chrome;
+- inspector reads selected node id, type, layout, style/styleRef, action, binding/data, semantic parts, and unknown/advanced fields;
+- synthetic patches are limited to explicit safe paths and preserve unknown/advanced node fields;
+- Phase 4a focused shell tests and Phase 3 renderer/host/bridge tests pass with DOM behavior assertions.
+
+## Phase 4b Interaction Evidence
+
+Phase 4b extends the synthetic Unified Editor Shell with interaction, geometry, and undo behavior only. Context menus select the target node before showing valid synthetic operations. Duplicate, delete, hierarchy reorder, wrap-in-stack, and reset-overrides operate on the synthetic fixture document and keep unknown/advanced fields preserved unless the selected operation intentionally removes a node or override.
+
+The shell now has a synthetic history stack independent of production `script.pushState()`. Completed context-menu operations, inspector patches, keyboard nudge, keyboard delete, undo, and redo update the same `SharedUiRenderer` preview host without mutating production screens or executing migration writes.
+
+Completion evidence:
+
+- right-click canvas and hierarchy targets select before opening the operation menu;
+- synthetic duplicate/delete/reorder/wrap/reset operations are schema-normalized and undoable;
+- Delete/Backspace and arrow-key nudge are focus-safe and ignore text/select inputs;
+- geometry utilities cover anchor/pivot canvas origin, zoom/letterbox point conversion, nudge, and resize calculations;
+- one synthetic history transaction is recorded per completed operation;
+- Phase 4a shell tests remain green with Phase 4b additions, and Phase 3 renderer/host/bridge tests remain on the shared renderer path.
 
 ## Definition Of Architecture Complete
 

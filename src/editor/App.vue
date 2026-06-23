@@ -91,6 +91,7 @@ const tabs = [
   { id: 'game-menu', icon: '🎮', label: '游戏菜单' },
   { id: 'save-load', icon: '📋', label: '存读档' },
   { id: 'backlog', icon: '📖', label: '回想' },
+  { id: 'unified-screen-designer', icon: '▣', label: 'UI Designer' },
   { id: 'resource-library', icon: '📦', label: '资源库' },
   { id: 'project-settings', icon: '⚡', label: '项目设置' },
 ];
@@ -107,6 +108,7 @@ const tabComponents = {
   'game-menu': asyncWorkspace(() => import('./views/GameMenuEditor.vue')),
   'save-load': asyncWorkspace(() => import('./views/SaveLoadEditor.vue')),
   'backlog': asyncWorkspace(() => import('./views/BacklogEditor.vue')),
+  'unified-screen-designer': asyncWorkspace(() => import('./components/screen-designer/UnifiedScreenDesignerShell.vue')),
   'resource-library': asyncWorkspace(() => import('./views/ResourceLibrary.vue')),
   'project-settings': asyncWorkspace(() => import('./views/ProjectSettings.vue')),
 };

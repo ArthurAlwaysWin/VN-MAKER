@@ -159,6 +159,7 @@ export class SharedUiRenderer {
     }
     if (this.host.mode === 'preview' && this.host.onSelectNode) {
       const listener = event => {
+        event.stopPropagation();
         const started = performance.now();
         this.host.onSelectNode({ nodeId: node.id, event });
         this.host.measurements.lastSelectionLatencyMs = performance.now() - started;

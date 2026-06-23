@@ -1,6 +1,6 @@
 # Unified Screen Designer Roadmap
 
-**Status:** Phase 0-3 complete; Phase 4+ not started
+**Status:** Phase 0-4 complete; Phase 5 not started
 **Date:** 2026-06-23
 **Planning base:** `main` at `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
@@ -47,7 +47,7 @@ Every phase must preserve these rules:
 | 1 | Baseline And Parity Harness | Current screen behavior and visual baselines are captured before structural change. | Medium | Complete |
 | 2 | Canonical UI Document Contract | Versioned nodes, layout, actions, bindings, validation, and legacy adapters exist. | High | Complete |
 | 3 | Shared Renderer And Semantic Widget Host | Runtime and preview can render canonical documents through one path. | High | Complete |
-| 4 | Unified Editor Shell | Palette, hierarchy, canvas, inspector, context menu, keyboard, geometry, and undo work. | High | Not started |
+| 4 | Unified Editor Shell | Palette, hierarchy, canvas, inspector, context menu, keyboard, geometry, and undo work. | High | Complete |
 | 5 | Title Vertical Slice | Title becomes the first end-to-end canonical screen and proves migration. | High | Not started |
 | 6 | Game Menu And Shared Confirmation | Menu navigation and reusable confirmation overlay migrate safely. | Medium/High | Not started |
 | 7 | Save/Load And Backlog | Stateful list screens migrate without breaking persistence, pagination, or voice replay. | High | Not started |
@@ -265,6 +265,25 @@ Deliver:
 
 **Phase 4a stop boundary:** A synthetic fixture can be rendered, selected, inspected, and patched without implementing geometry gestures or migrating a production screen.
 
+**Status:** Complete on 2026-06-23.
+
+Completion evidence:
+
+- added a reusable Unified Editor Shell backed by a synthetic canonical fixture, not production screen data;
+- added a screen selector, viewport toolbar, read-only primitive/semantic palette, stable hierarchy tree, renderer-backed canvas host, and inspector summary;
+- reused `SharedUiRenderer` via the preview host for canvas rendering and selection instrumentation;
+- synchronized renderer node selection to hierarchy and inspector, and hierarchy selection back to editor-only canvas selected state;
+- exposed typed selected-node fields for id, type, layout, style/styleRef, action, binding/data, semantic parts/info, and unknown/advanced fields;
+- added safe synthetic fixture patching for explicit editor-state fields while preserving unknown/advanced node data;
+- added `unified-screen-designer-fixture.html` for browser/DOM evidence without opening or migrating a production project;
+- focused Phase 4a shell tests passed, Phase 3 renderer/host/bridge tests remained green, and browser evidence confirmed render/select/inspect/patch behavior with no key console errors.
+
+Remaining Phase 4 boundary:
+
+- Phase 4b interaction, geometry gestures, context menu, keyboard shortcuts, and full undo/redo remain not started;
+- Title and all other production screens remain on legacy editor/runtime paths;
+- no migration write path was executed.
+
 ### Phase 4b - Interaction, Geometry, And Undo
 
 Deliver:
@@ -290,6 +309,24 @@ Acceptance:
 - no production screen is migrated solely to demonstrate the shell.
 
 **Stop boundary:** Stop before Title migration and review the interaction model in a real browser.
+
+**Status:** Complete on 2026-06-23.
+
+Completion evidence:
+
+- added target-selecting context menus for canvas and hierarchy nodes with valid synthetic operations;
+- implemented synthetic-only duplicate, delete, hierarchy move up/down, wrap-in-stack, reset-overrides, inspector patches, keyboard nudge, and focus-safe Delete/Backspace;
+- added a synthetic undo/redo stack independent of production `script.pushState()` and recorded one transaction per completed operation;
+- added geometry utilities for anchor/pivot origin, nudge, resize, zoom, scrolling, and letterbox coordinate conversion;
+- preserved unknown/advanced fields through unrelated synthetic edits and intentionally removed them only when deleting the owning node or resetting explicit overrides;
+- kept runtime preview and authoring canvas on `SharedUiRenderer` through the existing preview host;
+- focused Phase 4b shell tests passed, Phase 4a shell tests remained green, Phase 3 renderer/host/bridge tests remained green, and browser evidence covered right-click selection/menu, duplicate/delete or reorder, keyboard nudge/delete, undo/redo, and console health.
+
+Remaining boundary:
+
+- Title and every production screen remain on legacy editor/runtime paths;
+- no canonical screen migration write path was added or executed;
+- legacy renderers remain in place.
 
 ## Phase 5 - Title Vertical Slice
 

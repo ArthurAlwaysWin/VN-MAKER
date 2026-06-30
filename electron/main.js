@@ -33,6 +33,8 @@ import {
   sanitizeProjectName as sanitizeScaffoldProjectName,
 } from '../src/authoring/projectScaffold.js';
 import { createDefaultGalgameScript, ensureGalgameContract } from '../src/shared/galgameContract.js';
+import { createProjectSession } from '../src/authoring/projectSession.js';
+import { validateProject } from '../src/shared/projectValidator.js';
 import { migrateLegacyAppliedThemeData } from '../src/shared/themeLegacyMigrations.js';
 import { isSameFileState } from '../src/shared/fileState.js';
 import {
@@ -530,7 +532,6 @@ ipcMain.handle('load-project', async (event, projectPath) => {
     projectPath = path.resolve(projectPath);
     let projectData;
     let scriptData;
-    let scriptChanged = false;
     const projectJsonPath = path.join(projectPath, 'project.json');
     const scriptJsonPath = path.join(projectPath, 'script.json');
 
@@ -547,7 +548,6 @@ ipcMain.handle('load-project', async (event, projectPath) => {
     const migratedThemeData = migrateLegacyAppliedThemeData(scriptData);
     if (migratedThemeData.changed) {
       scriptData = migratedThemeData.script;
-      scriptChanged = true;
     }
 
     // Legacy migration: script.json has meta but no project.json
@@ -563,22 +563,13 @@ ipcMain.handle('load-project', async (event, projectPath) => {
         lastModified: new Date().toISOString()
       };
       delete scriptData.meta;
-      scriptChanged = true;
       await fs.writeFile(projectJsonPath, JSON.stringify(projectData, null, 2), 'utf-8');
       for (const sub of ['backgrounds', 'characters', 'audio', 'ui', 'videos']) {
         await fs.mkdir(path.join(projectPath, 'assets', sub), { recursive: true });
       }
     }
 
-    const normalizedScriptData = ensureGalgameContract(scriptData);
-    if (JSON.stringify(normalizedScriptData) !== JSON.stringify(scriptData)) {
-      scriptChanged = true;
-    }
-    scriptData = normalizedScriptData;
-
-    if (scriptChanged && existsSync(scriptJsonPath)) {
-      await fs.writeFile(scriptJsonPath, JSON.stringify(scriptData, null, 2), 'utf-8');
-    }
+    scriptData = ensureGalgameContract(scriptData);
 
     if (!projectData) {
       projectData = {
@@ -636,6 +627,82 @@ ipcMain.handle('save-project', async (event, { project, script, expectedScriptFi
   } catch (e) {
     console.error('Failed to save project:', e);
     return createIpcErrorResponse();
+  }
+});
+
+ipcMain.handle('migrate-ui-project', async (_event, options = {}) => {
+  if (!currentProjectPath) return { success: false, error: 'No project loaded' };
+  try {
+    const mode = options.mode ?? 'dry-run';
+    if (!['validate-only', 'dry-run', 'write', 'rollback'].includes(mode)) {
+      return { success: false, error: `Unsupported UI migration mode: ${mode}` };
+    }
+
+    const scriptPath = path.join(currentProjectPath, 'script.json');
+    const checkpointDir = path.join(currentProjectPath, '.checkpoints');
+    if (mode === 'rollback') {
+      const checkpointPath = path.resolve(String(options.checkpointPath ?? ''));
+      if (!checkpointPath || !isInsidePath(checkpointPath, checkpointDir) || !existsSync(checkpointPath)) {
+        return { success: false, error: 'Invalid UI migration checkpoint path' };
+      }
+      const checkpointSource = await fs.readFile(checkpointPath, 'utf-8');
+      JSON.parse(checkpointSource);
+      await atomicWrite(scriptPath, checkpointSource);
+      return {
+        success: true,
+        mode,
+        wrote: true,
+        checkpointPath,
+        script: JSON.parse(checkpointSource),
+        scriptFileState: await getProjectScriptFileState(),
+      };
+    }
+
+    const source = await fs.readFile(scriptPath, 'utf-8');
+    const originalScript = JSON.parse(source);
+    const session = createProjectSession({ script: originalScript });
+    const result = session.migrateUiProject();
+    const migratedScript = { ...originalScript, ui: session.toJSON().ui };
+    const validation = validateProject(migratedScript);
+    const output = {
+      success: validation.ok,
+      mode,
+      wrote: false,
+      result,
+      changedPaths: result.changedPaths,
+      diagnostics: result.diagnostics,
+      validation,
+      checkpointPath: null,
+      resultPath: null,
+    };
+    if (mode !== 'write' || !validation.ok) return output;
+    if (options.confirmed !== true) {
+      return { ...output, success: false, error: 'UI migration write requires explicit confirmation' };
+    }
+
+    await fs.mkdir(checkpointDir, { recursive: true });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const checkpointPath = path.join(checkpointDir, `script.ui-migration.${timestamp}.json`);
+    await fs.writeFile(checkpointPath, source, 'utf-8');
+    await atomicWrite(scriptPath, JSON.stringify(migratedScript, null, 2));
+    const resultDir = path.join(currentProjectPath, '.agent');
+    const resultPath = path.join(resultDir, 'ui-migration-result.json');
+    await fs.mkdir(resultDir, { recursive: true });
+    const writtenOutput = {
+      ...output,
+      wrote: true,
+      checkpointPath,
+      resultPath,
+    };
+    await fs.writeFile(resultPath, JSON.stringify(writtenOutput, null, 2), 'utf-8');
+    return {
+      ...writtenOutput,
+      script: migratedScript,
+      scriptFileState: await getProjectScriptFileState(),
+    };
+  } catch (error) {
+    console.error('Failed to migrate canonical UI project:', error);
+    return { success: false, error: error?.message || String(error) };
   }
 });
 

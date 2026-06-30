@@ -1,50 +1,30 @@
 <template>
   <div class="screen-editor" v-if="script.data">
-    <div class="se-panel">
-      <div class="se-panel-header">
-        <span class="se-panel-title">🎮 游戏菜单</span>
-      </div>
-      <div class="se-scroll">
-        <GameMenuSection />
-      </div>
-    </div>
-    <div class="se-preview">
-      <iframe
-        :ref="onIframeRef"
-        class="preview-iframe"
-        src="/index.html"
-      ></iframe>
+    <div class="se-canvas">
+      <UnifiedScreenDesignerShell
+        v-if="initialDocument"
+        :initial-document="initialDocument"
+        production-screen-id="gameMenu"
+        production-screen-label="Game Menu"
+        @document-change="onCanonicalGameMenuDocumentChange"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onActivated, onBeforeUnmount } from 'vue';
+import { computed } from 'vue';
 import { useScriptStore } from '../stores/script.js';
-import { createScreenLayoutEditor } from '../composables/useScreenLayoutEditor.js';
-import GameMenuSection from '../components/layout/GameMenuSection.vue';
+import UnifiedScreenDesignerShell from '../components/screen-designer/UnifiedScreenDesignerShell.vue';
+import { adaptLegacyUiScreen } from '../../shared/uiLegacyAdapters.js';
 
 const script = useScriptStore();
-const editor = createScreenLayoutEditor('gameMenu');
 
-function onIframeRef(el) {
-  editor.iframeRef.value = el;
+const initialDocument = computed(() => script.data ? adaptLegacyUiScreen(script.data, 'gameMenu').document : null);
+
+function onCanonicalGameMenuDocumentChange({ document }) {
+  script.updateCanonicalGameMenuScreen(document);
 }
-
-onMounted(() => {
-  window.addEventListener('message', editor.onEngineMessage);
-});
-
-onActivated(() => {
-  if (editor.isEngineReady.value) {
-    editor.startEngine();
-    editor.flushPreview();
-  }
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener('message', editor.onEngineMessage);
-});
 </script>
 
 <style scoped>
@@ -53,37 +33,9 @@ onBeforeUnmount(() => {
   height: 100%;
   background: #1e1e1e;
 }
-.se-panel {
-  width: 360px;
-  min-width: 360px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #333;
-  background: #252526;
-}
-.se-panel-header {
-  padding: 10px 14px;
-  border-bottom: 1px solid #333;
-  background: #2d2d2d;
-}
-.se-panel-title {
-  color: #e0e0e0;
-  font-size: 13px;
-  font-weight: 600;
-}
-.se-scroll {
+.se-canvas {
   flex: 1;
-  overflow-y: auto;
-  padding: 8px 14px 12px;
-}
-.se-preview {
-  flex: 1;
-  display: flex;
-  background: #000;
-}
-.preview-iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
+  min-width: 0;
+  overflow: auto;
 }
 </style>

@@ -1,5 +1,19 @@
 <template>
   <div class="page-editor" v-if="script.data">
+    <div class="page-editor-mode-toolbar" data-test="page-editor-mode-toolbar">
+      <button type="button" data-test="page-editor-story-mode" :class="{ active: editMode === 'story' }" @click="editMode = 'story'">Story Edit</button>
+      <button type="button" data-test="page-editor-ui-mode" :class="{ active: editMode === 'ui' }" @click="editMode = 'ui'">Gameplay UI Edit</button>
+      <span>{{ editMode === 'story' ? 'Page Editor owns story staging' : 'Unified Designer owns persistent gameplay chrome' }}</span>
+    </div>
+    <div v-if="editMode === 'ui'" class="gameplay-ui-editor" data-test="gameplay-ui-edit-mode">
+      <UnifiedScreenDesignerShell
+        :initial-document="gameplayDocument"
+        production-screen-id="gameplay"
+        production-screen-label="Gameplay UI"
+        @document-change="onGameplayDocumentChange"
+      />
+    </div>
+    <template v-else>
     <!-- Left: Scene Tree Sidebar -->
     <div class="sidebar" :class="{ 'preview-readonly': editor.previewSessionType.value !== null }">
       <SceneTree />
@@ -49,11 +63,12 @@
       @select="onAudioSelect"
       @close="editor.showAudioPicker.value = false"
     />
+    </template>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { useScriptStore } from '../stores/script.js';
 import { useProjectStore } from '../stores/project.js';
 import { createPageEditor } from '../composables/usePageEditor.js';
@@ -64,12 +79,20 @@ import CharacterPicker from '../components/page-editor/CharacterPicker.vue';
 import AssetPickerModal from '../components/resource-library/AssetPickerModal.vue';
 import AudioPicker from '../components/page-editor/AudioPicker.vue';
 import PageInspector from '../components/page-editor/PageInspector.vue';
+import UnifiedScreenDesignerShell from '../components/screen-designer/UnifiedScreenDesignerShell.vue';
+import { adaptLegacyUiScreen } from '../../shared/uiLegacyAdapters.js';
 
 const script = useScriptStore();
 const project = useProjectStore();
 const editor = createPageEditor();
 
 const iframeRef = ref(null);
+const editMode = ref('story');
+const gameplayDocument = computed(() => adaptLegacyUiScreen(script.data ?? {}, 'gameplay').document);
+function onGameplayDocumentChange(event) {
+  if (!event?.document) return;
+  script.updateCanonicalGameplayScreen(event.document);
+}
 
 function onIframeRef(el) {
   iframeRef.value = el;
@@ -134,7 +157,28 @@ onBeforeUnmount(() => {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  position: relative;
+  padding-top: 38px;
+  box-sizing: border-box;
 }
+
+.page-editor-mode-toolbar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: #18181a;
+  border-bottom: 1px solid #34343a;
+  z-index: 20;
+}
+
+.page-editor-mode-toolbar button { color: #ddd; background: #2b2b30; border: 1px solid #454550; border-radius: 4px; padding: 4px 10px; }
+.page-editor-mode-toolbar button.active { color: #fff; background: #4d3d78; border-color: #8069bb; }
+.page-editor-mode-toolbar span { color: #9ca3af; font-size: 12px; }
+.gameplay-ui-editor { width: 100%; height: 100%; overflow: hidden; }
 
 .sidebar {
   width: 220px;

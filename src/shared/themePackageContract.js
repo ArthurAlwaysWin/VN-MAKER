@@ -105,8 +105,13 @@ function getTitleScreenVisualSnapshot(titleScreen) {
   };
 }
 
+function getCanonicalScreenProjections(ui) {
+  const screens = ui?.canonicalScreens;
+  return screens && typeof screens === 'object' ? screens : {};
+}
+
 function getCanonicalTitleProjection(ui) {
-  const title = ui?.canonicalScreens?.title;
+  const title = getCanonicalScreenProjections(ui).title;
   return title && typeof title === 'object' ? title : null;
 }
 
@@ -225,6 +230,14 @@ function collectThemeRefs(theme) {
       pushRef(refs, `ui.canonicalScreens.title.nodes.${index}.asset.path`, node.asset.path ?? node.asset.id);
     }
   }
+  for (const [screenId, document] of Object.entries(getCanonicalScreenProjections(ui))) {
+    if (screenId === 'title') continue;
+    for (const [index, node] of (document?.nodes ?? []).entries()) {
+      if (node?.asset?.kind === 'image') {
+        pushRef(refs, `ui.canonicalScreens.${screenId}.nodes.${index}.asset.path`, node.asset.path ?? node.asset.id);
+      }
+    }
+  }
 
   return refs;
 }
@@ -242,6 +255,9 @@ function detectCoverage(theme) {
   if (hasMeaningfulValue(ui.dialogueBox)) {
     coverage.push('dialogueBox');
   }
+  if (hasMeaningfulValue(getCanonicalScreenProjections(ui).gameplay)) {
+    coverage.push('gameplay');
+  }
   if (hasMeaningfulValue(ui.saveLoadScreen)) {
     coverage.push('saveLoadScreen');
   }
@@ -249,6 +265,9 @@ function detectCoverage(theme) {
     coverage.push('backlogScreen');
   }
   if (hasMeaningfulValue(ui.gameMenu)) {
+    coverage.push('gameMenu');
+  }
+  if (hasMeaningfulValue(getCanonicalScreenProjections(ui).gameMenu) && !coverage.includes('gameMenu')) {
     coverage.push('gameMenu');
   }
   if (hasMeaningfulValue(ui.settingsScreen)) {

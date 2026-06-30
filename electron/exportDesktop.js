@@ -68,6 +68,7 @@ function sanitizeTitle(title) {
  *
  * @param {Object} options
  * @param {string} options.projectPath - Absolute path to project directory
+ * @param {string} [options.assetRoot] - Absolute source asset root (defaults to projectPath/assets)
  * @param {string} options.outputDir - Absolute path to base output directory
  * @param {string} options.gameTitle - Game title for window titlebar and .exe
  * @param {string|null} options.iconPath - Absolute path to user PNG icon, or null
@@ -91,12 +92,13 @@ export async function exportDesktop(options, sendProgress) {
 
 async function exportDesktopUnlocked(options, sendProgress) {
   const {
-    projectPath, outputDir, gameTitle, iconPath, zip,
+    projectPath, assetRoot: assetRootOption, outputDir, gameTitle, iconPath, zip,
     gameWidth = 1280, gameHeight = 720,
     _skipBuild, _appRoot, _skipPackager, _electronRuntimeDir,
   } = options;
   const appRoot = _appRoot || process.env.APP_ROOT;
   const distWeb = path.join(appRoot, 'dist-web');
+  const assetRoot = path.resolve(assetRootOption || path.join(projectPath, 'assets'));
   const warnings = [];
   const sanitized = sanitizeTitle(gameTitle);
   let savedNoAsar;
@@ -146,7 +148,6 @@ async function exportDesktopUnlocked(options, sendProgress) {
         continue;
       }
 
-      const assetRoot = path.join(projectPath, 'assets');
       const stagingAssetRoot = path.join(stagingDir, 'assets');
       const src = path.join(assetRoot, safeRelPath);
       const dst = path.join(stagingAssetRoot, safeRelPath);

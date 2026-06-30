@@ -422,7 +422,7 @@ export const useScriptStore = defineStore('script', () => {
   }
 
   function selectStorySystemsPanel(panel) {
-    storySystemsPanel.value = ['endings', 'cgs', 'graph'].includes(panel) ? panel : 'variables';
+    storySystemsPanel.value = ['endings', 'cgs', 'graph', 'gallery-ui', 'text-input-ui', 'video-controls-ui'].includes(panel) ? panel : 'variables';
   }
 
   function ensureVariableRegistryState() {
@@ -1312,6 +1312,59 @@ export const useScriptStore = defineStore('script', () => {
     pushState();
   }
 
+  function updateCanonicalGameMenuScreen(document) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+    data.value.ui.screens ??= {};
+    data.value.ui.screenAuthorities ??= {};
+    data.value.ui.screens.gameMenu = normalizeUiDocument(document);
+    data.value.ui.screenAuthorities.gameMenu = 'canonical-active';
+    pushState();
+  }
+
+  function updateCanonicalStatefulScreen(screenId, document) {
+    if (!data.value || !['saveLoad', 'backlog'].includes(screenId)) return;
+    data.value.ui ??= {};
+    data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+    data.value.ui.screens ??= {};
+    data.value.ui.screenAuthorities ??= {};
+    data.value.ui.screens[screenId] = normalizeUiDocument(document);
+    data.value.ui.screenAuthorities[screenId] = 'canonical-active';
+    pushState();
+  }
+
+  function updateCanonicalSettingsScreen(document) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+    data.value.ui.screens ??= {};
+    data.value.ui.screenAuthorities ??= {};
+    data.value.ui.screens.settings = normalizeUiDocument(document);
+    data.value.ui.screenAuthorities.settings = 'canonical-active';
+    pushState();
+  }
+
+  function updateCanonicalGameplayScreen(document) {
+    if (!data.value) return;
+    data.value.ui ??= {};
+    data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+    data.value.ui.screens ??= {};
+    data.value.ui.screenAuthorities ??= {};
+    data.value.ui.screens.gameplay = normalizeUiDocument(document);
+    data.value.ui.screenAuthorities.gameplay = 'canonical-active';
+    pushState();
+  }
+
+  function updateCanonicalOverlay(overlayId, document) {
+    if (!data.value || !['textInput', 'confirmation', 'videoControls'].includes(overlayId)) return;
+    data.value.ui ??= {};
+    data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+    data.value.ui.overlays ??= {};
+    data.value.ui.overlays[overlayId] = normalizeUiDocument(document);
+    pushState();
+  }
+
   /** Get or initialize the ui.dialogueBox font settings */
   function getDialogueBox() {
     if (!data.value) return null;
@@ -1860,6 +1913,14 @@ export const useScriptStore = defineStore('script', () => {
         elements: Array.isArray(nextTitleScreen.elements) ? nextTitleScreen.elements : [],
       };
     }
+    const canonicalGameMenu = bundleConfig?.canonicalScreens?.gameMenu;
+    if (canonicalGameMenu) {
+      data.value.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+      data.value.ui.screens ??= {};
+      data.value.ui.screenAuthorities ??= {};
+      data.value.ui.screens.gameMenu = normalizeUiDocument(JSON.parse(JSON.stringify(canonicalGameMenu)));
+      data.value.ui.screenAuthorities.gameMenu = 'canonical-active';
+    }
 
     pushState();
   }
@@ -1878,7 +1939,7 @@ export const useScriptStore = defineStore('script', () => {
     createCgDraft, updateCgFields, renameCg, findCgReferences, deleteCg,
     ensureVideoRegistryState, createVideoDraft, updateVideoFields, renameVideo, deleteVideo,
     getSettingsScreen, updateSettingsScreen,
-    getTitleScreen, updateTitleScreen, updateCanonicalTitleScreen,
+    getTitleScreen, updateTitleScreen, updateCanonicalTitleScreen, updateCanonicalGameMenuScreen, updateCanonicalStatefulScreen, updateCanonicalSettingsScreen, updateCanonicalGameplayScreen, updateCanonicalOverlay,
     getDialogueBox, updateDialogueBox,
     getTheme, updateTheme,
     getWidgetStyles, updateWidgetStyles,

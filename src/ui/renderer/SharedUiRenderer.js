@@ -1,5 +1,6 @@
 import { normalizeUiDocument, UI_PRIMITIVE_WIDGETS, UI_SEMANTIC_WIDGETS, validateUiDocument } from '../../shared/uiDocumentContract.js';
 import { applyUiAccessibility, createUiFocusManager } from './uiFocusManager.js';
+import { createUiGamepadController } from './uiGamepadController.js';
 import { applyUiNodeStyle, resolveUiNodeStyle } from './uiStyleResolver.js';
 
 const ELEMENTS = Object.freeze({ panel: 'div', stack: 'div', grid: 'div', text: 'p', image: 'img', button: 'button', spacer: 'div', slot: 'div' });
@@ -8,7 +9,7 @@ function setPixels(style, property, value) {
   style[property] = typeof value === 'number' ? `${value}px` : value === null || value === undefined ? '' : String(value);
 }
 
-function applyLayout(element, layout, isRoot) {
+export function applyUiNodeLayout(element, layout, isRoot = false) {
   const { anchor, pivot, offset, size, constraints, padding, align } = layout;
   element.style.position = isRoot ? 'relative' : 'absolute';
   if (isRoot) {
@@ -77,6 +78,17 @@ export class SharedUiRenderer {
     this.root.style.height = '100%';
     this.container.appendChild(this.root);
     this.focus = createUiFocusManager(this.root);
+    this.gamepad = createUiGamepadController(this.root, {
+      onBack: () => {
+        const modal = this.document?.nodes?.find(node => node.type === 'confirmation' || node.content?.modal === true);
+        if (modal?.content?.cancelAction) {
+          this.host.actionRouter.dispatch(modal.content.cancelAction, { nodeId: modal.id, input: 'gamepad-back' });
+          return;
+        }
+        const closeNode = this.document?.nodes?.find(node => node.action?.type === 'close-screen' && node.state !== 'disabled');
+        if (closeNode) this.host.actionRouter.dispatch(closeNode.action, { nodeId: closeNode.id, input: 'gamepad-back' });
+      },
+    });
     this.entries = new Map();
     this.document = null;
   }
@@ -84,6 +96,7 @@ export class SharedUiRenderer {
   mount(document, options = {}) {
     if (!this.root.isConnected) this.container.appendChild(this.root);
     this.focus.remember();
+    this.gamepad.start();
     return this.#render(document, options, 'mount');
   }
 
@@ -114,7 +127,7 @@ export class SharedUiRenderer {
         entry = { element, node, cleanups: [], semanticMounted: false, state: 'default', lifecycle: new AbortController(), updateLifecycle: null };
         this.entries.set(node.id, entry);
       }
-      this.#updateEntry(entry, node, options);
+      this.#updateEntry(entry, node, options, document);
     }
 
     for (const node of document.nodes) {
@@ -141,14 +154,14 @@ export class SharedUiRenderer {
     return { diagnostics, measurements: this.host.measurements, root: this.root };
   }
 
-  #updateEntry(entry, node, options) {
+  #updateEntry(entry, node, options, document) {
     entry.cleanups.splice(0).forEach(cleanup => cleanup());
     entry.updateLifecycle?.abort();
     entry.updateLifecycle = new AbortController();
     const element = entry.element;
     element.dataset.gmUiNodeId = node.id;
     element.dataset.gmUiNodeType = node.type;
-    applyLayout(element, node.layout, node.id === this.document?.rootId || node.parentId === null);
+    applyUiNodeLayout(element, node.layout, node.id === this.document?.rootId || node.parentId === null);
     applyUiAccessibility(element, node, this.host.reportDiagnostic);
 
     const applyState = state => {
@@ -188,7 +201,7 @@ export class SharedUiRenderer {
         this.host.reportDiagnostic({ severity: 'error', code: 'ui-required-part-missing', message: `Node "${node.id}" is missing: ${missing.join(', ')}.`, nodeId: node.id });
       } else {
         const context = {
-          element, node, data: this.host.dataSources.get(node.binding?.source), host: this.host,
+          element, node, document, data: this.host.dataSources.get(node.binding?.source), host: this.host,
           signal: entry.lifecycle.signal, updateSignal: entry.updateLifecycle.signal,
         };
         if (!entry.semanticMounted) { this.host.semanticWidgets.mount(node.type, context); entry.semanticMounted = true; }
@@ -210,6 +223,7 @@ export class SharedUiRenderer {
   }
 
   unmount() {
+    this.gamepad.stop();
     for (const [id, entry] of [...this.entries]) this.#removeEntry(id, entry);
     this.focus.restore();
     this.root.replaceChildren();

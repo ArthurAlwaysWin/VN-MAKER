@@ -143,16 +143,17 @@ describe('Config routing — main.js source patterns', () => {
 
   // ── init() patterns ──
 
-  it('init() calls saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen)', () => {
-    expect(src).toContain('saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen)');
+  it('init() calls canonical-aware Save/Load layout routing', () => {
+    expect(sourceSection(src, 'async function init', 'function initPreview')).toContain('applySaveLoadLayout()');
   });
 
-  it('init() calls backlogScreen.setLayout(engine.script.ui.backlogScreen)', () => {
-    expect(src).toContain('backlogScreen.setLayout(engine.script.ui.backlogScreen)');
+  it('init() calls canonical-aware Backlog layout routing', () => {
+    expect(sourceSection(src, 'async function init', 'function initPreview')).toContain('applyBacklogLayout()');
   });
 
-  it('init() calls gameMenu.setLayout(engine.script.ui.gameMenu)', () => {
-    expect(src).toContain('gameMenu.setLayout(engine.script.ui.gameMenu)');
+  it('init() calls canonical-aware Game Menu layout routing', () => {
+    const initSection = sourceSection(src, 'async function init', 'function initPreview');
+    expect(initSection).toContain('applyGameMenuLayout()');
   });
 
   it('init() calls settingsScreen.setWidgetStyles(engine.script.ui.widgetStyles)', () => {
@@ -170,9 +171,9 @@ describe('Config routing — main.js source patterns', () => {
     expect(previewSection).toContain('applyTitleScreenLayout()');
   });
 
-  it('initPreview() has settingsScreen.setLayout for preview', () => {
+  it('initPreview() resolves canonical or legacy Settings for preview', () => {
     const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
-    expect(previewSection).toContain('settingsScreen.setLayout(engine.script.ui?.settingsScreen)');
+    expect(previewSection).toContain('applySettingsLayout()');
   });
 
   it('initPreview() has settingsScreen.setWidgetStyles for preview', () => {
@@ -180,19 +181,19 @@ describe('Config routing — main.js source patterns', () => {
     expect(previewSection).toContain('settingsScreen.setWidgetStyles(engine.script.ui?.widgetStyles)');
   });
 
-  it('initPreview() has saveLoadScreen.setLayout for preview', () => {
+  it('initPreview() has canonical-aware Save/Load routing for preview', () => {
     const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
-    expect(previewSection).toContain('saveLoadScreen.setLayout(engine.script.ui?.saveLoadScreen)');
+    expect(previewSection).toContain('applySaveLoadLayout()');
   });
 
-  it('initPreview() has backlogScreen.setLayout for preview', () => {
+  it('initPreview() has canonical-aware Backlog routing for preview', () => {
     const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
-    expect(previewSection).toContain('backlogScreen.setLayout(engine.script.ui?.backlogScreen)');
+    expect(previewSection).toContain('applyBacklogLayout()');
   });
 
-  it('initPreview() has gameMenu.setLayout for preview', () => {
+  it('initPreview() has canonical-aware Game Menu layout routing for preview', () => {
     const previewSection = sourceSection(src, 'function applyPreviewScriptSnapshot', 'function establishPreviewPageBaseline');
-    expect(previewSection).toContain('gameMenu.setLayout(engine.script.ui?.gameMenu)');
+    expect(previewSection).toContain('applyGameMenuLayout()');
   });
 
   it('initPreview() has dialogueBox.setNameplateStyle for preview', () => {
@@ -224,9 +225,9 @@ describe('Config routing — main.js source patterns', () => {
   // ── Guard patterns ──
 
   it('all setLayout calls are guarded with optional chaining', () => {
-    expect(src).toContain('engine.script.ui?.saveLoadScreen');
-    expect(src).toContain('engine.script.ui?.backlogScreen');
-    expect(src).toContain('engine.script.ui?.gameMenu');
+    expect(src).toContain("getResolvedStatefulScreen('saveLoad', 'saveLoadScreen')");
+    expect(src).toContain("getResolvedStatefulScreen('backlog', 'backlogScreen')");
+    expect(src).toContain('engine.script?.ui?.gameMenu');
     expect(src).toContain('engine.script.ui?.widgetStyles');
     expect(src).toContain('engine.script.ui?.dialogueBox?.nameplateStyle');
   });
@@ -242,11 +243,11 @@ describe('Config routing — main.js source patterns', () => {
     expect(matches.length).toBe(1);
   });
 
-  it('init() does not duplicate settingsScreen.setLayout', () => {
+  it('init() does not duplicate Settings layout application', () => {
     const initStart = src.indexOf('async function init');
     const initEnd = src.indexOf('function initPreview()');
     const initBody = src.slice(initStart, initEnd);
-    const matches = initBody.match(/settingsScreen\.setLayout/g) || [];
+    const matches = initBody.match(/applySettingsLayout\(\)/g) || [];
     expect(matches.length).toBe(1);
   });
 });

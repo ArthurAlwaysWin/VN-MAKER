@@ -1,5 +1,11 @@
 # Agent Authoring Workflow
 
+## Phase 10 screen presentation
+
+Gallery content continues to be authored in `systems.gallery.cg` and `systems.endings`; the canonical Gallery document changes only presentation. Text Input and Video Controls overlay documents likewise change layout, labels, safe styles, and protected semantic presentation while delegating commit and playback behavior to `ScriptEngine` and `VideoPlayer`.
+
+For any Gallery or overlay migration, use a temporary fixture and run `--validate-only`, `--dry-run`, then `--force --checkpoint --result-out`. Review the exact changed paths and finish by exercising `restore-checkpoint`. Opening a project never performs this migration automatically, and whole-project migration remains a Phase 11 concern.
+
 For visual polish requests such as "make the game UI look good", use [visual-polish-skill.md](./visual-polish-skill.md). For cross-cutting operation, transaction, diagnostic, preview, handoff, and conflict rules, use [integration-contract.md](./integration-contract.md). For a compact prompt-friendly version of this workflow, use [agent-checklist.md](./agent-checklist.md). For focused edits, use [mini-workflows.md](./mini-workflows.md). For prose-to-VN adaptation, use [novel-adaptation-skill.md](./novel-adaptation-skill.md) and [example-adaptation-preview.md](./example-adaptation-preview.md). For the executable multi-ending example and editor review steps, use [example-plan.json](./example-plan.json) and [human-review-tutorial.md](./human-review-tutorial.md). For asset names that agents can match reliably, use [asset-naming-guidelines.md](./asset-naming-guidelines.md). For screen UI design from a style prompt or reference screenshot, use [screen-ui-skill.md](./screen-ui-skill.md). For plan command parameters, use [command-reference.md](./command-reference.md).
 
 Milestone 11 effect packs are manifest-only; see [../milestone-11-effect-packs-feasibility-security-audit.md](../milestone-11-effect-packs-feasibility-security-audit.md). You may use validated `assets.effectPacks` manifests, page `effectPacks` references, and built-in adapters such as `canvas2d:film-flicker`. Do not add project-local JavaScript, `runtime.js`, shaders/WebGL, raw CSS/HTML, plugin metadata, AI chat fields, or generic visual DSLs to a workflow.
@@ -114,9 +120,49 @@ npm run vn -- add-title-element --script public/game/script.json --type button -
 For existing settings, game menu, save/load, and backlog screens, use `set-screen-layout` with a structured JSON config:
 
 ```bash
-npm run vn -- set-screen-layout --script public/game/script.json --screen gameMenu --config .tmp/game-menu-layout.json --force --checkpoint --json
 npm run vn -- set-screen-layout --script public/game/script.json --screen settingsScreen --config .tmp/settings-layout.json --force --json
 ```
+
+For Game Menu canonical migration and edits, use the explicit Game Menu commands through the normal validation gate:
+
+```bash
+npm run vn -- migrate-game-menu-screen --script public/game/script.json --validate-only --result-out .tmp/game-menu-validate.json --json
+npm run vn -- migrate-game-menu-screen --script public/game/script.json --dry-run --json
+npm run vn -- migrate-game-menu-screen --script public/game/script.json --force --checkpoint --result-out .tmp/game-menu-write.json --json
+```
+
+Save/Load and Backlog use separate explicit Phase 7 migration gates. Do not migrate them merely by opening a project:
+
+```bash
+npm run vn -- migrate-save-load-screen --script public/game/script.json --validate-only --result-out .tmp/save-load-validate.json --json
+npm run vn -- migrate-save-load-screen --script public/game/script.json --dry-run --result-out .tmp/save-load-dry-run.json --json
+npm run vn -- migrate-save-load-screen --script public/game/script.json --force --checkpoint --result-out .tmp/save-load-write.json --json
+npm run vn -- migrate-backlog-screen --script public/game/script.json --validate-only --result-out .tmp/backlog-validate.json --json
+npm run vn -- migrate-backlog-screen --script public/game/script.json --dry-run --result-out .tmp/backlog-dry-run.json --json
+npm run vn -- migrate-backlog-screen --script public/game/script.json --force --checkpoint --result-out .tmp/backlog-write.json --json
+```
+
+Settings uses its own explicit Phase 8 gate. Opening a project or the Settings editor never migrates it automatically:
+
+```bash
+npm run vn -- migrate-settings-screen --script public/game/script.json --validate-only --result-out .tmp/settings-validate.json --json
+npm run vn -- migrate-settings-screen --script public/game/script.json --dry-run --result-out .tmp/settings-dry-run.json --json
+npm run vn -- migrate-settings-screen --script public/game/script.json --force --checkpoint --result-out .tmp/settings-write.json --json
+npm run vn -- restore-checkpoint <checkpoint-path> --script public/game/script.json --force --json
+```
+
+Review `changedPaths` and migration diagnostics before write. Canonical Settings may arrange and style registered controls, but values, defaults, persistence, and reset always remain owned by `ConfigManager`.
+
+Gameplay UI uses its own explicit Phase 9 gate. Opening a project or switching Page Editor into UI-edit mode never migrates it automatically:
+
+```bash
+npm run vn -- migrate-gameplay-ui --script public/game/script.json --validate-only --result-out .tmp/gameplay-validate.json --json
+npm run vn -- migrate-gameplay-ui --script public/game/script.json --dry-run --result-out .tmp/gameplay-dry-run.json --json
+npm run vn -- migrate-gameplay-ui --script public/game/script.json --force --checkpoint --result-out .tmp/gameplay-write.json --json
+npm run vn -- restore-checkpoint <checkpoint-path> --script public/game/script.json --force --json
+```
+
+Review the exact `ui.screens.gameplay` changed paths and diagnostics before write. The protected `story-viewport` is a boundary marker only: Page Editor still owns backgrounds, characters, camera, particles, video pages, effects, and every `scenes.*.pages` field. `ScriptEngine` and the existing DialogueBox, ChoiceMenu, QuickActionBar, audio, auto, and skip paths remain the runtime behavior owners.
 
 For shared UI styling, use the structured shared UI commands:
 
@@ -137,7 +183,7 @@ npm run vn -- set-character-transition --scene chapter_1 --page 0 --character sa
 
 `set-character-transition` writes the compatible `characters[].animation` field. Background durations are limited to `0..5000` ms and camera effect durations to `0..2000` ms; direct out-of-contract project data is reported as `invalid-transition-param`.
 
-When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, or `ui.backlogScreen`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions. It also creates an `ending-list` target for changed endings, a `gallery` target for changed `systems.gallery.cg` entries, and a `branch-graph` target for changed scene flow:
+When an apply result changes `ui.titleScreen`, `ui.settingsScreen`, `ui.gameMenu`, `ui.saveLoadScreen`, `ui.backlogScreen`, or canonical `ui.screens.gameplay`, `author-check --transaction` plans screen preview targets and reports `screen-ui-preview-required` issues/suggestions. It also creates an `ending-list` target for changed endings, a `gallery` target for changed `systems.gallery.cg` entries, and a `branch-graph` target for changed scene flow:
 
 ```bash
 npm run vn:author-check -- --script public/game/script.json --transaction .tmp/apply-plan-result.json --write-preview-plan --json
@@ -292,3 +338,7 @@ Tell the human creator:
 - Which assets are placeholders.
 - Which warnings remain.
 - What should be reviewed visually in the editor.
+
+## Explicit whole-project UI migration workflow
+
+Use only a temporary fixture or a user-confirmed project. Run validate-only, dry-run, then confirmed write with checkpoint and result-out. Review `changeSummary.changedPaths`, run author-check and review-handoff against the transaction, round-trip through the editor/CLI/runtime/theme/export gates, and exercise restore-checkpoint. Project open is read-compatible but never an implicit canonical UI migration trigger.

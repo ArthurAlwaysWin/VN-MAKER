@@ -22,6 +22,7 @@ export class ChoiceMenu {
     this._buttonWidgetStyle = null;
     /** @type {Record<'a'|'b'|'c', string>|null} Decorative badge image config. */
     this._choiceBadgeConfig = null;
+    this._canonicalLayoutActive = false;
   }
 
   setWidgetStyles(styles) {
@@ -42,6 +43,19 @@ export class ChoiceMenu {
       if (src) normalized[slotKey] = src;
     }
     this._choiceBadgeConfig = Object.keys(normalized).length > 0 ? normalized : null;
+  }
+
+  setCanonicalLayoutActive(active) {
+    this._canonicalLayoutActive = Boolean(active);
+    this._applyCanonicalFill();
+  }
+
+  _applyCanonicalFill() {
+    if (!this._canonicalLayoutActive) return;
+    Object.assign(this.el.style, {
+      position: 'relative', left: '0px', top: '0px', right: 'auto', bottom: 'auto',
+      width: '100%', height: '100%', boxSizing: 'border-box',
+    });
   }
 
   _applyButtonStyle(btn, style = {}) {
@@ -148,6 +162,7 @@ export class ChoiceMenu {
     });
 
     this.el.appendChild(list);
+    this._applyCanonicalFill();
     this.el.classList.remove('hidden');
 
     // Animate in

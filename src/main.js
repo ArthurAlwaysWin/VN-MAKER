@@ -42,9 +42,10 @@ import { TitleScreen } from './ui/TitleScreen.js';
 import { GalleryScreen } from './ui/GalleryScreen.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { QuickActionBar } from './ui/QuickActionBar.js';
+import { GameplayUi } from './ui/GameplayUi.js';
 import { VideoPlayer } from './ui/VideoPlayer.js';
 import { createUiPreviewHost } from './ui/renderer/createUiRendererHost.js';
-import { adaptLegacyUiScreen } from './shared/uiLegacyAdapters.js';
+import { adaptLegacyUiOverlay, adaptLegacyUiScreen } from './shared/uiLegacyAdapters.js';
 import { createUiPreviewBridge, UI_PREVIEW_MESSAGE_TYPES } from './ui/renderer/uiPreviewBridge.js';
 import { attachResponsiveGameContainer } from './ui/runtimeViewport.js';
 import { loadAllFonts } from './engine/fontLoader.js';
@@ -120,6 +121,7 @@ skipIndicator.id = 'skip-indicator';
 skipIndicator.textContent = '▶▶ SKIP';
 skipIndicator.classList.add('hidden');
 gameContainer.appendChild(skipIndicator);
+const gameplayUi = new GameplayUi({ gameContainer, dialogueLayer, uiOverlay, dialogueBox, choiceMenu, quickBar, skipIndicator });
 
 // Title screen is appended to the game container itself (z-index 100)
 const titleScreen = new TitleScreen(gameContainer, '');
@@ -144,8 +146,69 @@ function applyTitleScreenLayout(layoutOverride = null) {
 function getTitleBehavior() {
   return getResolvedTitleScreen().canonicalDocument?.behavior ?? engine.script?.ui?.titleScreen ?? {};
 }
+function getResolvedGameMenu() {
+  const result = adaptLegacyUiScreen(engine.script ?? {}, 'gameMenu');
+  return {
+    legacyLayout: engine.script?.ui?.gameMenu ?? null,
+    canonicalDocument: result.authority === 'canonical-active' ? result.document : null,
+  };
+}
+
+function applyGameMenuLayout(layoutOverride = null) {
+  if (layoutOverride) {
+    gameMenu.setLayout(layoutOverride);
+    return;
+  }
+  const resolved = getResolvedGameMenu();
+  gameMenu.setLayout(resolved.legacyLayout, { canonicalDocument: resolved.canonicalDocument });
+}
+function getResolvedStatefulScreen(screenId, legacyKey) {
+  const result = adaptLegacyUiScreen(engine.script ?? {}, screenId);
+  return { legacyLayout: engine.script?.ui?.[legacyKey] ?? null, canonicalDocument: result.authority === 'canonical-active' ? result.document : null };
+}
+function applySaveLoadLayout(layoutOverride = null) {
+  if (layoutOverride) return saveLoadScreen.setLayout(layoutOverride);
+  const resolved = getResolvedStatefulScreen('saveLoad', 'saveLoadScreen');
+  saveLoadScreen.setLayout(resolved.legacyLayout, { canonicalDocument: resolved.canonicalDocument });
+}
+function applyBacklogLayout(layoutOverride = null) {
+  if (layoutOverride) return backlogScreen.setLayout(layoutOverride);
+  const resolved = getResolvedStatefulScreen('backlog', 'backlogScreen');
+  backlogScreen.setLayout(resolved.legacyLayout, { canonicalDocument: resolved.canonicalDocument });
+}
+function getResolvedSettingsScreen() {
+  const result = adaptLegacyUiScreen(engine.script ?? {}, 'settings');
+  return { legacyLayout: engine.script?.ui?.settingsScreen ?? null, canonicalDocument: result.authority === 'canonical-active' ? result.document : null };
+}
+function applySettingsLayout(layoutOverride = null) {
+  if (layoutOverride) return settingsScreen.setLayout(layoutOverride);
+  const resolved = getResolvedSettingsScreen();
+  settingsScreen.setLayout(resolved.legacyLayout, { canonicalDocument: resolved.canonicalDocument });
+}
+function getResolvedGameplayUi() {
+  const result = adaptLegacyUiScreen(engine.script ?? {}, 'gameplay');
+  return { canonicalDocument: result.authority === 'canonical-active' ? result.document : null };
+}
+function applyGameplayUiLayout(documentOverride = undefined) {
+  const canonicalDocument = documentOverride === undefined ? getResolvedGameplayUi().canonicalDocument : documentOverride;
+  gameplayUi.setDocument(canonicalDocument);
+}
 const galleryScreen = new GalleryScreen(gameContainer);
 const videoPlayer = new VideoPlayer(gameContainer, { audioManager: audio });
+function applyGalleryLayout() {
+  const result = adaptLegacyUiScreen(engine.script ?? {}, 'gallery');
+  galleryScreen.setLayout(null, { canonicalDocument: result.authority === 'canonical-active' ? result.document : null });
+}
+function applyOverlayLayouts() {
+  const textInput = adaptLegacyUiOverlay(engine.script ?? {}, 'textInput');
+  const confirmation = adaptLegacyUiOverlay(engine.script ?? {}, 'confirmation');
+  const videoControls = adaptLegacyUiOverlay(engine.script ?? {}, 'videoControls');
+  textInputScreen.setDocument(textInput.authority === 'canonical-active' ? textInput.document : null);
+  const confirmationDocument = confirmation.authority === 'canonical-active' ? confirmation.document : null;
+  gameMenu.setConfirmationDocument(confirmationDocument);
+  saveLoadScreen.setConfirmationDocument(confirmationDocument);
+  videoPlayer.setControlsDocument(videoControls.authority === 'canonical-active' ? videoControls.document : null);
+}
 
 // ─── State ──────────────────────────────────────────────
 let autoMode = false;
@@ -259,12 +322,15 @@ function applyPreviewScriptSnapshot(request) {
   dialogueBox.applyGlobalStyle(engine.script.ui?.dialogueBox);
 
   applyTitleScreenLayout();
-  settingsScreen.setLayout(engine.script.ui?.settingsScreen);
+  applySettingsLayout();
   settingsScreen.setWidgetStyles(engine.script.ui?.widgetStyles);
   choiceMenu.setWidgetStyles(engine.script.ui?.widgetStyles);
-  saveLoadScreen.setLayout(engine.script.ui?.saveLoadScreen);
-  backlogScreen.setLayout(engine.script.ui?.backlogScreen);
-  gameMenu.setLayout(engine.script.ui?.gameMenu);
+  applySaveLoadLayout();
+  applyBacklogLayout();
+  applyGameMenuLayout();
+  applyGameplayUiLayout();
+  applyGalleryLayout();
+  applyOverlayLayouts();
 
   // Apply theme-level icons (Phase 75 — ICO-01)
   const themeIcons = engine.script.ui?.theme?.icons;
@@ -819,11 +885,13 @@ function showDialogueEvent(data) {
   if (skipMode) {
     dialogueBox.show(data);
     dialogueBox._finishLine(); // Instant text display
+    gameplayUi.updateRuntimeState({ dialogue: { ...data, pageType: 'normal' }, choices: [] });
     currentVoicePromise = null; // Don't play voice
     return; // Skip interval handles advancement — no setTimeout chain
   }
 
   dialogueBox.show(data);
+  gameplayUi.updateRuntimeState({ dialogue: { ...data, pageType: 'normal' }, choices: [] });
 
   // Voice playback — only play if voice is bound (D-01)
   if (data.voice) {
@@ -844,6 +912,7 @@ function showChoiceEvent(data) {
   stopAuto();
   stopSkip();
   choiceMenu.show(data);
+  gameplayUi.updateRuntimeState({ dialogue: null, choices: data?.options ?? [] });
 }
 
 function showInputEvent(data) {
@@ -852,6 +921,7 @@ function showInputEvent(data) {
   stopAuto();
   stopSkip();
   textInputScreen.show(data);
+  gameplayUi.updateRuntimeState({ dialogue: null, choices: [] });
 }
 
 function playCharacterEvent(type, data, { instant = false } = {}) {
@@ -1301,6 +1371,7 @@ gameMenu.onTitle = async () => {
   effectPacks.clear();
   await showTitle();
 };
+settingsScreen.onTitle = () => gameMenu.onTitle?.();
 
 // ─── Quick action bar wiring ────────────────────────────
 quickBar.onAuto = () => toggleAuto();
@@ -1570,6 +1641,7 @@ function startSkip() {
   effectPacks.clear();
   updateQuickBtnStates();
   skipIndicator.classList.remove('hidden');
+  gameplayUi.updateRuntimeState({ skipStatus: { active: true, readOnly: false } });
 
   // Mute current BGM (D-07)
   if (audio._bgm) {
@@ -1598,6 +1670,7 @@ function stopSkip() {
     skipTimer = null;
   }
   skipIndicator.classList.add('hidden');
+  gameplayUi.updateRuntimeState({ skipStatus: { active: false, readOnly: false } });
   updateQuickBtnStates();
   if (wasSkipping) {
     restoreBgmAfterSkip();
@@ -1637,6 +1710,7 @@ function toggleSkip() {
 function updateQuickBtnStates() {
   quickBar.setAutoActive(autoMode);
   quickBar.setSkipActive(skipMode);
+  gameplayUi.updateRuntimeState({ quickActions: { autoActive: autoMode, skipActive: skipMode, quickLoadEnabled: quickBar.isQuickLoadEnabled } });
 }
 
 // ─── Title screen ───────────────────────────────────────
@@ -1774,7 +1848,7 @@ async function init(env) {
 
     // Apply custom settings screen layout if defined in script
     if (engine.script.ui?.settingsScreen) {
-      settingsScreen.setLayout(engine.script.ui.settingsScreen);
+      applySettingsLayout();
     }
 
     // Apply widget styles for settings controls (v1.1 Phase 42)
@@ -1784,15 +1858,12 @@ async function init(env) {
     }
 
     // Apply screen layouts (v1.1 Phase 43)
-    if (engine.script.ui?.saveLoadScreen) {
-      saveLoadScreen.setLayout(engine.script.ui.saveLoadScreen);
-    }
-    if (engine.script.ui?.backlogScreen) {
-      backlogScreen.setLayout(engine.script.ui.backlogScreen);
-    }
-    if (engine.script.ui?.gameMenu) {
-      gameMenu.setLayout(engine.script.ui.gameMenu);
-    }
+    applySaveLoadLayout();
+    applyBacklogLayout();
+    applyGameMenuLayout();
+    applyGameplayUiLayout();
+    applyGalleryLayout();
+    applyOverlayLayouts();
 
     // Apply theme-level icons (Phase 75 — ICO-01)
     const themeIcons = engine.script.ui?.theme?.icons;
@@ -1928,9 +1999,9 @@ function initPreview() {
       case 'update-screen-layout': {
         const cfg = msg.config;
         switch (msg.screen) {
-          case 'saveLoadScreen': saveLoadScreen.setLayout(cfg); break;
-          case 'backlogScreen': backlogScreen.setLayout(cfg); break;
-          case 'gameMenu': gameMenu.setLayout(cfg); break;
+          case 'saveLoadScreen': applySaveLoadLayout(cfg); break;
+          case 'backlogScreen': applyBacklogLayout(cfg); break;
+          case 'gameMenu': applyGameMenuLayout(cfg); break;
           case 'settingsScreen': settingsScreen.setLayout(cfg); break;
           case 'titleScreen': applyTitleScreenLayout(cfg); break;
         }

@@ -1028,10 +1028,20 @@ function pageTargetsFromChangedPaths(changedPaths = [], script = {}) {
 
 const PREVIEW_SCREEN_PATHS = new Map([
   ['ui.titleScreen', 'titleScreen'],
+  ['ui.screens.title', 'title'],
   ['ui.settingsScreen', 'settingsScreen'],
+  ['ui.screens.settings', 'settings'],
   ['ui.gameMenu', 'gameMenu'],
+  ['ui.screens.gameMenu', 'gameMenu'],
   ['ui.saveLoadScreen', 'saveLoadScreen'],
+  ['ui.screens.saveLoad', 'saveLoad'],
   ['ui.backlogScreen', 'backlogScreen'],
+  ['ui.screens.backlog', 'backlog'],
+  ['ui.screens.gameplay', 'gameplay'],
+  ['ui.screens.gallery', 'gallery'],
+  ['ui.overlays.textInput', 'textInput'],
+  ['ui.overlays.confirmation', 'confirmation'],
+  ['ui.overlays.videoControls', 'videoControls'],
 ]);
 
 function screenTargetsFromChangedPaths(changedPaths = []) {
@@ -1051,7 +1061,7 @@ function screenTargetsFromChangedPaths(changedPaths = []) {
 
     for (const [pathPrefix, screenId] of PREVIEW_SCREEN_PATHS.entries()) {
       if (changedPath === pathPrefix || changedPath.startsWith(`${pathPrefix}.`)) {
-        targets.push({ type: 'screen', screenId });
+        targets.push({ type: 'screen', screenId, pathString: String(changedPath) });
       }
     }
   }
@@ -1374,6 +1384,7 @@ function createMutationChangeSummary({
   scriptPath,
   outPath,
   dryRun,
+  validateOnly = false,
   beforeScript,
   afterScript,
   result,
@@ -1386,7 +1397,8 @@ function createMutationChangeSummary({
   return {
     command,
     dryRun,
-    writeStatus: dryRun ? 'planned' : 'written',
+    validateOnly,
+    writeStatus: validateOnly ? 'validated' : dryRun ? 'planned' : 'written',
     scriptPath,
     outPath,
     target: getMutationTarget(result),
@@ -1946,6 +1958,7 @@ const APPLY_PLAN_OPERATION_HANDLERS = new Map([
   ['migrate-title-screen', (session) => {
     return session.migrateTitleScreen();
   }],
+  ['migrate-ui-project', (session) => session.migrateUiProject()],
   ['set-title-document', (session, params, command) => {
     return session.setTitleDocument({
       document: requireParam(params, command, 'document'),
@@ -1983,6 +1996,70 @@ const APPLY_PLAN_OPERATION_HANDLERS = new Map([
       nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
     });
   }],
+  ['migrate-game-menu-screen', (session) => {
+    return session.migrateGameMenuScreen();
+  }],
+  ['set-game-menu-document', (session, params, command) => {
+    return session.setGameMenuDocument({
+      document: requireParam(params, command, 'document'),
+    });
+  }],
+  ['add-game-menu-node', (session, params, command) => {
+    return session.addGameMenuNode({
+      node: buildCanonicalTitleNode(command, params),
+      parentId: getParam(params, 'parentId', 'parent-id', 'parent'),
+    });
+  }],
+  ['update-game-menu-node', (session, params, command) => {
+    return session.updateGameMenuNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+      path: getParam(params, 'path'),
+      value: getParam(params, 'value'),
+      patch: getParam(params, 'patch'),
+    });
+  }],
+  ['move-game-menu-node', (session, params, command) => {
+    return session.moveGameMenuNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+      parentId: getParam(params, 'parentId', 'parent-id', 'parent'),
+      order: getParam(params, 'order'),
+    });
+  }],
+  ['duplicate-game-menu-node', (session, params, command) => {
+    return session.duplicateGameMenuNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+      id: getParam(params, 'newId', 'new-id'),
+    });
+  }],
+  ['remove-game-menu-node', (session, params, command) => {
+    return session.removeGameMenuNode({
+      nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'),
+    });
+  }],
+  ['migrate-save-load-screen', session => session.migrateStatefulUiScreen({ screenId: 'saveLoad' })],
+  ['set-save-load-document', (session, params, command) => session.setStatefulUiDocument({ screenId: 'saveLoad', document: requireParam(params, command, 'document') })],
+  ['update-save-load-node', (session, params, command) => session.updateStatefulUiNode({ screenId: 'saveLoad', nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-backlog-screen', session => session.migrateStatefulUiScreen({ screenId: 'backlog' })],
+  ['set-backlog-document', (session, params, command) => session.setStatefulUiDocument({ screenId: 'backlog', document: requireParam(params, command, 'document') })],
+  ['update-backlog-node', (session, params, command) => session.updateStatefulUiNode({ screenId: 'backlog', nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-settings-screen', session => session.migrateSettingsScreen()],
+  ['set-settings-document', (session, params, command) => session.setSettingsDocument({ document: requireParam(params, command, 'document') })],
+  ['update-settings-node', (session, params, command) => session.updateSettingsNode({ nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-gameplay-ui', session => session.migrateGameplayUi()],
+  ['set-gameplay-document', (session, params, command) => session.setGameplayDocument({ document: requireParam(params, command, 'document') })],
+  ['update-gameplay-node', (session, params, command) => session.updateGameplayNode({ nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-gallery-screen', session => session.migrateStatefulUiScreen({ screenId: 'gallery' })],
+  ['set-gallery-document', (session, params, command) => session.setStatefulUiDocument({ screenId: 'gallery', document: requireParam(params, command, 'document') })],
+  ['update-gallery-node', (session, params, command) => session.updateStatefulUiNode({ screenId: 'gallery', nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-text-input-overlay', session => session.migrateUiOverlay({ overlayId: 'textInput' })],
+  ['set-text-input-overlay', (session, params, command) => session.setUiOverlayDocument({ overlayId: 'textInput', document: requireParam(params, command, 'document') })],
+  ['update-text-input-overlay-node', (session, params, command) => session.updateUiOverlayNode({ overlayId: 'textInput', nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-confirmation-overlay', session => session.migrateUiOverlay({ overlayId: 'confirmation' })],
+  ['set-confirmation-overlay', (session, params, command) => session.setUiOverlayDocument({ overlayId: 'confirmation', document: requireParam(params, command, 'document') })],
+  ['update-confirmation-overlay-node', (session, params, command) => session.updateUiOverlayNode({ overlayId: 'confirmation', nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
+  ['migrate-video-controls-overlay', session => session.migrateUiOverlay({ overlayId: 'videoControls' })],
+  ['set-video-controls-overlay', (session, params, command) => session.setUiOverlayDocument({ overlayId: 'videoControls', document: requireParam(params, command, 'document') })],
+  ['update-video-controls-overlay-node', (session, params, command) => session.updateUiOverlayNode({ overlayId: 'videoControls', nodeId: requireParam(params, command, 'nodeId', 'node-id', 'id'), path: getParam(params, 'path'), value: getParam(params, 'value'), patch: getParam(params, 'patch') })],
   ['set-screen-layout', (session, params, command) => {
     return session.setScreenLayout(buildScreenLayoutPatch(command, params));
   }],
@@ -2920,8 +2997,9 @@ async function mutateScript(args, mutator) {
 
   const outputPath = path.resolve(repoRoot, getArgValue(args, '--out', scriptPath));
   const dryRun = hasFlag(args, '--dry-run');
+  const validateOnly = hasFlag(args, '--validate-only');
   let writeResult = null;
-  if (!dryRun) {
+  if (!dryRun && !validateOnly) {
     writeResult = await writeScriptFile(outputPath, nextScript, {
       force: hasFlag(args, '--force') || outputPath === scriptPath,
       backup: hasFlag(args, '--backup'),
@@ -2929,13 +3007,14 @@ async function mutateScript(args, mutator) {
     });
   }
 
-  const outPath = dryRun ? null : outputPath;
+  const outPath = dryRun || validateOnly ? null : outputPath;
   const command = process.argv[2] ?? 'mutate';
   const changeSummary = createMutationChangeSummary({
     command,
     scriptPath,
     outPath,
     dryRun,
+    validateOnly,
     beforeScript: script,
     afterScript: nextScript,
     result,
@@ -2943,21 +3022,24 @@ async function mutateScript(args, mutator) {
     writeResult,
   });
 
-  return {
+  const output = {
     scriptPath,
     outPath,
     dryRun,
+    validateOnly,
     result,
     transaction: {
       command,
-      status: dryRun ? 'planned' : 'written',
-      wrote: !dryRun,
+      status: validateOnly ? 'validated' : dryRun ? 'planned' : 'written',
+      wrote: !dryRun && !validateOnly,
       checkpointPath: writeResult?.checkpointPath ?? null,
       backupPath: writeResult?.backupPath ?? null,
     },
     changeSummary,
     validation: report,
   };
+  await writeApplyPlanResultOut(args, output);
+  return output;
 }
 
 async function writeApplyPlanResultOut(args, output) {
@@ -4540,6 +4622,7 @@ async function exportWebCommand(args) {
   const { progress, sendProgress } = createCliProgressCollector({ silent: hasFlag(args, '--json') });
   const result = await runWithJsonSafeConsole(hasFlag(args, '--json'), () => exportGame({
     projectPath,
+    assetRoot,
     outputDir,
     gameTitle: title,
     faviconPath: resolveOptionalPath(getArgValue(args, '--favicon', getArgValue(args, '--favicon-path', null))),
@@ -4583,6 +4666,7 @@ async function exportDesktopCommand(args) {
   const { progress, sendProgress } = createCliProgressCollector({ silent: hasFlag(args, '--json') });
   const result = await runWithJsonSafeConsole(hasFlag(args, '--json'), () => exportDesktop({
     projectPath,
+    assetRoot,
     outputDir,
     gameTitle: title,
     iconPath: resolveOptionalPath(getArgValue(args, '--icon', getArgValue(args, '--icon-path', null))),
@@ -6898,6 +6982,62 @@ async function migrateTitleScreen(args) {
   return output.validation.ok ? 0 : 1;
 }
 
+async function migrateUiProject(args) {
+  const { scriptPath, script } = await readScript(args);
+  const session = createProjectSession({ script });
+  const result = session.migrateUiProject();
+  const nextScript = {
+    ...script,
+    ui: session.toJSON().ui,
+  };
+  const validation = validateProject(nextScript);
+  const outputPath = path.resolve(repoRoot, getArgValue(args, '--out', scriptPath));
+  const dryRun = hasFlag(args, '--dry-run');
+  const validateOnly = hasFlag(args, '--validate-only');
+  let writeResult = null;
+  if (!dryRun && !validateOnly && validation.ok) {
+    writeResult = await writeScriptFile(outputPath, nextScript, {
+      force: hasFlag(args, '--force') || outputPath === scriptPath,
+      backup: hasFlag(args, '--backup'),
+      checkpoint: hasFlag(args, '--checkpoint'),
+    });
+  }
+  const outPath = dryRun || validateOnly || !validation.ok ? null : outputPath;
+  const changeSummary = createMutationChangeSummary({
+    command: 'migrate-ui-project',
+    scriptPath,
+    outPath,
+    dryRun,
+    validateOnly,
+    beforeScript: script,
+    afterScript: nextScript,
+    result,
+    validation,
+    writeResult,
+  });
+  const output = {
+    scriptPath,
+    outPath,
+    dryRun,
+    validateOnly,
+    result,
+    transaction: {
+      command: 'migrate-ui-project',
+      status: !validation.ok ? 'invalid' : validateOnly ? 'validated' : dryRun ? 'planned' : 'written',
+      wrote: !dryRun && !validateOnly && validation.ok,
+      checkpointPath: writeResult?.checkpointPath ?? null,
+      backupPath: writeResult?.backupPath ?? null,
+    },
+    changeSummary,
+    validation,
+  };
+  await writeApplyPlanResultOut(args, output);
+  emitResult(args, output, () => {
+    printMutationResult('Migrated canonical UI project', output);
+  });
+  return validation.ok ? 0 : 1;
+}
+
 async function setTitleDocument(args) {
   const document = await parseJsonFileArg(args, '--document', parseJsonArg(args, '--document-json', null));
   if (!document) throw new Error('set-title-document requires --document or --document-json');
@@ -6962,6 +7102,113 @@ async function removeTitleNode(args) {
   emitResult(args, output, () => {
     printMutationResult('Removed canonical title node', output);
   });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function migrateGameMenuScreen(args) {
+  const output = await mutateScript(args, (session) => session.migrateGameMenuScreen());
+  emitResult(args, output, () => {
+    printMutationResult('Migrated game menu screen', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function setGameMenuDocument(args) {
+  const document = await parseJsonFileArg(args, '--document', parseJsonArg(args, '--document-json', null));
+  if (!document) throw new Error('set-game-menu-document requires --document or --document-json');
+  const output = await mutateScript(args, (session) => session.setGameMenuDocument({ document }));
+  emitResult(args, output, () => {
+    printMutationResult('Set canonical game menu document', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function addGameMenuNode(args) {
+  const output = await mutateScript(args, (session) => session.addGameMenuNode({
+    node: parseCanonicalTitleNodeArgs(args),
+    parentId: getArgValue(args, '--parent-id', getArgValue(args, '--parent', undefined)),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Added canonical game menu node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function updateGameMenuNode(args) {
+  const output = await mutateScript(args, (session) => session.updateGameMenuNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    path: getOptionalArgValue(args, '--path'),
+    value: parseOptionalScalarValue(getOptionalArgValue(args, '--value')),
+    patch: parseJsonArg(args, '--patch', undefined),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Updated canonical game menu node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function moveGameMenuNode(args) {
+  const output = await mutateScript(args, (session) => session.moveGameMenuNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    parentId: getOptionalArgValue(args, '--parent-id') ?? getOptionalArgValue(args, '--parent'),
+    order: getIntArg(args, '--order', undefined),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Moved canonical game menu node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function duplicateGameMenuNode(args) {
+  const output = await mutateScript(args, (session) => session.duplicateGameMenuNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+    id: getOptionalArgValue(args, '--new-id'),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Duplicated canonical game menu node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function removeGameMenuNode(args) {
+  const output = await mutateScript(args, (session) => session.removeGameMenuNode({
+    nodeId: getArgValue(args, '--id', getArgValue(args, '--node-id', null)),
+  }));
+  emitResult(args, output, () => {
+    printMutationResult('Removed canonical game menu node', output);
+  });
+  return output.validation.ok ? 0 : 1;
+}
+
+async function mutateStatefulUi(args, screenId, operation, label) {
+  let document;
+  if (operation === 'set') {
+    document = await parseJsonFileArg(args, '--document', parseJsonArg(args, '--document-json', null));
+    if (!document) throw new Error(`${label} requires --document or --document-json`);
+  }
+  const nodeId = getArgValue(args, '--id', getArgValue(args, '--node-id', null));
+  const output = await mutateScript(args, session => operation === 'migrate'
+    ? session.migrateStatefulUiScreen({ screenId })
+    : operation === 'set'
+      ? session.setStatefulUiDocument({ screenId, document })
+      : session.updateStatefulUiNode({ screenId, nodeId, path: getOptionalArgValue(args, '--path'), value: parseOptionalScalarValue(getOptionalArgValue(args, '--value')), patch: parseJsonArg(args, '--patch', undefined) }));
+  emitResult(args, output, () => printMutationResult(label, output));
+  return output.validation.ok ? 0 : 1;
+}
+
+async function mutateUiOverlay(args, overlayId, operation, label) {
+  let document;
+  if (operation === 'set') {
+    document = await parseJsonFileArg(args, '--document', parseJsonArg(args, '--document-json', null));
+    if (!document) throw new Error(`${label} requires --document or --document-json`);
+  }
+  const nodeId = getArgValue(args, '--id', getArgValue(args, '--node-id', null));
+  const output = await mutateScript(args, session => operation === 'migrate'
+    ? session.migrateUiOverlay({ overlayId })
+    : operation === 'set'
+      ? session.setUiOverlayDocument({ overlayId, document })
+      : session.updateUiOverlayNode({ overlayId, nodeId, path: getOptionalArgValue(args, '--path'), value: parseOptionalScalarValue(getOptionalArgValue(args, '--value')), patch: parseJsonArg(args, '--patch', undefined) }));
+  emitResult(args, output, () => printMutationResult(label, output));
   return output.validation.ok ? 0 : 1;
 }
 
@@ -7462,12 +7709,38 @@ function printHelp() {
   update-title-element --id id|--index index [--patch json] [--content text] [--text text] [--x number] [--y number] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-title-element --id id|--index index [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   migrate-title-screen [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  migrate-ui-project [--script path] [--out path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
   set-title-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   add-title-node --id node_id --type panel|text|image|button [--parent-id node_id] [--node json] [--layout json] [--style json] [--content json] [--asset json] [--action json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   update-title-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   move-title-node --id node_id [--parent-id node_id] [--order index] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   duplicate-title-node --id node_id [--new-id node_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   remove-title-node --id node_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  migrate-game-menu-screen [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  set-game-menu-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  add-game-menu-node --id node_id --type panel|text|image|button|stack [--parent-id node_id] [--node json] [--layout json] [--style json] [--content json] [--asset json] [--action json] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  update-game-menu-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  move-game-menu-node --id node_id [--parent-id node_id] [--order index] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  duplicate-game-menu-node --id node_id [--new-id node_id] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  remove-game-menu-node --id node_id [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
+  migrate-save-load-screen [--script path] [--out path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  set-save-load-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  update-save-load-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  migrate-backlog-screen [--script path] [--out path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  set-backlog-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  update-backlog-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  migrate-settings-screen [--script path] [--out path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  set-settings-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  update-settings-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  migrate-gameplay-ui [--script path] [--out path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  set-gameplay-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  update-gameplay-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  migrate-gallery-screen [--script path] [--out path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  set-gallery-document (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  update-gallery-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  migrate-text-input-overlay|migrate-confirmation-overlay|migrate-video-controls-overlay [--script path] [--validate-only] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  set-text-input-overlay|set-confirmation-overlay|set-video-controls-overlay (--document file|--document-json json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
+  update-text-input-overlay-node|update-confirmation-overlay-node|update-video-controls-overlay-node --id node_id (--path path --value value|--patch json) [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--result-out path] [--json]
   set-screen-layout --screen settingsScreen|gameMenu|saveLoadScreen|backlogScreen --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-dialogue-box --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
   set-theme --config file|--config-json json [--replace] [--script path] [--out path] [--dry-run] [--force] [--backup] [--checkpoint] [--json]
@@ -7583,12 +7856,44 @@ const CLI_COMMAND_HANDLERS = new Map([
   ['update-title-element', updateTitleElement],
   ['remove-title-element', removeTitleElement],
   ['migrate-title-screen', migrateTitleScreen],
+  ['migrate-ui-project', migrateUiProject],
   ['set-title-document', setTitleDocument],
   ['add-title-node', addTitleNode],
   ['update-title-node', updateTitleNode],
   ['move-title-node', moveTitleNode],
   ['duplicate-title-node', duplicateTitleNode],
   ['remove-title-node', removeTitleNode],
+  ['migrate-game-menu-screen', migrateGameMenuScreen],
+  ['set-game-menu-document', setGameMenuDocument],
+  ['add-game-menu-node', addGameMenuNode],
+  ['update-game-menu-node', updateGameMenuNode],
+  ['move-game-menu-node', moveGameMenuNode],
+  ['duplicate-game-menu-node', duplicateGameMenuNode],
+  ['remove-game-menu-node', removeGameMenuNode],
+  ['migrate-save-load-screen', args => mutateStatefulUi(args, 'saveLoad', 'migrate', 'Migrated save/load screen')],
+  ['set-save-load-document', args => mutateStatefulUi(args, 'saveLoad', 'set', 'Set canonical save/load document')],
+  ['update-save-load-node', args => mutateStatefulUi(args, 'saveLoad', 'update', 'Updated canonical save/load node')],
+  ['migrate-backlog-screen', args => mutateStatefulUi(args, 'backlog', 'migrate', 'Migrated backlog screen')],
+  ['set-backlog-document', args => mutateStatefulUi(args, 'backlog', 'set', 'Set canonical backlog document')],
+  ['update-backlog-node', args => mutateStatefulUi(args, 'backlog', 'update', 'Updated canonical backlog node')],
+  ['migrate-settings-screen', args => mutateStatefulUi(args, 'settings', 'migrate', 'Migrated settings screen')],
+  ['set-settings-document', args => mutateStatefulUi(args, 'settings', 'set', 'Set canonical settings document')],
+  ['update-settings-node', args => mutateStatefulUi(args, 'settings', 'update', 'Updated canonical settings node')],
+  ['migrate-gameplay-ui', args => mutateStatefulUi(args, 'gameplay', 'migrate', 'Migrated gameplay UI')],
+  ['set-gameplay-document', args => mutateStatefulUi(args, 'gameplay', 'set', 'Set canonical gameplay UI document')],
+  ['update-gameplay-node', args => mutateStatefulUi(args, 'gameplay', 'update', 'Updated canonical gameplay UI node')],
+  ['migrate-gallery-screen', args => mutateStatefulUi(args, 'gallery', 'migrate', 'Migrated gallery screen')],
+  ['set-gallery-document', args => mutateStatefulUi(args, 'gallery', 'set', 'Set canonical gallery document')],
+  ['update-gallery-node', args => mutateStatefulUi(args, 'gallery', 'update', 'Updated canonical gallery node')],
+  ['migrate-text-input-overlay', args => mutateUiOverlay(args, 'textInput', 'migrate', 'Migrated text input overlay')],
+  ['set-text-input-overlay', args => mutateUiOverlay(args, 'textInput', 'set', 'Set canonical text input overlay')],
+  ['update-text-input-overlay-node', args => mutateUiOverlay(args, 'textInput', 'update', 'Updated canonical text input overlay node')],
+  ['migrate-confirmation-overlay', args => mutateUiOverlay(args, 'confirmation', 'migrate', 'Migrated confirmation overlay')],
+  ['set-confirmation-overlay', args => mutateUiOverlay(args, 'confirmation', 'set', 'Set canonical confirmation overlay')],
+  ['update-confirmation-overlay-node', args => mutateUiOverlay(args, 'confirmation', 'update', 'Updated canonical confirmation overlay node')],
+  ['migrate-video-controls-overlay', args => mutateUiOverlay(args, 'videoControls', 'migrate', 'Migrated video controls overlay')],
+  ['set-video-controls-overlay', args => mutateUiOverlay(args, 'videoControls', 'set', 'Set canonical video controls overlay')],
+  ['update-video-controls-overlay-node', args => mutateUiOverlay(args, 'videoControls', 'update', 'Updated canonical video controls overlay node')],
   ['set-screen-layout', setScreenLayout],
   ['set-dialogue-box', (args) => setSharedUiConfig(args, 'set-dialogue-box', 'dialogue box', (session, patch) => session.setDialogueBox(patch))],
   ['set-theme', (args) => setSharedUiConfig(args, 'set-theme', 'theme', (session, patch) => session.setTheme(patch))],

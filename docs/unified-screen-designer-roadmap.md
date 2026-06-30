@@ -1,7 +1,7 @@
 # Unified Screen Designer Roadmap
 
-**Status:** Phase 0-5 complete; Phase 6 not started
-**Date:** 2026-06-23
+**Status:** Phase 0-11 complete; release gates passed, with commit, tag, push, and publish intentionally not performed
+**Date:** 2026-06-30
 **Planning base:** `main` at `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
 **Architecture:** [unified-screen-designer-architecture.md](./unified-screen-designer-architecture.md)
@@ -49,9 +49,9 @@ Every phase must preserve these rules:
 | 3 | Shared Renderer And Semantic Widget Host | Runtime and preview can render canonical documents through one path. | High | Complete |
 | 4 | Unified Editor Shell | Palette, hierarchy, canvas, inspector, context menu, keyboard, geometry, and undo work. | High | Complete |
 | 5 | Title Vertical Slice | Title becomes the first end-to-end canonical screen and proves migration. | High | Complete |
-| 6 | Game Menu And Shared Confirmation | Menu navigation and reusable confirmation overlay migrate safely. | Medium/High | Not started |
-| 7 | Save/Load And Backlog | Stateful list screens migrate without breaking persistence, pagination, or voice replay. | High | Not started |
-| 8 | Settings | Structured settings widgets migrate without weakening ConfigManager or accessibility. | High | Not started |
+| 6 | Game Menu And Shared Confirmation | Menu navigation and reusable confirmation overlay migrate safely. | Medium/High | Complete |
+| 7 | Save/Load And Backlog | Stateful list screens migrate without breaking persistence, pagination, or voice replay. | High | Complete |
+| 8 | Settings | Structured settings widgets migrate without weakening ConfigManager or accessibility. | High | Complete |
 | 9 | Gameplay UI | Dialogue, nameplate, choices, and quick actions migrate while story staging stays separate. | High | Not started |
 | 10 | Gallery And Remaining Overlays | Gallery, text input, and video controls join the canonical system. | Medium/High | Not started |
 | 11 | Migration, Authoring, Export, And Release Closure | All paths converge; legacy removal is gated by evidence. | High | Not started |
@@ -387,6 +387,8 @@ Remaining boundary:
 
 **Goal:** Migrate a bounded navigation screen and establish reusable modal confirmation.
 
+**Status:** Complete on 2026-06-23.
+
 Deliver:
 
 - canonical game-menu document and semantic navigation actions;
@@ -410,6 +412,22 @@ Acceptance:
 - confirmation is reusable and does not embed screen-specific callbacks in project data.
 
 **Stop boundary:** Do not begin save/load migration in this phase.
+
+Completion evidence:
+
+- added a canonical Game Menu adapter that maps legacy panel, button, close/title/settings/save/load/backlog/gallery routing, background, motion-compatible layout, and explicit icon/image assets into a validated screen document while retaining legacy read/render support;
+- routed canonical Game Menu runtime rendering and the editor preview through `SharedUiRenderer`, with `GameMenuEditor` using the Unified Editor Shell for hierarchy, canvas, inspector, context menu, keyboard deletion, layer/order changes, anchors, responsive preview, and undo/redo transactions;
+- added a reusable shared confirmation overlay backed by a canonical protected-parts document, then used it only for the Phase 6 Game Menu title/quit confirmation path;
+- added explicit Game Menu migration and canonical add/update/move/duplicate/remove authoring paths with validate-only, dry-run, checkpoint, rollback, and result-output coverage;
+- extended `.gmtheme` canonical-screen projection/import behavior, validation/export/readiness asset collection, and browser fixtures to include canonical Game Menu without migrating unrelated production screens;
+- focused Phase 6 tests covered legacy-to-canonical mapping, runtime/editor behavior, actions, asset references, migration preview/write safety, checkpoint rollback, and the exact shared-confirmation call paths; Phase 5 Title tests, Phase 4 shell tests, Phase 3 renderer/host/bridge tests, and existing Game Menu tests remained green;
+- browser evidence covered canonical Game Menu render/edit behavior, hierarchy selection, right-click and keyboard delete on the intended element, undo/redo transaction behavior, menu action routing, confirmation cancel/confirm behavior, responsive preview, clean console state, and screenshot capture at desktop plus mobile widths under the Phase 6 screenshot output directory.
+
+Remaining boundary:
+
+- Phase 7 Save/Load and Backlog migration remain not started;
+- Settings, Gameplay UI, Gallery, and non-Game-Menu production screens remain outside this slice;
+- legacy Game Menu renderer/read compatibility remains in place until later compatibility gates authorize cleanup.
 
 ## Phase 7 - Save/Load And Backlog
 
@@ -459,9 +477,23 @@ Acceptance:
 
 **Stop boundary:** Do not migrate Settings in Phase 7.
 
+Completion evidence (2026-06-28):
+
+- Phase 7a added one canonical Save/Load document with bounded `save`/`load` variants, a protected semantic slot grid, shared-renderer runtime/editor routing, explicit migration/set/update authoring commands, and canonical theme/asset/export participation while preserving the existing save-manager callbacks, cached slots, async supersession guard, pagination, source routing, and save-record format;
+- canonical Save/Load deletion alone reuses the Phase 6 shared confirmation overlay, with modal action validation and cancel-focus restoration; overwrite confirmation stays on the established slot-local path;
+- Phase 7b added a canonical Backlog document and protected semantic history list through the same renderer/editor shell, preserving entry order, scrolling, speaker/text presentation, empty state, single-voice replacement/stop behavior, rejection recovery, and engine ownership of history contents;
+- the Unified Editor Shell now disables duplicate/delete/wrap operations for protected semantic widgets while retaining selection, hierarchy/inspector visibility, safe styling, context menu, keyboard operations for ordinary nodes, responsive preview, and undo/redo;
+- explicit Save/Load and Backlog migration commands support validate-only, dry-run, result-out, checkpointed writes, changed paths, and rollback. The completion run used only a temporary fixture under the system temp directory; no real project was auto-migrated;
+- focused behavior matrices covered legacy mapping, variants, populated/empty grids, pagination/cache/async behavior, actions/routing, delete confirmation/focus, Backlog order/empty/voice/error behavior, Phase 6 confirmation/Game Menu regressions, Phase 5 Title, Phase 4 shell, Phase 3 renderer, authoring, migration, theme/assets, and existing screen/history tests;
+- browser evidence covered Save and Load modes, second-page data, deletion cancel/focus, Backlog empty/populated/voice, protected semantic editor actions, context menu, keyboard delete, undo, portrait preview, desktop/tablet/mobile screenshots, and a clean console. The in-app Browser produced the first DOM/screenshot pass; after its tab connection timed out, the remaining checks used the documented Playwright fallback;
+- legacy `ui.saveLoadScreen` and `ui.backlogScreen` read/render support remains in place. Gameplay UI, Gallery, Text Input, Video Controls, and every other production screen were not migrated in Phase 7;
+- Phase 8 subsequently migrated Settings only; Phase 9 remains not started.
+
 ## Phase 8 - Settings
 
 **Goal:** Migrate the most structurally complex existing UI without weakening engine setting semantics.
+
+**Status:** Complete on 2026-06-29.
 
 Deliver:
 
@@ -490,9 +522,29 @@ Acceptance:
 
 **Stop boundary:** Do not fold Page Editor story staging into the screen designer.
 
+Completion evidence:
+
+- added a canonical Settings document with protected `settings-group` and `settings-control` widgets, one control per registered definition, tabbed/single-page presentation, safe labels/layout/style fields, and a validated binary toggle presentation for registered enum values;
+- preserved deterministic legacy assignment behavior: first assignment wins, unknown and later duplicate keys are omitted with explicit diagnostics, and all unassigned registered settings append to the final group; supported header, panel/background, tab bar, footer, decorations, images, labels, buttons, icons, and widget-style dependencies remain mapped or preserved through legacy fallback;
+- canonical runtime and editor preview use `SharedUiRenderer`; `SettingsPageEditor` now hosts the Unified Editor Shell, semantic controls remain visible in hierarchy/inspector, Agent-authored fields survive safe edits, and protected groups/controls cannot be duplicated or deleted;
+- `ConfigManager` remains the only owner of get/set/default/reset/localStorage persistence. Canonical controls route sliders, select buttons, toggle presentation, reset, close, title routing, and focus restoration through the existing manager/callback seams rather than project-authored executable behavior;
+- added `migrate-settings-screen`, `set-settings-document`, and `update-settings-node` to direct CLI and apply-plan registries. Migration evidence used only a system-temp fixture and covered validate-only, dry-run, result-out, checkpointed write, exact changed paths, and restore-checkpoint rollback;
+- canonical Settings participates in `.gmtheme` screen projection, canonical asset scanning, validation, export/readiness, and the existing theme icon/widget-style paths without introducing a second asset or persistence owner;
+- focused tests covered registered/unknown/duplicate/missing assignments, tabbed/single-page modes, controls/actions/focus, ConfigManager persistence/reset, shell invariants/history, authoring, theme/assets, legacy migration diagnostics, and Phase 3-7 regressions;
+- browser evidence covered runtime tab switching, slider/toggle/reset/title/close interactions, single-page mode, focus restoration, Settings hierarchy/inspector, protected context-menu actions, patch/undo/redo, desktop/tablet/mobile and portrait preview screenshots, and a clean console. The in-app Browser supplied the initial DOM/screenshot pass and exposed a footer hitbox defect; after its connection timed out, the documented Playwright fallback completed the fixed matrix;
+- legacy `ui.settingsScreen`, the legacy Settings renderer, and the former structured editor composables/components remain compatibility inputs/fallbacks until Phase 11 retirement evidence explicitly permits removal.
+
+Remaining boundary:
+
+- Phase 9 Gameplay UI has not started; Page Editor story staging remains separate;
+- Gallery, Text Input, Video Controls, and all other production screens/overlays were not migrated in Phase 8;
+- legacy Title, Game Menu, Save/Load, Backlog, and Settings compatibility paths remain in place.
+
 ## Phase 9 - Gameplay UI
 
 **Goal:** Unify persistent gameplay chrome while keeping story content authoring separate.
+
+**Status:** Complete on 2026-06-29.
 
 Deliver:
 
@@ -521,9 +573,31 @@ Acceptance:
 
 **Stop boundary:** Do not introduce new story page types or a visual scripting graph.
 
+Completion evidence:
+
+- added a validated canonical Gameplay UI document with one protected `story-viewport` plus protected `dialogue-box`, `nameplate`, `choice-list`, `quick-action-bar`, and `skip-status` widgets; the validator rejects missing/duplicate invariants, story-state bindings, and non-presentation assets;
+- expanded the pure legacy adapter to project supported dialogue layout/typography, nameplate art/style, decorations, choice badges, widget styles, theme icons, and UI motion dependencies while reporting unsupported or lossy detail and retaining legacy read/render fallback;
+- routed canonical Gameplay UI through `SharedUiRenderer` in runtime and editor preview while the existing `DialogueBox`, `ChoiceMenu`, `QuickActionBar`, audio/voice lifecycle, auto/skip helpers, and `ScriptEngine` continue to own behavior and state;
+- added an explicit Page Editor `Story Edit` / `Gameplay UI Edit` switch. UI edits write only `ui.screens.gameplay`; browser and store evidence kept the complete `scenes` snapshot byte-identical, including background, character, camera, particle, video/effect ownership;
+- reused the Unified Editor Shell for hierarchy, inspector, context menu, keyboard safety, responsive viewport selection, and undo/redo. All Gameplay semantic widgets reject delete, duplicate, wrap, and invalid hierarchy operations;
+- added `migrate-gameplay-ui`, `set-gameplay-document`, and `update-gameplay-node` to direct CLI and apply-plan registries, plus Gameplay preview routing. A system-temp fixture proved validate-only, dry-run, checkpointed write, exact changed paths, result-out, and semantic restore-checkpoint rollback;
+- canonical Gameplay assets participate in `.gmtheme` projection, scan, validation, export/readiness, while legacy dialogue art, widget styles, choice badges, theme icons, and motion remain supported dependency paths;
+- focused tests covered narration, voiced/replaced/error voice states, long text, choices, disabled actions, normal/input/video fixtures, typewriter complete/advance, click isolation, choice effects/transitions, auto/skip/read state, protected shell invariants, authoring/migration/theme/assets, and Phase 3-8 regressions;
+- browser evidence covered editor selection/inspector/context/keyboard/undo/redo and runtime desktop/tablet/mobile/portrait states with accessible controls, keyboard choice activation, reduced motion, real screenshots, and a clean final console. The in-app Browser completed the editor pass; after runtime interaction calls repeatedly timed out at `Runtime.evaluate`, the permitted Playwright fallback completed the remaining matrix;
+- full validation passed with 148 Vitest files / 1278 tests and a successful production build. Project validation retained only the three existing `sakura_affection` warnings; readiness retained the 13 existing missing-audio blockers unrelated to Phase 9.
+
+Remaining boundary:
+
+- Phase 10 is not started;
+- Gallery, Text Input, Video Controls, and every other remaining production screen/overlay were not migrated;
+- no new story page type or visual scripting graph was introduced;
+- legacy Gameplay UI read/render compatibility remains until Phase 11 retirement evidence authorizes removal.
+
 ## Phase 10 - Gallery And Remaining Overlays
 
 **Goal:** Complete screen coverage and consolidate remaining system UI.
+
+**Status:** Complete on 2026-06-29.
 
 Deliver:
 
@@ -552,9 +626,27 @@ Acceptance:
 
 **Stop boundary:** Do not remove legacy fields until Phase 11 migration evidence is complete.
 
+Completion evidence:
+
+- Gallery now has a canonical document, first-class Unified Screen Designer surface, protected `gallery-grid` and `focus-viewer`, and runtime binding directly to `systems.gallery.cg`, `systems.endings`, and read-only player unlock records;
+- Text Input uses a canonical protected overlay while `ScriptEngine.submitInput()` remains the only variable commit path; required/default/current value, Enter, Escape/cancel, IME composition, focus trap, visible validation, and focus restoration are covered;
+- Video Controls uses a canonical protected overlay whose visible and callable actions are derived from the active `VideoPlayer` request; `controls`, `skippable`, `loop`, `volume`, `fit`, `audioMode`, media lifecycle, audio restoration, and outcomes remain VideoPlayer-owned;
+- Gallery and overlay authoring commands support validate-only, dry-run, checkpoint, result artifacts, exact changed paths, preview/handoff routing, and restore-checkpoint rollback on temporary fixtures; no unlock/player data path is authorable;
+- shared renderer/editor tests cover protected parts, hierarchy, inspector, context menu, keyboard, undo/redo, responsive viewports, Agent-authored metadata preservation, and zero-diagnostic preview fixtures;
+- browser evidence covers Gallery locked/unlocked/multi-image navigation, Text Input invalid/commit/cancel keyboard paths, allowed/forbidden video actions, editor protected operations, desktop/tablet/portrait/mobile screenshots, and a clean console;
+- all seven primary screens plus the named Text Input, Confirmation, and Video Controls overlays now have canonical coverage. Legacy readers, writers, renderers, adapters, and project-open behavior remain intact.
+
+Remaining boundary:
+
+- Phase 11 has not started;
+- no whole-project migration, compatibility retirement, release tagging, publishing, or legacy deletion was performed;
+- compatibility removal still requires Phase 11 migration telemetry and a separately reviewed batch.
+
 ## Phase 11 - Migration, Authoring, Export, And Release Closure
 
 **Goal:** Audit and close every integration path, fill only remaining cross-screen gaps, and decide legacy retirement from evidence. Per-screen CLI, accessibility, asset collection, and package support must already have shipped with their owning screen phases.
+
+**Status:** Complete. Migration, desktop workflow, confirmation integration, preview/handoff routing, gamepad, accessibility repairs, performance measurement, fixture/browser matrices, clean readiness, and Web/Windows game exports are verified. See [the Phase 11 audit ledger](./unified-screen-designer-phase-11-audit.md).
 
 Deliver:
 
@@ -582,6 +674,20 @@ Acceptance:
 - any retained compatibility path has an owner and explicit retirement condition.
 
 **Stop boundary:** Do not commit, push, tag, or publish without explicit user instruction.
+
+Implementation evidence:
+
+- `migrate-ui-project` passes validate-only, dry-run, confirmed write, checkpoint, result-out, idempotency, invalid refusal, exact-path, non-UI preservation, author-check, review-handoff, and byte-identical rollback on temporary fixtures;
+- Project Settings exposes the same explicit lifecycle, while project load performs no canonical UI write;
+- preview/handoff routing covers all seven screens and all three named overlays;
+- Confirmation now has editor, CLI, runtime projection, accessible naming, responsive bounds, and behavior-owner preservation;
+- shared gamepad navigation and Gallery focus restoration close the audited accessibility gaps;
+- browser/DOM evidence and screenshots are under `.tmp/phase11-browser*`; the final console is clean;
+- legacy compatibility is retained with owners and retirement conditions in the audit ledger;
+- the three `sakura_affection` warnings are fixed by registering the variable;
+- the three intended audio assets resolve all 13 prior references; readiness is clean and fresh Web/Windows exports contain byte-identical copies with zero export warnings;
+- explicit CLI `assetRoot` is shared by readiness and actual Web/desktop asset copying, with focused regression coverage;
+- Phase 0-11 is complete, while commit, push, tag, and publish remain outside the authorized boundary.
 
 ## Cross-Phase Test Matrix
 

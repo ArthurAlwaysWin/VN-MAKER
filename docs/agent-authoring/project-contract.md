@@ -413,3 +413,7 @@ Responsive variants, closed context predicates, reusable component instances, an
 The Phase 2 `.gmtheme` projection may contain canonical hierarchy, viewport, typed layout/style/state, style references, and assets. It excludes actions, bindings, transient runtime state, player/save/profile data, and unsupported advanced data. It is not a second project schema; persisted round-trip integration begins with Title in Phase 5.
 
 Read-only commands are `list-ui-screens`, `inspect-ui-screen`, `list-ui-nodes`, and `inspect-ui-schema`. They normalize legacy data in memory and never migrate or write the project.
+
+### Explicit whole-project UI migration
+
+`migrate-ui-project` is the only aggregate canonical activation command. It preserves valid existing canonical documents, adapts missing screens/overlays, activates all seven `ui.screenAuthorities`, and never mutates scenes, registries, assets, player profiles, save data, config values, or runtime state. Opening a project does not run it. Exact changed paths are limited to `ui.screenSchemaVersion`, `ui.screenAuthorities.*`, `ui.screens.*`, and `ui.overlays.*`.

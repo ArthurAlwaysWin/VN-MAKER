@@ -37,11 +37,13 @@ import { normalizeVideoEntry, normalizeVideoRegistry } from '../shared/videoCont
 import { replaceTextTemplateVariableId } from '../shared/textTemplate.js';
 import { assertStableId } from '../shared/stableId.js';
 import {
+  UI_OVERLAY_IDS,
+  UI_SCREEN_IDS,
   UI_SCREEN_SCHEMA_VERSION,
   normalizeUiDocument,
   validateUiDocument,
 } from '../shared/uiDocumentContract.js';
-import { adaptLegacyUiScreen } from '../shared/uiLegacyAdapters.js';
+import { adaptLegacyUiOverlay, adaptLegacyUiScreen } from '../shared/uiLegacyAdapters.js';
 import {
   isKnownSettingsCustomButtonAction,
   isKnownSettingsFooterButtonAction,
@@ -715,6 +717,7 @@ const SUPPORTED_SCREEN_LAYOUT_IDS = [
 
 const CANONICAL_TITLE_PATCH_PATHS = Object.freeze(new Set([
   'content.text',
+  'content.label',
   'content.alt',
   'asset.path',
   'style.color',
@@ -740,6 +743,7 @@ const CANONICAL_TITLE_PATCH_PATHS = Object.freeze(new Set([
   'layout.size.height',
   'action',
 ]));
+const CANONICAL_GAME_MENU_PATCH_PATHS = CANONICAL_TITLE_PATCH_PATHS;
 
 function assertSupportedScreenLayoutId(screenId) {
   const id = assertNonEmptyString(screenId, 'screenId');
@@ -787,7 +791,66 @@ function normalizeCanonicalTitleDocument(document) {
   return normalized;
 }
 
+function normalizeCanonicalGameMenuDocument(document) {
+  const normalized = normalizeUiDocument({
+    ...cloneJsonValue(document ?? {}),
+    schemaVersion: UI_SCREEN_SCHEMA_VERSION,
+    id: 'gameMenu',
+    kind: 'screen',
+    authority: 'canonical-active',
+  });
+  const errors = validateUiDocument(normalized, { screenId: 'gameMenu', kind: 'screen' })
+    .filter(item => item.severity === 'error');
+  if (errors.length) {
+    throw new Error(`Canonical game menu document is invalid: ${errors.map(item => item.code).join(', ')}`);
+  }
+  return normalized;
+}
+
+function normalizeCanonicalStatefulDocument(document, screenId) {
+  if (!['saveLoad', 'backlog', 'settings', 'gameplay', 'gallery'].includes(screenId)) throw new Error(`Unsupported canonical screen: ${screenId}`);
+  const normalized = normalizeUiDocument({ ...cloneJsonValue(document ?? {}), schemaVersion: UI_SCREEN_SCHEMA_VERSION, id: screenId, kind: 'screen', authority: 'canonical-active' });
+  const errors = validateUiDocument(normalized, { screenId, kind: 'screen' }).filter(item => item.severity === 'error');
+  if (errors.length) throw new Error(`Canonical ${screenId} document is invalid: ${errors.map(item => item.code).join(', ')}`);
+  return normalized;
+}
+
+function normalizeCanonicalOverlayDocument(document, overlayId) {
+  if (!UI_OVERLAY_IDS.includes(overlayId)) throw new Error(`Unsupported canonical overlay: ${overlayId}`);
+  const normalized = normalizeUiDocument({ ...cloneJsonValue(document ?? {}), schemaVersion: UI_SCREEN_SCHEMA_VERSION, id: overlayId, kind: 'overlay', authority: 'canonical-active' });
+  const errors = validateUiDocument(normalized, { screenId: overlayId, kind: 'overlay' }).filter(item => item.severity === 'error');
+  if (errors.length) throw new Error(`Canonical ${overlayId} overlay is invalid: ${errors.map(item => item.code).join(', ')}`);
+  return normalized;
+}
+
+function ensureCanonicalOverlayDocument(script, overlayId) {
+  script.ui ??= {};
+  script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+  script.ui.overlays ??= {};
+  if (!script.ui.overlays[overlayId]) script.ui.overlays[overlayId] = adaptLegacyUiOverlay(script, overlayId).document;
+  script.ui.overlays[overlayId] = normalizeCanonicalOverlayDocument(script.ui.overlays[overlayId], overlayId);
+  return script.ui.overlays[overlayId];
+}
+
+function ensureCanonicalStatefulDocument(script, screenId) {
+  script.ui ??= {};
+  script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+  script.ui.screens ??= {};
+  script.ui.screenAuthorities ??= {};
+  if (!script.ui.screens[screenId]) script.ui.screens[screenId] = adaptLegacyUiScreen(script, screenId).document;
+  script.ui.screens[screenId] = normalizeCanonicalStatefulDocument(script.ui.screens[screenId], screenId);
+  script.ui.screenAuthorities[screenId] = 'canonical-active';
+  return script.ui.screens[screenId];
+}
+
 function ensureCanonicalTitleRegistry(script) {
+  script.ui ??= {};
+  script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+  script.ui.screens ??= {};
+  script.ui.screenAuthorities ??= {};
+}
+
+function ensureCanonicalGameMenuRegistry(script) {
   script.ui ??= {};
   script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
   script.ui.screens ??= {};
@@ -805,9 +868,36 @@ function ensureCanonicalTitleDocument(script) {
   return script.ui.screens.title;
 }
 
+function ensureCanonicalGameMenuDocument(script) {
+  ensureCanonicalGameMenuRegistry(script);
+  if (!script.ui.screens.gameMenu) {
+    const adapted = adaptLegacyUiScreen(script, 'gameMenu');
+    script.ui.screens.gameMenu = adapted.document;
+  }
+  script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(script.ui.screens.gameMenu);
+  script.ui.screenAuthorities.gameMenu = 'canonical-active';
+  return script.ui.screens.gameMenu;
+}
+
+function normalizeCanonicalScreenDocument(document, screenId) {
+  if (screenId === 'title') return normalizeCanonicalTitleDocument(document);
+  if (screenId === 'gameMenu') return normalizeCanonicalGameMenuDocument(document);
+  return normalizeCanonicalStatefulDocument(document, screenId);
+}
+
+function jsonValuesEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 function findCanonicalTitleNode(document, nodeId) {
   const node = document.nodes.find(item => item.id === nodeId);
   if (!node) throw new Error(`Canonical title node not found: ${nodeId}`);
+  return node;
+}
+
+function findCanonicalGameMenuNode(document, nodeId) {
+  const node = document.nodes.find(item => item.id === nodeId);
+  if (!node) throw new Error(`Canonical game menu node not found: ${nodeId}`);
   return node;
 }
 
@@ -2121,6 +2211,299 @@ export function createProjectSession(input = {}) {
         removedNodeCount: removeIds.size,
         changedPaths: [`ui.screens.title.nodes.${nodeId}`],
       };
+    },
+
+    migrateGameMenuScreen() {
+      ensureCanonicalGameMenuRegistry(script);
+      const adapted = adaptLegacyUiScreen(script, 'gameMenu');
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(adapted.document);
+      script.ui.screenAuthorities.gameMenu = 'canonical-active';
+      return {
+        screenId: 'gameMenu',
+        authority: 'canonical-active',
+        nodeCount: script.ui.screens.gameMenu.nodes.length,
+        diagnostics: cloneJsonValue(adapted.diagnostics ?? []),
+        changedPaths: ['ui.screenSchemaVersion', 'ui.screenAuthorities.gameMenu', 'ui.screens.gameMenu'],
+      };
+    },
+
+    setGameMenuDocument({ document }) {
+      ensureCanonicalGameMenuRegistry(script);
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(document);
+      script.ui.screenAuthorities.gameMenu = 'canonical-active';
+      return {
+        screenId: 'gameMenu',
+        authority: 'canonical-active',
+        nodeCount: script.ui.screens.gameMenu.nodes.length,
+        changedPaths: ['ui.screenSchemaVersion', 'ui.screenAuthorities.gameMenu', 'ui.screens.gameMenu'],
+      };
+    },
+
+    addGameMenuNode({ node, parentId = 'gameMenu.root' }) {
+      const document = ensureCanonicalGameMenuDocument(script);
+      const nextNode = {
+        ...cloneJsonValue(node ?? {}),
+        parentId: node?.parentId ?? parentId,
+        order: Number.isInteger(node?.order)
+          ? node.order
+          : document.nodes.filter(item => item.parentId === (node?.parentId ?? parentId)).length,
+        parts: Array.isArray(node?.parts) ? node.parts : [],
+      };
+      if (!nextNode.id) throw new Error('Canonical game menu node requires id');
+      document.nodes.push(nextNode);
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(document);
+      return {
+        screenId: 'gameMenu',
+        nodeId: nextNode.id,
+        changedPaths: [`ui.screens.gameMenu.nodes.${nextNode.id}`],
+      };
+    },
+
+    updateGameMenuNode({ nodeId, patch = {}, path, value }) {
+      const document = ensureCanonicalGameMenuDocument(script);
+      const node = findCanonicalGameMenuNode(document, nodeId);
+      if (path !== undefined) {
+        if (!CANONICAL_GAME_MENU_PATCH_PATHS.has(path)) {
+          throw new Error(`Unsupported canonical game menu patch path: ${path}`);
+        }
+        setPathValue(node, path, value);
+      } else {
+        for (const [patchPath, patchValue] of Object.entries(patch ?? {})) {
+          if (!CANONICAL_GAME_MENU_PATCH_PATHS.has(patchPath)) {
+            throw new Error(`Unsupported canonical game menu patch path: ${patchPath}`);
+          }
+          setPathValue(node, patchPath, patchValue);
+        }
+      }
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(document);
+      return {
+        screenId: 'gameMenu',
+        nodeId,
+        changedPaths: [`ui.screens.gameMenu.nodes.${nodeId}`],
+      };
+    },
+
+    moveGameMenuNode({ nodeId, parentId, order }) {
+      const document = ensureCanonicalGameMenuDocument(script);
+      const node = findCanonicalGameMenuNode(document, nodeId);
+      if (node.id === document.rootId) throw new Error('Cannot move canonical game menu root node');
+      const nextParentId = parentId ?? node.parentId;
+      if (!document.nodes.some(item => item.id === nextParentId)) throw new Error(`Canonical game menu parent not found: ${nextParentId}`);
+      node.parentId = nextParentId;
+      node.order = Number.isInteger(order) && order >= 0 ? order : node.order;
+      renumberCanonicalSiblings(document, node.parentId);
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(document);
+      return {
+        screenId: 'gameMenu',
+        nodeId,
+        changedPaths: [`ui.screens.gameMenu.nodes.${nodeId}.parentId`, `ui.screens.gameMenu.nodes.${nodeId}.order`],
+      };
+    },
+
+    duplicateGameMenuNode({ nodeId, id }) {
+      const document = ensureCanonicalGameMenuDocument(script);
+      const node = findCanonicalGameMenuNode(document, nodeId);
+      if (node.id === document.rootId) throw new Error('Cannot duplicate canonical game menu root node');
+      const nextId = id ?? nextCanonicalNodeId(document, `${node.id}.copy`);
+      const copy = {
+        ...cloneJsonValue(node),
+        id: nextId,
+        order: (node.order ?? 0) + 1,
+      };
+      for (const sibling of document.nodes) {
+        if (sibling.parentId === node.parentId && (sibling.order ?? 0) > (node.order ?? 0)) sibling.order += 1;
+      }
+      document.nodes.push(copy);
+      renumberCanonicalSiblings(document, node.parentId);
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(document);
+      return {
+        screenId: 'gameMenu',
+        nodeId: nextId,
+        changedPaths: [`ui.screens.gameMenu.nodes.${nextId}`],
+      };
+    },
+
+    removeGameMenuNode({ nodeId }) {
+      const document = ensureCanonicalGameMenuDocument(script);
+      const node = findCanonicalGameMenuNode(document, nodeId);
+      if (node.id === document.rootId) throw new Error('Cannot remove canonical game menu root node');
+      const removeIds = new Set([nodeId]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const candidate of document.nodes) {
+          if (removeIds.has(candidate.parentId) && !removeIds.has(candidate.id)) {
+            removeIds.add(candidate.id);
+            changed = true;
+          }
+        }
+      }
+      script.ui.screens.gameMenu.nodes = document.nodes.filter(item => !removeIds.has(item.id));
+      renumberCanonicalSiblings(script.ui.screens.gameMenu, node.parentId);
+      script.ui.screens.gameMenu = normalizeCanonicalGameMenuDocument(script.ui.screens.gameMenu);
+      return {
+        screenId: 'gameMenu',
+        nodeId,
+        removedNodeCount: removeIds.size,
+        changedPaths: [`ui.screens.gameMenu.nodes.${nodeId}`],
+      };
+    },
+
+    migrateStatefulUiScreen({ screenId }) {
+      const adapted = adaptLegacyUiScreen(script, screenId);
+      script.ui ??= {};
+      script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+      script.ui.screens ??= {};
+      script.ui.screenAuthorities ??= {};
+      script.ui.screens[screenId] = normalizeCanonicalStatefulDocument(adapted.document, screenId);
+      script.ui.screenAuthorities[screenId] = 'canonical-active';
+      return { screenId, authority: 'canonical-active', nodeCount: script.ui.screens[screenId].nodes.length, diagnostics: cloneJsonValue(adapted.diagnostics ?? []), changedPaths: ['ui.screenSchemaVersion', `ui.screenAuthorities.${screenId}`, `ui.screens.${screenId}`] };
+    },
+
+    setStatefulUiDocument({ screenId, document }) {
+      ensureCanonicalStatefulDocument(script, screenId);
+      script.ui.screens[screenId] = normalizeCanonicalStatefulDocument(document, screenId);
+      return { screenId, authority: 'canonical-active', nodeCount: script.ui.screens[screenId].nodes.length, changedPaths: [`ui.screens.${screenId}`] };
+    },
+
+    updateStatefulUiNode({ screenId, nodeId, patch = {}, path, value }) {
+      const document = ensureCanonicalStatefulDocument(script, screenId);
+      const node = document.nodes.find(item => item.id === nodeId);
+      if (!node) throw new Error(`Canonical ${screenId} node not found: ${nodeId}`);
+      const updates = path !== undefined ? { [path]: value } : patch;
+      for (const [patchPath, patchValue] of Object.entries(updates ?? {})) {
+        if (!CANONICAL_TITLE_PATCH_PATHS.has(patchPath)) throw new Error(`Unsupported canonical ${screenId} patch path: ${patchPath}`);
+        setPathValue(node, patchPath, patchValue);
+      }
+      script.ui.screens[screenId] = normalizeCanonicalStatefulDocument(document, screenId);
+      return { screenId, nodeId, changedPaths: [`ui.screens.${screenId}.nodes.${nodeId}`] };
+    },
+
+    migrateUiOverlay({ overlayId }) {
+      const adapted = adaptLegacyUiOverlay(script, overlayId);
+      script.ui ??= {};
+      script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+      script.ui.overlays ??= {};
+      script.ui.overlays[overlayId] = normalizeCanonicalOverlayDocument(adapted.document, overlayId);
+      return { overlayId, nodeCount: script.ui.overlays[overlayId].nodes.length, diagnostics: cloneJsonValue(adapted.diagnostics ?? []), changedPaths: ['ui.screenSchemaVersion', `ui.overlays.${overlayId}`] };
+    },
+
+    migrateUiProject() {
+      const beforeUi = cloneJsonValue(script.ui ?? {});
+      const diagnostics = [];
+      const screens = [];
+      const overlays = [];
+
+      script.ui ??= {};
+      script.ui.screens ??= {};
+      script.ui.overlays ??= {};
+      script.ui.screenAuthorities ??= {};
+      script.ui.screenSchemaVersion = UI_SCREEN_SCHEMA_VERSION;
+
+      for (const screenId of UI_SCREEN_IDS) {
+        const existing = script.ui.screens[screenId];
+        const adapted = existing
+          ? { document: existing, diagnostics: [] }
+          : adaptLegacyUiScreen(script, screenId);
+        script.ui.screens[screenId] = normalizeCanonicalScreenDocument(adapted.document, screenId);
+        script.ui.screenAuthorities[screenId] = 'canonical-active';
+        const screenDiagnostics = cloneJsonValue(adapted.diagnostics ?? []);
+        diagnostics.push(...screenDiagnostics);
+        screens.push({
+          id: screenId,
+          source: existing ? 'canonical-preserved' : 'legacy-adapted',
+          nodeCount: script.ui.screens[screenId].nodes.length,
+          diagnostics: screenDiagnostics,
+        });
+      }
+
+      for (const overlayId of UI_OVERLAY_IDS) {
+        const existing = script.ui.overlays[overlayId];
+        const adapted = existing
+          ? { document: existing, diagnostics: [] }
+          : adaptLegacyUiOverlay(script, overlayId);
+        script.ui.overlays[overlayId] = normalizeCanonicalOverlayDocument(adapted.document, overlayId);
+        const overlayDiagnostics = cloneJsonValue(adapted.diagnostics ?? []);
+        diagnostics.push(...overlayDiagnostics);
+        overlays.push({
+          id: overlayId,
+          source: existing ? 'canonical-preserved' : 'legacy-adapted',
+          nodeCount: script.ui.overlays[overlayId].nodes.length,
+          diagnostics: overlayDiagnostics,
+        });
+      }
+
+      const changedPaths = [];
+      if (beforeUi.screenSchemaVersion !== script.ui.screenSchemaVersion) {
+        changedPaths.push('ui.screenSchemaVersion');
+      }
+      for (const screenId of UI_SCREEN_IDS) {
+        if (!jsonValuesEqual(beforeUi.screenAuthorities?.[screenId], script.ui.screenAuthorities[screenId])) {
+          changedPaths.push(`ui.screenAuthorities.${screenId}`);
+        }
+        if (!jsonValuesEqual(beforeUi.screens?.[screenId], script.ui.screens[screenId])) {
+          changedPaths.push(`ui.screens.${screenId}`);
+        }
+      }
+      for (const overlayId of UI_OVERLAY_IDS) {
+        if (!jsonValuesEqual(beforeUi.overlays?.[overlayId], script.ui.overlays[overlayId])) {
+          changedPaths.push(`ui.overlays.${overlayId}`);
+        }
+      }
+
+      return {
+        migration: 'canonical-ui-project',
+        schemaVersion: UI_SCREEN_SCHEMA_VERSION,
+        screens,
+        overlays,
+        diagnostics,
+        changedPaths,
+        idempotent: changedPaths.length === 0,
+        preservedPaths: ['scenes', 'systems.variables', 'systems.gallery', 'systems.endings', 'assets', 'playerProfile', 'saves'],
+      };
+    },
+
+    setUiOverlayDocument({ overlayId, document }) {
+      ensureCanonicalOverlayDocument(script, overlayId);
+      script.ui.overlays[overlayId] = normalizeCanonicalOverlayDocument(document, overlayId);
+      return { overlayId, nodeCount: script.ui.overlays[overlayId].nodes.length, changedPaths: [`ui.overlays.${overlayId}`] };
+    },
+
+    updateUiOverlayNode({ overlayId, nodeId, patch = {}, path, value }) {
+      const document = ensureCanonicalOverlayDocument(script, overlayId);
+      const node = document.nodes.find(item => item.id === nodeId);
+      if (!node) throw new Error(`Canonical ${overlayId} overlay node not found: ${nodeId}`);
+      const updates = path !== undefined ? { [path]: value } : patch;
+      for (const [patchPath, patchValue] of Object.entries(updates ?? {})) {
+        if (!CANONICAL_TITLE_PATCH_PATHS.has(patchPath)) throw new Error(`Unsupported canonical ${overlayId} overlay patch path: ${patchPath}`);
+        setPathValue(node, patchPath, patchValue);
+      }
+      script.ui.overlays[overlayId] = normalizeCanonicalOverlayDocument(document, overlayId);
+      return { overlayId, nodeId, changedPaths: [`ui.overlays.${overlayId}.nodes.${nodeId}`] };
+    },
+
+    migrateSettingsScreen() {
+      return this.migrateStatefulUiScreen({ screenId: 'settings' });
+    },
+
+    setSettingsDocument({ document }) {
+      return this.setStatefulUiDocument({ screenId: 'settings', document });
+    },
+
+    updateSettingsNode({ nodeId, patch = {}, path, value }) {
+      return this.updateStatefulUiNode({ screenId: 'settings', nodeId, patch, path, value });
+    },
+
+    migrateGameplayUi() {
+      return this.migrateStatefulUiScreen({ screenId: 'gameplay' });
+    },
+
+    setGameplayDocument({ document }) {
+      return this.setStatefulUiDocument({ screenId: 'gameplay', document });
+    },
+
+    updateGameplayNode({ nodeId, patch = {}, path, value }) {
+      return this.updateStatefulUiNode({ screenId: 'gameplay', nodeId, patch, path, value });
     },
 
     setScreenLayout({ screenId, config, merge = true }) {

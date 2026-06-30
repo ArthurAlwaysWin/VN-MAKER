@@ -265,3 +265,7 @@ When `ready` is `false`, fix every `blockers[]` entry before handoff.
 ```
 
 By default, validation starts graph traversal from `start` when it exists, otherwise the first scene in the script. `missingTargetEdges` retain exact author paths and `repair-scene-target` hints; the repair and clear commands also accept references to an absent target id. Dead-end and closed-cycle validation warnings apply once the project has explicit registered endings; basic drafts can still inspect those graph findings without making validation noisy. Partial drafts can suppress reachability warnings through the authoring API with `checkReachability: false`, but handoff-ready projects should have no unresolved graph findings. Story Systems > Flow presents these route findings together with unreachable unlock and asset handoff review navigation.
+
+## Whole-project UI migration gates
+
+Run `migrate-ui-project --validate-only` before dry-run or write. Invalid canonical documents refuse the entire transaction. A successful transaction must report only exact `ui.*` changed paths, pass project validation, preserve non-UI JSON semantics, and create a checkpoint before write. Repeated migration must return no changed paths. Export readiness remains authoritative after migration; missing business assets may not be bypassed with `--allow-readiness-blockers` for release closure.

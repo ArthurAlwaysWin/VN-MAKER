@@ -1254,4 +1254,37 @@ describe('project authoring session', () => {
       pageIndex: 1,
     })).toThrow('normal or choice pages');
   });
+
+  it('migrates the complete UI project explicitly, preserves canonical documents, and is idempotent', () => {
+    const seed = createProjectSession({
+      script: {
+        projectId: 'gm_ui_project_migration',
+        characters: {},
+        scenes: { start: { pages: [{ type: 'normal', dialogues: [] }] } },
+      },
+    });
+    seed.migrateGameplayUi();
+    const mixedScript = seed.toJSON();
+    mixedScript.ui.screenAuthorities.gameplay = 'legacy-only';
+    const session = createProjectSession({ script: mixedScript });
+
+    const beforeStory = JSON.parse(JSON.stringify(session.toJSON().scenes));
+    const first = session.migrateUiProject();
+    const migrated = session.toJSON();
+
+    expect(first.changedPaths).toEqual(expect.arrayContaining([
+      'ui.screens.title',
+      'ui.screenAuthorities.gameplay',
+      'ui.overlays.confirmation',
+    ]));
+    expect(first.screens.find(item => item.id === 'gameplay')?.source).toBe('canonical-preserved');
+    expect(migrated.ui.screens.gameplay.rootId).toBe('gameplay.root');
+    expect(migrated.ui.screenAuthorities.gameplay).toBe('canonical-active');
+    expect(migrated.scenes).toEqual(beforeStory);
+    expect(session.validate().ok).toBe(true);
+
+    const second = session.migrateUiProject();
+    expect(second.idempotent).toBe(true);
+    expect(second.changedPaths).toEqual([]);
+  });
 });

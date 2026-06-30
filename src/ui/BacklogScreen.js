@@ -5,6 +5,7 @@ import { sanitizeCssValue, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
 import { attachThemeIconFallback, resolveThemeIcon, hasThemeIcon } from './themeIconHelpers.js';
+import { createUiRuntimeHost } from './renderer/createUiRendererHost.js';
 
 export class BacklogScreen {
   /**
@@ -17,6 +18,8 @@ export class BacklogScreen {
     this._playingEntry = null;
     this._layoutConfig = null;
     this._themeIcons = null;
+    this._canonicalDocument = null;
+    this._canonicalHost = null;
     this.el = document.createElement('div');
     this.el.id = 'backlog-screen';
     this.el.classList.add('hidden');
@@ -28,8 +31,9 @@ export class BacklogScreen {
    * Pass null to revert to default hardcoded rendering (COMPAT-02).
    * @param {object|null} config — layout config from ui.backlogScreen
    */
-  setLayout(config) {
+  setLayout(config, { canonicalDocument = null } = {}) {
     this._layoutConfig = config || null;
+    this._canonicalDocument = canonicalDocument || null;
     if (this.el.classList.contains('visible')) {
       this.show(this._lastHistory || [], this._lastCharacters || {});
     }
@@ -54,6 +58,12 @@ export class BacklogScreen {
     this._lastHistory = history;
     this._lastCharacters = characters;
     const cfg = this._layoutConfig;
+
+    if (this._canonicalDocument) {
+      this._renderCanonical(history, characters);
+      return;
+    }
+    this._unmountCanonical();
 
     // Reset inline styles from any previous config render (COMPAT-02)
     this.el.style.background = '';
@@ -149,6 +159,80 @@ export class BacklogScreen {
     requestAnimationFrame(() => {
       content.scrollTop = content.scrollHeight;
     });
+  }
+
+  _renderCanonical(history, characters) {
+    this._stopCurrentVoice();
+    this._unmountCanonical();
+    this.el.innerHTML = '';
+    const semanticWidgets = {
+      'backlog-list': {
+        mount: ({ element }) => {
+          element.classList.add('backlog-content');
+          element.dataset.gmUiPart = 'entries';
+          element.style.overflowY = 'auto';
+        },
+        update: ({ element, node, data }) => {
+          element.innerHTML = '';
+          const entries = Array.isArray(data) ? data : [];
+          if (!entries.length) {
+            const empty = element.ownerDocument.createElement('div');
+            empty.className = 'backlog-empty';
+            empty.textContent = node.content?.emptyText ?? '暂无历史记录';
+            element.appendChild(empty);
+          }
+          for (const entry of entries) this._appendCanonicalEntry(element, entry, characters, node.content?.entryStyle);
+        },
+        unmount: () => this._stopCurrentVoice(),
+      },
+    };
+    this._canonicalHost = createUiRuntimeHost({
+      container: this.el,
+      resolveAssetUrl: path => resolvePath(path),
+      dataSources: { 'backlog.entries': history },
+      semanticWidgets,
+      actions: { 'close-screen': () => this.hide() },
+    });
+    this._canonicalHost.mount(this._canonicalDocument);
+    this.el.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      this.el.classList.add('visible');
+      const content = this.el.querySelector('[data-gm-ui-semantic-widget="backlog-list"]');
+      if (content) content.scrollTop = content.scrollHeight;
+    });
+  }
+
+  _appendCanonicalEntry(content, entry, characters, entryStyle) {
+    const div = content.ownerDocument.createElement('div');
+    div.className = 'backlog-entry';
+    const charColor = entry.speaker && characters[entry.speaker] ? characters[entry.speaker].color : null;
+    if (entry.voice && this.audio) {
+      const button = content.ownerDocument.createElement('button');
+      button.className = 'backlog-voice-btn';
+      button.textContent = '▶';
+      button.addEventListener('click', event => { event.stopPropagation(); this._playVoice(div, button, entry.voice); });
+      div.appendChild(button);
+      div.classList.add('backlog-has-voice');
+    }
+    if (entry.speakerName) {
+      const speaker = content.ownerDocument.createElement('div');
+      speaker.className = 'backlog-speaker';
+      speaker.textContent = entry.speakerName;
+      if (charColor) speaker.style.color = charColor;
+      div.appendChild(speaker);
+    }
+    const text = content.ownerDocument.createElement('div');
+    text.className = 'backlog-text';
+    text.textContent = entry.text;
+    if (!entry.speakerName) text.style.fontStyle = 'italic';
+    div.appendChild(text);
+    if (entryStyle) this._applyEntryConfig(entryStyle, div, charColor);
+    content.appendChild(div);
+  }
+
+  _unmountCanonical() {
+    this._canonicalHost?.unmount();
+    this._canonicalHost = null;
   }
 
   // ── Layout config helpers ─────────────────────────────

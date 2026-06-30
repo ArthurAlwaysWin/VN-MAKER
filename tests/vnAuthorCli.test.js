@@ -171,8 +171,19 @@ describe('vn-author CLI', () => {
       'clear-page-effect-packs', 'set-page-particles', 'clear-page-particles',
       'inherit-page-particles', 'set-character-animation', 'set-character-transition',
       'set-opening-video', 'set-title-screen', 'add-title-element', 'update-title-element',
-      'remove-title-element', 'migrate-title-screen', 'set-title-document', 'add-title-node',
+      'remove-title-element', 'migrate-title-screen', 'migrate-ui-project', 'set-title-document', 'add-title-node',
       'update-title-node', 'move-title-node', 'duplicate-title-node', 'remove-title-node',
+      'migrate-game-menu-screen', 'set-game-menu-document', 'add-game-menu-node',
+      'update-game-menu-node', 'move-game-menu-node', 'duplicate-game-menu-node',
+      'remove-game-menu-node',
+      'migrate-save-load-screen', 'set-save-load-document', 'update-save-load-node',
+      'migrate-backlog-screen', 'set-backlog-document', 'update-backlog-node',
+      'migrate-settings-screen', 'set-settings-document', 'update-settings-node',
+      'migrate-gameplay-ui', 'set-gameplay-document', 'update-gameplay-node',
+      'migrate-gallery-screen', 'set-gallery-document', 'update-gallery-node',
+      'migrate-text-input-overlay', 'set-text-input-overlay', 'update-text-input-overlay-node',
+      'migrate-confirmation-overlay', 'set-confirmation-overlay', 'update-confirmation-overlay-node',
+      'migrate-video-controls-overlay', 'set-video-controls-overlay', 'update-video-controls-overlay-node',
       'set-screen-layout', 'set-dialogue-box', 'set-theme',
       'set-widget-styles', 'set-ui-motion', 'apply-ui-style-preset', 'add-choice-effect',
       'set-choice-effect', 'remove-choice-effect',
@@ -253,8 +264,19 @@ describe('vn-author CLI', () => {
       'set-page-particles', 'clear-page-particles', 'inherit-page-particles',
       'set-character-animation', 'set-character-transition', 'set-opening-video',
       'set-ending-video', 'set-title-screen', 'add-title-element', 'update-title-element',
-      'remove-title-element', 'migrate-title-screen', 'set-title-document', 'add-title-node',
+      'remove-title-element', 'migrate-title-screen', 'migrate-ui-project', 'set-title-document', 'add-title-node',
       'update-title-node', 'move-title-node', 'duplicate-title-node', 'remove-title-node',
+      'migrate-game-menu-screen', 'set-game-menu-document', 'add-game-menu-node',
+      'update-game-menu-node', 'move-game-menu-node', 'duplicate-game-menu-node',
+      'remove-game-menu-node',
+      'migrate-save-load-screen', 'set-save-load-document', 'update-save-load-node',
+      'migrate-backlog-screen', 'set-backlog-document', 'update-backlog-node',
+      'migrate-settings-screen', 'set-settings-document', 'update-settings-node',
+      'migrate-gameplay-ui', 'set-gameplay-document', 'update-gameplay-node',
+      'migrate-gallery-screen', 'set-gallery-document', 'update-gallery-node',
+      'migrate-text-input-overlay', 'set-text-input-overlay', 'update-text-input-overlay-node',
+      'migrate-confirmation-overlay', 'set-confirmation-overlay', 'update-confirmation-overlay-node',
+      'migrate-video-controls-overlay', 'set-video-controls-overlay', 'update-video-controls-overlay-node',
       'set-screen-layout', 'set-dialogue-box', 'set-theme',
       'set-widget-styles', 'set-ui-motion', 'apply-ui-style-preset', 'add-choice-effect',
       'set-choice-effect', 'remove-choice-effect',
@@ -8462,6 +8484,58 @@ scene start "Start":
       ])).rejects.toMatchObject({
         code: 1,
       });
+    });
+  });
+
+  it('runs whole-project UI migration through validate, dry-run, write, result-out, and rollback', async () => {
+    await withTempDir(async (dir) => {
+      const scriptPath = path.join(dir, 'script.json');
+      const validationPath = path.join(dir, 'validation.json');
+      const resultPath = path.join(dir, 'result.json');
+      const original = JSON.stringify({
+        projectId: 'gm_ui_migration_cli',
+        characters: {},
+        scenes: { start: { pages: [{ type: 'normal', dialogues: [] }] } },
+      }, null, 2);
+      await writeFile(scriptPath, original, 'utf8');
+
+      const validate = JSON.parse((await execFileAsync('node', [
+        cliPath, 'migrate-ui-project', '--script', scriptPath,
+        '--validate-only', '--result-out', validationPath, '--json',
+      ])).stdout);
+      expect(validate.validateOnly).toBe(true);
+      expect(validate.transaction.wrote).toBe(false);
+      expect(await readFile(scriptPath, 'utf8')).toBe(original);
+
+      const dryRun = JSON.parse((await execFileAsync('node', [
+        cliPath, 'migrate-ui-project', '--script', scriptPath, '--dry-run', '--json',
+      ])).stdout);
+      expect(dryRun.dryRun).toBe(true);
+      expect(dryRun.changeSummary.changedPaths).toContain('ui.screens.title');
+      expect(await readFile(scriptPath, 'utf8')).toBe(original);
+
+      const written = JSON.parse((await execFileAsync('node', [
+        cliPath, 'migrate-ui-project', '--script', scriptPath, '--force', '--checkpoint',
+        '--result-out', resultPath, '--json',
+      ])).stdout);
+      expect(written.transaction.wrote).toBe(true);
+      expect(written.transaction.checkpointPath).toBeTruthy();
+      expect(JSON.parse(await readFile(scriptPath, 'utf8')).ui.screens.gallery).toBeTruthy();
+      expect(JSON.parse(await readFile(resultPath, 'utf8')).changeSummary.changedPaths)
+        .toContain('ui.overlays.confirmation');
+
+      const repeated = JSON.parse((await execFileAsync('node', [
+        cliPath, 'migrate-ui-project', '--script', scriptPath, '--dry-run', '--json',
+      ])).stdout);
+      expect(repeated.result.idempotent).toBe(true);
+      expect(repeated.changeSummary.changedPaths).toEqual([]);
+
+      const restored = JSON.parse((await execFileAsync('node', [
+        cliPath, 'restore-checkpoint', written.transaction.checkpointPath,
+        '--script', scriptPath, '--force', '--json',
+      ])).stdout);
+      expect(restored.transaction.wrote).toBe(true);
+      expect(JSON.parse(await readFile(scriptPath, 'utf8'))).toEqual(JSON.parse(original));
     });
   });
 });

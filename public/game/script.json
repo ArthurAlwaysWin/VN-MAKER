@@ -27,6 +27,15 @@
       }
     }
   },
+  "systems": {
+    "variables": {
+      "sakura_affection": {
+        "type": "number",
+        "initial": 0,
+        "label": "樱好感度"
+      }
+    }
+  },
   "scenes": {
     "start": {
       "name": "序章 — 春日邂逅",

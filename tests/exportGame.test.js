@@ -269,6 +269,32 @@ describe('exportGame — asset filtering', () => {
     expect(existsSync(path.join(outputDir, 'assets', 'videos', 'unreferenced.mp4'))).toBe(false);
   });
 
+  it('copies from an explicit asset root used by CLI readiness', async () => {
+    const projectPath = path.join(tempRoot, 'project-explicit-asset-root');
+    const assetRoot = path.join(tempRoot, 'external-assets');
+    const customOutput = path.join(tempRoot, 'output-explicit-asset-root');
+    await fs.mkdir(path.join(assetRoot, 'backgrounds'), { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(path.join(projectPath, 'script.json'), JSON.stringify({
+      scenes: { start: { pages: [{ background: 'backgrounds/custom.png', dialogues: [] }] } },
+    }), 'utf-8');
+    await fs.writeFile(path.join(assetRoot, 'backgrounds', 'custom.png'), Buffer.from('CUSTOM'));
+
+    const result = await exportGame({
+      projectPath,
+      assetRoot,
+      outputDir: customOutput,
+      gameTitle: 'Explicit Asset Root',
+      faviconPath: null,
+      zip: false,
+      _skipBuild: true,
+      _appRoot: mockAppRoot,
+    }, () => {});
+
+    expect(result.warnings).toEqual([]);
+    expect(existsSync(path.join(customOutput, 'assets', 'backgrounds', 'custom.png'))).toBe(true);
+  });
+
   it('removes assets left by a prior export while preserving unrelated files in the chosen directory', async () => {
     const outputDir = path.join(tempRoot, 'output-reexport');
     const staleAsset = path.join(outputDir, 'assets', 'audio', 'old-track.mp3');

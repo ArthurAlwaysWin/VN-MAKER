@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phase 7 Stateful Screen Fixture</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #11151b; color: #fff; font-family: system-ui, sans-serif; }
+      #fixture-toolbar { position: fixed; z-index: 1000; bottom: 8px; left: 8px; display: flex; gap: 6px; }
+      #fixture-toolbar button { padding: 7px 11px; }
+      #fixture-root { position: relative; width: min(100vw, 1280px); aspect-ratio: 16 / 9; margin: 0 auto; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <div id="fixture-toolbar">
+      <button data-fixture-action="save">Save mode</button>
+      <button data-fixture-action="load">Load mode</button>
+      <button data-fixture-action="backlog-empty">Backlog empty</button>
+      <button data-fixture-action="backlog-populated">Backlog populated</button>
+    </div>
+    <div id="fixture-root"></div>
+    <script type="module" src="/src/ui/statefulScreensRuntimeBrowserFixture.js"></script>
+  </body>
+</html>

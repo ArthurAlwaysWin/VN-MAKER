@@ -758,4 +758,25 @@ describe('agent handoff editor integration', () => {
     expect(graphPanelSource).toContain('reviewCountForScene');
     expect(graphPanelSource).toContain("emit('navigate-path'");
   });
+
+  it('exposes an explicit desktop UI migration workflow without writing migration data on project load', () => {
+    const main = readFileSync(resolve(process.cwd(), 'electron', 'main.js'), 'utf8');
+    const projectStore = readFileSync(resolve(process.cwd(), 'src', 'editor', 'stores', 'project.js'), 'utf8');
+    const settings = readFileSync(resolve(process.cwd(), 'src', 'editor', 'views', 'ProjectSettings.vue'), 'utf8');
+    const loadHandler = main.slice(
+      main.indexOf("ipcMain.handle('load-project'"),
+      main.indexOf("ipcMain.handle('save-project'"),
+    );
+
+    expect(loadHandler).not.toContain('fs.writeFile(scriptJsonPath');
+    expect(main).toContain("ipcMain.handle('migrate-ui-project'");
+    expect(main).toContain("['validate-only', 'dry-run', 'write', 'rollback']");
+    expect(main).toContain('options.confirmed !== true');
+    expect(main).toContain('script.ui-migration.');
+    expect(projectStore).toContain("window.ipcRenderer.invoke('migrate-ui-project'");
+    expect(settings).toContain("runUiMigration('validate-only')");
+    expect(settings).toContain("runUiMigration('dry-run')");
+    expect(settings).toContain("runUiMigration('write')");
+    expect(settings).toContain('rollbackUiMigration');
+  });
 });

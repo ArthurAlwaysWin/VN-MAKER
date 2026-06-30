@@ -135,14 +135,22 @@ export function scanAssets(script) {
     }
   }
 
-  const titleAuthority = script.ui?.screenAuthorities?.title
-    ?? (script.ui?.screens?.title ? 'canonical-active' : 'legacy-only');
-  if (titleAuthority === 'canonical-active' && script.ui?.screens?.title) {
-    for (const reference of collectCanonicalUiAssetReferences(script.ui.screens.title)) {
+  for (const [screenId, document] of Object.entries(script.ui?.screens ?? {})) {
+    const authority = script.ui?.screenAuthorities?.[screenId]
+      ?? (document ? 'canonical-active' : 'legacy-only');
+    if (authority !== 'canonical-active' || !document) continue;
+    for (const reference of collectCanonicalUiAssetReferences(document)) {
       if (reference.kind === 'image') _add(bg, reference.path);
       if (reference.kind === 'audio') _add(audio, reference.path);
     }
-    addVideoReference(script.ui.screens.title.behavior?.openingVideo);
+    if (screenId === 'title') addVideoReference(document.behavior?.openingVideo);
+  }
+  for (const document of Object.values(script.ui?.overlays ?? {})) {
+    if (!document) continue;
+    for (const reference of collectCanonicalUiAssetReferences(document)) {
+      if (reference.kind === 'image') _add(bg, reference.path);
+      if (reference.kind === 'audio') _add(audio, reference.path);
+    }
   }
 
   collectUiImagePaths(script, (value) => _add(ui, value));

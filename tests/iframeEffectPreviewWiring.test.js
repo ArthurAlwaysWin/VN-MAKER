@@ -72,7 +72,7 @@ describe('iframe effect preview wiring', () => {
     expect(src).toMatch(/function applyPreviewScriptSnapshot\([\s\S]*engine\.script = request\.script;/);
     expect(src).toMatch(/function applyPreviewScriptSnapshot\([\s\S]*applyTheme\(gameContainer, engine\.script\.ui\?\.theme\);/);
     expect(src).toMatch(/function applyPreviewScriptSnapshot\([\s\S]*applyTitleScreenLayout\(\);/);
-    expect(src).toMatch(/function applyPreviewScriptSnapshot\([\s\S]*settingsScreen\.setLayout\(engine\.script\.ui\?\.settingsScreen\);/);
+    expect(src).toMatch(/function applyPreviewScriptSnapshot\([\s\S]*applySettingsLayout\(\);/);
     expect(src).toMatch(/function establishPreviewPageBaseline\([\s\S]*engine\.restoreState\(\{[\s\S]*currentScene: request\.sceneId \|\| 'start'/);
   });
 

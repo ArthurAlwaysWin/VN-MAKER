@@ -283,6 +283,28 @@ describe('exportDesktop — asset filtering', () => {
   it('does NOT copy unreferenced videos', () => {
     ok(!existsSync(path.join(result.outputPath, 'assets', 'videos', 'unreferenced.mp4')));
   });
+
+  it('copies from an explicit asset root used by CLI readiness', async () => {
+    const projectPath = path.join(tempRoot, 'project-desktop-explicit-asset-root');
+    const assetRoot = path.join(tempRoot, 'desktop-external-assets');
+    const outputDir = path.join(tempRoot, 'out-desktop-explicit-asset-root');
+    await fs.mkdir(path.join(assetRoot, 'backgrounds'), { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(path.join(projectPath, 'script.json'), JSON.stringify({
+      scenes: { start: { pages: [{ background: 'backgrounds/custom.png', dialogues: [] }] } },
+    }), 'utf-8');
+    await fs.writeFile(path.join(assetRoot, 'backgrounds', 'custom.png'), Buffer.from('CUSTOM'));
+
+    const customResult = await exportDesktop({
+      ...baseOpts(),
+      projectPath,
+      assetRoot,
+      outputDir,
+    }, () => {});
+
+    deepStrictEqual(customResult.warnings, []);
+    ok(existsSync(path.join(customResult.outputPath, 'assets', 'backgrounds', 'custom.png')));
+  });
 });
 
 // ─── 2b. exportDesktop — path safety ────────────────────

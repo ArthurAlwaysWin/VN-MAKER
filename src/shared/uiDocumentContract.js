@@ -1,5 +1,7 @@
 import { validateUiAction } from './uiActionContract.js';
 import { normalizeUiLayout, validateUiLayout } from './uiLayoutContract.js';
+import { validateCanonicalSettingsDocument } from './settingsScreenContract.js';
+import { validateCanonicalGameplayDocument } from './gameplayUiContract.js';
 
 export const UI_SCREEN_SCHEMA_VERSION = 2;
 export const UI_SCREEN_IDS = Object.freeze(['title', 'gameplay', 'gameMenu', 'settings', 'saveLoad', 'backlog', 'gallery']);
@@ -12,8 +14,9 @@ export const UI_PRIMITIVE_WIDGETS = Object.freeze({
 
 export const UI_SEMANTIC_WIDGETS = Object.freeze({
   'dialogue-box': { requiredParts: ['text'] }, nameplate: { requiredParts: ['label'] }, 'choice-list': { requiredParts: ['options'] },
-  'quick-action-bar': { requiredParts: ['actions'] }, 'settings-group': { requiredParts: ['controls'] }, 'settings-control': { requiredParts: ['control'] },
+  'quick-action-bar': { requiredParts: ['actions'] }, 'skip-status': { requiredParts: ['status'] }, 'settings-group': { requiredParts: ['controls'] }, 'settings-control': { requiredParts: ['control'] },
   'save-slot-grid': { requiredParts: ['slots', 'pagination'] }, 'backlog-list': { requiredParts: ['entries'] }, 'gallery-grid': { requiredParts: ['items'] },
+  'focus-viewer': { requiredParts: ['media', 'title', 'description', 'navigation', 'close'] },
   'tab-bar': { requiredParts: ['tabs'] }, 'story-viewport': { requiredParts: ['viewport'] },
   'text-input': { requiredParts: ['prompt', 'input', 'confirm', 'cancel', 'validation'] },
   confirmation: { requiredParts: ['title', 'body', 'confirm', 'cancel'] },
@@ -21,7 +24,7 @@ export const UI_SEMANTIC_WIDGETS = Object.freeze({
 });
 
 export const UI_BINDING_REGISTRY = Object.freeze([
-  'save.slots', 'backlog.entries', 'gallery.items', 'settings.controls', 'choice.options', 'dialogue.current', 'input.value', 'video.state',
+  'save.slots', 'backlog.entries', 'gallery.items', 'settings.controls', 'choice.options', 'dialogue.current', 'runtime.quickActions', 'runtime.skipStatus', 'story.viewport', 'input.value', 'video.state',
 ]);
 export const UI_CONTEXT_KEYS = Object.freeze(['viewport.width', 'viewport.height', 'viewport.aspect', 'input.mode', 'screen.mode', 'player.hasSave', 'runtime.reducedMotion']);
 export const UI_PREDICATE_OPERATORS = Object.freeze(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in']);
@@ -63,6 +66,26 @@ export function normalizeUiDocument(document) {
   };
 }
 
+export function applyUiDocumentVariant(document, variantId) {
+  const normalized = normalizeUiDocument(document);
+  const variant = normalized?.variants?.[variantId];
+  if (!variant?.overrides) return normalized;
+  const next = clone(normalized);
+  const byId = new Map(next.nodes.map(node => [node.id, node]));
+  for (const [nodeId, override] of Object.entries(variant.overrides)) {
+    const node = byId.get(nodeId);
+    if (!node || !plain(override)) continue;
+    for (const field of ['content', 'style', 'states', 'layout', 'asset', 'action']) {
+      if (override[field] === undefined) continue;
+      node[field] = plain(node[field]) && plain(override[field])
+        ? { ...node[field], ...clone(override[field]) }
+        : clone(override[field]);
+    }
+  }
+  delete next.variants;
+  return normalizeUiDocument(next);
+}
+
 function validateStyle(style, path, diagnostics) {
   if (!plain(style)) { diagnostics.push(issue('error', 'ui-style-invalid', 'Style must be a typed object.', path)); return; }
   for (const [key, value] of Object.entries(style)) {
@@ -95,13 +118,20 @@ function validateAdvanced(document, path, diagnostics, capabilities) {
     if (document[field] !== undefined && !capabilities.has(capability)) diagnostics.push(issue('error', 'ui-capability-unregistered', `${field} requires registered capability "${capability}".`, [...path, field], { capability }));
   };
   gate('components', UI_CAPABILITIES.COMPONENT_INSTANCES);
-  gate('variants', UI_CAPABILITIES.RESPONSIVE_VARIANTS);
+  const saveLoadModeVariants = document.id === 'saveLoad' && plain(document.variants)
+    && Object.keys(document.variants).every(id => ['save', 'load'].includes(id));
+  if (!saveLoadModeVariants) gate('variants', UI_CAPABILITIES.RESPONSIVE_VARIANTS);
   gate('tracks', UI_CAPABILITIES.ANIMATION_TRACKS);
   if (capabilities.has(UI_CAPABILITIES.COMPONENT_INSTANCES)) for (const [i, component] of (document.components ?? []).entries()) {
     if (!plain(component) || !stableId(component.id) || !stableId(component.componentId) || !plain(component.props ?? {})) diagnostics.push(issue('error', 'ui-component-instance-invalid', 'Component instances require stable id, componentId, and typed props object.', [...path, 'components', i]));
   }
-  if (capabilities.has(UI_CAPABILITIES.RESPONSIVE_VARIANTS)) for (const [id, variant] of Object.entries(document.variants ?? {})) {
+  if (capabilities.has(UI_CAPABILITIES.RESPONSIVE_VARIANTS) || saveLoadModeVariants) for (const [id, variant] of Object.entries(document.variants ?? {})) {
     if (!stableId(id) || !plain(variant) || !plain(variant.overrides)) diagnostics.push(issue('error', 'ui-variant-invalid', 'Responsive variants require stable ids and bounded overrides.', [...path, 'variants', id]));
+    for (const [nodeId, override] of Object.entries(variant?.overrides ?? {})) {
+      if (!stableId(nodeId) || !plain(override) || Object.keys(override).some(field => !['content', 'style', 'states', 'layout', 'asset', 'action'].includes(field))) {
+        diagnostics.push(issue('error', 'ui-variant-override-invalid', 'Variant overrides must target stable nodes and allowlisted node fields.', [...path, 'variants', id, 'overrides', nodeId]));
+      }
+    }
     if (variant?.when) {
       if (!capabilities.has(UI_CAPABILITIES.CONTEXT_PREDICATES)) diagnostics.push(issue('error', 'ui-capability-unregistered', 'Variant predicates require registered context-predicates capability.', [...path, 'variants', id, 'when']));
       else validatePredicate(variant.when, [...path, 'variants', id, 'when'], diagnostics);
@@ -155,6 +185,8 @@ export function validateUiDocument(document, { path = [], screenId, kind = 'scre
     if (id !== document.rootId && !seen.has(document.rootId)) diagnostics.push(issue('error', 'ui-node-unreachable', `Node "${id}" is unreachable from root.`, [...path, 'nodes', document.nodes.indexOf(byId.get(id))]));
   }
   validateAdvanced(document, path, diagnostics, new Set(capabilities));
+  diagnostics.push(...validateCanonicalSettingsDocument(document, { path }));
+  diagnostics.push(...validateCanonicalGameplayDocument(document, { path }));
   return diagnostics;
 }
 

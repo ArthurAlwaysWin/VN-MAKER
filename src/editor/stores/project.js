@@ -219,6 +219,21 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  async function runUiProjectMigration(mode, { checkpointPath = null, confirmed = false } = {}) {
+    if (!window.ipcRenderer || !projectPath.value) {
+      return { success: false, error: 'No project loaded' };
+    }
+    const result = await window.ipcRenderer.invoke('migrate-ui-project', {
+      mode,
+      checkpointPath,
+      confirmed,
+    });
+    if (result?.success && result?.scriptFileState) {
+      scriptFileState.value = result.scriptFileState;
+    }
+    return result;
+  }
+
   function closeProject() {
     projectPath.value = null;
     projectData.value = null;
@@ -352,7 +367,7 @@ export const useProjectStore = defineStore('project', () => {
   return {
     projectPath, projectData, recentProjects, projectLibraryDir, agentHandoff, agentHandoffPath, agentReviewState, playerProfile, playerProfileStatus, playerProfileError, sceneNavigationRequest, agentPathNavigationRequest, hasCreatedProject, isDirty, scriptFileState, externalScriptChange, externalScriptDiff,
     projectName,
-    loadRecentProjects, chooseProjectLibrary, createProject, openProjectDialog, loadProject, saveProject,
+    loadRecentProjects, chooseProjectLibrary, createProject, openProjectDialog, loadProject, saveProject, runUiProjectMigration,
     loadAgentHandoff, loadAgentReviewState, loadPlayerProfile, closeProject, markDirty, loadExternalScriptDiff, checkExternalScriptChange, clearExternalScriptChange, requestSceneNavigation, requestAgentPathNavigation, setAgentReviewItemStatus, clearAgentReviewItemStatus
   };
 });

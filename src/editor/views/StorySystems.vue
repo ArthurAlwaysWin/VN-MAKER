@@ -17,6 +17,10 @@
           :class="{ active: script.storySystemsPanel === 'cgs' }"
           @click="script.selectStorySystemsPanel('cgs')"
         >CG</button>
+        <button type="button" :class="{ active: script.storySystemsPanel === 'gallery-ui' }" @click="script.selectStorySystemsPanel('gallery-ui')">图库布局</button>
+        <button type="button" :class="{ active: script.storySystemsPanel === 'text-input-ui' }" @click="script.selectStorySystemsPanel('text-input-ui')">输入叠层</button>
+        <button type="button" :class="{ active: script.storySystemsPanel === 'confirmation-ui' }" @click="script.selectStorySystemsPanel('confirmation-ui')">确认叠层</button>
+        <button type="button" :class="{ active: script.storySystemsPanel === 'video-controls-ui' }" @click="script.selectStorySystemsPanel('video-controls-ui')">视频叠层</button>
         <button
           type="button"
           :class="{ active: script.storySystemsPanel === 'graph' }"
@@ -57,9 +61,13 @@
         @create="onCreateCg"
         @select="script.selectCg"
       />
-      <div v-else class="graph-sidebar">
+      <div v-else-if="script.storySystemsPanel === 'graph'" class="graph-sidebar">
         <strong>剧情流程</strong>
         <p>查看场景连接、不可达路线、终点与解锁收束。</p>
+      </div>
+      <div v-else class="graph-sidebar">
+        <strong>Unified Screen Designer</strong>
+        <p>只编辑布局、标签和安全样式。图库注册表、玩家解锁、变量提交和视频播放策略仍由原系统拥有。</p>
       </div>
     </aside>
 
@@ -85,6 +93,14 @@
         :review-items="project.agentHandoff?.reviewItems || []"
         @navigate-scene="openGraphScene"
         @navigate-path="openGraphPath"
+      />
+
+      <UnifiedScreenDesignerShell
+        v-else-if="activeUiDocument"
+        :initial-document="activeUiDocument"
+        :production-screen-id="activeUiDocument.id"
+        :production-screen-label="activeUiLabel"
+        @document-change="onUiDocumentChange"
       />
 
       <EndingInspector
@@ -145,11 +161,13 @@ import EndingRegistryList from '../components/story-systems/EndingRegistryList.v
 import VariableImpactModal from '../components/story-systems/VariableImpactModal.vue';
 import VariableInspector from '../components/story-systems/VariableInspector.vue';
 import VariableRegistryList from '../components/story-systems/VariableRegistryList.vue';
+import UnifiedScreenDesignerShell from '../components/screen-designer/UnifiedScreenDesignerShell.vue';
 import { useProjectStore } from '../stores/project.js';
 import { useScriptStore } from '../stores/script.js';
 import { collectEndingUnlockReferences } from '../../shared/endingRegistry.js';
 import { collectCgUnlockReferences } from '../../shared/cgRegistry.js';
 import { collectVariableReferences } from '../../shared/variableRegistry.js';
+import { adaptLegacyUiOverlay, adaptLegacyUiScreen } from '../../shared/uiLegacyAdapters.js';
 
 const script = useScriptStore();
 const project = useProjectStore();
@@ -321,6 +339,20 @@ const selectedCg = computed(() => allCgs.value.find((item) => item.id === script
 const selectedCgEntry = computed(() => script.selectedCgId
   ? script.data?.systems?.gallery?.cg?.[script.selectedCgId] ?? null
   : null);
+const activeUiDocument = computed(() => {
+  if (script.storySystemsPanel === 'gallery-ui') return adaptLegacyUiScreen(script.data ?? {}, 'gallery').document;
+  if (script.storySystemsPanel === 'text-input-ui') return adaptLegacyUiOverlay(script.data ?? {}, 'textInput').document;
+  if (script.storySystemsPanel === 'confirmation-ui') return adaptLegacyUiOverlay(script.data ?? {}, 'confirmation').document;
+  if (script.storySystemsPanel === 'video-controls-ui') return adaptLegacyUiOverlay(script.data ?? {}, 'videoControls').document;
+  return null;
+});
+const activeUiLabel = computed(() => ({ 'gallery-ui': 'Gallery', 'text-input-ui': 'Text Input Overlay', 'confirmation-ui': 'Confirmation Overlay', 'video-controls-ui': 'Video Controls Overlay' }[script.storySystemsPanel] ?? 'UI'));
+function onUiDocumentChange({ document }) {
+  if (script.storySystemsPanel === 'gallery-ui') script.updateCanonicalStatefulScreen('gallery', document);
+  if (script.storySystemsPanel === 'text-input-ui') script.updateCanonicalOverlay('textInput', document);
+  if (script.storySystemsPanel === 'confirmation-ui') script.updateCanonicalOverlay('confirmation', document);
+  if (script.storySystemsPanel === 'video-controls-ui') script.updateCanonicalOverlay('videoControls', document);
+}
 const placeholderTitle = computed(() => {
   if (script.storySystemsPanel === 'endings') return '选择一个结局';
   if (script.storySystemsPanel === 'cgs') return '选择一张 CG';

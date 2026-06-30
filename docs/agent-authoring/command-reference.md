@@ -338,6 +338,112 @@ Plan manifest example:
 }
 ```
 
+## Canonical Game Menu Commands
+
+These commands edit the canonical `ui.screens.gameMenu` document. They are safe for `apply-plan` only through the normal validate-only, dry-run, checkpoint, and result-output gate; do not use them for Save/Load, Backlog, Settings, Gameplay UI, or Gallery migration.
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `migrate-game-menu-screen` | | `force`, `checkpoint`, `resultOut` | Explicitly converts the current legacy `ui.gameMenu` config into `ui.screens.gameMenu` and marks `ui.screenAuthorities.gameMenu` as `canonical-active`. It never runs on project open. |
+| `set-game-menu-document` | `document` | | Replaces the canonical Game Menu document after schema validation. |
+| `add-game-menu-node` | `node` | | Adds one canonical node to the Game Menu document. |
+| `update-game-menu-node` | `nodeId`, `patch` | | Applies an allowlisted canonical patch to one Game Menu node. Aliases: `id`, `node-id`. |
+| `move-game-menu-node` | `nodeId` | `parentId`, `order` | Moves one node within the canonical Game Menu hierarchy. Aliases: `id`, `node-id`, `parent-id`. |
+| `duplicate-game-menu-node` | `nodeId` | `newId`, `parentId`, `order` | Duplicates a Game Menu node and descendants with stable generated ids when `newId` is omitted. |
+| `remove-game-menu-node` | `nodeId` | | Removes one non-root Game Menu node. Protected required parts remain schema-validated. |
+
+Example bounded migration:
+
+```bash
+npm run vn -- migrate-game-menu-screen --script public/game/script.json --validate-only --result-out .tmp/game-menu-validate.json --json
+npm run vn -- migrate-game-menu-screen --script public/game/script.json --dry-run --json
+npm run vn -- migrate-game-menu-screen --script public/game/script.json --force --checkpoint --result-out .tmp/game-menu-write.json --json
+```
+
+## Canonical Save/Load And Backlog Commands
+
+These Phase 7 commands edit only `ui.screens.saveLoad` or `ui.screens.backlog`. Migration is explicit and never occurs when a project is opened.
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `migrate-save-load-screen` | | `validateOnly`, `dryRun`, `checkpoint`, `resultOut` | Produces the canonical Save/Load document and activates its authority. |
+| `set-save-load-document` | `document` | | Replaces the validated canonical Save/Load document. |
+| `update-save-load-node` | `nodeId`, `path`/`patch` | `value` | Applies only allowlisted node fields. |
+| `migrate-backlog-screen` | | `validateOnly`, `dryRun`, `checkpoint`, `resultOut` | Produces the canonical Backlog document and activates its authority. |
+| `set-backlog-document` | `document` | | Replaces the validated canonical Backlog document. |
+| `update-backlog-node` | `nodeId`, `path`/`patch` | `value` | Applies only allowlisted node fields. |
+
+Use the normal gate for each migration:
+
+```bash
+npm run vn -- migrate-save-load-screen --script public/game/script.json --validate-only --result-out .tmp/save-load-validate.json --json
+npm run vn -- migrate-save-load-screen --script public/game/script.json --dry-run --result-out .tmp/save-load-dry-run.json --json
+npm run vn -- migrate-save-load-screen --script public/game/script.json --force --checkpoint --result-out .tmp/save-load-write.json --json
+npm run vn -- migrate-backlog-screen --script public/game/script.json --validate-only --result-out .tmp/backlog-validate.json --json
+npm run vn -- migrate-backlog-screen --script public/game/script.json --dry-run --result-out .tmp/backlog-dry-run.json --json
+npm run vn -- migrate-backlog-screen --script public/game/script.json --force --checkpoint --result-out .tmp/backlog-write.json --json
+```
+
+## Canonical Settings Commands
+
+These Phase 8 commands edit only `ui.screens.settings`. A Settings document must contain each registered setting exactly once; unknown, duplicate, or missing keys fail validation, and project data never owns runtime values.
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `migrate-settings-screen` | | `validateOnly`, `dryRun`, `checkpoint`, `resultOut` | Converts the legacy layout explicitly and activates canonical Settings authority. |
+| `set-settings-document` | `document` | | Replaces the fully validated canonical Settings document. |
+| `update-settings-node` | `nodeId`, `path`/`patch` | `value` | Updates allowlisted presentation/layout fields without changing protected setting ids or parts. |
+
+```bash
+npm run vn -- migrate-settings-screen --script public/game/script.json --validate-only --result-out .tmp/settings-validate.json --json
+npm run vn -- migrate-settings-screen --script public/game/script.json --dry-run --result-out .tmp/settings-dry-run.json --json
+npm run vn -- migrate-settings-screen --script public/game/script.json --force --checkpoint --result-out .tmp/settings-write.json --json
+npm run vn -- restore-checkpoint <checkpoint-path> --script public/game/script.json --force --json
+```
+
+### Gallery and remaining overlays
+
+Phase 10 adds typed canonical presentation commands without exposing registry, unlock, variable-commit, or playback-state writes:
+
+```bash
+npm run vn -- migrate-gallery-screen --script <scriptPath> --validate-only --result-out .tmp/gallery-validation.json --json
+npm run vn -- migrate-gallery-screen --script <scriptPath> --dry-run --result-out .tmp/gallery-dry-run.json --json
+npm run vn -- migrate-gallery-screen --script <scriptPath> --force --checkpoint --result-out .tmp/gallery-write.json --json
+npm run vn -- set-gallery-document --script <scriptPath> --document .tmp/gallery-document.json --dry-run --json
+npm run vn -- update-gallery-node --script <scriptPath> --id gallery.header --path style.backgroundColor --value "#111827" --dry-run --json
+
+npm run vn -- migrate-text-input-overlay --script <scriptPath> --validate-only --result-out .tmp/text-input-validation.json --json
+npm run vn -- set-text-input-overlay --script <scriptPath> --document .tmp/text-input-overlay.json --dry-run --json
+npm run vn -- update-text-input-overlay-node --script <scriptPath> --id textInput.content --path content.label --value "Name" --dry-run --json
+
+npm run vn -- migrate-confirmation-overlay --script <scriptPath> --validate-only --result-out .tmp/confirmation-validation.json --json
+npm run vn -- set-confirmation-overlay --script <scriptPath> --document .tmp/confirmation-overlay.json --dry-run --json
+npm run vn -- update-confirmation-overlay-node --script <scriptPath> --id confirmation.content --path style.backgroundColor --value "#111827" --dry-run --json
+
+npm run vn -- migrate-video-controls-overlay --script <scriptPath> --validate-only --result-out .tmp/video-controls-validation.json --json
+npm run vn -- set-video-controls-overlay --script <scriptPath> --document .tmp/video-controls-overlay.json --dry-run --json
+npm run vn -- update-video-controls-overlay-node --script <scriptPath> --id videoControls.content --path style.backgroundColor --value "#111827" --dry-run --json
+```
+
+These commands may mutate only `ui.screens.gallery`, `ui.screenAuthorities.gallery`, `ui.overlays.textInput`, `ui.overlays.confirmation`, and `ui.overlays.videoControls` plus `ui.screenSchemaVersion`. They never write `systems.gallery.cg`, `systems.endings`, player-data unlocks, story variables, or active video state.
+
+## Canonical Gameplay UI Commands
+
+These Phase 9 commands edit only `ui.screens.gameplay`. The canonical document controls persistent gameplay presentation; `scenes.*.pages`, story progression, choice effects, auto/skip state, and voice lifecycle remain owned by Page Editor, `ScriptEngine`, and the existing runtime components.
+
+| Command | Required params | Optional params | Notes |
+| --- | --- | --- | --- |
+| `migrate-gameplay-ui` | | `validateOnly`, `dryRun`, `checkpoint`, `resultOut` | Explicitly projects legacy dialogue, decoration, widget-style, badge, icon, and supported layout data into canonical Gameplay UI. It never runs on project open. |
+| `set-gameplay-document` | `document` | | Replaces a fully validated Gameplay UI document containing the protected story viewport and required semantic widgets. |
+| `update-gameplay-node` | `nodeId`, `path`/`patch` | `value` | Updates allowlisted presentation/layout fields without changing protected bindings, parts, or runtime behavior ownership. |
+
+```bash
+npm run vn -- migrate-gameplay-ui --script public/game/script.json --validate-only --result-out .tmp/gameplay-validate.json --json
+npm run vn -- migrate-gameplay-ui --script public/game/script.json --dry-run --result-out .tmp/gameplay-dry-run.json --json
+npm run vn -- migrate-gameplay-ui --script public/game/script.json --force --checkpoint --result-out .tmp/gameplay-write.json --json
+npm run vn -- restore-checkpoint <checkpoint-path> --script public/game/script.json --force --json
+```
+
 ## Screen Layout Commands
 
 These commands edit existing editor-owned screen layout sections. They are safe for `apply-plan` and intentionally exclude `titleScreen`, which uses the title-specific commands above.
@@ -556,3 +662,14 @@ When an operation fails before validation, `apply-plan --json` includes `operati
 | `add-param` | Add the required param or one of its aliases. |
 
 Patch the manifest, rerun `--validate-only`, then rerun `--dry-run` before writing.
+
+## Whole-project canonical UI migration
+
+```bash
+npm run vn -- migrate-ui-project --script <scriptPath> --validate-only --result-out .tmp/ui-migration-validation.json --json
+npm run vn -- migrate-ui-project --script <scriptPath> --dry-run --result-out .tmp/ui-migration-dry-run.json --json
+npm run vn -- migrate-ui-project --script <scriptPath> --force --checkpoint --result-out .tmp/ui-migration-result.json --json
+npm run vn -- restore-checkpoint <checkpointPath> --script <scriptPath> --force --json
+```
+
+The command is also allowlisted in apply-plan. It migrates seven screens and the Text Input, Confirmation, and Video Controls overlays in one validated transaction. Existing canonical documents are preserved; missing documents use the established adapters. Project Settings exposes the same explicit workflow and never runs it on open.

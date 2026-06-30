@@ -5,6 +5,7 @@
 import { createApp, nextTick } from 'vue';
 import { afterEach, describe, expect, it } from 'vitest';
 import UnifiedScreenDesignerShell from '../src/editor/components/screen-designer/UnifiedScreenDesignerShell.vue';
+import { adaptLegacyUiScreen } from '../src/shared/uiLegacyAdapters.js';
 import {
   applySyntheticNodeOperation,
   applySyntheticNodePatch,
@@ -28,6 +29,17 @@ async function mountShell() {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const app = createApp(UnifiedScreenDesignerShell);
+  const vm = app.mount(container);
+  await nextTick();
+  await nextTick();
+  harness = { app, container, vm };
+  return harness;
+}
+
+async function mountShellWithProps(props) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const app = createApp(UnifiedScreenDesignerShell, props);
   const vm = app.mount(container);
   await nextTick();
   await nextTick();
@@ -225,5 +237,40 @@ describe('Phase 4b unified editor shell interactions', () => {
     shell.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true, bubbles: true }));
     await nextTick();
     expect(vm.state.document.nodes.some(node => node.id === 'title.heading')).toBe(false);
+  });
+});
+
+describe('Phase 6 production game menu shell', () => {
+  it('renders canonical Game Menu in the shared shell and keeps context, keyboard, and undo transactions working', async () => {
+    const document = adaptLegacyUiScreen({
+      meta: { resolution: { width: 1280, height: 720 } },
+      ui: { gameMenu: { buttons: { save: { text: 'Save' }, title: { text: 'Title' } } } },
+    }, 'gameMenu').document;
+    const { container, vm } = await mountShellWithProps({
+      initialDocument: document,
+      productionScreenId: 'gameMenu',
+      productionScreenLabel: 'Game Menu',
+    });
+
+    expect(container.querySelector('[data-test="usd-screen-selector"]').value).toBe('gameMenu');
+    expect(container.querySelector('[data-gm-ui-node-id="gameMenu.save"]').textContent).toContain('Save');
+
+    const save = container.querySelector('[data-gm-ui-node-id="gameMenu.save"]');
+    save.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 50 }));
+    await nextTick();
+    container.querySelector('[data-test="usd-context-menu"] [data-operation-id="duplicate"]').click();
+    await nextTick();
+    expect(vm.state.selectedNodeId).toBe('gameMenu.save.copy');
+    expect(vm.state.transactions.at(-1).operation).toBe('duplicate');
+
+    const shell = container.querySelector('[data-test="unified-editor-shell"]');
+    shell.focus();
+    shell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    await nextTick();
+    expect(vm.state.document.nodes.some(node => node.id === 'gameMenu.save.copy')).toBe(false);
+
+    shell.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
+    await nextTick();
+    expect(vm.state.document.nodes.some(node => node.id === 'gameMenu.save.copy')).toBe(true);
   });
 });

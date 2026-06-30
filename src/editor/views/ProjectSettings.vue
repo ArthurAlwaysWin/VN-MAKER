@@ -34,6 +34,23 @@
           <div class="export-section">
             <button class="export-btn" @click="showExport = true" title="打开导出设置">📦 导出游戏</button>
           </div>
+          <section class="ui-migration-section" aria-labelledby="ui-migration-title">
+            <h4 id="ui-migration-title">统一界面显式迁移</h4>
+            <p>打开项目不会迁移。先验证或预演；写入会创建 checkpoint 和 result artifact。</p>
+            <div class="ui-migration-actions">
+              <button class="toolbar-btn" :disabled="uiMigrationBusy" @click="runUiMigration('validate-only')">验证</button>
+              <button class="toolbar-btn" :disabled="uiMigrationBusy" @click="runUiMigration('dry-run')">预演</button>
+              <button class="toolbar-btn migration-write" :disabled="uiMigrationBusy" @click="runUiMigration('write')">创建检查点并迁移</button>
+              <button class="toolbar-btn" :disabled="uiMigrationBusy || !uiMigrationCheckpoint" @click="rollbackUiMigration">恢复检查点</button>
+            </div>
+            <div class="ui-migration-status" role="status" aria-live="polite" v-if="uiMigrationStatus">
+              {{ uiMigrationStatus }}
+            </div>
+            <details v-if="uiMigrationChangedPaths.length">
+              <summary>精确变更路径（{{ uiMigrationChangedPaths.length }}）</summary>
+              <code v-for="pathString in uiMigrationChangedPaths" :key="pathString">{{ pathString }}</code>
+            </details>
+          </section>
           <div class="agent-handoff-section" v-if="project.agentHandoff">
             <div class="agent-handoff-header">
               <h4>外部 Agent 交接</h4>
@@ -310,6 +327,10 @@ const themeEditor = createThemeEditor();
 const showExport = ref(false);
 const showThemeBrowser = ref(false);
 const themeExportStatus = ref('');
+const uiMigrationBusy = ref(false);
+const uiMigrationStatus = ref('');
+const uiMigrationChangedPaths = ref([]);
+const uiMigrationCheckpoint = ref('');
 const uiStylePresetScope = ref('all');
 const agentGateRows = computed(() => {
   const gates = project.agentHandoff?.gates ?? {};
@@ -588,6 +609,42 @@ async function onExportThemePackage() {
   } catch (error) {
     console.error('[ProjectSettings] Export theme package failed:', error);
     themeExportStatus.value = `导出失败：${error?.message ?? '未知错误'}`;
+  }
+}
+
+async function runUiMigration(mode) {
+  if (mode === 'write' && !window.confirm('仅在明确确认后写入 canonical UI 文档。继续并创建 checkpoint？')) return;
+  uiMigrationBusy.value = true;
+  uiMigrationStatus.value = mode === 'write' ? '正在迁移…' : '正在审计…';
+  try {
+    const result = await project.runUiProjectMigration(mode, { confirmed: mode === 'write' });
+    uiMigrationChangedPaths.value = result?.changedPaths ?? [];
+    if (!result?.success) {
+      uiMigrationStatus.value = `失败：${result?.error || result?.validation?.errors?.[0]?.message || '验证未通过'}`;
+      return;
+    }
+    if (result.checkpointPath) uiMigrationCheckpoint.value = result.checkpointPath;
+    uiMigrationStatus.value = result.wrote
+      ? `迁移完成；${uiMigrationChangedPaths.value.length} 条路径已写入。`
+      : `${mode === 'validate-only' ? '验证' : '预演'}通过；将变更 ${uiMigrationChangedPaths.value.length} 条路径。`;
+    if (result.wrote && result.script) script.loadFromData(result.script);
+  } finally {
+    uiMigrationBusy.value = false;
+  }
+}
+
+async function rollbackUiMigration() {
+  if (!uiMigrationCheckpoint.value || !window.confirm('恢复迁移前 checkpoint？当前 script.json 将被替换。')) return;
+  uiMigrationBusy.value = true;
+  try {
+    const result = await project.runUiProjectMigration('rollback', { checkpointPath: uiMigrationCheckpoint.value });
+    uiMigrationStatus.value = result?.success ? 'checkpoint 已恢复。' : `恢复失败：${result?.error || '未知错误'}`;
+    if (result?.success) {
+      uiMigrationChangedPaths.value = [];
+      if (result.script) script.loadFromData(result.script);
+    }
+  } finally {
+    uiMigrationBusy.value = false;
   }
 }
 
@@ -974,6 +1031,21 @@ onBeforeUnmount(() => {
   color: #999;
   font-size: 12px;
 }
+.ui-migration-section {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  background: #202020;
+}
+.ui-migration-section h4 { margin: 0 0 6px; color: #eee; }
+.ui-migration-section p { margin: 0 0 8px; color: #aaa; font-size: 12px; line-height: 1.5; }
+.ui-migration-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ui-migration-actions button:disabled { cursor: not-allowed; opacity: 0.5; }
+.ui-migration-actions .migration-write { border-color: #6d5ccf; color: #ddd8ff; }
+.ui-migration-status { margin-top: 8px; color: #c9c9c9; font-size: 12px; }
+.ui-migration-section details { margin-top: 8px; color: #aaa; font-size: 12px; }
+.ui-migration-section code { display: block; margin-top: 4px; color: #b8d7ff; overflow-wrap: anywhere; }
 .motion-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

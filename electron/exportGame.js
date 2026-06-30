@@ -159,6 +159,7 @@ export async function createZip(sourceDir, zipPath) {
  *
  * @param {Object} options - Export configuration
  * @param {string} options.projectPath - Absolute path to project directory
+ * @param {string} [options.assetRoot] - Absolute source asset root (defaults to projectPath/assets)
  * @param {string} options.outputDir - Absolute path to output directory
  * @param {string} options.gameTitle - Title for the HTML page
  * @param {string|null} options.faviconPath - Absolute path to favicon file, or null
@@ -169,9 +170,10 @@ export async function createZip(sourceDir, zipPath) {
  * @returns {Promise<{ success: boolean, outputPath: string, zipPath: string|null, warnings: string[] }>}
  */
 export async function exportGame(options, sendProgress) {
-  const { projectPath, outputDir, gameTitle, faviconPath, zip, _skipBuild, _appRoot } = options;
+  const { projectPath, assetRoot: assetRootOption, outputDir, gameTitle, faviconPath, zip, _skipBuild, _appRoot } = options;
   const appRoot = _appRoot || process.env.APP_ROOT;
   const distWeb = path.join(appRoot, 'dist-web');
+  const assetRoot = path.resolve(assetRootOption || path.join(projectPath, 'assets'));
   const warnings = [];
 
   // Step 1 — 构建引擎 (0%)
@@ -220,7 +222,6 @@ export async function exportGame(options, sendProgress) {
       continue;
     }
 
-    const assetRoot = path.join(projectPath, 'assets');
     const outputAssetRoot = path.join(outputDir, 'assets');
     const src = path.join(assetRoot, safeRelPath);
     const dst = path.join(outputAssetRoot, safeRelPath);

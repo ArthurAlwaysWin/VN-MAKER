@@ -15,6 +15,9 @@ import { resolvePath } from '../engine/assetPath.js';
 import { sanitizeCssValue, clampField } from './sanitize.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
 import { attachThemeIconFallback, hasThemeIcon, resolveThemeIcon } from './themeIconHelpers.js';
+import { createUiRuntimeHost } from './renderer/createUiRendererHost.js';
+import { applyUiDocumentVariant } from '../shared/uiDocumentContract.js';
+import { SharedConfirmationOverlay } from './sharedConfirmationOverlay.js';
 
 function isInlineThumbnail(value) {
   return typeof value === 'string' && /^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(value.trim());
@@ -74,6 +77,9 @@ export class SaveLoadScreen {
     this._gridRenderRequest = 0;
     /** @type {Object|null} Custom layout configuration from setLayout() */
     this._layoutConfig = null;
+    this._canonicalDocument = null;
+    this._canonicalHost = null;
+    this._confirmation = new SharedConfirmationOverlay(this.el, { resolveAssetUrl: path => resolvePath(path) });
   }
 
   // ─── Public API ──────────────────────────────────────────
@@ -83,8 +89,9 @@ export class SaveLoadScreen {
    * Pass null/undefined to revert to default hardcoded rendering (COMPAT-02).
    * @param {Object|null} config — layout config from ui.saveLoadScreen schema
    */
-  setLayout(config) {
+  setLayout(config, { canonicalDocument = null } = {}) {
     this._layoutConfig = config || null;
+    this._canonicalDocument = canonicalDocument || null;
     if (this.el.classList.contains('visible')) this._render();
   }
 
@@ -119,6 +126,7 @@ export class SaveLoadScreen {
    * @param {boolean} skipRoute — if true, skip onClose routing (e.g. after load success)
    */
   hide(skipRoute = false) {
+    this._confirmation.hide();
     this._detachKeyboard();
     this.el.classList.remove('visible');
     this.el.classList.add('hidden');
@@ -155,6 +163,12 @@ export class SaveLoadScreen {
 
   /** @private Full rebuild of el.innerHTML */
   _render() {
+    this._confirmation.hide();
+    if (this._canonicalDocument) {
+      this._renderCanonical();
+      return;
+    }
+    this._unmountCanonical();
     const cfg = this._layoutConfig;
 
     if (cfg) {
@@ -248,6 +262,45 @@ export class SaveLoadScreen {
     }
 
     attachThemeIconFallback(this.el);
+  }
+
+  setConfirmationDocument(document) {
+    this._confirmation.setDocument(document);
+  }
+
+  _renderCanonical() {
+    this._unmountCanonical();
+    this.el.innerHTML = '';
+    const semanticWidgets = {
+      'save-slot-grid': {
+        mount: ({ element }) => {
+          element.classList.add('save-load-canonical-content');
+          const grid = element.ownerDocument.createElement('div');
+          grid.className = 'save-load-grid';
+          grid.dataset.gmUiPart = 'slots';
+          const pagination = element.ownerDocument.createElement('div');
+          pagination.className = 'save-load-pagination';
+          pagination.dataset.gmUiPart = 'pagination';
+          element.append(grid, pagination);
+        },
+        update() {},
+        unmount() {},
+      },
+    };
+    this._canonicalHost = createUiRuntimeHost({
+      container: this.el,
+      resolveAssetUrl: path => resolvePath(path),
+      semanticWidgets,
+      actions: { 'close-screen': () => this.hide() },
+    });
+    this._canonicalHost.mount(applyUiDocumentVariant(this._canonicalDocument, this.mode));
+    this._renderGrid();
+    this._renderPagination();
+  }
+
+  _unmountCanonical() {
+    this._canonicalHost?.unmount();
+    this._canonicalHost = null;
   }
 
   /** @private Partial re-render of grid section only */
@@ -463,6 +516,22 @@ export class SaveLoadScreen {
     this._clearConfirmation();
 
     const isDelete = type === 'delete';
+    if (isDelete && this._canonicalDocument) {
+      this._confirmation.show({
+        title: '删除存档？',
+        body: `存档 ${slotNum} 将被永久删除。`,
+        confirmText: '删除',
+        cancelText: '取消',
+        confirmAction: { type: 'open-screen', params: { screenId: 'saveLoad', mode: this.mode, source: 'gameMenu' } },
+        cancelAction: { type: 'close-screen', params: { destination: 'gameMenu' } },
+        onConfirm: async () => {
+          if (this.onDelete) await this.onDelete(slotNum);
+          this._cachedSlots = null;
+          this._renderGrid();
+        },
+      });
+      return;
+    }
     const overlay = document.createElement('div');
     overlay.className = 'save-confirm-overlay';
     overlay.innerHTML = `

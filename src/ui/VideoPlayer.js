@@ -7,6 +7,7 @@ import {
   normalizeVideoRegistry,
   resolveVideoReference,
 } from '../shared/videoContract.js';
+import { createUiRuntimeHost } from './renderer/createUiRendererHost.js';
 
 const DEFAULT_VIDEO_VOLUME = 1;
 const DEFAULT_DUCK_FACTOR = 0.28;
@@ -104,6 +105,8 @@ export class VideoPlayer {
     this.container.appendChild(this.el);
 
     this._active = null;
+    this._controlsDocument = null;
+    this._controlsHost = null;
     this._onKeyDown = (event) => {
       if (!this._active?.request.skippable) return;
       if (event.key === 'Escape') {
@@ -115,6 +118,10 @@ export class VideoPlayer {
 
   get isPlaying() {
     return Boolean(this._active);
+  }
+
+  setControlsDocument(document) {
+    this._controlsDocument = document || null;
   }
 
   play(reference, {
@@ -152,7 +159,7 @@ export class VideoPlayer {
 
       this.video.onended = () => finish('ended');
       this.video.onerror = () => finish('error', { code: 'media-error' });
-      this.skipButton.onclick = () => finish('skipped');
+      this.skipButton.onclick = request.skippable ? () => finish('skipped') : null;
       this.gateButton.onclick = () => this._attemptPlay(finish, true);
       document.addEventListener('keydown', this._onKeyDown);
 
@@ -171,12 +178,83 @@ export class VideoPlayer {
     this.video.className = `runtime-video-element fit-${request.fit}`;
     this.video.src = request.src;
     this.video.poster = request.posterSrc;
-    this.video.controls = request.controls;
+    this.video.controls = this._controlsDocument ? false : request.controls;
     this.video.loop = request.loop;
     this.video.volume = request.volume;
     this.video.muted = request.volume <= 0;
     this.gateButton.classList.add('hidden');
     this.skipButton.classList.toggle('hidden', !request.skippable);
+    if (this._controlsDocument) this._renderCanonicalControls(request);
+  }
+
+  _renderCanonicalControls(request) {
+    this._unmountCanonicalControls();
+    const root = this.el.ownerDocument.createElement('div');
+    root.className = 'runtime-video-controls-canonical';
+    Object.assign(root.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' });
+    this.el.appendChild(root);
+    const semanticWidgets = {
+      'video-controls': {
+        mount: ({ element }) => { element.classList.add('runtime-video-controls'); },
+        update: ({ element, node }) => {
+          element.replaceChildren();
+          const progress = element.ownerDocument.createElement('progress');
+          progress.dataset.gmUiPart = 'progress';
+          progress.max = 1;
+          progress.value = 0;
+          progress.setAttribute('aria-label', node.content?.progressLabel ?? 'Video progress');
+          const playPause = element.ownerDocument.createElement('button');
+          playPause.type = 'button';
+          playPause.dataset.gmUiPart = 'playPause';
+          playPause.textContent = node.content?.pauseLabel ?? '暂停';
+          playPause.setAttribute('aria-label', 'Play or pause video');
+          const volume = element.ownerDocument.createElement('input');
+          volume.type = 'range';
+          volume.min = '0';
+          volume.max = '1';
+          volume.step = '0.05';
+          volume.value = String(request.volume);
+          volume.dataset.gmUiPart = 'volume';
+          volume.setAttribute('aria-label', node.content?.volumeLabel ?? '音量');
+          if (request.skippable) this.skipButton.dataset.gmUiPart = 'skip';
+          else delete this.skipButton.dataset.gmUiPart;
+          this.skipButton.textContent = node.content?.skipLabel ?? '跳过';
+          const updateProgress = () => {
+            const duration = Number(this.video.duration);
+            progress.value = Number.isFinite(duration) && duration > 0 ? Math.min(1, this.video.currentTime / duration) : 0;
+          };
+          if (request.controls) {
+            playPause.onclick = () => {
+              if (this.video.paused) void this.video.play();
+              else this.video.pause();
+              playPause.textContent = this.video.paused ? (node.content?.playLabel ?? '播放') : (node.content?.pauseLabel ?? '暂停');
+            };
+            volume.oninput = () => {
+              this.video.volume = clamp01(volume.value, request.volume);
+              this.video.muted = this.video.volume <= 0;
+            };
+            this.video.addEventListener('timeupdate', updateProgress);
+            element.append(progress, playPause, volume);
+          }
+          if (request.skippable) element.appendChild(this.skipButton);
+          element.dataset.controlsAllowed = request.controls ? 'true' : 'false';
+          element.dataset.skipAllowed = request.skippable ? 'true' : 'false';
+          element.dataset.audioMode = request.audioMode;
+          element.dataset.loop = request.loop ? 'true' : 'false';
+          this._canonicalControlCleanup = () => this.video.removeEventListener('timeupdate', updateProgress);
+        },
+        unmount: () => { this._canonicalControlCleanup?.(); this._canonicalControlCleanup = null; },
+      },
+    };
+    this._controlsHost = createUiRuntimeHost({ container: root, dataSources: { 'video.state': request }, semanticWidgets });
+    this._controlsHost.mount(this._controlsDocument);
+  }
+
+  _unmountCanonicalControls() {
+    this._controlsHost?.unmount();
+    this._controlsHost = null;
+    this.el.querySelector('.runtime-video-controls-canonical')?.remove();
+    if (this.skipButton.parentElement !== this.el) this.el.appendChild(this.skipButton);
   }
 
   _attemptPlay(finish, fromGate) {
@@ -195,6 +273,7 @@ export class VideoPlayer {
   }
 
   _teardownActive() {
+    this._unmountCanonicalControls();
     document.removeEventListener('keydown', this._onKeyDown);
     this.video.onended = null;
     this.video.onerror = null;

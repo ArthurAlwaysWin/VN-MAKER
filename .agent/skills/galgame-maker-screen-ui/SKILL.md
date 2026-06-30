@@ -47,6 +47,8 @@ npm run vn:review-handoff -- --script public/game/script.json --transaction .tmp
 
 When screenshot capture is required and available, add `--require-preview-screenshot`.
 
+For an explicit whole-project canonical UI migration, never use a real project as an unconfirmed test fixture. Run `migrate-ui-project` with `--validate-only`, then `--dry-run`, then `--force --checkpoint --result-out`; review exact changed paths and finish by exercising `restore-checkpoint`. Opening a project must not perform this migration. Include all seven screens and the Text Input, Confirmation, and Video Controls overlays in preview/handoff review.
+
 ## References
 
 - `../../../docs/agent-authoring/screen-ui-skill.md` for full screen UI workflow.

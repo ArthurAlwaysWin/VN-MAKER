@@ -1,7 +1,7 @@
 # Unified Screen Designer Architecture
 
-**Status:** Phase 0-5 complete; Phase 6 not started
-**Date:** 2026-06-23
+**Status:** Phase 0-10 complete; Phase 11 implemented but release-blocked by three missing sample audio assets
+**Date:** 2026-06-30
 **Planning baseline:** `7cf2e9a`
 **Phase 1 completion:** `fa11d14`
 **Roadmap:** [unified-screen-designer-roadmap.md](./unified-screen-designer-roadmap.md)
@@ -9,6 +9,8 @@
 ## Purpose
 
 Define a UE-inspired, Galgame Maker-native architecture for editing the complete in-game UI without turning project data into arbitrary HTML, CSS, JavaScript, or a general visual-programming system.
+
+Phase 11 closure evidence and the retained-compatibility decision are recorded in [unified-screen-designer-phase-11-audit.md](./unified-screen-designer-phase-11-audit.md). The explicit whole-project migration is the only path that activates all canonical documents; project open resolves compatibility in memory and does not persist canonical migration data.
 
 The target is one coherent no-code editor model across seven primary UI surfaces:
 
@@ -55,13 +57,13 @@ This is a horizontal UI-platform refactor. The story engine, save data engine, r
 | Surface | Current editor | Current runtime | Main gap |
 | --- | --- | --- | --- |
 | Title | Unified Editor Shell backed by canonical Title document | `TitleScreen` via `SharedUiRenderer` when canonical-active, with legacy read/render compatibility retained | Phase 5 vertical slice complete; later phases must not remove legacy compatibility before migration gates |
-| Gameplay UI | Page canvas plus separate theme/dialogue settings | `DialogueBox`, `ChoiceMenu`, `QuickActionBar` | Persistent UI has no unified hierarchy or canvas |
-| Game menu | Fixed configuration form plus runtime iframe | `GameMenu` | No element hierarchy or direct manipulation |
-| Settings | Rich structured form plus runtime iframe | `SettingsScreen` and widget helpers | No unified canvas; large bespoke schema |
-| Save/load | Fixed configuration form plus runtime iframe | `SaveLoadScreen` | No direct manipulation; mode-specific behavior is embedded in runtime code |
-| Backlog | Fixed configuration form plus runtime iframe | `BacklogScreen` | No direct manipulation; history list is runtime-owned |
-| Gallery | Registry editing only; runtime review | `GalleryScreen` | No screen-layout contract or editor |
-| Shared overlays | No common editor | `TextInputScreen`, confirmation DOM, video controls | Styling and layout are fragmented or hard-coded |
+| Gameplay UI | Page Editor story/UI mode split; canonical Gameplay document uses the Unified Editor Shell | `SharedUiRenderer` composes persistent chrome while `DialogueBox`, `ChoiceMenu`, `QuickActionBar`, audio, auto/skip, and `ScriptEngine` retain behavior ownership | Phase 9 complete; protected story viewport keeps story staging outside the screen document and legacy fallback remains active |
+| Game menu | Unified Editor Shell backed by canonical Game Menu document | `GameMenu` via `SharedUiRenderer` when canonical-active, with legacy read/render compatibility retained | Phase 6 vertical slice complete; shared confirmation is introduced only for the Game Menu title/quit path |
+| Settings | Unified Editor Shell backed by a canonical Settings document | `SettingsScreen` via `SharedUiRenderer` when canonical-active; semantic groups/controls delegate values to `ConfigManager` | Phase 8 complete; registered-key validation and legacy read/render fallback remain active |
+| Save/load | Unified Editor Shell backed by one canonical Save/Load document with `save`/`load` variants | `SaveLoadScreen` via `SharedUiRenderer` when canonical-active; semantic slot grid preserves engine-owned persistence, pagination, cache, and callbacks | Phase 7a complete; legacy read/render remains available until compatibility retirement |
+| Backlog | Unified Editor Shell backed by canonical Backlog document | `BacklogScreen` via `SharedUiRenderer` when canonical-active; semantic history list preserves engine-owned entries and voice lifecycle | Phase 7b complete; legacy read/render remains available until compatibility retirement |
+| Gallery | Unified Editor Shell backed by canonical Gallery document; existing CG/ending registry inspectors remain content editors | `GalleryScreen` via `SharedUiRenderer` when canonical-active | Phase 10 complete; registry and unlock ownership remain outside the screen document |
+| Shared overlays | Unified Editor Shell preview/edit surfaces for Text Input, confirmation, and Video Controls documents | Existing `TextInputScreen`, shared confirmation, and `VideoPlayer` behavior owners hosted by the shared renderer | Phase 10 complete; overlay documents control presentation only |
 
 ## Architecture Principles
 
@@ -240,6 +242,10 @@ Title is the first migration slice because it already has editable elements. Exi
 The gameplay screen document describes UI layered over the story stage. The stage itself remains owned by `PageEditor` and the scene/page contract.
 
 The gameplay root exposes a protected `storyViewport` slot plus editable semantic widgets for dialogue, nameplate, choices, quick actions, skip indicators, and other persistent chrome. A user may move and style those widgets but cannot make story progression depend on arbitrary UI script.
+
+Phase 9 completion preserves this split in executable code: Page Editor UI-edit transactions update only `ui.screens.gameplay`; the full `scenes.*.pages` tree remains byte-stable. The runtime host uses `SharedUiRenderer` as the canonical composition path but delegates typewriter completion/advance, voice start/replacement/cleanup, choice effects/transitions, Quick Action callbacks, auto/skip/read state, and input propagation to their pre-existing owners. Editor-only selection, history, and semantic metadata are not runtime story inputs.
+
+Legacy `ui.dialogueBox`, dialogue decorations, `ui.widgetStyles`, theme icons/choice badges, and UI motion continue to load and render. Explicit migration produces diagnostics, exact changed paths, result artifacts, checkpoints, and rollback evidence; opening a project never activates canonical Gameplay authority automatically.
 
 ### Game menu
 
@@ -450,8 +456,11 @@ These questions must be answered during the named roadmap phases rather than gue
 - **Phase 2 and each widget slice:** how much internal structure each semantic widget safely exposes;
 - **Phase 3:** resolved for the synthetic host as in-process; later editor canvas work may add chrome around the same renderer but must not introduce a second renderer implementation;
 - **Phase 5:** resolved for Title canonical screens: `.gmtheme` receives a pure theme-owned Title projection, import prefers canonical Title data without reviving legacy data as a second writer, and later screens must prove the same behavior in their own slices;
-- **Phase 10:** whether gallery uses one mixed grid or explicit CG/ending tabs;
-- **Phase 10:** which video controls are authorable for each playback policy;
+- **Phase 6:** resolved for Game Menu canonical screens: runtime/editor preview share `SharedUiRenderer`, migration and authoring writes are explicit/checkpointed, canonical Game Menu assets participate in theme/export/readiness collection, and shared confirmation is reusable but only adopted by the Phase 6 Game Menu title/quit path;
+- **Phase 7:** resolved for Save/Load and Backlog canonical screens: Save/Load uses one document with bounded `save`/`load` variants, protected semantic list widgets cannot be deleted in the editor, runtime persistence/history data ownership is unchanged, explicit migrations support validate-only/dry-run/result-out/checkpoint/rollback, and the Phase 6 shared confirmation is reused only for canonical Save/Load deletion;
+- **Phase 8:** resolved for canonical Settings: registered setting ids are closed and occur exactly once, legacy unknown/duplicate assignments normalize with explicit diagnostics, `ConfigManager` remains the sole value/default/persistence/reset owner, and Settings now shares the renderer/editor/authoring/theme/asset/export path while retaining legacy fallback;
+- **Phase 10:** resolved with one deterministic mixed Gallery grid plus a protected focus viewer; CG and ending cards remain distinguishable semantic items from the existing registries, without a second content registry;
+- **Phase 10:** resolved with policy-derived Video Controls: play/pause, progress, and volume exist only when `controls=true`, skip exists only when `skippable=true`, and no document field may override loop/audio/fit/source or completion ownership;
 - **Phase 11:** when a project is considered fully migrated and eligible for legacy-field cleanup.
 
 ## Phase 2 Canonical Decisions

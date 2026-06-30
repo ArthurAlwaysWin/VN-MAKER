@@ -19,6 +19,7 @@ import {
   isKnownSettingsCustomButtonAction,
   isKnownSettingsFooterButtonAction,
 } from '../shared/settingsScreenContract.js';
+import { createUiRuntimeHost } from './renderer/createUiRendererHost.js';
 
 // ─── Structured Mode Constants ───────────────────────────
 
@@ -106,6 +107,9 @@ export class SettingsScreen {
     this._activeTab = 0;
     /** @type {object|null} Theme-level icons from ui.theme.icons (Phase 75) */
     this._themeIcons = null;
+    this._canonicalDocument = null;
+    this._canonicalHost = null;
+    this._canonicalActiveTab = 0;
 
     this.el = document.createElement('div');
     this.el.id = 'settings-screen';
@@ -114,6 +118,8 @@ export class SettingsScreen {
 
     /** @type {Function|null} Called when any setting value changes */
     this.onChange = null;
+    /** @type {Function|null} Called by the canonical/legacy title action. */
+    this.onTitle = null;
   }
 
   /** Whether the settings overlay is currently showing */
@@ -122,8 +128,9 @@ export class SettingsScreen {
   }
 
   /** Load a custom layout from script.json ui.settingsScreen */
-  setLayout(layout) {
+  setLayout(layout, { canonicalDocument = null } = {}) {
     this.customLayout = layout;
+    this._canonicalDocument = canonicalDocument || null;
     // Clamp active tab to valid range when layout changes (BUG-06 fix)
     if (this._resolvedTabs) {
       this._activeTab = Math.min(this._activeTab, this._resolvedTabs.length - 1);
@@ -162,7 +169,9 @@ export class SettingsScreen {
       this._sliderCssInjected = true;
     }
 
-    if (this.customLayout?.elements?.length > 0) {
+    if (this._canonicalDocument) {
+      this._renderCanonical();
+    } else if (this.customLayout?.elements?.length > 0) {
       this._renderCustom(this.customLayout);
     } else if (this.customLayout?.header || this.customLayout?.tabBar || this.customLayout?.contentArea) {
       this._renderStructured(this.customLayout);
@@ -186,6 +195,152 @@ export class SettingsScreen {
   hide() {
     this.el.classList.remove('visible');
     this.el.classList.add('hidden');
+    this._unmountCanonical();
+  }
+
+  _renderCanonical() {
+    this._unmountCanonical();
+    this.el.innerHTML = '';
+    this.el.classList.remove('settings-custom', 'settings-structured');
+    this.el.classList.add('settings-canonical');
+    const semanticWidgets = {
+      'settings-group': {
+        mount: ({ element }) => {
+          element.classList.add('settings-canonical-group');
+          element.dataset.gmUiPart = 'controls';
+        },
+        update: ({ element, node }) => {
+          const columns = node.content?.columns === 2 ? 2 : 1;
+          element.dataset.gmUiGridColumns = String(columns);
+          element.style.display = 'grid';
+          element.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+          element.style.gap = '12px 24px';
+          element.style.overflowY = 'auto';
+        },
+        unmount() {},
+      },
+      'settings-control': {
+        mount: ({ element }) => {
+          element.classList.add('settings-canonical-control');
+          element.dataset.gmUiPart = 'control';
+        },
+        update: ({ element, node }) => this._renderCanonicalControl(element, node),
+        unmount() {},
+      },
+      'tab-bar': {
+        mount: ({ element }) => {
+          element.classList.add('settings-canonical-tabs');
+          element.dataset.gmUiPart = 'tabs';
+        },
+        update: ({ element, node }) => this._renderCanonicalTabs(element, node),
+        unmount() {},
+      },
+    };
+    this._canonicalHost = createUiRuntimeHost({
+      container: this.el,
+      resolveAssetUrl: path => resolvePath(path),
+      dataSources: { 'settings.controls': SETTING_DEFS },
+      semanticWidgets,
+      actions: {
+        'close-screen': () => this.hide(),
+        'reset-settings': () => {
+          this.configManager.reset();
+          this._notifyChange();
+          this._renderCanonical();
+        },
+        'open-screen': (params) => {
+          if (params?.screenId !== 'title') return;
+          this.hide();
+          this.onTitle?.();
+        },
+      },
+    });
+    this._canonicalHost.mount(this._canonicalDocument);
+    const close = this.el.querySelector('[data-gm-ui-node-id="settings.headerClose"]');
+    if (close && hasThemeIcon(this._themeIcons, 'close')) close.innerHTML = resolveThemeIcon(this._themeIcons, 'close', '×', 'close-icon');
+    attachThemeIconFallback(this.el);
+    this._applyCanonicalTabVisibility();
+  }
+
+  _renderCanonicalControl(element, node) {
+    element.replaceChildren();
+    element.style.position = 'relative';
+    element.style.left = 'auto';
+    element.style.top = 'auto';
+    element.style.right = 'auto';
+    element.style.bottom = 'auto';
+    element.style.width = 'auto';
+    element.style.height = 'auto';
+    element.style.transform = 'none';
+    element.style.display = 'flex';
+    element.style.alignItems = 'center';
+    element.style.padding = '12px';
+    const def = SETTING_DEFS[node.content?.settingId];
+    if (!def) return;
+    const label = element.ownerDocument.createElement('div');
+    label.className = 'settings-structured-label';
+    label.textContent = node.content?.label ?? def.label;
+    label.style.minWidth = '140px';
+    const control = element.ownerDocument.createElement('div');
+    control.className = 'settings-structured-control';
+    control.style.flex = '1';
+    if (def.type === 'slider') this._buildSlider(control, def, this.configManager, DEFAULT_SETTING_STYLE, node.content?.showValueLabel !== false);
+    if (def.type === 'toggle') this._buildToggle(control, def, this.configManager, DEFAULT_SETTING_STYLE);
+    if (def.type === 'select' && node.content?.presentation === 'toggle') {
+      const toggle = element.ownerDocument.createElement('label');
+      toggle.className = 'sc-toggle';
+      const input = element.ownerDocument.createElement('input');
+      input.type = 'checkbox';
+      input.checked = this.configManager.get(def.settingKey) === node.content.trueValue;
+      input.addEventListener('change', () => {
+        this.configManager.set(def.settingKey, input.checked ? node.content.trueValue : node.content.falseValue);
+        this._notifyChange();
+      });
+      const track = element.ownerDocument.createElement('span');
+      track.className = 'sc-toggle-track';
+      toggle.append(input, track);
+      control.appendChild(toggle);
+    } else if (def.type === 'select') this._buildSelect(control, def, this.configManager, DEFAULT_SETTING_STYLE);
+    for (const input of control.querySelectorAll('input, button')) {
+      if (!input.getAttribute('aria-label')) input.setAttribute('aria-label', `${label.textContent}${input.textContent ? ` ${input.textContent}` : ''}`);
+    }
+    element.append(label, control);
+  }
+
+  _renderCanonicalTabs(element, node) {
+    element.replaceChildren();
+    const mode = this._canonicalDocument?.behavior?.mode ?? node.content?.mode ?? 'tabbed';
+    const tabs = Array.isArray(node.content?.tabs) ? node.content.tabs : [];
+    element.hidden = mode === 'single-page';
+    if (element.hidden) return;
+    tabs.forEach((tab, index) => {
+      const button = element.ownerDocument.createElement('button');
+      button.type = 'button';
+      button.className = `settings-tab-btn${index === this._canonicalActiveTab ? ' active' : ''}`;
+      button.textContent = tab.label || `Tab ${index + 1}`;
+      button.setAttribute('aria-label', button.textContent);
+      button.setAttribute('aria-selected', index === this._canonicalActiveTab ? 'true' : 'false');
+      button.addEventListener('click', () => {
+        this._canonicalActiveTab = index;
+        this._renderCanonicalTabs(element, node);
+        this._applyCanonicalTabVisibility();
+      });
+      element.appendChild(button);
+    });
+  }
+
+  _applyCanonicalTabVisibility() {
+    const mode = this._canonicalDocument?.behavior?.mode ?? 'tabbed';
+    const groups = [...this.el.querySelectorAll('[data-gm-ui-node-type="settings-group"]')];
+    groups.forEach((group, index) => {
+      group.hidden = mode === 'tabbed' && index !== this._canonicalActiveTab;
+      group.style.display = group.hidden ? 'none' : 'grid';
+    });
+  }
+
+  _unmountCanonical() {
+    this._canonicalHost?.unmount();
+    this._canonicalHost = null;
   }
 
   // ── Custom layout rendering ───────────────────────────

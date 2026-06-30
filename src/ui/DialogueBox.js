@@ -58,6 +58,7 @@ export class DialogueBox {
     this._nameplateStyle = 'inline';
     /** @type {boolean} Whether nameplate CSS has been injected into document.head */
     this._nameplateCssInjected = false;
+    this._canonicalLayoutActive = false;
 
     // Hidden by default
     this.hide();
@@ -78,6 +79,7 @@ export class DialogueBox {
 
     // Apply custom style if provided, with font override support
     this._applyStyle(data.style, data.fontOverride);
+    this._applyCanonicalFill();
 
     // Apply nameplate style class
     const namePlate = this.namePlateEl;
@@ -175,6 +177,19 @@ export class DialogueBox {
     if (this._globalSettings.nameplateStyle) {
       this.setNameplateStyle(this._globalSettings.nameplateStyle);
     }
+  }
+
+  setCanonicalLayoutActive(active) {
+    this._canonicalLayoutActive = Boolean(active);
+    this._applyCanonicalFill();
+  }
+
+  _applyCanonicalFill() {
+    if (!this._canonicalLayoutActive) return;
+    Object.assign(this.el.style, {
+      position: 'relative', left: '0px', top: '0px', right: 'auto', bottom: 'auto',
+      width: '100%', height: '100%', minHeight: '0px', boxSizing: 'border-box',
+    });
   }
 
   /**
@@ -334,6 +349,7 @@ export class DialogueBox {
     this._stopTypewriter();
     this.el.classList.add('visible');
     this._applyStyle(null, null);
+    this._applyCanonicalFill();
 
     this.namePlateEl.classList.remove('nameplate-inline', 'nameplate-floating', 'nameplate-banner');
     this.namePlateEl.classList.add(`nameplate-${this._nameplateStyle}`);

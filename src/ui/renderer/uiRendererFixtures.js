@@ -4,6 +4,12 @@ import { normalizeUiDocument } from '../../shared/uiDocumentContract.js';
 const layout = overrides => normalizeUiLayout(overrides);
 
 export const UI_RENDERER_FIXTURE_DATA = Object.freeze({
+  'settings.controls': Object.freeze([]),
+  'story.viewport': Object.freeze({ owner: 'PageEditor', pageType: 'normal' }),
+  'dialogue.current': Object.freeze({ speakerName: 'Sakura', text: 'A deterministic voiced dialogue fixture.', voice: 'voice/sakura-001.ogg' }),
+  'choice.options': Object.freeze([{ text: 'Stay' }, { text: 'Leave' }]),
+  'runtime.quickActions': Object.freeze({ autoActive: false, skipActive: false, quickLoadEnabled: false }),
+  'runtime.skipStatus': Object.freeze({ active: false, readOnly: false }),
   'save.slots': Object.freeze([
     Object.freeze({ slot: '1', previewText: 'Moonlit platform' }),
     Object.freeze({ slot: '2', previewText: 'Archive door' }),

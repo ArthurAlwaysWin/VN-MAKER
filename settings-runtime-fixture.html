@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phase 8 Settings Fixture</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #11151b; color: #fff; font-family: system-ui, sans-serif; }
+      #fixture-toolbar { position: fixed; z-index: 1000; bottom: 8px; left: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+      #fixture-toolbar button { padding: 7px 11px; }
+      #fixture-status { position: fixed; z-index: 1000; right: 8px; top: 8px; max-width: 48vw; padding: 8px; background: #111c; pointer-events: none; }
+      #fixture-root { position: absolute; width: 1280px; height: 720px; left: 0; top: 0; transform-origin: top left; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <div id="fixture-toolbar">
+      <button data-fixture-action="tabbed">Tabbed</button>
+      <button data-fixture-action="single">Single page</button>
+      <button data-fixture-action="reopen">Reopen</button>
+    </div>
+    <output id="fixture-status">ready</output>
+    <div id="fixture-root"></div>
+    <script type="module" src="/src/ui/settingsRuntimeBrowserFixture.js"></script>
+  </body>
+</html>

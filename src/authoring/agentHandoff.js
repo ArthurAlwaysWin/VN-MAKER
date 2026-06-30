@@ -174,10 +174,20 @@ function collectAgentDslStaleReviewItems(dslStaleness = null, sourceMap = null) 
 
 const PREVIEW_SCREEN_PATHS = new Map([
   ['ui.titleScreen', 'titleScreen'],
+  ['ui.screens.title', 'title'],
   ['ui.settingsScreen', 'settingsScreen'],
+  ['ui.screens.settings', 'settings'],
   ['ui.gameMenu', 'gameMenu'],
+  ['ui.screens.gameMenu', 'gameMenu'],
   ['ui.saveLoadScreen', 'saveLoadScreen'],
+  ['ui.screens.saveLoad', 'saveLoad'],
   ['ui.backlogScreen', 'backlogScreen'],
+  ['ui.screens.backlog', 'backlog'],
+  ['ui.screens.gameplay', 'gameplay'],
+  ['ui.screens.gallery', 'gallery'],
+  ['ui.overlays.textInput', 'textInput'],
+  ['ui.overlays.confirmation', 'confirmation'],
+  ['ui.overlays.videoControls', 'videoControls'],
 ]);
 
 const PREVIEW_SCREEN_IDS = new Set(PREVIEW_SCREEN_PATHS.values());
@@ -282,7 +292,7 @@ function previewTargetsFromChangedPaths(changedPaths = []) {
 
     for (const [pathPrefix, screenId] of PREVIEW_SCREEN_PATHS.entries()) {
       if (changedPath === pathPrefix || String(changedPath).startsWith(`${pathPrefix}.`)) {
-        targets.push({ type: 'screen', screenId });
+        targets.push({ type: 'screen', screenId, pathString: String(changedPath) });
       }
     }
 

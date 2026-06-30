@@ -156,8 +156,8 @@ describe('agent handoff report', () => {
         pathString: 'analysis.sceneGraph',
         reason: 'changed-scene-flow',
       },
-      { type: 'screen', screenId: 'titleScreen' },
-      { type: 'screen', screenId: 'gameMenu' },
+      { type: 'screen', screenId: 'titleScreen', pathString: 'ui.titleScreen' },
+      { type: 'screen', screenId: 'gameMenu', pathString: 'ui.gameMenu.chrome' },
     ]);
     expect(handoff.reviewItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -540,6 +540,33 @@ describe('agent handoff report', () => {
         pathString: 'systems.gallery.cg',
       }),
     ]));
+  });
+
+  it('routes every canonical screen and named overlay to preview targets', () => {
+    const paths = [
+      'ui.screens.title',
+      'ui.screens.gameplay',
+      'ui.screens.gameMenu',
+      'ui.screens.settings',
+      'ui.screens.saveLoad',
+      'ui.screens.backlog',
+      'ui.screens.gallery',
+      'ui.overlays.textInput',
+      'ui.overlays.confirmation',
+      'ui.overlays.videoControls',
+    ];
+    const handoff = createAgentHandoff({ projectId: 'gm_all_ui_targets', scenes: {} }, {
+      readiness: { knownAssets: [], requireAssetCheck: false },
+      transaction: {
+        transaction: { command: 'migrate-ui-project', status: 'written', wrote: true },
+        changeSummary: { changedPaths: paths },
+      },
+    });
+
+    expect(handoff.previewTargets.map(target => target.screenId)).toEqual([
+      'title', 'gameplay', 'gameMenu', 'settings', 'saveLoad', 'backlog', 'gallery',
+      'textInput', 'confirmation', 'videoControls',
+    ]);
   });
 
   it('includes video preview targets for changed video authoring paths', () => {

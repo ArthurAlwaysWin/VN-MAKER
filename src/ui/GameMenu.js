@@ -5,6 +5,8 @@ import { sanitizeCssValue, clamp, clampField } from './sanitize.js';
 import { resolvePath } from '../engine/assetPath.js';
 import { clearScreenDecorations, renderScreenDecorations } from './screenDecorations.js';
 import { attachThemeIconFallback, resolveThemeIcon } from './themeIconHelpers.js';
+import { createUiRuntimeHost } from './renderer/createUiRendererHost.js';
+import { SharedConfirmationOverlay } from './sharedConfirmationOverlay.js';
 
 /** Default button labels matching the hardcoded originals */
 const DEFAULT_LABELS = {
@@ -39,6 +41,9 @@ export class GameMenu {
 
     /** @type {object|null} Layout config from ui.gameMenu schema */
     this._layoutConfig = null;
+    this._canonicalDocument = null;
+    this._canonicalHost = null;
+    this._confirmation = new SharedConfirmationOverlay(this.el, { resolveAssetUrl: path => resolvePath(path) });
 
     /** @type {object|null} Theme-level icons from ui.theme.icons */
     this._themeIcons = null;
@@ -69,9 +74,14 @@ export class GameMenu {
    * Pass null to revert to default hardcoded rendering.
    * @param {object|null} config
    */
-  setLayout(config) {
+  setLayout(config, { canonicalDocument = null } = {}) {
     this._layoutConfig = config || null;
+    this._canonicalDocument = canonicalDocument || null;
     this._render();
+  }
+
+  setConfirmationDocument(document) {
+    this._confirmation.setDocument(document);
   }
 
   /**
@@ -89,6 +99,7 @@ export class GameMenu {
   }
 
   hide() {
+    this._confirmation.hide();
     this.el.classList.remove('visible');
     this.el.classList.add('hidden');
   }
@@ -107,6 +118,12 @@ export class GameMenu {
    * @private
    */
   _render() {
+    this._confirmation.hide();
+    if (this._canonicalDocument) {
+      this._renderCanonical();
+      return;
+    }
+    this._unmountCanonical();
     if (!this._layoutConfig) {
       // ── Default path (COMPAT-02: unchanged from original) ──────
       // Reset any config-mode style overrides on the overlay
@@ -224,5 +241,68 @@ export class GameMenu {
     }
 
     attachThemeIconFallback(this.el);
+  }
+
+  _renderCanonical() {
+    this._unmountCanonical();
+    this.el.innerHTML = '';
+    this.el.style.background = '';
+    this.el.style.backdropFilter = '';
+    this.el.style.justifyContent = '';
+    this._canonicalHost = createUiRuntimeHost({
+      container: this.el,
+      resolveAssetUrl: path => resolvePath(path),
+      actions: {
+        'open-screen': params => this._handleCanonicalOpenScreen(params),
+        'close-screen': () => this.hide(),
+      },
+    });
+    this._canonicalHost.mount(this._canonicalDocument);
+  }
+
+  _handleCanonicalOpenScreen({ screenId, mode } = {}) {
+    if (screenId === 'saveLoad' && mode === 'save') {
+      this.hide();
+      if (this.onSave) this.onSave();
+      return;
+    }
+    if (screenId === 'saveLoad' && mode === 'load') {
+      this.hide();
+      if (this.onLoad) this.onLoad();
+      return;
+    }
+    if (screenId === 'backlog') {
+      this.hide();
+      if (this.onBacklog) this.onBacklog();
+      return;
+    }
+    if (screenId === 'settings') {
+      this.hide();
+      if (this.onSettings) this.onSettings();
+      return;
+    }
+    if (screenId === 'title') {
+      this._showTitleConfirmation();
+    }
+  }
+
+  _showTitleConfirmation() {
+    this._confirmation.show({
+      title: 'Return to title?',
+      body: 'Unsaved progress may be lost.',
+      confirmText: 'Return',
+      cancelText: 'Cancel',
+      confirmAction: { type: 'open-screen', params: { screenId: 'title', source: 'gameMenu' } },
+      cancelAction: { type: 'close-screen', params: { destination: 'gameMenu' } },
+      onConfirm: () => {
+        this.hide();
+        if (this.onTitle) this.onTitle();
+      },
+    });
+  }
+
+  _unmountCanonical() {
+    this._canonicalHost?.unmount();
+    this._canonicalHost = null;
   }
 }

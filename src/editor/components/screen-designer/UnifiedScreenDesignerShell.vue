@@ -37,6 +37,12 @@
       <button type="button" data-test="usd-redo" :disabled="!canRedo" @click.stop="redoSynthetic">
         Redo
       </button>
+      <button v-if="isSettingsDocument" type="button" data-test="usd-settings-add-tab" @click.stop="addSettingsTabTransaction">
+        Add Tab
+      </button>
+      <button v-if="isSettingsDocument" type="button" data-test="usd-settings-remove-tab" :disabled="!canRemoveSettingsTab" @click.stop="removeSettingsTabTransaction">
+        Remove Tab
+      </button>
       <span class="usd-status" data-test="usd-renderer-status">
         Shared renderer · {{ diagnostics.length }} diagnostics · {{ state.transactions.length }} transactions
       </span>
@@ -100,9 +106,9 @@
           <label class="usd-field">
             <span>Text</span>
             <input
-              :value="selectedNode?.content?.text || ''"
+              :value="selectedNode?.content?.text || selectedNode?.content?.label || ''"
               data-test="usd-text-patch"
-              @input="patchSelected('content.text', $event.target.value)"
+              @input="patchSelected(selectedNode?.type === 'settings-group' ? 'content.label' : 'content.text', $event.target.value)"
             />
           </label>
           <label class="usd-field">
@@ -166,17 +172,22 @@ import {
   createUnifiedEditorShellState,
   getNodeById,
   getSyntheticNodeOperations,
+  addSettingsTab,
+  removeSettingsTab,
   summarizeNode,
 } from '../../screen-designer/unifiedEditorShellModel.js';
 
 const props = defineProps({
   initialDocument: { type: Object, default: null },
   productionTitle: { type: Boolean, default: false },
+  productionScreenId: { type: String, default: '' },
+  productionScreenLabel: { type: String, default: '' },
 });
 const emit = defineEmits(['document-change', 'action']);
 
-const screens = props.productionTitle
-  ? Object.freeze([{ id: 'title', label: 'Title', source: 'canonical' }])
+const productionScreenId = props.productionScreenId || (props.productionTitle ? 'title' : '');
+const screens = productionScreenId
+  ? Object.freeze([{ id: productionScreenId, label: props.productionScreenLabel || productionScreenId, source: 'canonical' }])
   : UNIFIED_EDITOR_SHELL_SCREENS;
 const viewports = UNIFIED_EDITOR_SHELL_VIEWPORTS;
 const palette = UNIFIED_EDITOR_SHELL_PALETTE;
@@ -186,7 +197,7 @@ const zoomLevels = Object.freeze([
   { value: 1.25, label: '125%' },
 ]);
 const state = reactive(props.initialDocument
-  ? createUnifiedEditorShellStateFromDocument(props.initialDocument, { screenId: 'title' })
+  ? createUnifiedEditorShellStateFromDocument(props.initialDocument, { screenId: productionScreenId || props.initialDocument.id || 'title' })
   : createUnifiedEditorShellState());
 const canvasRef = ref(null);
 const canvasFrameRef = ref(null);
@@ -200,6 +211,9 @@ const selectedSummary = computed(() => summarizeNode(selectedNode.value));
 const activeViewport = computed(() => viewports.find(item => item.id === state.viewportId) ?? viewports[0]);
 const canUndo = computed(() => state.historyIndex > 0);
 const canRedo = computed(() => state.historyIndex < state.history.length - 1);
+const isSettingsDocument = computed(() => state.document?.id === 'settings');
+const settingsGroups = computed(() => state.document?.nodes?.filter(node => node.type === 'settings-group') ?? []);
+const canRemoveSettingsTab = computed(() => selectedNode.value?.type === 'settings-group' && settingsGroups.value.length > 1);
 const contextMenuOperations = computed(() => getSyntheticNodeOperations(state.document, contextMenu.nodeId ?? state.selectedNodeId));
 const canvasFrameStyle = computed(() => ({
   aspectRatio: `${activeViewport.value.width} / ${activeViewport.value.height}`,
@@ -254,6 +268,16 @@ function commitSyntheticTransaction(operation, nextDocument, selectedNodeId = st
   closeContextMenu();
   renderDocument();
   emit('document-change', { operation, document: clone(nextDocument), selectedNodeId });
+}
+
+function addSettingsTabTransaction() {
+  const result = addSettingsTab(state.document);
+  if (result.changed) commitSyntheticTransaction('settings-tab-add', result.document, result.selectedNodeId);
+}
+
+function removeSettingsTabTransaction() {
+  const result = removeSettingsTab(state.document, state.selectedNodeId);
+  if (result.changed) commitSyntheticTransaction('settings-tab-remove', result.document, result.selectedNodeId);
 }
 
 function patchSelected(path, value) {
@@ -370,6 +394,7 @@ onMounted(() => {
       'start-game': params => emit('action', { type: 'start-game', params }),
       'continue-game': params => emit('action', { type: 'continue-game', params }),
       'open-screen': params => emit('action', { type: 'open-screen', params }),
+      'close-screen': params => emit('action', { type: 'close-screen', params }),
       'replay-opening-video': params => emit('action', { type: 'replay-opening-video', params }),
       'quit-game': params => emit('action', { type: 'quit-game', params }),
     },

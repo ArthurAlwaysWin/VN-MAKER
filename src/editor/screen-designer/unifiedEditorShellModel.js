@@ -1,11 +1,12 @@
 import { UI_RENDERER_FIXTURE_DATA, UI_RENDERER_FIXTURE_STYLES } from '../../ui/renderer/uiRendererFixtures.js';
-import { normalizeUiDocument } from '../../shared/uiDocumentContract.js';
+import { normalizeUiDocument, UI_SEMANTIC_WIDGETS } from '../../shared/uiDocumentContract.js';
 import { normalizeUiLayout } from '../../shared/uiLayoutContract.js';
 
 const clone = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 const layout = overrides => normalizeUiLayout(overrides);
 const SYNTHETIC_PATCH_PATHS = Object.freeze(new Set([
   'content.text',
+  'content.label',
   'style.color',
   'layout.anchor.minX',
   'layout.anchor.minY',
@@ -44,6 +45,12 @@ export const UNIFIED_EDITOR_SHELL_PALETTE = Object.freeze([
   { id: 'text', label: 'Text', family: 'primitive' },
   { id: 'button', label: 'Button', family: 'primitive' },
   { id: 'save-slot-grid', label: 'Save Slot Grid', family: 'semantic' },
+  { id: 'settings-group', label: 'Settings Group', family: 'semantic' },
+  { id: 'settings-control', label: 'Settings Control', family: 'semantic' },
+  { id: 'gallery-grid', label: 'Gallery Grid', family: 'semantic' },
+  { id: 'focus-viewer', label: 'Focus Viewer', family: 'semantic' },
+  { id: 'text-input', label: 'Text Input', family: 'semantic' },
+  { id: 'video-controls', label: 'Video Controls', family: 'semantic' },
 ]);
 
 export const UNIFIED_EDITOR_SHELL_DATA = UI_RENDERER_FIXTURE_DATA;
@@ -242,9 +249,14 @@ export function applySyntheticNodePatch(document, nodeId, patch) {
   const next = clone(document);
   const node = next.nodes.find(item => item.id === nodeId);
   if (!node) throw new Error(`Cannot patch missing synthetic node: ${nodeId}`);
-  if (patch.path === 'content.text') {
+  if (patch.path === 'content.text' || patch.path === 'content.label') {
     node.content ??= {};
-    node.content.text = String(patch.value ?? '');
+    node.content[patch.path.slice('content.'.length)] = String(patch.value ?? '');
+    if (patch.path === 'content.label' && node.type === 'settings-group') {
+      const tabBar = next.nodes.find(candidate => candidate.type === 'tab-bar');
+      const tab = tabBar?.content?.tabs?.find(candidate => candidate.groupId === node.id);
+      if (tab) tab.label = node.content.label;
+    }
   } else if (patch.path === 'asset.path') {
     node.asset ??= { kind: node.type === 'image' ? 'image' : 'image' };
     node.asset.path = String(patch.value ?? '');
@@ -260,6 +272,53 @@ export function applySyntheticNodePatch(document, nodeId, patch) {
     node.layout = normalizeUiLayout(node.layout);
   }
   return normalizeUiDocument(next);
+}
+
+export function addSettingsTab(document, label) {
+  if (document?.id !== 'settings') return { document, selectedNodeId: document?.rootId ?? null, changed: false };
+  const next = clone(document);
+  const tabBar = next.nodes.find(node => node.type === 'tab-bar');
+  const groups = next.nodes.filter(node => node.type === 'settings-group').sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  if (!tabBar) return { document, selectedNodeId: next.rootId, changed: false };
+  const tabId = `tab-${groups.length + 1}`;
+  const groupId = nextSyntheticId(next, `settings.group.${tabId}`);
+  const group = {
+    id: groupId,
+    type: 'settings-group',
+    parentId: next.rootId,
+    order: Math.max(1, ...groups.map(node => node.order ?? 0)) + 1,
+    layout: clone(groups.at(-1)?.layout ?? normalizeUiLayout()),
+    parts: ['controls'],
+    content: { tabId, label: String(label ?? `Tab ${groups.length + 1}`), columns: 1, itemStyle: {} },
+    binding: { source: 'settings.controls' },
+  };
+  next.nodes.push(group);
+  tabBar.content ??= {};
+  tabBar.content.mode = 'tabbed';
+  tabBar.content.tabs = [...(tabBar.content.tabs ?? []), { id: tabId, label: group.content.label, groupId }];
+  next.behavior = { ...(next.behavior ?? {}), mode: 'tabbed' };
+  return { document: normalizeUiDocument(next), selectedNodeId: groupId, changed: true };
+}
+
+export function removeSettingsTab(document, groupId) {
+  if (document?.id !== 'settings') return { document, selectedNodeId: groupId, changed: false };
+  const next = clone(document);
+  const groups = next.nodes.filter(node => node.type === 'settings-group').sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const index = groups.findIndex(group => group.id === groupId);
+  if (groups.length <= 1 || index < 0) return { document, selectedNodeId: groupId, changed: false };
+  const destination = groups[index > 0 ? index - 1 : 1];
+  const destinationControls = next.nodes.filter(node => node.parentId === destination.id);
+  let order = destinationControls.length;
+  for (const control of next.nodes.filter(node => node.parentId === groupId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))) {
+    control.parentId = destination.id;
+    control.order = order++;
+  }
+  next.nodes = next.nodes.filter(node => node.id !== groupId);
+  const tabBar = next.nodes.find(node => node.type === 'tab-bar');
+  if (tabBar?.content?.tabs) tabBar.content.tabs = tabBar.content.tabs.filter(tab => tab.groupId !== groupId);
+  renumberSiblings(next.nodes, next.rootId);
+  renumberSiblings(next.nodes, destination.id);
+  return { document: normalizeUiDocument(next), selectedNodeId: destination.id, changed: true };
 }
 
 function nextSyntheticId(document, baseId) {
@@ -307,14 +366,16 @@ export function getSyntheticNodeOperations(document, nodeId) {
   const node = getNodeById(document, nodeId);
   if (!node) return [];
   const isRoot = node.id === document.rootId || node.parentId == null;
+  const isProtectedSemantic = Boolean(UI_SEMANTIC_WIDGETS[node.type]);
+  const isOrderableSettingsSemantic = ['settings-group', 'settings-control'].includes(node.type);
   const siblings = childNodes(document, node.parentId);
   const siblingIndex = siblings.findIndex(item => item.id === node.id);
   return [
-    { id: 'duplicate', label: 'Duplicate', enabled: !isRoot },
-    { id: 'delete', label: 'Delete', enabled: !isRoot },
-    { id: 'move-up', label: 'Move Up', enabled: !isRoot && siblingIndex > 0 },
-    { id: 'move-down', label: 'Move Down', enabled: !isRoot && siblingIndex >= 0 && siblingIndex < siblings.length - 1 },
-    { id: 'wrap', label: 'Wrap In Stack', enabled: !isRoot },
+    { id: 'duplicate', label: 'Duplicate', enabled: !isRoot && !isProtectedSemantic },
+    { id: 'delete', label: 'Delete', enabled: !isRoot && !isProtectedSemantic },
+    { id: 'move-up', label: 'Move Up', enabled: !isRoot && (!isProtectedSemantic || isOrderableSettingsSemantic) && siblingIndex > 0 },
+    { id: 'move-down', label: 'Move Down', enabled: !isRoot && (!isProtectedSemantic || isOrderableSettingsSemantic) && siblingIndex >= 0 && siblingIndex < siblings.length - 1 },
+    { id: 'wrap', label: 'Wrap In Stack', enabled: !isRoot && !isProtectedSemantic },
     { id: 'reset-overrides', label: 'Reset Overrides', enabled: Boolean(node.style || node.states) },
   ];
 }
@@ -322,7 +383,7 @@ export function getSyntheticNodeOperations(document, nodeId) {
 function duplicateSyntheticNode(document, nodeId) {
   const next = clone(document);
   const source = next.nodes.find(node => node.id === nodeId);
-  if (!source || source.id === next.rootId || source.parentId == null) return { document: next, selectedNodeId: nodeId, changed: false };
+  if (!source || source.id === next.rootId || source.parentId == null || UI_SEMANTIC_WIDGETS[source.type]) return { document: next, selectedNodeId: nodeId, changed: false };
   const subtree = collectSubtree(next, nodeId);
   const idMap = new Map();
   for (const node of subtree) idMap.set(node.id, nextSyntheticId({ nodes: [...next.nodes, ...[...idMap.values()].map(id => ({ id }))] }, `${node.id}.copy`));
@@ -342,7 +403,7 @@ function duplicateSyntheticNode(document, nodeId) {
 
 function deleteSyntheticNode(document, nodeId) {
   const target = getNodeById(document, nodeId);
-  if (!target || target.id === document.rootId || target.parentId == null) return { document, selectedNodeId: nodeId, changed: false };
+  if (!target || target.id === document.rootId || target.parentId == null || UI_SEMANTIC_WIDGETS[target.type]) return { document, selectedNodeId: nodeId, changed: false };
   const ids = new Set(collectSubtree(document, nodeId).map(node => node.id));
   const next = clone(document);
   next.nodes = next.nodes.filter(node => !ids.has(node.id));
@@ -353,7 +414,8 @@ function deleteSyntheticNode(document, nodeId) {
 
 function moveSyntheticNode(document, nodeId, direction) {
   const target = getNodeById(document, nodeId);
-  if (!target || target.id === document.rootId || target.parentId == null) return { document, selectedNodeId: nodeId, changed: false };
+  const orderableSemantic = ['settings-group', 'settings-control'].includes(target?.type);
+  if (!target || target.id === document.rootId || target.parentId == null || (UI_SEMANTIC_WIDGETS[target.type] && !orderableSemantic)) return { document, selectedNodeId: nodeId, changed: false };
   const next = clone(document);
   const siblings = childNodes(next, target.parentId);
   const from = siblings.findIndex(node => node.id === nodeId);
